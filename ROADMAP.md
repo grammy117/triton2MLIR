@@ -26,6 +26,28 @@ operations, fusion and decomposition, but cannot replace missing operations. Pri
 retain annotations: the MVP uses generic assembly to avoid xDSL custom-printer losses. An exact
 hash-linked sidecar preserves the original graph and correspondence independently of printer form.
 
+## Reuse-first implementation track
+
+triton-shared already implements substantial parts of R1/R2/R3/R6. Those milestone descriptions
+are acceptance requirements for this product, not instructions to reimplement all upstream passes.
+Use the [source-backed reuse map and stage adapter](docs/triton_shared.md) before adding converters.
+
+The `shared-lower` adapter now exposes structured, tensor-compute and complete upstream stages,
+with exact input/tool/output hashes, safe mask options and bounded execution. A licensed upstream
+2-D fixture is retained for real-tool qualification. The present host has the source checkout but
+no installed optimizer; three explicit integration checks remain skipped until one is configured.
+
+Next, qualify a version-matched upstream binary/corpus, then bridge structured descriptors and
+upstream tensor computation into the declared whole-launch tensor ABI. Concentrate new work on
+functional outputs, bounds/effects/aliasing, numeric contracts, source intent/correspondence and
+model2MLIR/Merlin packaging. Reuse upstream region/arithmetic conversion as those contracts become
+qualified. The current stock-wheel frontend remains a small working reference and compatibility
+path while the broader upstream integration is developed.
+
+An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
+arguments and missing source correspondence must remain explicit. Native toolchain builds require
+approval under the shared-VM rules; no build or CPU backend is started implicitly by the adapter.
+
 ## R0 — minimum visible demo: now implemented
 
 **Demo:** real `@triton.jit` vector add → native TTIR → symbolic access recovery → tiled
@@ -203,7 +225,8 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 
 ## Immediate next work
 
-Continue R1 with runtime scalar/region intake, multi-dimensional access recovery and local
-memory-version sequencing, keeping its tensor abstraction and proof discipline. A native verifier
-and LLVM legalization path now exist; a host execution harness is still needed. The small demos
-stay GPU-free so contributors can reproduce each later change against them.
+Qualify the reusable upstream stages and their versioned input/output boundary, then adapt their
+structured/tensor results to the existing functional ABI and provenance contract. Use that path
+for multi-dimensional/region coverage while retaining the current small numerical/refusal tests.
+A native verifier and LLVM legalization path already exist; host execution is a separate remaining
+gate. The small demos stay GPU-free for fast contributor regression checks.

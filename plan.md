@@ -92,9 +92,11 @@ A descriptor describes an access; it does not prove bounds, alias freedom or par
 
 The complete [`TritonToLinalgExperimental` pipeline][shared-pipeline] subsequently invokes structured,
 unstructured and Triton-pointer-to-memref conversions. Therefore its complete output is not our
-tensor-only ingest contract. An optional experiment could stop earlier and adapt the descriptors;
-that would still require version-matched project dialects and its Triton pin. There is no need to
-build that stack for the first implementation.
+tensor-only ingest contract. Reuse the earlier structured/tensor stages and adapt their descriptors
+and computation to that contract. The implemented `shared-lower` adapter exposes these boundaries
+using an existing optimizer; see [the reuse map](docs/triton_shared.md). Broad coverage should build
+on upstream analyses/converters, with our semantic ABI and provenance checks added at the boundary.
+That path requires version-matched project dialects and its Triton pin; no native build is implicit.
 
 Its optional six added program-id/grid-size arguments are **not intrinsically hardware-specific**;
 they express a per-program ABI. We instead want a complete-launch function with a logical grid
@@ -538,6 +540,9 @@ project roots when such work is authorized.
 ## 12. Package shape, reference map and next work
 
 Proposed implementation: Python analysis and xDSL builders, matching the existing tooling.
+This is the implemented small stock-wheel/reference path. For broader coverage, prioritize the
+upstream stage adapter and functional tensor/provenance bridge described in the roadmap rather
+than independently recreating all of triton-shared's supported operations and region analyses.
 The standard-only core does not import model2MLIR/PyTorch. An optional pinned integration extra
 reuses m2m's existing composite definitions/expansion and registry contract rather than vendoring
 copies. Coordinate incompatible xDSL versions explicitly. If shared dialect code is later split
