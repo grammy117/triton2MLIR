@@ -51,6 +51,13 @@ def main(argv=None):
     native.add_argument("mlir", type=Path)
     native.add_argument("--python", type=Path, help="Python environment that already contains torch-mlir")
     native.add_argument("--lower-to-llvm", action="store_true", help="also check standard legalization to LLVM in the verifier process")
+    shared = commands.add_parser("shared-lower", help="run an existing triton-shared optimizer and record its middle-layer boundary")
+    shared.add_argument("ttir", type=Path)
+    shared.add_argument("--out", type=Path, required=True)
+    shared.add_argument("--optimizer", type=Path, help="existing triton-shared-opt executable")
+    shared.add_argument("--stage", choices=("structured", "tensor-compute", "full"), default="structured")
+    shared.add_argument("--optimizer-sha256", help="optional exact executable-content pin")
+    shared.add_argument("--timeout", type=float, default=30)
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
@@ -61,6 +68,13 @@ def main(argv=None):
         elif args.command == "verify-mlir":
             from .verify import verify_mlir
             summary = verify_mlir(args.mlir.read_text(), python=args.python, lower_to_llvm=args.lower_to_llvm)
+        elif args.command == "shared-lower":
+            from .upstream import lower_with_shared
+            report = lower_with_shared(args.ttir, args.out, optimizer=args.optimizer, stage=args.stage,
+                                       timeout=args.timeout, expected_optimizer_sha256=args.optimizer_sha256)
+            summary = {"out": str(args.out), "stage": report["stage"],
+                       "stage_completed": True, "portable_conversion_complete": False,
+                       "next_step": "qualify functional tensor ABI and provenance; see stage.json"}
         else:
             spec = KernelSpec.from_dict(json.loads(args.spec.read_text()))
             result = convert(args.ttir, spec)

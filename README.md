@@ -5,6 +5,9 @@ and intent in annotations and provenance. Exact tiles and the first tensor-memor
 [roadmap](ROADMAP.md) for the path through tiled GEMM, attention and broader kernel semantics,
 and [plan.md](plan.md) for the architecture.
 
+Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will reuse
+[triton-shared's existing passes and analyses](docs/triton_shared.md).
+
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a
 reference interpreter, and checks it against an independent NumPy computation.
@@ -59,6 +62,16 @@ This checks registered operations with unregistered dialects disabled, then opti
 passes through bufferization and LLVM legalization. It operates on a separate copy; exported kernel
 MLIR stays at the tensor/linalg/SCF boundary. No native compiler is built or installed automatically.
 LLVM legalization does not claim native code execution or runtime-helper linking.
+
+An existing triton-shared optimizer can also be used directly:
+
+```bash
+TRITON_SHARED_OPT=/path/to/triton-shared-opt python -m t2m shared-lower kernel.ttir --out out/shared --stage structured
+```
+
+This writes an inspectable upstream stage, with exact tool/input/output hashes and its boundary
+recorded. It does not claim our tensor ABI, provenance correspondence or complete package until
+those contracts have been qualified. No native toolchain is built implicitly.
 
 Current support: static f32 rank-one logical tensors, positive-stride storage views and offsets,
 independent allocations, rectangular boundary masks, defined scalar/splat fills, one write or
