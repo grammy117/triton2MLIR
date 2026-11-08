@@ -29,3 +29,13 @@ def block_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
     b = tl.load(y + k[:, None] * N + n[None, :])
     c = tl.dot(a, b, input_precision="ieee")
     tl.store(out + m[:, None] * N + n[None, :], c)
+
+
+@triton.jit
+def sequenced_outputs(x, out, second, N: tl.constexpr):
+    i = tl.arange(0, N)
+    value = tl.load(x + i)
+    tl.store(out + i, value + 1)
+    updated = tl.load(out + i)
+    tl.store(out + i, updated * 2)
+    tl.store(second + i, updated - 3)

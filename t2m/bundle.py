@@ -91,6 +91,9 @@ def write_bundle(result, out, inputs, reference):
 def verify_bundle(out):
     out = Path(out)
     receipt = json.loads((out / "capture_receipt.json").read_text())
+    if receipt.get("schema") == "t2m.capture-receipt.v2":
+        from .shared_bundle import verify_shared_bundle
+        return verify_shared_bundle(out)
     if receipt.get("schema") != "t2m.capture-receipt.v1" or set(receipt.get("artifacts", {})) != REQUIRED:
         raise ValueError("not a complete t2m capture receipt")
     for name, record in receipt["artifacts"].items():

@@ -4,6 +4,26 @@ Baseline inspected: model2MLIR `feat/triton-integration` at `035bb5a`, particula
 `m2m/capture/bundle.py`, `m2m/capture/provenance.py` and `m2m/transforms/externalize.py`.
 This document specifies the implemented R0/R1 package, not every future roadmap profile.
 
+## Shared tensor profile (`t2m.capture-receipt.v2`)
+
+The [upstream-based frontend](shared_tensor.md) uses the same core filenames with an explicitly
+versioned ABI and receipt. `shared-demo` writes complete examples; `shared-tensor` accepts saved
+TTIR plus `--abi`, optionally `--inputs` (`in0`, `in1`, ...) and `--reference` (`out0`, `out1`, ...)
+NPZ archives. Without both arrays and references it writes IR/provenance only, with no receipt.
+
+Every declared buffer, including each writable destination's incoming value, is a tensor argument.
+Writable results follow declaration order. The function retains its kernel name. Specialized
+integer scalars are recorded in `spec.json` rather than becoming runtime tensor arguments.
+`golden.npy` stores result zero; `extra.npz` stores any additional results as `out1`, `out2`, ... .
+That use of `extra.npz` is an explicit convention difference, not implied m2m compatibility.
+
+Before writing any bundle, the writer executes the serialized MLIR through the native host LLVM
+path and compares every result with the supplied independent references at explicit tolerances.
+`execution.json` binds those checks to the exact IR hash. It makes no NaN-payload/signed-zero-bit,
+universal source-equivalence, original Triton-execution or consumer/device-execution claim.
+`verify-bundle` dispatches both receipt versions and verifies all artifact/source/ABI bindings.
+The full list of differences is also embedded in each package's `compatibility.json`.
+
 ## Shared core artifacts
 
 | Artifact | MVP convention |

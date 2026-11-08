@@ -8,6 +8,23 @@ and [plan.md](plan.md) for the architecture.
 Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will reuse
 [triton-shared's existing passes and analyses](docs/triton_shared.md).
 
+The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
+masked softmax and IEEE matmul, emitting functional tensor/linalg IR. Its packages are checked
+by **native LLVM host execution** against independent NumPy references. It currently accepts
+one logical program with static structured memory; this is not full arbitrary-kernel coverage.
+
+```bash
+python scripts/fetch_shared_opt.py --out .scratch/shared-opt
+export TRITON_SHARED_OPT=$PWD/.scratch/shared-opt/triton-shared-opt
+python -m t2m shared-demo --kernel softmax --out out/shared_softmax --python /path/to/native-env/bin/python
+python -m t2m shared-demo --kernel matmul --out out/shared_matmul --python /path/to/native-env/bin/python
+python -m t2m verify-bundle out/shared_softmax
+```
+
+The optional fetcher extracts a pinned standalone optimizer from a verified distribution;
+it builds nothing and installs no target backend. An existing optimizer is also supported.
+See [the package differences](docs/package.md) and [native execution scope](docs/native_execution.md).
+
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a
 reference interpreter, and checks it against an independent NumPy computation.
@@ -39,8 +56,8 @@ out/vector_add/
 These use model2MLIR's core filenames and array conventions. **The receipt/trace schemas and tiled
 payload support are explicit differences**, recorded in [the package contract](docs/package.md)
 and each bundle's `compatibility.json`. Merlin parser acceptance does not imply staged accelerator
-execution. Numerical execution currently uses a standard-op reference interpreter; native LLVM
-legalization is additionally checked by the optional verifier.
+execution. The reference path uses a standard-op interpreter; the shared tensor path has a
+separate native host execution gate.
 
 Saved input replay:
 
