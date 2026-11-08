@@ -1,0 +1,152 @@
+"""Small symbolic facts for logical-program ownership; no element enumeration."""
+
+from dataclasses import dataclass
+
+from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
+
+from .diagnostics import ConversionError
+
+
+@dataclass(frozen=True)
+class Linear:
+    constant: int = 0
+    programs: tuple[int, ...] = (0, 0, 0)
+
+    def __add__(self, other):
+        return Linear(self.constant + other.constant, tuple(a + b for a, b in zip(self.programs, other.programs, strict=True)))
+
+    def scale(self, amount):
+        return Linear(self.constant * amount, tuple(a * amount for a in self.programs))
+
+    def divide(self, amount):
+        if amount <= 0 or any(n % amount for n in (self.constant, *self.programs)):
+            raise ConversionError("element offsets do not align with declared logical axes")
+        return Linear(self.constant // amount, tuple(n // amount for n in self.programs))
+
+    def bounds(self, grid):
+        grid = (*grid, *((1,) * (3 - len(grid))))
+        spans = [coefficient * (size - 1) for coefficient, size in zip(self.programs, grid, strict=True)]
+        return self.constant + sum(min(0, n) for n in spans), self.constant + sum(max(0, n) for n in spans)
+
+
+def linear(value, facts, grid):
+    if value in facts:
+        return facts[value]
+    op = value.owner
+    if not hasattr(op, "name"):
+        raise ConversionError("memory index has an unproved loop/block recurrence")
+    name = op.name
+    if name == "arith.constant" and isinstance(op.value, IntegerAttr):
+        result = Linear(op.value.value.data)
+    elif name in ("arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
+        result = linear(op.operands[0], facts, grid)
+        if name == "arith.extui" and result.bounds(grid)[0] < 0:
+            raise ConversionError("unsigned address extension requires a nonnegative source")
+    elif name in ("arith.addi", "arith.subi", "arith.muli", "arith.divsi", "arith.divui"):
+        a, b = (linear(v, facts, grid) for v in op.operands)
+        if name == "arith.addi":
+            result = a + b
+        elif name == "arith.subi":
+            result = a + b.scale(-1)
+        elif name == "arith.muli" and not any(b.programs):
+            result = a.scale(b.constant)
+        elif name == "arith.muli" and not any(a.programs):
+            result = b.scale(a.constant)
+        elif name in ("arith.divsi", "arith.divui") and not any(b.programs):
+            result = a.divide(b.constant)
+        else:
+            raise ConversionError("nonlinear program indexing needs a separate ownership proof")
+    else:
+        raise ConversionError("memory index is not a qualified affine program expression", opcode=name)
+    low, high = result.bounds(grid)
+    type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+    width = getattr(getattr(type_, "width", None), "data", 64)
+    if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
+        raise ConversionError("logical address arithmetic may overflow")
+    facts[value] = result
+    return result
+
+
+def independent_tile(offsets, sizes, grid):
+    """Each nontrivial grid axis owns a distinct tensor axis with a tile stride."""
+    used = set()
+    for axis, programs in enumerate(grid):
+        if programs == 1:
+            continue
+        candidates = [i for i, (off, size) in enumerate(zip(offsets, sizes, strict=True))
+                      if size > 0 and abs(off.programs[axis]) >= size
+                      and all(c == 0 or j == axis or j >= len(grid) or grid[j] == 1
+                              for j, c in enumerate(off.programs))]
+        match = next((i for i in candidates if i not in used), None)
+        if match is None:
+            raise ConversionError("parallel write ownership is not proved; refusing to serialize conflicting programs")
+        used.add(match)
+
+
+def check_source_addresses(module, abi):
+    """Check source integer widths before upstream re-raises them to index.
+
+    Checking only recovered index arithmetic would miss an i32 overflow that
+    the source performed before pointer analysis promoted the expression.
+    """
+    def name(op):
+        return op.op_name.data if op.name == "builtin.unregistered" else op.name
+
+    function = next(op for op in module.ops if name(op) == "tt.func")
+    facts = {v: (n, n) for v, n in zip(function.regions[0].block.args[len(abi.buffers):], abi.scalar_constants, strict=True)}
+
+    def bounds(value):
+        if value in facts:
+            return facts[value]
+        op = value.owner
+        if not hasattr(op, "name"):
+            raise ConversionError("source memory index needs a loop/runtime range proof")
+        kind = name(op)
+        if kind in ("tt.get_program_id", "tt.get_num_programs"):
+            axis = op.properties["axis"].value.data
+            size = abi.grid[axis] if axis < len(abi.grid) else 1
+            low, high = (0, size - 1) if kind == "tt.get_program_id" else (size, size)
+        elif kind == "tt.make_range":
+            low, high = op.properties["start"].value.data, op.properties["end"].value.data - 1
+        elif kind == "arith.constant":
+            attr = op.properties["value"]
+            if isinstance(attr, IntegerAttr):
+                low = high = attr.value.data
+            elif isinstance(attr, DenseIntOrFPElementsAttr):
+                values = attr.get_values()
+                low, high = min(values), max(values)
+            else:
+                raise ConversionError("memory offset constant must be integer")
+        elif kind in ("tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans", "tt.reshape",
+                       "arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
+            low, high = bounds(op.operands[0])
+            if kind == "arith.extui" and low < 0:
+                raise ConversionError("source unsigned address extension needs a nonnegative range")
+        elif kind == "arith.select":
+            a, b = (bounds(v) for v in op.operands[1:])
+            low, high = min(a[0], b[0]), max(a[1], b[1])
+        elif kind in ("arith.addi", "arith.subi", "arith.muli", "arith.minsi", "arith.maxsi"):
+            a, b = (bounds(v) for v in op.operands)
+            if kind == "arith.addi":
+                low, high = a[0] + b[0], a[1] + b[1]
+            elif kind == "arith.subi":
+                low, high = a[0] - b[1], a[1] - b[0]
+            elif kind == "arith.minsi":
+                low, high = min(a[0], b[0]), min(a[1], b[1])
+            elif kind == "arith.maxsi":
+                low, high = max(a[0], b[0]), max(a[1], b[1])
+            else:
+                products = [x * y for x in a for y in b]
+                low, high = min(products), max(products)
+        else:
+            raise ConversionError("source memory arithmetic needs an integer range proof", opcode=kind)
+        type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+        width = getattr(getattr(type_, "width", None), "data", 64)
+        if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
+            raise ConversionError("source address arithmetic may overflow before upstream index promotion", opcode=kind)
+        facts[value] = low, high
+        return low, high
+
+    for op in module.walk():
+        if name(op) == "tt.addptr":
+            bounds(op.operands[1])

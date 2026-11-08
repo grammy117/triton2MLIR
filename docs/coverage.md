@@ -53,9 +53,11 @@ triton-shared; the local adapter checks the tensor ABI and memory effects.
 The existing reference frontend additionally qualifies rank-one masked tiled
 pointwise kernels with an unmapped logical grid and symbolic ownership checks.
 
-The principal work still needed for broad functional tensor coverage is:
+Multi-axis affine tiled grids now have an unmapped forall wrapper, bounds/overflow
+checks and disjoint ownership. Native tests cover tiled add/matmul plus negative
+conflicting-write and cross-tile-read cases. The principal work still needed is:
 
-1. General logical grids and memory/pointer recurrences with established output
+1. Grouped/nonlinear logical grids and memory/pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
 2. Strided/permuted/block descriptors, dynamic bounds and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.

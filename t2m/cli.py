@@ -42,7 +42,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         raise FileExistsError(out)
     work = out.with_name(out.name + ".work")
     work.mkdir(parents=True, exist_ok=False)
-    if kernel == "matrix-add":
+    grid = (1,)
+    if kernel == "tiled-add":
+        fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
+    elif kernel == "tiled-matmul":
+        fn, constants, shapes, grid = kernels.tiled_matmul, {"N": 32, "K": 16, "BM": 16, "BN": 16}, [(32, 16), (16, 32), (32, 32)], (2, 2)
+    elif kernel == "matrix-add":
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
         fn, constants, shapes = kernels.block_matmul, {"M": 16, "N": 16, "K": 16}, [(16, 16)] * 3
@@ -50,16 +55,16 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, "readwrite" if n == "out" else "read")
-                    for n, s in zip(names, shapes, strict=True)), intent=f"Source {kernel} example")
+                    for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example")
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(fn, {**{n: "*fp32" for n in names},
                                       **{n: "constexpr" for n in constants}}, constants))
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=s).astype("float32") for s in shapes]
-    if kernel == "matrix-add":
+    if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
-    elif kernel == "matmul":
+    elif kernel in ("matmul", "tiled-matmul"):
         golden = arrays[0] @ arrays[1]
     else:
         e = np.exp(arrays[0] - arrays[0].max())
@@ -107,7 +112,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured add, masked softmax or matmul after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")

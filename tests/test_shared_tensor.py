@@ -44,8 +44,8 @@ def test_dense_hex_constants_are_ieee_bits_and_preserve_signed_zero():
 
 
 def test_tensor_abi_does_not_silently_serialize_parallel_writes():
-    with pytest.raises(ValueError, match="single logical program"):
-        TensorABI("f", (TensorBuffer("out", (8,), "readwrite"),), grid=(2,))
+    with pytest.raises(ValueError, match="logical grid requires"):
+        TensorABI("f", (TensorBuffer("out", (8,), "readwrite"),), grid=(0,))
 
 
 @pytest.mark.skipif(not OPT, reason="existing shared optimizer not configured")
@@ -94,6 +94,8 @@ def test_bounds_effects_and_dot_numeric_policy_refuse(tmp_path):
                                     TensorBuffer("y", (4, 8)), TensorBuffer("out", (4, 8))))
     with pytest.raises(ConversionError, match="read-only"):
         _functionalize(parse_shared(lowered), readonly)
+    with pytest.raises(ConversionError, match="parallel write ownership"):
+        _functionalize(parse_shared(lowered), TensorABI(abi.entry, abi.buffers, grid=(2,)))
     dot_dir = tmp_path / "dot"
     dot_dir.mkdir()
     source, abi = source_case("block_matmul", dot_dir)
@@ -140,3 +142,41 @@ def test_source_accumulator_stays_in_the_contraction_recurrence(tmp_path):
     assert not np.array_equal(expected, x @ y + initial)
     (actual,), _ = execute_native(result.mlir_text, [x, y, initial, np.zeros_like(x)], tmp_path / "native", python=NATIVE)
     np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing optimizer and native environment required")
+@pytest.mark.parametrize("name", ["tiled_add", "tiled_matmul"])
+def test_logical_multiaxis_grid_keeps_tiles_and_executes(tmp_path, name):
+    from t2m.examples import tensor_kernels as kernels
+    if name == "tiled_add":
+        constants, shapes = {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3
+    else:
+        constants, shapes = {"N": 32, "K": 16, "BM": 16, "BN": 16}, [(32, 16), (16, 32), (32, 32)]
+    names = ("x", "y", "out")
+    source = tmp_path / "kernel.ttir"
+    source.write_text(capture_ttir(getattr(kernels, name),
+        {**{n: "*fp32" for n in names}, **{n: "constexpr" for n in constants}}, constants))
+    abi = TensorABI(name, tuple(TensorBuffer(n, s, "readwrite" if n == "out" else "read")
+                    for n, s in zip(names, shapes, strict=True)), grid=(2, 2))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)
+    assert "scf.forall" in result.mlir_text and "tensor.parallel_insert_slice" in result.mlir_text
+    assert 'mapping =' not in result.mlir_text
+    assert result.trace["memory"]["grid"] == "unmapped-logical-forall-with-owned-tiles"
+    rng = np.random.default_rng(18)
+    arrays = [rng.normal(size=s).astype("float32") for s in shapes]
+    (actual,), _ = execute_native(result.mlir_text, arrays, tmp_path / "native", python=NATIVE)
+    expected = arrays[0] + arrays[1] if name == "tiled_add" else arrays[0] @ arrays[1]
+    np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=2e-6)
+    with pytest.raises(ConversionError, match="bounds"):
+        _functionalize(parse_shared((tmp_path / "translation/tensor-ir/lowered.mlir").read_text()),
+                       TensorABI(name, abi.buffers, grid=(3, 2)))
+
+
+@pytest.mark.skipif(not OPT, reason="existing optimizer required")
+def test_parallel_readwrite_load_cannot_observe_another_programs_tile(tmp_path):
+    from t2m.examples.tensor_kernels import cross_tile_read
+    source = tmp_path / "kernel.ttir"
+    source.write_text(capture_ttir(cross_tile_read, {"out": "*fp32", "B": "constexpr"}, {"B": 8}))
+    abi = TensorABI("cross_tile_read", (TensorBuffer("out", (16,), "readwrite"),), grid=(2,))
+    with pytest.raises(ConversionError, match="crosses a program's.*owned tile"):
+        convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)

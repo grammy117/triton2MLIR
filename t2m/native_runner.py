@@ -42,10 +42,11 @@ def main(work):
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         pipelines = (
             "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-results-to-out-params{modify-public-functions})",
-            "builtin.module(func.func(convert-linalg-to-loops),lower-affine,convert-scf-to-cf,expand-strided-metadata,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
+            "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
             passmanager.PassManager.parse(pipeline).run(module.operation)
+        (work / "lowered-llvm.mlir").write_text(str(module))
 
         def check(operation):
             if operation.name.split(".")[0] not in ("builtin", "llvm") or operation.name == "builtin.unrealized_conversion_cast":
@@ -56,7 +57,6 @@ def main(work):
                         check(child.operation)
         check(module.operation)
         module.operation.verify()
-        (work / "lowered-llvm.mlir").write_text(str(module))
         engine = execution_engine.ExecutionEngine(module, opt_level=0)
 
         # MLIR's generic copy ABI uses two unranked strided descriptors. A small

@@ -41,8 +41,11 @@ not exhaustive numeric equivalence or Merlin/device certification.
 
 This profile currently requires:
 
-- One logical program, independent contiguous positive static tensor shapes,
-  and structured descriptor rank/strides matching the logical buffer.
+- One to three logical grid axes, independent contiguous positive static tensor
+  shapes, and structured descriptor rank/strides matching the logical buffer.
+  Multi-program rectangular writes must have disjoint affine owned tiles;
+  each nontrivial grid axis must advance a distinct tensor axis by at least
+  its tile size. Readwrite loads stay within that same owned tile.
 - Statically resolved descriptor offsets, masks and specialized integer scalar
   arguments. Source compute loops may survive; memory/pointer loop recurrences
   still require an adapter and fail explicitly.
@@ -61,8 +64,15 @@ f16/bf16/f32/f64 and integer tensor types are represented; actual dtype/op
 combinations remain qualified by native checks and the test corpus. A supported
 type name is not a claim that all operations on that type work.
 
-Larger grids must remain undecided iteration spaces with established ownership,
-not become serialized programs. Dynamic/irregular memory, aliasing, pointer
+The grid becomes an unmapped `scf.forall`; division/remainder decode logical
+coordinates from its iteration variable. Per-program tensor versions preserve
+local ordering, then publish only the owned output slices. Bounds and source
+integer widths are checked symbolically before upstream index promotion, without
+enumerating elements/programs. Native tests execute 2-D tiled add and matmul and
+refuse conflicting writes, cross-tile readwrite loads and out-of-bounds domains.
+Source numeric source/consumer qualifications remain separate.
+
+Dynamic/irregular memory, aliasing, pointer
 recurrences, scans and mixed-precision policy need further work. The upstream
 stage driver remains available for these investigations; successful stage
 conversion is not counted as complete functional-tensor/package coverage.

@@ -51,3 +51,30 @@ def accumulated_matmul(x, y, initial, out, M: tl.constexpr, N: tl.constexpr, K: 
     c = tl.load(initial + m[:, None] * N + n[None, :])
     value = tl.dot(a, b, c, input_precision="ieee")
     tl.store(out + m[:, None] * N + n[None, :], value)
+
+
+@triton.jit
+def tiled_add(x, y, out, N: tl.constexpr, BM: tl.constexpr, BN: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    i = m[:, None] * N + n[None, :]
+    tl.store(out + i, tl.load(x + i) + tl.load(y + i))
+
+
+@triton.jit
+def tiled_matmul(x, y, out, N: tl.constexpr, K: tl.constexpr, BM: tl.constexpr, BN: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    k = tl.arange(0, K)
+    a = tl.load(x + m[:, None] * K + k[None, :])
+    b = tl.load(y + k[:, None] * N + n[None, :])
+    c = tl.dot(a, b, input_precision="ieee")
+    tl.store(out + m[:, None] * N + n[None, :], c)
+
+
+@triton.jit
+def cross_tile_read(out, B: tl.constexpr):
+    i = tl.arange(0, B)
+    pid = tl.program_id(0)
+    value = tl.load(out + (1 - pid) * B + i)
+    tl.store(out + pid * B + i, value)
