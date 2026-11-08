@@ -73,6 +73,18 @@ The script records this distinction and does not claim reproducible-build attest
 All four real stage tests pass on this host with this executable, including the
 `tensor-ir` stage that retains `tt.func` and logical program IDs for our ABI adapter.
 
+The distribution builds its Triton IR library from the `triton-lang/triton-cpu`
+fork, as recorded by its pinned `.gitmodules`; this is a build-provenance difference.
+Only its standalone **shared IR optimizer** is extracted. We do not install or
+invoke that fork's target backend, CPU driver, launcher or runtime. Source capture
+still uses the pinned stock Triton wheel, and host qualification uses standard
+MLIR/LLVM through existing torch-mlir. A compiler built directly against the Meta
+survey pin remains a separate, unperformed source-build qualification.
+
+The real [corpus coverage report](coverage.md) and [functional tensor adapter](shared_tensor.md)
+supersede the initial stage-only status below. Reused arithmetic conversion now
+feeds complete, natively checked example packages, within the adapter's explicit scope.
+
 The historical Microsoft repository is archived, at surveyed revision
 `050b93ae9c737111f1ca425d793419b32427a971`. It contains both the earlier monolithic
 `TritonToLinalg` implementation and the staged experimental pipeline inherited by

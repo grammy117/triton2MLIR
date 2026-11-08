@@ -68,6 +68,45 @@ def _write_json(path, value):
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
 
 
+@dataclass(frozen=True)
+class Optimizer:
+    """One hashed tool session for a corpus; refuse executable replacement.
+
+    A session avoids rehashing a 478MB optimizer for every tiny fixture. File
+    metadata is checked before/after every invocation. This is a local workflow
+    integrity check, not an attestation against hostile filesystem mutation.
+    """
+
+    path: Path
+    record: dict
+    identity: tuple
+
+    def check(self):
+        if _identity(self.path) != self.identity:
+            raise ConversionError("optimizer changed during this tool session")
+
+
+def _identity(path):
+    stat = path.stat()
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
+def inspect_optimizer(optimizer=None):
+    if isinstance(optimizer, Optimizer):
+        optimizer.check()
+        return optimizer
+    configured = str(optimizer or os.environ.get("TRITON_SHARED_OPT", "triton-shared-opt"))
+    executable = shutil.which(configured)
+    if executable is None:
+        raise ConversionError("triton-shared-opt is unavailable; set TRITON_SHARED_OPT or --optimizer "
+                              "to an existing build; no source build is started automatically")
+    executable = Path(executable).resolve()
+    identity = _identity(executable)
+    tool = Optimizer(executable, _record(executable), identity)
+    tool.check()
+    return tool
+
+
 def lower_with_shared(source, out, *, optimizer=None, stage="structured", timeout=30,
                       output_limit=16 * 1024 * 1024, expected_optimizer_sha256=None):
     """Run a fixed audited upstream stage with bounded resources and exact hashes.
@@ -80,13 +119,8 @@ def lower_with_shared(source, out, *, optimizer=None, stage="structured", timeou
         raise ConversionError(f"unknown upstream stage {stage!r}; choose {', '.join(STAGES)}")
     if not 0 < timeout <= 60 or not 1024 <= output_limit <= 64 * 1024 * 1024:
         raise ConversionError("upstream invocation requires a 0..60s timeout and 1KiB..64MiB output bound")
-    configured = str(optimizer or os.environ.get("TRITON_SHARED_OPT", "triton-shared-opt"))
-    executable = shutil.which(configured)
-    if executable is None:
-        raise ConversionError("triton-shared-opt is unavailable; set TRITON_SHARED_OPT or --optimizer "
-                              "to an existing build; no source build is started automatically")
-    executable = Path(executable).resolve()
-    binary = _record(executable)
+    tool = inspect_optimizer(optimizer)
+    executable, binary = tool.path, tool.record
     if expected_optimizer_sha256 is not None and binary["sha256"] != expected_optimizer_sha256:
         raise ConversionError("triton-shared optimizer hash does not match the requested binary pin")
     source, out = Path(source), Path(out)
@@ -115,6 +149,7 @@ def lower_with_shared(source, out, *, optimizer=None, stage="structured", timeou
             error = "triton-shared produced no output"
     except subprocess.TimeoutExpired:
         error = f"triton-shared stage exceeded {timeout}s"
+    tool.check()
     if error:
         _write_json(out / "failure.json", {"stage": stage, "error": error,
                      "portable_conversion_complete": False, "command": command})

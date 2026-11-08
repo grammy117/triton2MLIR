@@ -23,6 +23,8 @@ SOURCE = {
     "distribution": "https://github.com/amd/Triton-XDNA",
     "revision": "7180fccfa0283456eb083a5718104da8156ae50b",
     "triton_submodule": "c8e7cc932320d05d08f39ffc99bfda32dc4f22fa",
+    "triton_ir_source_repository": "https://github.com/triton-lang/triton-cpu",
+    "triton_cpu_target_backend_used": False,
     "triton_shared_submodule": "0c27923cbcb51f1565ae39c2de0e2245babb6067",
     "build_source_attestation": "not-independently-reproduced",
 }

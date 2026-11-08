@@ -110,12 +110,26 @@ def main(argv=None):
     sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
+    coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
+    coverage.add_argument("corpus", type=Path)
+    coverage.add_argument("--out", type=Path, required=True)
+    coverage.add_argument("--optimizer", type=Path)
+    coverage.add_argument("--stage", choices=tuple(STAGES), default="tensor-ir")
+    coverage.add_argument("--limit", type=int, default=1000)
+    coverage.add_argument("--budget", type=float, default=120)
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
             summary = demo(args.out, size=args.size, block=args.block, operation=args.operation)
         elif args.command == "shared-demo":
             summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python)
+        elif args.command == "shared-coverage":
+            from .coverage import qualify_corpus
+            report = qualify_corpus(args.corpus, args.out, optimizer=args.optimizer, stage=args.stage,
+                                    limit=args.limit, budget=args.budget)
+            summary = {key: report[key] for key in ("measured_cases", "discovered_cases", "complete_corpus_measured",
+                       "stage_successes", "source_native_verified", "inventory_failures", "elapsed_seconds")}
+            summary["functional_tensor_coverage"] = report["functional_tensor_coverage"]
         elif args.command == "verify-bundle":
             receipt = verify_bundle(args.bundle)
             summary = {"bundle": str(args.bundle), "artifacts_verified": len(receipt["artifacts"])}

@@ -9,7 +9,7 @@ import sys
 import pytest
 
 from t2m.diagnostics import ConversionError
-from t2m.upstream import lower_with_shared
+from t2m.upstream import inspect_optimizer, lower_with_shared
 
 
 def process_fixture(tmp_path, body):
@@ -72,6 +72,16 @@ def test_binary_pin_mismatch_precedes_invocation(source, tmp_path):
     with pytest.raises(ConversionError, match="hash does not match"):
         lower_with_shared(source, tmp_path / "out", optimizer=tool, expected_optimizer_sha256="0" * 64)
     assert not (tmp_path / "out").exists()
+
+
+def test_hashed_tool_session_refuses_executable_replacement(source, tmp_path):
+    tool = process_fixture(tmp_path, "print('module {}')")
+    session = inspect_optimizer(tool)
+    lower_with_shared(source, tmp_path / "first", optimizer=session)
+    tool.write_text(tool.read_text() + "# changed\n")
+    with pytest.raises(ConversionError, match="optimizer changed"):
+        lower_with_shared(source, tmp_path / "second", optimizer=session)
+    assert not (tmp_path / "second").exists()
 
 
 def test_timeout_and_empty_output_fail_closed(source, tmp_path):
