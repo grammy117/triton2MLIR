@@ -31,6 +31,19 @@ class DefiniteWrites:
         if buffer.name in self.fresh and all(sizes):
             self.writes[buffer.name].append((offsets, sizes))
 
+    def snapshot(self):
+        return {name: list(values) for name, values in self.writes.items()}
+
+    def restore(self, state):
+        self.writes = {name: list(values) for name, values in state.items()}
+
+    def merge_branches(self, first, second):
+        # A store in only one branch cannot initialize the other branch. Keep
+        # boxes established on both paths; unions/intersections of differently
+        # partitioned boxes need a separate coverage rule.
+        self.writes = {name: [box for box in boxes if box in second[name]]
+                       for name, boxes in first.items()}
+
     def finish(self, *, source_id=None):
         evidence = {}
         for name, buffer in self.fresh.items():

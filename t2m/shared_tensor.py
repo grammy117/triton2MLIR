@@ -290,7 +290,7 @@ def _functionalize(module, abi):
     initialization = DefiniteWrites(abi)
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
-    writes, reads, source_loops = {}, [], []
+    writes, reads, source_loops, source_conditionals = {}, [], [], []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
     for arg, buffer in zip(function.regions[0].block.args, abi.buffers):
@@ -405,7 +405,36 @@ def _functionalize(module, abi):
         nonlocal body, loop_counter
         for op in source_block.ops:
             name = opcode(op)
-            if name == "scf.for":
+            if name == "scf.if":
+                source_conditionals.append({"source_ids": _source_ids(op.location),
+                                            "memory": "branch-results-carry-tensor-versions",
+                                            "initialization": "intersection-of-both-branch-facts"})
+                if any(isinstance(v.type, builtin.UnregisteredAttr) or
+                       isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr)
+                       for v in op.results):
+                    raise ConversionError("branch-returned pointers need a descriptor merge adapter", opcode=name)
+                incoming, before = dict(states), initialization.snapshot()
+                regions, initialized = [], []
+                previous = body
+                for source_region in (op.true_region, op.false_region):
+                    states.update(incoming)
+                    initialization.restore(before)
+                    body = Block()
+                    if source_region.blocks:
+                        if len(source_region.blocks) != 1 or source_region.block.args:
+                            raise ConversionError("conditional regions need one argument-free block", opcode=name)
+                        translate(source_region.block)
+                    else:
+                        body.add_op(scf.YieldOp(*[states[b.name] for b in writable]))
+                    regions.append(Region(body))
+                    initialized.append(initialization.snapshot())
+                body = previous
+                initialization.merge_branches(*initialized)
+                branch = append(scf.IfOp(mapping[op.cond], [*[v.type for v in op.results],
+                                                          *[b.type for b in writable]], *regions), op)
+                mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
+                states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
+            elif name == "scf.for":
                 arguments = op.body.block.args
                 if any(isinstance(v.type, builtin.UnregisteredAttr) or
                        isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr)
@@ -538,6 +567,7 @@ def _functionalize(module, abi):
                               "prov.numeric_profile": StringAttr("upstream-standard-expansion")})
     output.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
+    output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
@@ -624,6 +654,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
              "abi_difference": "readwrite buffers are incoming tensors; write-only outputs omit inputs only with complete initialization checks"}
     entry = next(iter(result.ops))
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
+    trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data)
     trace["memory"]["output_initialization"] = json.loads(entry.attributes["prov.output_initialization"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)

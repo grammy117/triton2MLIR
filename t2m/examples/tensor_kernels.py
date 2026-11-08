@@ -132,3 +132,47 @@ def transpose_store(x, out, M: tl.constexpr, N: tl.constexpr):
     n = tl.arange(0, N)[None, :]
     value = tl.load(x + m * N + n)
     tl.store(out + n * M + m, value)
+
+
+@triton.jit
+def conditional_update(x, out, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + i)
+    if tl.sum(value, axis=0) > 0:
+        tl.store(out + i, value + 3)
+    else:
+        tl.store(out + i, value * 2)
+
+
+@triton.jit
+def conditional_partial(x, out, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + i)
+    if tl.sum(value, axis=0) > 0:
+        tl.store(out + i, value + 3)
+
+
+@triton.jit
+def conditional_uninitialized(x, out, B: tl.constexpr):
+    i = tl.arange(0, B)
+    value = tl.load(x + i)
+    if tl.sum(value, axis=0) > 0:
+        tl.store(out + i, value)
+    else:
+        tl.store(out + i, tl.load(out + i) + value)
+
+
+@triton.jit
+def loop_conditional_update(x, out, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + i)
+    tl.store(out + i, value)
+    for step in range(0, 3):
+        previous = tl.load(out + i)
+        if tl.sum(value, axis=0) > 0:
+            chosen = previous + 1
+            tl.store(out + i, chosen)
+        else:
+            chosen = previous * 2
+            tl.store(out + i, chosen)
+        tl.store(out + i, chosen + 1)

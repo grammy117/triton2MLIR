@@ -51,6 +51,10 @@ This profile currently requires:
   Bounded `scf.for` regions preserve their tensor accumulators and read-only tile
   loads; writable buffers become additional loop-carried tensor versions, including
   nested read-modify-write loops. Pointer-valued loop arguments remain refused.
+- `scf.if` carries source tensor results and writable buffer versions through
+  both regions. A missing source else returns incoming memory values. Definite
+  initialization facts are intersected across branches, so a store in one arm
+  cannot justify a load or a fresh output in the other arm.
 - `readwrite` buffers retain incoming values. Fresh `write` outputs omit incoming
   arguments only after store-dominance and complete-overwrite checks. Writable
   results follow declaration order; local stores observe previous versions.
@@ -83,6 +87,11 @@ ambiguities using a bounded search; non-bijective/broadcast strides stay refused
 Tests execute transposed-weight K-loop GEMM and transposed fresh-output stores.
 The original model2MLIR MLP kernel additionally exercises transposed weights,
 bias broadcasts, activations and a masked four-row output.
+
+Conditional tests execute both data-dependent arms, preserve incoming values on
+an unwritten arm, refuse partially initialized fresh results, and combine source
+branch results with nested loop memory updates. Branch-returned pointers and
+branch-dependent address bounds still need separate descriptor/range rules.
 
 Dynamic/irregular memory, aliasing, pointer
 recurrences, scans and mixed-precision policy need further work. The upstream
