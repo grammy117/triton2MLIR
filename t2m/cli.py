@@ -55,7 +55,8 @@ def main(argv=None):
     shared.add_argument("ttir", type=Path)
     shared.add_argument("--out", type=Path, required=True)
     shared.add_argument("--optimizer", type=Path, help="existing triton-shared-opt executable")
-    shared.add_argument("--stage", choices=("structured", "tensor-compute", "full"), default="structured")
+    from .upstream import STAGES
+    shared.add_argument("--stage", choices=tuple(STAGES), default="structured")
     shared.add_argument("--optimizer-sha256", help="optional exact executable-content pin")
     shared.add_argument("--timeout", type=float, default=30)
     args = parser.parse_args(argv)

@@ -57,6 +57,32 @@ It never builds a native toolchain or uses triton-cpu/the reference CPU driver.
 
 ## Qualification and next integration
 
+### A bounded prebuilt toolchain
+
+`scripts/fetch_shared_opt.py --out .scratch/shared-opt` downloads a content-pinned
+AMD Triton-XDNA wheel, verifies its published SHA-256 and the standalone optimizer's
+SHA-256, and extracts only `triton-shared-opt`. It installs no backend and compiles
+nothing. Peak disk use is approximately 900 MB; the temporary wheel is removed.
+The moving release tag is protected by exact content pins and fails on replacement.
+Set `TRITON_SHARED_OPT=$PWD/.scratch/shared-opt/triton-shared-opt` afterward.
+
+The surveyed executable reports LLVM 24.0.0git. Its distribution source is AMD
+`7180fccfa0283456eb083a5718104da8156ae50b`, with shared submodule
+`0c27923cbcb51f1565ae39c2de0e2245babb6067`; this differs from the Meta survey pin.
+The script records this distinction and does not claim reproducible-build attestation.
+All four real stage tests pass on this host with this executable, including the
+`tensor-ir` stage that retains `tt.func` and logical program IDs for our ABI adapter.
+
+The historical Microsoft repository is archived, at surveyed revision
+`050b93ae9c737111f1ca425d793419b32427a971`. It contains both the earlier monolithic
+`TritonToLinalg` implementation and the staged experimental pipeline inherited by
+the Meta repository. These are related implementations, not independent coverage
+oracles. Prefer the staged implementation; consult old patterns/tests when a new
+pipeline fails rather than silently selecting an unqualified legacy pass.
+
+Sources: [AMD packaging](https://github.com/amd/Triton-XDNA/blob/7180fccfa0283456eb083a5718104da8156ae50b/setup.py),
+[historical Microsoft conversion](https://github.com/microsoft/triton-shared/tree/050b93ae9c737111f1ca425d793419b32427a971/lib/Conversion/TritonToLinalg).
+
 1. Run the pinned upstream fixture corpus with an existing, revision-qualified optimizer. The
    current VM has reference sources but no discovered `triton-shared-opt`; opt-in compiler tests
    skip until `TRITON_SHARED_OPT` is set. Process-transport tests are labeled separately.

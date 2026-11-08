@@ -93,6 +93,7 @@ def test_output_file_size_is_bounded(source, tmp_path):
 
 @pytest.mark.skipif(not os.environ.get("TRITON_SHARED_OPT"), reason="existing upstream optimizer not configured")
 @pytest.mark.parametrize("stage,marker", [("structured", '"tts.make_tptr"'),
+                                        ("tensor-ir", '"tt.func"'),
                                         ("tensor-compute", '"linalg.generic"'),
                                         ("full", "memref")])
 def test_real_upstream_multidimensional_fixture(tmp_path, stage, marker):

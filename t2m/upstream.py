@@ -26,6 +26,11 @@ class Stage:
 
 
 STAGES = {
+    "tensor-ir": Stage(("--triton-to-structured=use-unsafe-mask=false", "--cse",
+                        "--canonicalize", "--triton-to-unstructured",
+                        "--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
+                        "--remove-dead-values", "--canonicalize"),
+                       "tensor computation and structured memory; logical program IDs retained"),
     "structured": Stage(("--triton-to-structured=use-unsafe-mask=false",
                          "--remove-dead-values", "--canonicalize"),
                         "structured pointers and source tensor/control-flow operations"),
@@ -92,7 +97,8 @@ def lower_with_shared(source, out, *, optimizer=None, stage="structured", timeou
     saved.write_bytes(input_bytes)
     output, diagnostics = out / "lowered.mlir", out / "stderr.log"
     command = [str(executable), "--mlir-disable-threading", "--verify-each",
-               "--mlir-print-op-generic", *STAGES[stage].flags, str(saved.resolve())]
+               "--mlir-print-op-generic", "--mlir-print-debuginfo",
+               *STAGES[stage].flags, str(saved.resolve())]
     environment = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                        TMPDIR=str(out.resolve()))
     error = None
