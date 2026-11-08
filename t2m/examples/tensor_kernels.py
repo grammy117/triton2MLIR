@@ -109,3 +109,26 @@ def nested_updates(out, B: tl.constexpr):
     for outer in range(0, 2):
         for inner in range(0, 3):
             tl.store(out + i, tl.load(out + i) + 1)
+
+
+@triton.jit
+def transposed_loop_matmul(x, weight, out, N: tl.constexpr, K: tl.constexpr,
+                           BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    k = tl.arange(0, BK)
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for start in range(0, K, BK):
+        ki = start + k
+        a = tl.load(x + m[:, None] * K + ki[None, :])
+        b = tl.load(weight + n[None, :] * K + ki[:, None])
+        acc = tl.dot(a, b, acc, input_precision="ieee")
+    tl.store(out + m[:, None] * N + n[None, :], acc)
+
+
+@triton.jit
+def transpose_store(x, out, M: tl.constexpr, N: tl.constexpr):
+    m = tl.arange(0, M)[:, None]
+    n = tl.arange(0, N)[None, :]
+    value = tl.load(x + m * N + n)
+    tl.store(out + n * M + m, value)

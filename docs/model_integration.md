@@ -65,3 +65,16 @@ own binding/native evidence and bundled TTIR implementations. Its parent FX trac
 is never relabeled as correspondence for changed IR. Merlin paths requiring a
 Torch-only capture receipt still need explicit derived-receipt admission; generic
 model interface/runtime generation accepts the actual tensor ABI.
+
+## Original MLP pair
+
+`scripts/capture_mlp_pair.py` captures model2MLIR's existing `mlp_basic` and
+`mlp_basic_triton` workloads, retaining their actual initialization and weights.
+The test extracts the original standalone JIT function through Python AST,
+captures it with the pinned Triton frontend, and binds it by schema names into
+the captured model. The plain and Triton captures have byte-identical weights
+and identical eager goldens. Both complete models pass native execution against
+those goldens and the optional Merlin interface/runtime-generation check.
+
+This tests the original two-layer fused MLP plus the surrounding third layer,
+rather than only substituting a standalone matmul result for a model output.

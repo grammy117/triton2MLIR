@@ -42,7 +42,7 @@ not exhaustive numeric equivalence or Merlin/device certification.
 This profile currently requires:
 
 - One to three logical grid axes, independent contiguous positive static tensor
-  shapes, and structured descriptor rank/strides matching the logical buffer.
+  shapes, and structured descriptors matching logical strides up to an axis permutation.
   Multi-program rectangular writes must have disjoint affine owned tiles;
   each nontrivial grid axis must advance a distinct tensor axis by at least
   its tile size. Readwrite loads stay within that same owned tile.
@@ -75,6 +75,14 @@ refuse conflicting writes, cross-tile readwrite loads and out-of-bounds domains.
 Source numeric and consumer qualifications remain separate. K-loop matmul tests
 retain two source K iterations and a source accumulator inside the logical grid.
 Nested-update tests check all six memory updates rather than only a last store.
+
+Permuted structured loads/stores now extract logical slices in buffer-axis order
+and use standard `linalg.transpose` to preserve the source tile order. Masks are
+cropped/padded in the appropriate source order. Bounds resolve degenerate stride
+ambiguities using a bounded search; non-bijective/broadcast strides stay refused.
+Tests execute transposed-weight K-loop GEMM and transposed fresh-output stores.
+The original model2MLIR MLP kernel additionally exercises transposed weights,
+bias broadcasts, activations and a masked four-row output.
 
 Dynamic/irregular memory, aliasing, pointer
 recurrences, scans and mixed-precision policy need further work. The upstream

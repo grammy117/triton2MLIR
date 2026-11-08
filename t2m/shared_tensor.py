@@ -15,7 +15,7 @@ from pathlib import Path
 from xdsl.dialects import arith, builtin, cf, func, math, scf, tensor
 from xdsl.dialects.builtin import (ArrayAttr, DenseArrayBase, DYNAMIC_INDEX, IndexType,
                                   IntegerAttr, ModuleOp, NameLoc, StringAttr, TensorType)
-from xdsl.dialects.linalg.ops import GenericOp
+from xdsl.dialects.linalg.ops import GenericOp, TransposeOp
 from xdsl.ir import Block, Region
 from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
@@ -26,6 +26,7 @@ from .initialization import DefiniteWrites
 from .shared_indexing import Linear, check_source_addresses, independent_tile, linear
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
 from .upstream import inspect_optimizer, lower_with_shared
+from .views import axis_permutation, inverse_permutation
 
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
@@ -352,8 +353,8 @@ def _functionalize(module, abi):
         if any(shape) or _array(op, "order"):
             raise ConversionError("wraparound/block-pointer bounds need a qualified tensor view adapter", opcode=opcode(op))
         buffer, sizes = buffers[base], _array(op, "sizes")
-        if len(sizes) != len(buffer.shape) or strides != buffer.strides:
-            raise ConversionError("descriptor must match the declared logical rank and contiguous strides", opcode=opcode(op))
+        if len(sizes) != len(buffer.shape) or any(stride <= 0 for stride in strides):
+            raise ConversionError("descriptor requires matching logical rank and positive structured strides", opcode=opcode(op))
         coordinates = []
         for off, stride in zip(offsets, strides, strict=True):
             form = off.form.divide(stride)
@@ -362,23 +363,30 @@ def _functionalize(module, abi):
                 divisor = append(arith.ConstantOp.from_int_and_width(stride, IndexType()), op).result
                 value = append(arith.DivSIOp(value, divisor), op).result
             coordinates.append(Coordinate(form, value))
-        return buffer, sizes, tuple(coordinates)
+        return buffer, sizes, tuple(coordinates), strides
 
     def access(op, desc, store=False):
-        buffer, sizes, offsets = desc
+        buffer, sizes, offsets, strides = desc
         mask = _array(op, "static_mask_dims")
         dynamic = op.operands[2:] if store else op.operands[1:1 + _array(op, "operandSegmentSizes")[1]]
         active = resolve(op, "static_mask_dims", dynamic) if mask else sizes
         if len(active) != len(sizes) or any(n < 0 or n > size for n, size in zip(active, sizes, strict=True)):
             raise ConversionError("mask must describe a bounded rectangular prefix", opcode=opcode(op))
-        if any(off.form.bounds(abi.grid)[0] < 0 or (n and off.form.bounds(abi.grid)[1] + n > extent)
-               for off, n, extent in zip(offsets, active, buffer.shape, strict=True)):
-            raise ConversionError("active structured access exceeds the declared tensor bounds", opcode=opcode(op))
+        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, abi.grid)
+        offsets = tuple(offsets[i] for i in inverse_permutation(axes))
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
             offsets = tuple(Coordinate(Linear(0)) for _ in offsets)
-        return buffer, sizes, offsets, active
+        return buffer, sizes, offsets, active, axes
+
+    def transpose(value, axes, source):
+        if axes == tuple(range(len(axes))):
+            return value
+        shape = value.type.get_shape()
+        target = TensorType(value.type.get_element_type(), [shape[i] for i in axes])
+        empty = append(tensor.EmptyOp([], target), source).tensor
+        return append(TransposeOp(value, empty, DenseArrayBase.from_list(builtin.i64, axes)), source).results[0]
 
     def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False):
         dynamic = [off.value for off in offsets if off.form.dynamic]
@@ -449,12 +457,14 @@ def _functionalize(module, abi):
             elif name == "tts.load":
                 if op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
-                buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]])
-                initialization.load(buffer, tuple(off.form for off in offsets), active,
+                buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]])
+                physical = tuple(active[i] for i in inverse_permutation(axes))
+                initialization.load(buffer, tuple(off.form for off in offsets), physical,
                                     source_id=next(iter(_source_ids(op.location)), None), opcode=name)
                 if parallel and buffer.effect == "readwrite":
-                    reads.append((buffer.name, tuple(off.form for off in offsets), active))
-                loaded = append(slice_op(states[buffer.name], offsets, active), op).result
+                    reads.append((buffer.name, tuple(off.form for off in offsets), physical))
+                loaded = append(slice_op(states[buffer.name], offsets, physical), op).result
+                loaded = transpose(loaded, axes, op)
                 if active != sizes:
                     segments = _array(op, "operandSegmentSizes")
                     if segments[2] != 1:
@@ -471,11 +481,12 @@ def _functionalize(module, abi):
             elif name == "tts.store":
                 if op.operands[0] not in descriptors:
                     raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
-                buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]], store=True)
+                buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]], store=True)
+                physical = tuple(active[i] for i in inverse_permutation(axes))
                 if buffer.effect == "read":
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
                 if parallel:
-                    footprint = (tuple(off.form for off in offsets), active)
+                    footprint = (tuple(off.form for off in offsets), physical)
                     independent_tile(*footprint, abi.grid)
                     if buffer.name in writes and writes[buffer.name][0] != footprint:
                         raise ConversionError("parallel local stores need one established owned tile per output")
@@ -483,8 +494,9 @@ def _functionalize(module, abi):
                 value = mapping[op.operands[1]]
                 if active != sizes:
                     value = append(tensor.ExtractSliceOp.from_static_parameters(value, [0] * len(sizes), active), op).result
-                states[buffer.name] = append(slice_op(value, offsets, active, destination=states[buffer.name]), op).result
-                initialization.store(buffer, tuple(off.form for off in offsets), active)
+                value = transpose(value, inverse_permutation(axes), op)
+                states[buffer.name] = append(slice_op(value, offsets, physical, destination=states[buffer.name]), op).result
+                initialization.store(buffer, tuple(off.form for off in offsets), physical)
             elif name == "tt.return":
                 if not parallel:
                     append(func.ReturnOp(*(states[b.name] for b in writable)), op)
