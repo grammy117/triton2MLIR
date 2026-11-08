@@ -5,4 +5,3 @@ from .spec import BufferSpec, KernelSpec
 
 __all__ = ["BufferSpec", "KernelSpec", "convert"]
 __version__ = "0.1.0"
-

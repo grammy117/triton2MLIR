@@ -82,4 +82,3 @@ class KernelSpec:
     @property
     def digest(self):
         return hashlib.sha256(json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-

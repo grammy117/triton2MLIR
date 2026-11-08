@@ -53,4 +53,3 @@ def convert(ttir_or_kernel, spec):
             "consumer_status": "not-tested", "numeric_profile": "f32-source-operations-no-reassociation",
             "mlir": {"sha256": hashlib.sha256(text(module).encode()).hexdigest()}}
     return ConversionResult(module, source.text, spec, trace)
-

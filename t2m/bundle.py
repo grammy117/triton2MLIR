@@ -111,4 +111,3 @@ def verify_bundle(out):
         if sorted(order.values()) != list(range(len(order))) or set(data.files) != {f"in{i}" for i in range(len(order))}:
             raise ValueError("input ordering is incomplete")
     return receipt
-

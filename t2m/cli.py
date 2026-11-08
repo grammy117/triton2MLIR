@@ -72,4 +72,3 @@ def main(argv=None):
         return 0
     except (ValueError, FileExistsError) as exc:
         parser.exit(2, f"t2m: {exc}\n")
-

@@ -243,4 +243,3 @@ def emit(analyzed):
     transformations = [{"name": "reuse-identical-tensor-reads", "reused_reads": reused,
                          "basis": "nonvolatile independent buffers, owned-tile readwrite reads precede sole store"}]
     return module, correspondence, transformations
-

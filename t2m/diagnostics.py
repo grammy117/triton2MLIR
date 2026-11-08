@@ -6,4 +6,3 @@ class ConversionError(ValueError):
         self.opcode = opcode
         prefix = f"{source_id} ({opcode}): " if source_id else ""
         super().__init__(prefix + message)
-

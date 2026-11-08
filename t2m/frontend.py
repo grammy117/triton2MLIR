@@ -141,4 +141,3 @@ def capture(kernel, spec):
 
 def value_id(value):
     return value.id()
-
