@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triton2mlir"
+version = "0.1.0"
+description = "Provenance-preserving TTIR to portable tensor MLIR"
+requires-python = ">=3.11"
+dependencies = ["xdsl==0.68.0", "numpy>=2,<3"]
+
+[project.optional-dependencies]
+triton = ["triton==3.7.1"]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+t2m = "t2m.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["t2m*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

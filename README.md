@@ -1,0 +1,76 @@
+# triton2MLIR
+
+Translate Triton TTIR into portable tensor MLIR while retaining the kernel's original dataflow
+and intent in annotations and provenance. Exact tiles and the first tensor-memory milestone are implemented; see the
+[roadmap](ROADMAP.md) for the path through tiled GEMM, attention and broader kernel semantics,
+and [plan.md](plan.md) for the architecture.
+
+The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
+accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a
+reference interpreter, and checks it against an independent NumPy computation.
+
+```bash
+uv venv
+uv pip install -e '.[triton,dev]'
+python -m t2m demo --out out/vector_add
+python -m t2m demo --operation multiply-add --out out/multiply_add
+python -m t2m demo --size 1000 --out out/masked_add
+python -m t2m verify-bundle out/vector_add
+python -m pytest -q --basetemp=.scratch/pytest
+```
+
+Existing output directories are refused. Use a new path for each demo run. The frontend pins
+Triton 3.7.1 and xDSL 0.68.0. There is no triton-cpu, Torch or Merlin runtime dependency.
+The optional Triton wheel is needed for capture and saved-TTIR parsing, not just source capture.
+
+```text
+out/vector_add/
+  model.mlir
+  weights.safetensors                 # real empty container for a parameter-free kernel
+  weights.safetensors.manifest.json   # tensor argument bindings
+  inputs.npz, golden.npy, extra.npz, input_order.json
+  capture_receipt.json                # hashes, t2m.capture-receipt.v1
+  source.ttir, spec.json, provenance.json, compatibility.json, meta.json
+```
+
+These use model2MLIR's core filenames and array conventions. **The receipt/trace schemas and tiled
+payload support are explicit differences**, recorded in [the package contract](docs/package.md)
+and each bundle's `compatibility.json`. Merlin parser acceptance does not imply staged accelerator
+execution. Numerical execution currently uses a standard-op reference interpreter; native LLVM
+legalization is additionally checked by the optional verifier.
+
+Saved input replay:
+
+```bash
+python -m t2m lower out/vector_add/source.ttir --spec out/vector_add/spec.json --out out/replayed
+```
+
+This command writes verified MLIR and provenance. It does not fabricate example inputs/goldens
+or claim to write a full capture bundle without those artifacts.
+
+Strict native verification and legalization can use an **existing** torch-mlir environment:
+
+```bash
+python -m t2m verify-mlir out/masked_add/model.mlir --python /path/to/native-env/bin/python --lower-to-llvm
+T2M_NATIVE_PYTHON=/path/to/native-env/bin/python python -m pytest -q --basetemp=.scratch/pytest
+```
+
+This checks registered operations with unregistered dialects disabled, then optionally runs standard
+passes through bufferization and LLVM legalization. It operates on a separate copy; exported kernel
+MLIR stays at the tensor/linalg/SCF boundary. No native compiler is built or installed automatically.
+LLVM legalization does not claim native code execution or runtime-helper linking.
+
+Current support: static f32 rank-one logical tensors, positive-stride storage views and offsets,
+independent allocations, rectangular boundary masks, defined scalar/splat fills, one write or
+readwrite output, and pointwise add/subtract/multiply. Masked loads with omitted `other` are accepted
+only when pointwise definedness proves no stored lane can observe the undefined values. Partial
+readwrite results preserve incoming values. Identical nonvolatile reads share an SSA tensor value;
+source cache/eviction policies remain provenance instead of selecting physical caches.
+
+Unproved bounds, index overflow, inter-program readwrite dependencies, nonrectangular/data-dependent
+masks and nested source regions remain refused. See [R1 evidence and remaining work](docs/r1_memory.md).
+Output contains an unmapped `scf.forall`; downstream consumers choose hardware realization.
+
+`prov.family`, `prov.op`, `prov.region_id`, stable source/emission IDs and recovered access facts
+retain the source intent as operations decompose. Caller intent is labeled as a description, and
+cannot override arithmetic. The interpreter also runs with all `prov.*` attributes stripped.
