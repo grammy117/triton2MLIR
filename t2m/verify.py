@@ -21,7 +21,7 @@ with ir.Context() as context:
         pipelines = (
             "builtin.module(scf-forall-to-for)",
             "builtin.module(canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map})",
-            "builtin.module(func.func(convert-linalg-to-loops),lower-affine,convert-scf-to-cf,expand-strided-metadata,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
+            "builtin.module(func.func(convert-linalg-to-loops),lower-affine,convert-scf-to-cf,expand-strided-metadata,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
             passmanager.PassManager.parse(pipeline).run(module.operation)
