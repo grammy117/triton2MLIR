@@ -26,6 +26,9 @@ class Stage:
 
 
 STAGES = {
+    "source": Stage((), "native-verified source IR, without transformations"),
+    "inline": Stage(("--inline", "--symbol-dce"),
+                    "source helper inlining; isolated from downstream dialect extensions"),
     "tensor-ir": Stage(("--triton-to-structured=use-unsafe-mask=false", "--cse",
                         "--canonicalize", "--triton-to-unstructured",
                         "--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
@@ -97,7 +100,7 @@ def lower_with_shared(source, out, *, optimizer=None, stage="structured", timeou
     saved.write_bytes(input_bytes)
     output, diagnostics = out / "lowered.mlir", out / "stderr.log"
     command = [str(executable), "--mlir-disable-threading", "--verify-each",
-               "--mlir-print-op-generic", "--mlir-print-debuginfo",
+               "--mlir-print-op-generic", "--mlir-print-debuginfo", "--mlir-print-local-scope",
                *STAGES[stage].flags, str(saved.resolve())]
     environment = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                        TMPDIR=str(out.resolve()))

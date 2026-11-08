@@ -139,5 +139,28 @@ def capture(kernel, spec):
     return _wrap(module, context, spec, "triton-source")
 
 
+def capture_ttir(kernel, signature, constexprs):
+    """Capture general pre-layout TTIR; apply semantic ABI checks downstream.
+
+    Unlike the reference frontend's `_wrap`, this preserves regions, arbitrary
+    ranks and source types. No CPU/GPU backend compilation or launch is run.
+    """
+    _, context = _context()
+    from triton.backends.compiler import GPUTarget
+    from triton.compiler.compiler import ASTSource, make_backend
+    if set(signature) != set(kernel.arg_names):
+        raise ConversionError("capture signature must describe every source parameter")
+    target = GPUTarget("cuda", 80, 32)
+    backend = make_backend(target)
+    backend.load_dialects(context)
+    options = backend.parse_options({})
+    source = ASTSource(fn=kernel, signature=signature, constexprs=constexprs)
+    module = source.make_ir(target, options, backend.get_codegen_implementation(options),
+                            backend.get_module_map(), context)
+    if not module.verify():
+        raise ConversionError("Triton rejected captured TTIR")
+    return module.str_nodebug()
+
+
 def value_id(value):
     return value.id()
