@@ -49,8 +49,11 @@ This profile currently requires:
 - All writable buffers are incoming `readwrite` tensors, returned in declaration
   order. Multiple local stores observe previous versions. No output initialization
   or complete-overwrite proof is invented.
-- Explicit IEEE dot precision and a positive-zero accumulator. Upstream's
-  zero-matmul-then-add expansion does not qualify nonzero source accumulators.
+- Explicit IEEE dot precision. For nonzero/source-defined accumulators, the
+  adapter checks upstream's unique-use, identity-map pointwise-add pattern,
+  restores C as the contraction destination and removes the post-contraction
+  addition. Ambiguous/changed patterns fail. An adversarial native test distinguishes
+  this recurrence from zero-matmul-then-add; no GPU bitwise-equivalence claim is made.
 - Registered standard output only. Volatile observations, atomics, external
   math/assembly and hardware/layout operations require separate profiles.
 

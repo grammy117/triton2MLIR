@@ -19,14 +19,18 @@ Corpus: Meta `17f0c234ce474bee334af36e351c62eca7852836`, all 255 files in
 `2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d`.
 The [distribution/source pins](triton_shared.md) differ from the corpus revision.
 
-| Observation | Tensor stage |
-|---|---:|
-| Cases measured / discovered | 339 / 339 |
-| Native-verified source cases | 335 |
-| Successful native stage conversions | 310 |
-| Structurally inventoried cases containing `tt.func` | 323 |
-| Successful stages in that observed TTIR subset | 309 |
-| Source inventories unavailable | 1 (fp8 type unsupported by xDSL 0.68) |
+| Observation | Tensor stage | Full upstream stage |
+|---|---:|---:|
+| Cases measured / discovered | 339 / 339 | 339 / 339 |
+| Native-verified source cases | 335 | 335 |
+| Successful native stage conversions | 310 | 314 |
+| Structurally inventoried cases containing `tt.func` | 323 | 323 |
+| Successful stages in that observed TTIR subset | 309 | 306 |
+| Source inventories unavailable | 1 | 1 |
+
+The unavailable inventory uses an fp8 type unsupported by xDSL 0.68. The full
+upstream stage includes memory/ptr ABI lowering; its successes are not automatically
+better tensor-frontend candidates. Each stage has different input assumptions.
 
 These numbers measure a reusable middle layer. They are **not** functional tensor
 ABI coverage, numeric equivalence, or Merlin materialization coverage. A whole

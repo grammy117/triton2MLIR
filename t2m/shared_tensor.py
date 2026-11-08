@@ -15,12 +15,14 @@ from pathlib import Path
 from xdsl.dialects import arith, builtin, cf, func, math, scf, tensor
 from xdsl.dialects.builtin import (ArrayAttr, DenseArrayBase, DYNAMIC_INDEX, IndexType,
                                   IntegerAttr, ModuleOp, NameLoc, StringAttr, TensorType)
+from xdsl.dialects.linalg.ops import GenericOp
 from xdsl.ir import Block, Region
+from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
 from .ir import context, text
-from .upstream import lower_with_shared
+from .upstream import inspect_optimizer, lower_with_shared
 
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
@@ -208,10 +210,52 @@ def _preflight(module, abi):
                 raise ConversionError("dot precision must explicitly be IEEE; upstream drops this policy", source_id=source_id, opcode=name)
             accumulator = op.operands[2].owner
             value = getattr(accumulator, "properties", {}).get("value")
-            if (not isinstance(value, builtin.DenseIntOrFPElementsAttr) or not value.is_splat()
-                or any(v != 0 or (isinstance(v, float) and host_math.copysign(1, v) < 0) for v in value.get_values())):
-                raise ConversionError("nonzero dot accumulation needs correction of the upstream zero-then-add expansion", source_id=source_id, opcode=name)
+            positive_zero = (isinstance(value, builtin.DenseIntOrFPElementsAttr) and value.is_splat()
+                and all(v == 0 and (not isinstance(v, float) or host_math.copysign(1, v) > 0) for v in value.get_values()))
+            records[-1]["restore_matmul_accumulator"] = not positive_zero
     return records
+
+
+def _restore_accumulators(module, records):
+    """Repair the surveyed upstream zero-matmul-then-add expansion structurally.
+
+    The source accumulator belongs in the contraction's destination. Moving it
+    after the entire contraction loses the original recurrence/numeric intent.
+    Refuse changed/ambiguous patterns instead of guessing from operation order.
+    """
+    required = {r["id"] for r in records if r.get("restore_matmul_accumulator")}
+    repaired, observed = [], set()
+    for matmul in list(module.walk()):
+        ids = set(_source_ids(matmul.location)) & required
+        if opcode(matmul) not in ("linalg.matmul", "linalg.batch_matmul") or not ids:
+            continue
+        users = {use.operation for use in matmul.results[0].uses}
+        if len(users) != 1:
+            raise ConversionError("upstream accumulator expansion has ambiguous contraction uses")
+        add = next(iter(users))
+        if not isinstance(add, GenericOp) or len(add.inputs) != 2 or len(add.outputs) != 1 or len(add.results) != 1:
+            raise ConversionError("upstream nonzero accumulator expansion is not the qualified pointwise add")
+        rank = len(matmul.results[0].type.get_shape())
+        if any(m.data != AffineMap.identity(rank) for m in add.indexing_maps):
+            raise ConversionError("upstream accumulator add changed its indexing maps")
+        scalar = list(add.body.block.ops)
+        if (len(scalar) != 2 or scalar[0].name not in ("arith.addf", "arith.addi")
+            or scalar[1].name != "linalg.yield" or tuple(scalar[0].operands) not in
+                (tuple(add.body.block.args[:2]), tuple(reversed(add.body.block.args[:2])))
+            or tuple(scalar[1].operands) != tuple(scalar[0].results)):
+            raise ConversionError("upstream accumulator combiner changed")
+        accumulator = next((v for v in add.inputs if v is not matmul.results[0]), None)
+        if accumulator is None or accumulator.type != matmul.results[0].type:
+            raise ConversionError("upstream source accumulator has an incompatible tensor type")
+        matmul.operands = (*matmul.operands[:2], accumulator)
+        add.results[0].replace_all_uses_with(matmul.results[0])
+        add.parent.erase_op(add)
+        observed.update(ids)
+        repaired.append({"kind": "restore-source-contraction-accumulator", "source_ids": sorted(ids),
+                         "checked_pattern": "unique-use identity-map pointwise add of contraction and source C"})
+    if observed != required:
+        raise ConversionError("upstream did not expose every required source accumulator for restoration")
+    return repaired
 
 
 def _functionalize(module, abi):
@@ -373,7 +417,8 @@ def convert_shared(source, abi, work, *, optimizer=None):
     """
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
-    source_text = Path(source).read_text()
+    optimizer = inspect_optimizer(optimizer)
+    source_text = Path(source).read_bytes().decode("utf-8")
     intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
     parsed = parse_shared((work / "source/lowered.mlir").read_text())
     records = _preflight(parsed, abi)
@@ -390,6 +435,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
+    transformations = _restore_accumulators(lowered, records)
     result = _functionalize(lowered, abi)
     emitted = []
     source_names = {r["id"]: r["opcode"] for r in records}
@@ -403,6 +449,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
     trace = {"schema": "t2m.shared-tensor-provenance.v1", "source_operations": records,
              "emitted_operations": emitted,
+             "transformations": transformations,
              "source_sha256": hashlib.sha256(source_text.encode()).hexdigest(),
              "mlir_sha256": hashlib.sha256(text(result).encode()).hexdigest(),
              "spec": abi.as_dict(), "optimizer": intake["optimizer"],

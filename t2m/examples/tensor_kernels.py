@@ -39,3 +39,15 @@ def sequenced_outputs(x, out, second, N: tl.constexpr):
     updated = tl.load(out + i)
     tl.store(out + i, updated * 2)
     tl.store(second + i, updated - 3)
+
+
+@triton.jit
+def accumulated_matmul(x, y, initial, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr):
+    m = tl.arange(0, M)
+    n = tl.arange(0, N)
+    k = tl.arange(0, K)
+    a = tl.load(x + m[:, None] * K + k[None, :])
+    b = tl.load(y + k[:, None] * N + n[None, :])
+    c = tl.load(initial + m[:, None] * N + n[None, :])
+    value = tl.dot(a, b, c, input_precision="ieee")
+    tl.store(out + m[:, None] * N + n[None, :], value)

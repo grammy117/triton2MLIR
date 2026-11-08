@@ -102,8 +102,8 @@ def test_bounds_effects_and_dot_numeric_policy_refuse(tmp_path):
     module = parse_shared(source_ir)
     dot = next(op for op in module.walk() if opcode(op) == "tt.dot")
     dot.operands[2].owner.properties["value"] = DenseIntOrFPElementsAttr.from_list(TensorType(f32, [16, 16]), [1.0] * 256)
-    with pytest.raises(ConversionError, match="nonzero dot accumulation"):
-        _preflight(module, abi)
+    records = _preflight(module, abi)
+    assert next(r for r in records if r["opcode"] == "tt.dot")["restore_matmul_accumulator"]
     with pytest.raises(ConversionError, match="precision must explicitly be IEEE"):
         _preflight(parse_shared(source_ir.replace("inputPrecision = 2", "inputPrecision = 0")), abi)
 
@@ -118,3 +118,25 @@ def test_unregistered_standard_spelling_is_not_tensor_coverage():
     }) : () -> ()''')
     with pytest.raises(ConversionError, match="requiring a tensor/effect adapter"):
         _functionalize(module, TensorABI("f", (TensorBuffer("out", (8,), "readwrite"),)))
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared optimizer and native environment required")
+def test_source_accumulator_stays_in_the_contraction_recurrence(tmp_path):
+    from t2m.examples.tensor_kernels import accumulated_matmul
+    source = tmp_path / "accumulated.ttir"
+    source.write_text(capture_ttir(accumulated_matmul,
+        {**{n: "*fp32" for n in ("x", "y", "initial", "out")},
+         **{n: "constexpr" for n in ("M", "N", "K")}}, {"M": 16, "N": 16, "K": 16}))
+    abi = TensorABI("accumulated_matmul", tuple(TensorBuffer(n, (16, 16), "readwrite" if n == "out" else "read")
+                    for n in ("x", "y", "initial", "out")))
+    result = convert_shared(source, abi, tmp_path / "converted", optimizer=OPT)
+    assert len(result.trace["transformations"]) == 1
+    x = np.zeros((16, 16), np.float32)
+    x[:, 0], x[:, 1] = 1e20, -1e20
+    y, initial = np.ones_like(x), np.ones_like(x)
+    expected = initial.copy()
+    for k in range(16):
+        expected = expected + x[:, k:k + 1] * y[k:k + 1, :]
+    assert not np.array_equal(expected, x @ y + initial)
+    (actual,), _ = execute_native(result.mlir_text, [x, y, initial, np.zeros_like(x)], tmp_path / "native", python=NATIVE)
+    np.testing.assert_array_equal(actual, expected)
