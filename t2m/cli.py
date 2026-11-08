@@ -125,6 +125,16 @@ def main(argv=None):
     coverage.add_argument("--stage", choices=tuple(STAGES), default="tensor-ir")
     coverage.add_argument("--limit", type=int, default=1000)
     coverage.add_argument("--budget", type=float, default=120)
+    bind = commands.add_parser("bind-model", help="replace model2MLIR registered kernel calls and write a natively checked model bundle")
+    bind.add_argument("capture", type=Path)
+    bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
+    bind.add_argument("--out", type=Path, required=True)
+    bind.add_argument("--optimizer", type=Path)
+    bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
+    bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
+    bind.add_argument("--merlin-python", type=Path)
+    bind.add_argument("--rtol", type=float, default=0)
+    bind.add_argument("--atol", type=float, default=0)
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
@@ -138,6 +148,32 @@ def main(argv=None):
             summary = {key: report[key] for key in ("measured_cases", "discovered_cases", "complete_corpus_measured",
                        "stage_successes", "source_native_verified", "inventory_failures", "elapsed_seconds")}
             summary["functional_tensor_coverage"] = report["functional_tensor_coverage"]
+        elif args.command == "bind-model":
+            from .model_binding import KernelBinding
+            from .model_bundle import write_model_bundle
+            from .shared_tensor import TensorABI, convert_shared
+            configuration = json.loads(args.bindings.read_text())
+            if configuration.get("schema") != "t2m.kernel-bindings.v1" or not isinstance(configuration.get("kernels"), list):
+                raise ValueError("expected a t2m.kernel-bindings.v1 configuration")
+            if args.out.exists():
+                raise FileExistsError(args.out)
+            work = args.out.with_name(args.out.name + ".work")
+            work.mkdir(parents=True, exist_ok=False)
+            bindings = []
+            for i, item in enumerate(configuration["kernels"]):
+                abi = item["abi"]
+                if isinstance(abi, str):
+                    abi = json.loads((args.bindings.parent / abi).read_text())
+                implementation = convert_shared(args.bindings.parent / item["ttir"], TensorABI.from_dict(abi),
+                                                work / f"kernel-{i}", optimizer=args.optimizer)
+                bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
+                                               results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {})))
+            write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
+                               merlin_root=args.merlin_root, merlin_python=args.merlin_python,
+                               rtol=args.rtol, atol=args.atol)
+            summary = {"bundle": str(args.out), "native_model_comparison": "passed",
+                       "merlin_interface": "passed" if args.merlin_root else "not-tested",
+                       "merlin_target_execution": "not-performed"}
         elif args.command == "verify-bundle":
             receipt = verify_bundle(args.bundle)
             summary = {"bundle": str(args.bundle), "artifacts_verified": len(receipt["artifacts"])}

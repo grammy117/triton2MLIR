@@ -29,3 +29,39 @@ Fresh `write` results satisfy its functional interface after initialization
 checks. General mutation/schema negotiation and downstream staged payload
 support still need explicit capabilities; the binder does not silently change
 model2MLIR's registry rules or certify a target's materializer.
+
+## Checked model bundle and Merlin interface
+
+The `bind-model` command reads `t2m.kernel-bindings.v1` JSON descriptions, translates
+the supplied TTIR specializations and binds every registered call. It retains the
+parent's real weights, manifest, runtime inputs, constants, input order and golden
+byte-for-byte. A native check materializes arguments by **function argument index**,
+using the manifest and `input_order.json` rather than treating weight positions as
+runtime input positions, and compares the complete model result with the unchanged
+PyTorch golden. The initial model-bundle profile requires one captured model output.
+
+```bash
+# Existing, independent environments; no GPU or Triton CPU backend required.
+/path/to/m2m-env/bin/python scripts/capture_model_binding_demo.py --out out/model_capture
+python -m t2m shared-demo --kernel loop-matmul --out out/shared_loop_matmul --python /path/to/native-env/bin/python
+python -m t2m bind-model out/model_capture --bindings examples/model_binding.json \
+  --out out/bound_model --python /path/to/native-env/bin/python \
+  --merlin-root /path/to/merlin --merlin-python /path/to/merlin-env/bin/python \
+  --rtol 1e-5 --atol 5e-6
+python -m t2m verify-bundle out/bound_model
+```
+
+Set `TRITON_SHARED_OPT` to an existing optimizer for both conversion commands.
+The optional Merlin check invokes its actual `forward_signature` reader and
+`c_runtime.generate`: `model_gen.h`, `model_io.h`, `model_call.c` and `weights.bin`
+are retained under `consumer/runtime/` and hash-bound by the derived receipt.
+This measures real interface ingestion/runtime generation; target execution and
+staged accelerator materialization are separate unperformed checks.
+
+The new receipt is **`t2m.bound-model-receipt.v1`**. The original m2m receipt, model,
+FX trace and metadata remain under `parent/`; unchanged data artifacts satisfy
+the parent receipt without duplicating weight files. The transformed MLIR has its
+own binding/native evidence and bundled TTIR implementations. Its parent FX trace
+is never relabeled as correspondence for changed IR. Merlin paths requiring a
+Torch-only capture receipt still need explicit derived-receipt admission; generic
+model interface/runtime generation accepts the actual tensor ABI.

@@ -11,7 +11,7 @@ versioned ABI and receipt. `shared-demo` writes complete examples; `shared-tenso
 TTIR plus `--abi`, optionally `--inputs` (`in0`, `in1`, ...) and `--reference` (`out0`, `out1`, ...)
 NPZ archives. Without both arrays and references it writes IR/provenance only, with no receipt.
 
-Every declared buffer, including each writable destination's incoming value, is a tensor argument.
+In the original v1 tensor ABI every buffer, including writable incoming values, is an argument.
 Writable results follow declaration order. The function retains its kernel name. Specialized
 integer scalars are recorded in `spec.json` rather than becoming runtime tensor arguments.
 `golden.npy` stores result zero; `extra.npz` stores any additional results as `out1`, `out2`, ... .
@@ -30,6 +30,11 @@ observed load against preceding stores and proves complete coverage from bounded
 tiles and equal total cardinality. Unwritten holes or initial reads are refused. `readwrite`
 continues to preserve incoming storage values. Existing v1 read/readwrite specs retain their
 canonical serialization; package receipts continue to describe the actual materialized ABI.
+
+The [bound-model profile](model_integration.md) keeps model2MLIR's actual core
+data files, function ABI and learned weights. It uses a distinct
+`t2m.bound-model-receipt.v1`, with original capture/FX evidence retained under
+`parent/` and explicit TTIR binding/native/consumer evidence for the derived IR.
 
 ## Shared core artifacts
 

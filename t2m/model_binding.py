@@ -89,6 +89,7 @@ def bind_model(model_mlir, bindings):
     The caller can qualify the resulting serialized model with its original
     argument manifest and independently captured model outputs.
     """
+    bindings = list(bindings)
     prepared = [(b, *b.validate()) for b in bindings]
     module = parse_shared(model_mlir)
     module.verify()
@@ -155,8 +156,7 @@ def bind_model(model_mlir, bindings):
                         "model_call_attributes": {n: str(v) for n, v in call.attributes.items()},
                         "schema_operands": [n.data for n in names], "source_result_order": list(output_names),
                         "implementation_sha256": binding.implementation.trace["mlir_sha256"],
-                        "source_sha256": binding.implementation.trace["source_sha256"],
-                        "kernel_provenance": binding.implementation.trace})
+                        "source_sha256": binding.implementation.trace["source_sha256"]})
     remaining_calls = {op.callee.root_reference.data for op in module.walk() if isinstance(op, func.CallOp)}
     for symbol, function in functions.items():
         if "prov.kernel" in function.attributes:
@@ -165,7 +165,10 @@ def bind_model(model_mlir, bindings):
             module.body.block.erase_op(function)
     module.attributes["prov.kernel_binding"] = StringAttr("t2m.model-kernel-binding.v1")
     module.verify()
-    report = {"schema": "t2m.model-kernel-binding.v1", "calls": records,
+    selected = {r["implementation_sha256"] for r in records}
+    kernels = {b.implementation.trace["mlir_sha256"]: b.implementation.trace for b in bindings
+               if b.implementation.trace["mlir_sha256"] in selected}
+    report = {"schema": "t2m.model-kernel-binding.v1", "calls": records, "kernels": kernels,
               "input_model_sha256": hashlib.sha256(model_mlir.encode()).hexdigest(),
               "mlir_sha256": hashlib.sha256(text(module).encode()).hexdigest(),
               "model_abi": "unchanged", "structural_verification": "passed",
