@@ -24,6 +24,13 @@ universal source-equivalence, original Triton-execution or consumer/device-execu
 `verify-bundle` dispatches both receipt versions and verifies all artifact/source/ABI bindings.
 The full list of differences is also embedded in each package's `compatibility.json`.
 
+`t2m.shared-tensor-abi.v2` adds a `write` buffer effect for fresh model results.
+These buffers become results without incoming function arguments. Conversion checks every
+observed load against preceding stores and proves complete coverage from bounded, disjoint
+tiles and equal total cardinality. Unwritten holes or initial reads are refused. `readwrite`
+continues to preserve incoming storage values. Existing v1 read/readwrite specs retain their
+canonical serialization; package receipts continue to describe the actual materialized ABI.
+
 ## Shared core artifacts
 
 | Artifact | MVP convention |

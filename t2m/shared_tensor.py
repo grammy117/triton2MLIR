@@ -22,6 +22,7 @@ from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
 from .ir import context, text
+from .initialization import DefiniteWrites
 from .shared_indexing import Linear, check_source_addresses, independent_tile, linear
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
 from .upstream import inspect_optimizer, lower_with_shared
@@ -68,8 +69,8 @@ class TensorBuffer:
     def __post_init__(self):
         if not self.name.isidentifier() or not self.shape or any(type(n) is not int or n <= 0 for n in self.shape):
             raise ValueError("tensor buffers require a name and positive static dimensions")
-        if self.dtype not in DTYPES or self.effect not in ("read", "readwrite"):
-            raise ValueError("tensor buffers require a supported dtype and read/readwrite effect")
+        if self.dtype not in DTYPES or self.effect not in ("read", "write", "readwrite"):
+            raise ValueError("tensor buffers require a supported dtype and read/write/readwrite effect")
 
     @property
     def type(self):
@@ -96,20 +97,29 @@ class TensorABI:
         if not self.entry.isidentifier() or not self.buffers:
             raise ValueError("tensor ABI requires an entry and buffers")
         names = [b.name for b in self.buffers]
-        if len(set(names)) != len(names) or not any(b.effect == "readwrite" for b in self.buffers):
-            raise ValueError("tensor ABI requires unique names and at least one readwrite result")
+        if len(set(names)) != len(names) or not self.outputs:
+            raise ValueError("tensor ABI requires unique names and at least one writable result")
         if not 1 <= len(self.grid) <= 3 or any(type(n) is not int or not 0 < n < 2**31 for n in self.grid) or host_math.prod(self.grid) >= 2**63:
             raise ValueError("logical grid requires 1..3 positive i32 dimensions and an i64-size domain")
         if any(type(n) is not int for n in self.scalar_constants):
             raise ValueError("specialized scalar arguments must be integers")
 
     def as_dict(self):
-        return {"schema": "t2m.shared-tensor-abi.v1", **asdict(self)}
+        schema = "t2m.shared-tensor-abi.v2" if any(b.effect == "write" for b in self.buffers) else "t2m.shared-tensor-abi.v1"
+        return {"schema": schema, **asdict(self)}
+
+    @property
+    def inputs(self):
+        return tuple(b for b in self.buffers if b.effect != "write")
+
+    @property
+    def outputs(self):
+        return tuple(b for b in self.buffers if b.effect != "read")
 
     @classmethod
     def from_dict(cls, value):
         fields = dict(value)
-        if fields.pop("schema", "t2m.shared-tensor-abi.v1") != "t2m.shared-tensor-abi.v1":
+        if fields.pop("schema", "t2m.shared-tensor-abi.v1") not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2"):
             raise ValueError("unknown shared tensor ABI schema")
         fields["buffers"] = tuple(TensorBuffer(**{**b, "shape": tuple(b["shape"])}) for b in fields["buffers"])
         for name in ("grid", "scalar_constants"):
@@ -264,12 +274,19 @@ def _restore_accumulators(module, records):
 
 def _functionalize(module, abi):
     function = next(op for op in module.ops if opcode(op) == "tt.func")
-    outer = Block(arg_types=[b.type for b in abi.buffers])
-    writable = [b for b in abi.buffers if b.effect == "readwrite"]
+    outer = Block(arg_types=[b.type for b in abi.inputs])
+    writable = list(abi.outputs)
     parallel = host_math.prod(abi.grid) > 1
     body = Block(arg_types=[IndexType(), *[b.type for b in writable]]) if parallel else outer
     mapping, buffers, descriptors, facts = {}, {}, {}, {}
-    states = {b.name: arg for b, arg in zip(abi.buffers, outer.args, strict=True)}
+    states = {b.name: arg for b, arg in zip(abi.inputs, outer.args, strict=True)}
+    for buffer in abi.buffers:
+        if buffer.effect == "write":
+            empty = tensor.EmptyOp([], buffer.type)
+            outer.add_op(empty)
+            states[buffer.name] = empty.tensor
+    initial = [states[b.name] for b in writable]
+    initialization = DefiniteWrites(abi)
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
     writes, reads, source_loops = {}, [], []
@@ -433,6 +450,8 @@ def _functionalize(module, abi):
                 if op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
                 buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]])
+                initialization.load(buffer, tuple(off.form for off in offsets), active,
+                                    source_id=next(iter(_source_ids(op.location)), None), opcode=name)
                 if parallel and buffer.effect == "readwrite":
                     reads.append((buffer.name, tuple(off.form for off in offsets), active))
                 loaded = append(slice_op(states[buffer.name], offsets, active), op).result
@@ -453,7 +472,7 @@ def _functionalize(module, abi):
                 if op.operands[0] not in descriptors:
                     raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
                 buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]], store=True)
-                if buffer.effect != "readwrite":
+                if buffer.effect == "read":
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
                 if parallel:
                     footprint = (tuple(off.form for off in offsets), active)
@@ -465,6 +484,7 @@ def _functionalize(module, abi):
                 if active != sizes:
                     value = append(tensor.ExtractSliceOp.from_static_parameters(value, [0] * len(sizes), active), op).result
                 states[buffer.name] = append(slice_op(value, offsets, active, destination=states[buffer.name]), op).result
+                initialization.store(buffer, tuple(off.form for off in offsets), active)
             elif name == "tt.return":
                 if not parallel:
                     append(func.ReturnOp(*(states[b.name] for b in writable)), op)
@@ -491,7 +511,6 @@ def _functionalize(module, abi):
             tile = append(slice_op(states[buffer.name], offsets, active), source).result
             updates.add_op(slice_op(tile, offsets, active, destination=shared[buffer.name], parallel_insert=True))
         body.add_op(InParallelOp.build(regions=[Region(updates)]))
-        initial = [arg for b, arg in zip(abi.buffers, outer.args, strict=True) if b.effect == "readwrite"]
         forall = ForallOp.build(operands=[[], [], [], initial], result_types=[[v.type for v in initial]],
                   properties={"staticLowerBound": DenseArrayBase.from_list(builtin.i64, [0]),
                               "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [host_math.prod(abi.grid)]),
@@ -499,13 +518,15 @@ def _functionalize(module, abi):
         forall.attributes.update({"prov.family": StringAttr("grid"), "prov.op": StringAttr("logical_launch"),
                                   "prov.logical_grid": DenseArrayBase.from_list(builtin.i64, abi.grid)})
         outer.add_ops([forall, func.ReturnOp(*forall.results)])
-    output = func.FuncOp(abi.entry, ([b.type for b in abi.buffers], [b.type for b in writable]), Region(outer))
+    evidence = initialization.finish(source_id=next(iter(_source_ids(function.location)), None))
+    output = func.FuncOp(abi.entry, ([b.type for b in abi.inputs], [b.type for b in writable]), Region(outer))
     output.attributes.update({"prov.family": StringAttr("triton"), "prov.op": StringAttr("kernel"),
                               "prov.intent": StringAttr(abi.intent),
                               "prov.intent_origin": StringAttr("caller-description"),
                               "prov.numeric_profile": StringAttr("upstream-standard-expansion")})
     output.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
+    output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
             "offsets": [asdict(off) for off in info[0][0]], "tile_sizes": info[0][1],
@@ -588,9 +609,10 @@ def convert_shared(source, abi, work, *, optimizer=None):
                         "grid": "unmapped-logical-forall-with-owned-tiles" if host_math.prod(abi.grid) > 1 else "single-logical-program"},
              "numeric_equivalence": "requires-qualification-against-source",
              "native_verification": "not-performed", "consumer_execution": "not-performed",
-             "abi_difference": "all writable buffers are incoming tensors and returned values; no implicit uninitialized outputs"}
+             "abi_difference": "readwrite buffers are incoming tensors; write-only outputs omit inputs only with complete initialization checks"}
     entry = next(iter(result.ops))
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
+    trace["memory"]["output_initialization"] = json.loads(entry.attributes["prov.output_initialization"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)
     return SharedTensorResult(result, abi, trace, source_text)

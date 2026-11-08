@@ -51,9 +51,9 @@ This profile currently requires:
   Bounded `scf.for` regions preserve their tensor accumulators and read-only tile
   loads; writable buffers become additional loop-carried tensor versions, including
   nested read-modify-write loops. Pointer-valued loop arguments remain refused.
-- All writable buffers are incoming `readwrite` tensors, returned in declaration
-  order. Multiple local stores observe previous versions. No output initialization
-  or complete-overwrite proof is invented.
+- `readwrite` buffers retain incoming values. Fresh `write` outputs omit incoming
+  arguments only after store-dominance and complete-overwrite checks. Writable
+  results follow declaration order; local stores observe previous versions.
 - Explicit IEEE dot precision. For nonzero/source-defined accumulators, the
   adapter checks upstream's unique-use, identity-map pointwise-add pattern,
   restores C as the contraction destination and removes the post-contraction

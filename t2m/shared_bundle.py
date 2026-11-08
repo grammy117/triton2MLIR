@@ -17,8 +17,8 @@ REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.j
             "spec.json", "provenance.json", "compatibility.json", "meta.json", "execution.json"}
 DIFFERENCES = [
     "t2m.capture-receipt.v2 and TTIR provenance; not the model2MLIR FX receipt/trace schemas",
-    "entry retains the kernel name; every buffer is an incoming tensor, including writable destinations",
-    "readwrite tensor results follow buffer declaration order; source storage must be independent",
+    "entry retains the kernel name; fresh write outputs omit input storage after initialization checks",
+    "writable tensor results follow buffer declaration order; readwrite destinations retain incoming values",
     "scalar_constants specialize source integer arguments; they are not runtime tensor arguments",
     "no captured learned parameters; weights.safetensors is a genuine empty container",
     "golden.npy is result zero; extra.npz contains out1, out2, ... for any other results",
@@ -39,7 +39,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     if hashlib.sha256(source.encode()).hexdigest() != result.trace["source_sha256"]:
         raise ValueError("source changed after conversion")
     arrays, references = tuple(np.asarray(a) for a in inputs), tuple(np.asarray(a) for a in references)
-    if len(references) != sum(b.effect == "readwrite" for b in result.spec.buffers):
+    if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
     actual, execution = execute_native(mlir, arrays, work, python=python)
     for computed, golden in zip(actual, references, strict=True):
@@ -58,11 +58,11 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     (out / "source.ttir").write_text(source)
     (out / "weights.safetensors").write_bytes(struct.pack("<Q", 8) + b"{}      ")
     _json(out / "weights.safetensors.manifest.json", {str(i): {"kind": "input", "name": b.name}
-                                                    for i, b in enumerate(result.spec.buffers)})
+                                                    for i, b in enumerate(result.spec.inputs)})
     np.savez(out / "inputs.npz", **{f"in{i}": a for i, a in enumerate(arrays)})
     np.save(out / "golden.npy", references[0], allow_pickle=False)
     np.savez(out / "extra.npz", **{f"out{i}": a for i, a in enumerate(references) if i})
-    _json(out / "input_order.json", {b.name: i for i, b in enumerate(result.spec.buffers)})
+    _json(out / "input_order.json", {b.name: i for i, b in enumerate(result.spec.inputs)})
     _json(out / "spec.json", result.spec.as_dict())
     _json(out / "provenance.json", trace)
     _json(out / "execution.json", execution)
@@ -99,16 +99,16 @@ def verify_shared_bundle(out):
     execution = json.loads((out / "execution.json").read_text())
     if execution["input_sha256"] != trace["mlir_sha256"] or execution.get("reference_comparison") != "passed":
         raise ValueError("native numerical validation does not bind the packaged IR")
-    expected = {b.name: i for i, b in enumerate(spec.buffers)}
+    expected = {b.name: i for i, b in enumerate(spec.inputs)}
     if json.loads((out / "input_order.json").read_text()) != expected:
         raise ValueError("input ordering differs from the ABI")
     with np.load(out / "inputs.npz", allow_pickle=False) as data:
         if set(data.files) != {f"in{i}" for i in expected.values()}:
             raise ValueError("incomplete packaged inputs")
-        for i, buffer in enumerate(spec.buffers):
+        for i, buffer in enumerate(spec.inputs):
             if tuple(data[f"in{i}"].shape) != buffer.shape:
                 raise ValueError("packaged input shape differs from the ABI")
-    results = [b for b in spec.buffers if b.effect == "readwrite"]
+    results = spec.outputs
     primary = np.load(out / "golden.npy", allow_pickle=False)
     if tuple(primary.shape) != results[0].shape:
         raise ValueError("primary golden shape differs from the ABI")
@@ -118,6 +118,6 @@ def verify_shared_bundle(out):
         for i, buffer in enumerate(results[1:], 1):
             if tuple(extra[f"out{i}"].shape) != buffer.shape:
                 raise ValueError("additional reference shape differs from the ABI")
-    if receipt["materialized_abi"] != {"complete": True, "inputs": len(spec.buffers), "outputs": len(results)}:
+    if receipt["materialized_abi"] != {"complete": True, "inputs": len(spec.inputs), "outputs": len(results)}:
         raise ValueError("receipt ABI differs from the resolved spec")
     return receipt

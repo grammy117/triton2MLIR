@@ -163,11 +163,11 @@ def main(argv=None):
             result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer)
             if args.inputs:
                 with np.load(args.inputs, allow_pickle=False) as saved:
-                    if set(saved.files) != {f"in{i}" for i in range(len(abi.buffers))}:
+                    if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:
                         raise ValueError("inputs must contain exactly in0, in1, ... in ABI order")
                     inputs = [saved[f"in{i}"].copy() for i in range(len(saved.files))]
                 with np.load(args.reference, allow_pickle=False) as saved:
-                    if set(saved.files) != {f"out{i}" for i in range(sum(b.effect == 'readwrite' for b in abi.buffers))}:
+                    if set(saved.files) != {f"out{i}" for i in range(len(abi.outputs))}:
                         raise ValueError("reference must contain exactly out0, out1, ... in result order")
                     reference = [saved[f"out{i}"].copy() for i in range(len(saved.files))]
                 write_shared_bundle(result, args.out, inputs, reference, work=work / "native", python=args.python,
