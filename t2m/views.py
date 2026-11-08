@@ -3,14 +3,14 @@
 from .diagnostics import ConversionError
 
 
-def axis_permutation(buffer, strides, offsets, active, grid):
+def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False):
     rank = len(buffer.shape)
     if len(strides) != rank or len(offsets) != rank:
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
     empty = not all(active)
 
     def matches(source, destination):
-        low, high = offsets[source].bounds(grid)
+        low, high = offsets[destination if physical_offsets else source].bounds(grid)
         return strides[source] == buffer.strides[destination] and (
             empty or low >= 0 and high + active[source] <= buffer.shape[destination])
 

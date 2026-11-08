@@ -23,7 +23,8 @@ from xdsl.parser import Parser
 from .diagnostics import ConversionError
 from .ir import context, text
 from .initialization import DefiniteWrites
-from .shared_indexing import Linear, check_source_addresses, independent_tile, linear
+from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
+                              logical_coordinates, seed_recurrences)
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
 from .upstream import inspect_optimizer, lower_with_shared
 from .views import axis_permutation, inverse_permutation
@@ -134,6 +135,19 @@ def _array(op, name):
     if not isinstance(value, DenseArrayBase):
         raise ConversionError(f"expected structured {name} array", opcode=opcode(op))
     return tuple(value.get_values())
+
+
+def _pointer_type(type_):
+    if isinstance(type_, TensorType):
+        type_ = type_.get_element_type()
+    return isinstance(type_, builtin.UnregisteredAttr) and type_.attr_name.data == "tt.ptr"
+
+
+def _unused_pointer_initialization(use):
+    op = use.operation
+    return (op.name == "scf.for" and use.index >= 3
+            and _pointer_type(op.body.block.args[use.index - 2].type)
+            and not op.body.block.args[use.index - 2].uses)
 
 
 def _integer(value):
@@ -355,25 +369,38 @@ def _functionalize(module, abi):
         buffer, sizes = buffers[base], _array(op, "sizes")
         if len(sizes) != len(buffer.shape) or any(stride <= 0 for stride in strides):
             raise ConversionError("descriptor requires matching logical rank and positive structured strides", opcode=opcode(op))
+        total = Linear()
+        for off in offsets:
+            total = total + off.form
+        forms = logical_coordinates(total, buffer.strides, abi.grid)
+        value = None
+        if any(form.dynamic for form in forms):
+            for off in offsets:
+                term = off.value
+                if not off.form.dynamic:
+                    term = append(arith.ConstantOp.from_int_and_width(off.form.constant, IndexType()), op).result
+                value = term if value is None else append(arith.AddiOp(value, term), op).result
         coordinates = []
-        for off, stride in zip(offsets, strides, strict=True):
-            form = off.form.divide(stride)
-            value = off.value
-            if form.dynamic and stride != 1:
+        for form, stride in zip(forms, buffer.strides, strict=True):
+            coordinate = value
+            if value is not None and stride != 1:
                 divisor = append(arith.ConstantOp.from_int_and_width(stride, IndexType()), op).result
-                value = append(arith.DivSIOp(value, divisor), op).result
-            coordinates.append(Coordinate(form, value))
+                coordinate = append(arith.DivSIOp(value, divisor), op).result
+                value = append(arith.RemSIOp(value, divisor), op).result
+            coordinates.append(Coordinate(form, coordinate))
         return buffer, sizes, tuple(coordinates), strides
 
     def access(op, desc, store=False):
         buffer, sizes, offsets, strides = desc
-        mask = _array(op, "static_mask_dims")
+        legacy = opcode(op) in ("tt.load", "tt.store")
+        if legacy and len(op.operands) != (2 if store else 1):
+            raise ConversionError("post-loop pointer memory requires an unmasked recovered descriptor", opcode=opcode(op))
+        mask = () if legacy else _array(op, "static_mask_dims")
         dynamic = op.operands[2:] if store else op.operands[1:1 + _array(op, "operandSegmentSizes")[1]]
         active = resolve(op, "static_mask_dims", dynamic) if mask else sizes
         if len(active) != len(sizes) or any(n < 0 or n > size for n, size in zip(active, sizes, strict=True)):
             raise ConversionError("mask must describe a bounded rectangular prefix", opcode=opcode(op))
-        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, abi.grid)
-        offsets = tuple(offsets[i] for i in inverse_permutation(axes))
+        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, abi.grid, physical_offsets=True)
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
@@ -405,7 +432,11 @@ def _functionalize(module, abi):
         nonlocal body, loop_counter
         for op in source_block.ops:
             name = opcode(op)
-            if name == "scf.if":
+            if name == "ub.poison":
+                if len(op.results) != 1 or not _pointer_type(op.results[0].type) or not all(
+                        _unused_pointer_initialization(use) for use in op.results[0].uses):
+                    raise ConversionError("poison is observable outside unused pointer carrier initialization", opcode=name)
+            elif name == "scf.if":
                 source_conditionals.append({"source_ids": _source_ids(op.location),
                                             "memory": "branch-results-carry-tensor-versions",
                                             "initialization": "intersection-of-both-branch-facts"})
@@ -436,10 +467,16 @@ def _functionalize(module, abi):
                 states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
             elif name == "scf.for":
                 arguments = op.body.block.args
-                if any(isinstance(v.type, builtin.UnregisteredAttr) or
-                       isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr)
-                       for v in arguments):
-                    raise ConversionError("loop-carried pointers need a descriptor recurrence adapter", opcode=name)
+                pointer_slots = [i for i, v in enumerate(arguments[1:]) if _pointer_type(v.type)]
+                if any(arguments[i + 1].uses for i in pointer_slots):
+                    raise ConversionError("live pointer loop arguments need descriptor-state normalization", opcode=name)
+                if any((isinstance(v.type, builtin.UnregisteredAttr) or
+                        isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr))
+                       and not _pointer_type(v.type) for v in arguments):
+                    raise ConversionError("unqualified loop-carried source type", opcode=name)
+                if any(not isinstance(arguments[i + 1].type, TensorType) for i in pointer_slots):
+                    raise ConversionError("scalar pointer carriers need a rank-aware descriptor adapter", opcode=name)
+                kept = [i for i in range(len(arguments) - 1) if i not in pointer_slots]
                 limits = [mapping[v] for v in op.operands[:3]]
                 lb, ub, step = map(_integer, limits)
                 if step <= 0 or ub <= lb:
@@ -448,19 +485,58 @@ def _functionalize(module, abi):
                                      "step": step, "iterations": (ub - lb + step - 1) // step,
                                      "memory_effects": "functional-loop-carried-tensor-versions"})
                 memory_inputs = [states[b.name] for b in writable]
-                nested = Block(arg_types=[*[v.type for v in arguments], *[b.type for b in writable]])
-                mapping.update(zip(arguments, nested.args[:len(arguments)], strict=True))
-                states.update((b.name, v) for b, v in zip(writable, nested.args[len(arguments):], strict=True))
-                facts[nested.args[0]] = Linear(loops=((loop_counter, lb, lb + ((ub - lb - 1) // step) * step, 1),))
+                pointer_ranks = [len(arguments[i + 1].type.get_shape()) for i in pointer_slots]
+                kept_arguments = [arguments[0], *[arguments[i + 1] for i in kept]]
+                nested = Block(arg_types=[*[v.type for v in kept_arguments], *[b.type for b in writable],
+                                         *([IndexType()] * sum(pointer_ranks))])
+                mapping.update(zip(kept_arguments, nested.args[:len(kept_arguments)], strict=True))
+                states.update((b.name, v) for b, v in zip(writable, nested.args[len(kept_arguments):len(kept_arguments) + len(writable)], strict=True))
+                iterations = (ub - lb + step - 1) // step
+                facts[nested.args[0]] = Linear(lb, loops=((loop_counter, 0, iterations - 1, step),))
+                final_facts, recurrences = seed_recurrences(op, [mapping.get(v) for v in arguments], mapping,
+                                                           facts, abi.grid, lb, ub, step, _integer)
+                source_loops[-1]["index_recurrences"] = recurrences
+                identity = loop_counter
                 loop_counter += 1
                 previous, body = body, nested
                 translate(op.body.block)
                 body = previous
-                loop = append(scf.ForOp(*limits, [*[mapping[v] for v in op.operands[3:]], *memory_inputs], Region(nested)), op)
-                mapping.update(zip(op.results, loop.results[:len(op.results)], strict=True))
-                states.update((b.name, v) for b, v in zip(writable, loop.results[len(op.results):], strict=True))
+                initial = [mapping[op.operands[i + 3]] for i in kept]
+                zeros = [append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result for _ in range(sum(pointer_ranks))]
+                loop = append(scf.ForOp(*limits, [*initial, *memory_inputs, *zeros], Region(nested)), op)
+                for position, i in enumerate(kept):
+                    mapping[op.results[i]] = loop.results[position]
+                    if i in final_facts:
+                        facts[loop.results[position]] = final_facts[i]
+                states.update((b.name, v) for b, v in zip(writable, loop.results[len(kept):len(kept) + len(writable)], strict=True))
+                cursor = len(kept) + len(writable)
+                for i, rank in zip(pointer_slots, pointer_ranks, strict=True):
+                    yielded = op.body.block.last_op.operands[i]
+                    if yielded not in descriptors:
+                        raise ConversionError("returned pointer has no recovered structured descriptor", opcode=name)
+                    buffer, sizes, offsets, strides = descriptors[yielded]
+                    if len(offsets) != rank:
+                        raise ConversionError("returned pointer descriptor rank changed", opcode=name)
+                    final = []
+                    for off, value in zip(offsets, loop.results[cursor:cursor + rank], strict=True):
+                        constant = off.form.constant + sum(high * c for loop_id, _low, high, c in off.form.loops if loop_id == identity)
+                        form = Linear(constant, off.form.programs, tuple(term for term in off.form.loops if term[0] != identity))
+                        facts[value] = form
+                        final.append(Coordinate(form, value))
+                    descriptors[op.results[i]] = buffer, sizes, tuple(final), strides
+                    cursor += rank
             elif name == "scf.yield":
-                append(scf.YieldOp(*[mapping[v] for v in op.operands], *[states[b.name] for b in writable]), op)
+                values, coordinates = [], []
+                for value in op.operands:
+                    if _pointer_type(value.type):
+                        if value not in descriptors:
+                            raise ConversionError("yielded pointer lacks a structured descriptor", opcode=name)
+                        for off in descriptors[value][2]:
+                            coordinates.append(off.value if off.form.dynamic else
+                                append(arith.ConstantOp.from_int_and_width(off.form.constant, IndexType()), op).result)
+                    else:
+                        values.append(mapping[value])
+                append(scf.YieldOp(*values, *[states[b.name] for b in writable], *coordinates), op)
             elif name == "bufferization.alloc_tensor":
                 if op.operands or len(op.results) != 1 or not isinstance(op.results[0].type, TensorType) or DYNAMIC_INDEX in op.results[0].type.get_shape():
                     raise ConversionError("only static, copy-free allocation tensors can become tensor.empty", opcode=name)
@@ -483,7 +559,7 @@ def _functionalize(module, abi):
                 mapping[op.results[0]] = value
             elif name == "tts.make_tptr":
                 descriptors[op.results[0]] = descriptor(op)
-            elif name == "tts.load":
+            elif name in ("tts.load", "tt.load"):
                 if op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
                 buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]])
@@ -507,7 +583,7 @@ def _functionalize(module, abi):
                                     [size - n for size, n in zip(sizes, active, strict=True)],
                                     TensorType(buffer.type.get_element_type(), sizes)), op).result
                 mapping[op.results[0]] = loaded
-            elif name == "tts.store":
+            elif name in ("tts.store", "tt.store"):
                 if op.operands[0] not in descriptors:
                     raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
                 buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]], store=True)

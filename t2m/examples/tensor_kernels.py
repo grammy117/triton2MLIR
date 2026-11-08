@@ -176,3 +176,30 @@ def loop_conditional_update(x, out, B: tl.constexpr):
             chosen = previous * 2
             tl.store(out + i, chosen)
         tl.store(out + i, chosen + 1)
+
+
+@triton.jit
+def pointer_loop_matmul(x, y, out, N: tl.constexpr, K: tl.constexpr,
+                        BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    k = tl.arange(0, BK)
+    ap = x + m[:, None] * K + k[None, :]
+    bp = y + k[:, None] * N + n[None, :]
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for step in range(0, K // BK):
+        acc = tl.dot(tl.load(ap), tl.load(bp), acc, input_precision="ieee")
+        ap += BK
+        bp += BK * N
+    tl.store(out + m[:, None] * N + n[None, :], acc)
+
+
+@triton.jit
+def pointer_loop_after(x, out, B: tl.constexpr):
+    i = tl.arange(0, B)
+    pointer = x + i
+    acc = tl.full((B,), 0, tl.float32)
+    for step in range(2, 8, 2):
+        acc += tl.load(pointer)
+        pointer += B
+    tl.store(out + i, acc + tl.load(pointer))

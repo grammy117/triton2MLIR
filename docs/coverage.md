@@ -55,16 +55,22 @@ pointwise kernels with an unmapped logical grid and symbolic ownership checks.
 
 Multi-axis affine tiled grids now have an unmapped forall wrapper, bounds/overflow
 checks and disjoint ownership. Native tests cover tiled add/matmul plus negative
-conflicting-write and cross-tile-read cases. The principal work still needed is:
+conflicting-write and cross-tile-read cases. Further product checks now cover fresh
+result initialization, permuted accesses, branch memory merges, affine pointer
+increments and final pointer values. Actual model2MLIR calls are bound by schema
+and scalar specialization, including the original plain/Triton MLP pair. Complete
+models match their captured PyTorch goldens and pass Merlin's actual interface
+reader and C runtime generation. This does not establish target execution or
+universal op/type/attribute coverage. The principal work still needed is:
 
-1. Grouped/nonlinear logical grids and memory/pointer recurrences with established output
+1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
-2. Strided/permuted/block descriptors, dynamic bounds and irregular access with
+2. General strided/block descriptors, dynamic bounds/masks and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.
 3. Mixed-precision, cast, scan/combiner and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.
-4. Consumer model-call/parameter binding and staged support for all retained
-   payloads. Standard MLIR verification and host execution do not discharge these.
+4. Derived-receipt admission, general mutation/result schemas and staged support
+   for all retained payloads. Interface ingestion and host execution do not discharge these.
 5. Explicit effectful/backend profiles for atomics, synchronization, volatile
    observations and hardware intrinsics. Arbitrary hardware-observing assembly
    has no universal equivalent in a pure mathematical tensor ABI.

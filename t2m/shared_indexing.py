@@ -104,6 +104,75 @@ def independent_tile(offsets, sizes, grid):
         used.add(match)
 
 
+def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer):
+    """Reuse upstream's pointer-to-index recurrences, retaining source loop SSA.
+
+    Only invariant affine increments are established. Other carried values stay
+    ordinary computation; using an unproved recurrence as an address still fails.
+    """
+    iterations = (upper - lower + step - 1) // step
+    ordinal = (facts[arguments[0]] + Linear(-lower)).divide(step)
+    yielded = operation.body.block.last_op.operands
+    finals, evidence = {}, []
+    for position, (old, target, initial, result) in enumerate(zip(operation.body.block.args[1:], arguments[1:],
+                                                               operation.operands[3:], yielded, strict=True)):
+        if str(old.type) != "index" and not hasattr(old.type, "width"):
+            continue
+        delta = None
+        if result is old:
+            delta = 0
+        else:
+            producer = result.owner
+            if hasattr(producer, "name") and producer.name in ("arith.addi", "arith.subi"):
+                a, b = producer.operands
+                try:
+                    if a is old:
+                        delta = integer(mapping.get(b, b)) * (-1 if producer.name == "arith.subi" else 1)
+                    elif b is old and producer.name == "arith.addi":
+                        delta = integer(mapping.get(a, a))
+                except ConversionError:
+                    pass
+        if delta is None:
+            continue
+        try:
+            start = linear(mapping.get(initial, initial), facts, grid)
+        except ConversionError:
+            continue
+        current, final = start + ordinal.scale(delta), start + Linear(iterations * delta)
+        width = getattr(getattr(old.type, "width", None), "data", 64)
+        for form in (current, final):
+            low, high = form.bounds(grid)
+            if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
+                raise ConversionError("loop-carried address recurrence may overflow")
+        facts[target] = current
+        finals[position] = final
+        evidence.append({"carried_argument": position, "increment": delta, "iterations": iterations})
+    return finals, evidence
+
+
+def logical_coordinates(total, strides, grid):
+    """Split a flat affine base offset into bounded row-major coordinates.
+
+    Source pointer increments can land in a different dimension than the offset
+    slot chosen by pointer analysis. Exact quotient terms and bounded remainders
+    recover that structure without enumerating programs or loop iterations.
+    """
+    low, high = total.bounds(grid)
+    if not -(1 << 63) <= low <= high < 1 << 63:
+        raise ConversionError("combined pointer offsets may overflow the logical index type")
+    result, remainder = [], total
+    for stride in strides:
+        quotient = Linear(remainder.constant // stride,
+                          tuple(c // stride if c % stride == 0 else 0 for c in remainder.programs),
+                          tuple((i, lo, hi, c // stride) for i, lo, hi, c in remainder.loops if c % stride == 0))
+        remainder = remainder + quotient.scale(-stride)
+        low, high = remainder.bounds(grid)
+        if low < 0 or high >= stride:
+            raise ConversionError("flat pointer recurrence needs a non-affine coordinate/range adapter")
+        result.append(quotient)
+    return tuple(result)
+
+
 def check_source_addresses(module, abi):
     """Check source integer widths before upstream re-raises them to index.
 

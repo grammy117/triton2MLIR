@@ -28,6 +28,13 @@ The optional fetcher extracts a pinned standalone optimizer from a verified dist
 it builds nothing and installs no target backend. An existing optimizer is also supported.
 See [the package differences](docs/package.md) and [native execution scope](docs/native_execution.md).
 
+The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
+translated tensor bodies while preserving the real model ABI, weights and input bindings.
+Complete models pass native comparison against their unchanged PyTorch goldens; optional
+checks invoke Merlin's actual interface reader and C runtime generator. The original plain
+and Triton MLP workloads pass through this path. Derived receipts remain explicit, and
+staged/device execution is still unqualified.
+
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a
 reference interpreter, and checks it against an independent NumPy computation.

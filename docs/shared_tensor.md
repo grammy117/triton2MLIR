@@ -97,3 +97,16 @@ Dynamic/irregular memory, aliasing, pointer
 recurrences, scans and mixed-precision policy need further work. The upstream
 stage driver remains available for these investigations; successful stage
 conversion is not counted as complete functional-tensor/package coverage.
+
+Upstream pointer-to-index recurrences now retain invariant affine increments,
+including nonzero lower bounds, nonunit loop steps and final values used after
+the loop. Flat affine base offsets become tensor coordinates using exact
+quotient terms and bounded remainders. Tests execute pointer-increment GEMM and
+a post-loop load, and reject its out-of-bounds variant. Nonlinear or unproved
+recurrences remain refused.
+
+When upstream leaves an unused pointer carrier for a post-loop result, the
+adapter carries recovered scalar coordinates through the loop instead. An
+upstream poison initializer is discarded only when all uses initialize pointer
+arguments proved unused inside positive-trip-count loops. Observable poison
+never becomes a zero or another invented value.

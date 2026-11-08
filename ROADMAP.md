@@ -1,6 +1,6 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
-**Updated 2026-11-07.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-08.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.
@@ -48,8 +48,17 @@ all results against supplied independent references. [Package v2 differences](do
 remain explicit. The stock-wheel reference frontend remains useful for its rank-one symbolic
 mask/strided-view guarantees and regression cases.
 
-Next, extend this qualified boundary to pointer recurrences, permuted/block/irregular descriptors,
-dynamic masks/control flow and numeric profiles, then connect the consumer's actual model-call ABI.
+The [model-call binder](docs/model_integration.md) now resolves model2MLIR's typed `prov.kernel`
+calls using schema operands, scalar specializations and result ordering. Fresh outputs omit
+incoming buffers only after initialization/coverage checks. Derived model bundles retain actual
+weights, manifests, runtime inputs, constants and PyTorch goldens, with parent capture evidence
+kept separate from changed-IR provenance. Native tests cover a real `triton_op` model and the
+original `mlp_basic` / `mlp_basic_triton` pair. Merlin's actual reader and C runtime generator
+accept both model interfaces; target/staged execution remains unqualified.
+
+Permuted loads/stores, data-dependent `scf.if` memory merges and affine pointer-to-index
+recurrences now have native checks. The next boundaries are runtime masks/shapes, grouped or
+nonlinear indexing, block/irregular descriptors, general while/pointer state and numeric profiles.
 
 An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
 arguments and missing source correspondence must remain explicit. Native toolchain builds require
@@ -123,8 +132,10 @@ native host execution job using an existing/pinned toolchain, separate from the 
 **Implemented slice:** real multi-program 2-D tiled GEMM, a retained bounded K loop, IEEE source
 accumulator restoration, affine logical-grid decoding, symbolic bounds/source-width checks and
 disjoint owned output tiles. Serialized IR passes native host numerical checks. Bounded nested
-loops carry functional buffer versions. Ragged contractions, pointer-valued loop recurrences,
-grouped traversal, effectful branches/while and mixed-precision profiles remain open.
+loops carry functional buffer versions. Permuted/transposed weights, invariant affine pointer
+increments, post-loop pointer descriptors and `scf.if` memory merges are now covered. Ragged
+contractions, nonlinear/live pointer state, grouped traversal, general while and mixed-precision
+profiles remain open.
 
 Translate `scf.for`/`if` and their block/yield arguments, pointer recurrences, reduction loops and
 the source accumulator. Add multiaxis/flattened grids, batch dimensions, constant div/rem and
@@ -171,6 +182,13 @@ bounded tile state and no N×N score materialization. Report algorithm retention
 performance, since a new target may select different physical storage and tile sizes.
 
 ## R5 — model2MLIR/Merlin package and model integration
+
+**Implemented slice:** typed `prov.kernel` body binding, fresh-output initialization checks,
+learned-weight/manifest preservation, unchanged model ABI, complete native comparison against
+the parent capture, and actual Merlin interface/runtime generation. The original plain/Triton
+MLP pair passes with identical source weights and eager goldens. Derived receipts are explicit;
+Torch-only receipt admission, general mutation schemas, multiple-model-output references and
+staged/device execution remain separate gates.
 
 Converge the packaging schema with the consumer rather than merely matching filenames. Add external
 parameters/constants, multiple results, precise dtype/storage metadata, optional trace adapters,
@@ -249,12 +267,13 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 ## Immediate next work
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
-pointer-valued recurrences, permuted/block and irregular descriptors, guarded runtime shapes,
-effectful `if`/`while`, scans and explicitly qualified mixed precision. Preserve earlier mask,
+nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,
+general `while`, scans and explicitly qualified mixed precision. Preserve earlier mask,
 ownership, source accounting and native numerical regressions. Inventory all remaining failures
 against the [measured corpus](docs/coverage.md), not a claimed opcode percentage.
 
-The package writer now handles ordered multiple results and native execution, but model2MLIR's
-`prov.kernel` binding, learned parameters, consumer schema agreement and Merlin staged support
-remain separate unimplemented gates. Backend-observing operations still need the explicit
-effectful/backend-bound profiles defined above; they cannot silently become pure tensor math.
+The binder now preserves model2MLIR's actual model ABI and learned parameters, and Merlin's
+reader/runtime-generation interface is checked. Derived-receipt admission, general mutation and
+model-result schemas, plus staged/device materialization, remain explicit consumer gates.
+Backend-observing operations still need the effectful/backend-bound profiles defined above;
+they cannot silently become pure tensor math.
