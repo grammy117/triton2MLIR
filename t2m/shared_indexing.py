@@ -11,22 +11,41 @@ from .diagnostics import ConversionError
 class Linear:
     constant: int = 0
     programs: tuple[int, ...] = (0, 0, 0)
+    # (identity, lower, upper, coefficient) for bounded source loop IVs.
+    loops: tuple[tuple[int, int, int, int], ...] = ()
+
+    @property
+    def dynamic(self):
+        return any(self.programs) or bool(self.loops)
 
     def __add__(self, other):
-        return Linear(self.constant + other.constant, tuple(a + b for a, b in zip(self.programs, other.programs, strict=True)))
+        loops = {identity: (low, high, coefficient) for identity, low, high, coefficient in self.loops}
+        for identity, low, high, coefficient in other.loops:
+            if identity in loops:
+                old_low, old_high, old_coefficient = loops[identity]
+                if (low, high) != (old_low, old_high):
+                    raise ConversionError("inconsistent source loop range")
+                coefficient += old_coefficient
+            loops[identity] = low, high, coefficient
+        return Linear(self.constant + other.constant,
+                      tuple(a + b for a, b in zip(self.programs, other.programs, strict=True)),
+                      tuple((i, lo, hi, c) for i, (lo, hi, c) in sorted(loops.items()) if c))
 
     def scale(self, amount):
-        return Linear(self.constant * amount, tuple(a * amount for a in self.programs))
+        return Linear(self.constant * amount, tuple(a * amount for a in self.programs),
+                      tuple((i, lo, hi, c * amount) for i, lo, hi, c in self.loops if c * amount))
 
     def divide(self, amount):
-        if amount <= 0 or any(n % amount for n in (self.constant, *self.programs)):
+        if amount <= 0 or any(n % amount for n in (self.constant, *self.programs, *(c for _, _, _, c in self.loops))):
             raise ConversionError("element offsets do not align with declared logical axes")
-        return Linear(self.constant // amount, tuple(n // amount for n in self.programs))
+        return Linear(self.constant // amount, tuple(n // amount for n in self.programs),
+                      tuple((i, lo, hi, c // amount) for i, lo, hi, c in self.loops))
 
     def bounds(self, grid):
         grid = (*grid, *((1,) * (3 - len(grid))))
         spans = [coefficient * (size - 1) for coefficient, size in zip(self.programs, grid, strict=True)]
-        return self.constant + sum(min(0, n) for n in spans), self.constant + sum(max(0, n) for n in spans)
+        return (self.constant + sum(min(0, n) for n in spans) + sum(min(lo * c, hi * c) for _, lo, hi, c in self.loops),
+                self.constant + sum(max(0, n) for n in spans) + sum(max(lo * c, hi * c) for _, lo, hi, c in self.loops))
 
 
 def linear(value, facts, grid):
@@ -48,11 +67,11 @@ def linear(value, facts, grid):
             result = a + b
         elif name == "arith.subi":
             result = a + b.scale(-1)
-        elif name == "arith.muli" and not any(b.programs):
+        elif name == "arith.muli" and not b.dynamic:
             result = a.scale(b.constant)
-        elif name == "arith.muli" and not any(a.programs):
+        elif name == "arith.muli" and not a.dynamic:
             result = b.scale(a.constant)
-        elif name in ("arith.divsi", "arith.divui") and not any(b.programs):
+        elif name in ("arith.divsi", "arith.divui") and not b.dynamic:
             result = a.divide(b.constant)
         else:
             raise ConversionError("nonlinear program indexing needs a separate ownership proof")
@@ -69,6 +88,8 @@ def linear(value, facts, grid):
 
 def independent_tile(offsets, sizes, grid):
     """Each nontrivial grid axis owns a distinct tensor axis with a tile stride."""
+    if any(off.loops for off in offsets):
+        raise ConversionError("parallel store coordinates depend on an unfunctionalized memory loop")
     used = set()
     for axis, programs in enumerate(grid):
         if programs == 1:
@@ -100,7 +121,18 @@ def check_source_addresses(module, abi):
             return facts[value]
         op = value.owner
         if not hasattr(op, "name"):
-            raise ConversionError("source memory index needs a loop/runtime range proof")
+            parent = op.parent_op()
+            if parent is None or parent.name != "scf.for" or value.index != 0:
+                raise ConversionError("source memory index needs a loop/runtime range proof")
+            limits = [bounds(v) for v in parent.operands[:3]]
+            if any(lo != hi for lo, hi in limits):
+                raise ConversionError("source memory loop bounds need static specialization")
+            lb, ub, step = (lo for lo, _ in limits)
+            if step <= 0 or ub <= lb:
+                raise ConversionError("source memory loop needs a positive nonempty iteration domain")
+            result = lb, lb + ((ub - lb - 1) // step) * step
+            facts[value] = result
+            return result
         kind = name(op)
         if kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data

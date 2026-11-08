@@ -20,7 +20,7 @@ with ir.Context() as context:
     if lower:
         pipelines = (
             "builtin.module(scf-forall-to-for)",
-            "builtin.module(canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map})",
+            "builtin.module(canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops})",
             "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:

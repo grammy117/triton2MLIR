@@ -47,6 +47,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
     elif kernel == "tiled-matmul":
         fn, constants, shapes, grid = kernels.tiled_matmul, {"N": 32, "K": 16, "BM": 16, "BN": 16}, [(32, 16), (16, 32), (32, 32)], (2, 2)
+    elif kernel == "loop-matmul":
+        fn, constants, shapes, grid = kernels.loop_matmul, {"N": 32, "K": 32, "BM": 16, "BN": 16, "BK": 16}, [(32, 32)] * 3, (2, 2)
     elif kernel == "matrix-add":
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
@@ -64,12 +66,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     arrays = [rng.normal(size=s).astype("float32") for s in shapes]
     if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
-    elif kernel in ("matmul", "tiled-matmul"):
+    elif kernel in ("matmul", "tiled-matmul", "loop-matmul"):
         golden = arrays[0] @ arrays[1]
     else:
         e = np.exp(arrays[0] - arrays[0].max())
         golden = e / e.sum()
-    write_shared_bundle(result, out, arrays, [golden], work=work / "native", python=python, rtol=1e-5, atol=2e-6)
+    write_shared_bundle(result, out, arrays, [golden], work=work / "native", python=python,
+                        rtol=1e-5, atol=5e-6 if kernel == "loop-matmul" else 2e-6)
     return {"bundle": str(out), "kernel": fn.__name__, "native_numerical_check": "passed",
             "profile": "shared-functional-tensor", "merlin_staged_execution": "not-certified"}
 
@@ -112,7 +115,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured add, masked softmax or matmul after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")

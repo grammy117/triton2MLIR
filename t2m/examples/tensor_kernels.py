@@ -78,3 +78,34 @@ def cross_tile_read(out, B: tl.constexpr):
     pid = tl.program_id(0)
     value = tl.load(out + (1 - pid) * B + i)
     tl.store(out + pid * B + i, value)
+
+
+@triton.jit
+def loop_matmul(x, y, out, N: tl.constexpr, K: tl.constexpr,
+                BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    k = tl.arange(0, BK)
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for start in range(0, K, BK):
+        ki = start + k
+        a = tl.load(x + m[:, None] * K + ki[None, :])
+        b = tl.load(y + ki[:, None] * N + n[None, :])
+        acc = tl.dot(a, b, acc, input_precision="ieee")
+    tl.store(out + m[:, None] * N + n[None, :], acc)
+
+
+@triton.jit
+def loop_stores(x, out, B: tl.constexpr):
+    i = tl.arange(0, B)
+    tl.store(out + i, tl.load(x + i))
+    for start in range(0, 2):
+        tl.store(out + i, tl.load(out + i) + start + 1)
+
+
+@triton.jit
+def nested_updates(out, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    for outer in range(0, 2):
+        for inner in range(0, 3):
+            tl.store(out + i, tl.load(out + i) + 1)

@@ -46,9 +46,11 @@ This profile currently requires:
   Multi-program rectangular writes must have disjoint affine owned tiles;
   each nontrivial grid axis must advance a distinct tensor axis by at least
   its tile size. Readwrite loads stay within that same owned tile.
-- Statically resolved descriptor offsets, masks and specialized integer scalar
-  arguments. Source compute loops may survive; memory/pointer loop recurrences
-  still require an adapter and fail explicitly.
+- Affine descriptor offsets over logical programs and statically bounded loop
+  IVs, static rectangular masks and specialized integer scalar arguments.
+  Bounded `scf.for` regions preserve their tensor accumulators and read-only tile
+  loads; writable buffers become additional loop-carried tensor versions, including
+  nested read-modify-write loops. Pointer-valued loop arguments remain refused.
 - All writable buffers are incoming `readwrite` tensors, returned in declaration
   order. Multiple local stores observe previous versions. No output initialization
   or complete-overwrite proof is invented.
@@ -70,7 +72,9 @@ local ordering, then publish only the owned output slices. Bounds and source
 integer widths are checked symbolically before upstream index promotion, without
 enumerating elements/programs. Native tests execute 2-D tiled add and matmul and
 refuse conflicting writes, cross-tile readwrite loads and out-of-bounds domains.
-Source numeric source/consumer qualifications remain separate.
+Source numeric and consumer qualifications remain separate. K-loop matmul tests
+retain two source K iterations and a source accumulator inside the logical grid.
+Nested-update tests check all six memory updates rather than only a last store.
 
 Dynamic/irregular memory, aliasing, pointer
 recurrences, scans and mixed-precision policy need further work. The upstream

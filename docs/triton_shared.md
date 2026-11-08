@@ -95,18 +95,19 @@ pipeline fails rather than silently selecting an unqualified legacy pass.
 Sources: [AMD packaging](https://github.com/amd/Triton-XDNA/blob/7180fccfa0283456eb083a5718104da8156ae50b/setup.py),
 [historical Microsoft conversion](https://github.com/microsoft/triton-shared/tree/050b93ae9c737111f1ca425d793419b32427a971/lib/Conversion/TritonToLinalg).
 
-1. Run the pinned upstream fixture corpus with an existing, revision-qualified optimizer. The
-   current VM has reference sources but no discovered `triton-shared-opt`; opt-in compiler tests
-   skip until `TRITON_SHARED_OPT` is set. Process-transport tests are labeled separately.
+1. The pinned corpus has now been measured using the content-pinned executable described above.
+   Source revision/build provenance differences remain explicit; tests still skip on machines
+   without `TRITON_SHARED_OPT`. Process-transport tests are labeled separately.
 2. Prefer the structured/tensor-compute boundary for functionalization. The complete memref pipeline
    remains valuable as a differential reference, with its different ABI recorded explicitly.
-3. Add a descriptor-to-logical-tensor adapter and whole-launch wrapper using the declared kernel
-   ABI. Reuse upstream arithmetic/region conversion, preserving source grid and recurrence.
-4. Establish actual source-to-emitted correspondence across rewrites. Counts, textual similarity
-   and whole-function annotations do not prove per-operation attribution or work retention.
-5. Qualify numerics/effects, then emit the existing versioned capture package with its explicit
-   compatibility differences. Until then, the small stock-wheel frontend remains a working
-   contract/reference path; broad upstream coverage is not claimed as local frontend coverage.
+3. The descriptor-to-tensor adapter and whole-launch wrapper now preserve qualified static grids,
+   source computation and bounded loop recurrences. Extend that boundary to pointer-valued state,
+   dynamic/permuted/irregular descriptors and effectful branches.
+4. Source name/callsite locations now establish emission origin across rewrites. Counts, textual
+   similarity and whole-function annotations still do not prove every elimination or work retention.
+5. Complete example packages now have native numerical/effect checks and a versioned tensor ABI.
+   General type/numeric/effect coverage and consumer binding remain work; broad upstream pass
+   success is not counted as product support.
 
 No native build was started for this integration. Building a version-matched Triton/LLVM stack on
 the shared VM requires a concrete resource plan and approval under the machine rules.

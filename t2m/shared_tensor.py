@@ -2,8 +2,8 @@
 
 Upstream owns TTIR arithmetic and region decomposition. This adapter owns the
 declared logical tensor ABI, ordered memory versions, bounds, and provenance.
-The initial profile requires one logical program and statically resolved
-structured descriptors. Unsupported memory/control-flow forms fail closed.
+The profile supports affine logical grids, bounded source loops and structured
+tensor descriptors. Unsupported memory/control-flow forms fail closed.
 """
 
 from dataclasses import asdict, dataclass
@@ -272,7 +272,9 @@ def _functionalize(module, abi):
     states = {b.name: arg for b, arg in zip(abi.buffers, outer.args, strict=True)}
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
-    writes, reads = {}, []
+    writes, reads, source_loops = {}, [], []
+    launch_iv = body.args[0] if parallel else None
+    loop_counter = 0
     for arg, buffer in zip(function.regions[0].block.args, abi.buffers):
         buffers[arg] = buffer
     scalar_args = function.regions[0].block.args[len(abi.buffers):]
@@ -339,7 +341,7 @@ def _functionalize(module, abi):
         for off, stride in zip(offsets, strides, strict=True):
             form = off.form.divide(stride)
             value = off.value
-            if any(form.programs) and stride != 1:
+            if form.dynamic and stride != 1:
                 divisor = append(arith.ConstantOp.from_int_and_width(stride, IndexType()), op).result
                 value = append(arith.DivSIOp(value, divisor), op).result
             coordinates.append(Coordinate(form, value))
@@ -362,8 +364,8 @@ def _functionalize(module, abi):
         return buffer, sizes, offsets, active
 
     def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False):
-        dynamic = [off.value for off in offsets if any(off.form.programs)]
-        static = [DYNAMIC_INDEX if any(off.form.programs) else off.form.constant for off in offsets]
+        dynamic = [off.value for off in offsets if off.form.dynamic]
+        static = [DYNAMIC_INDEX if off.form.dynamic else off.form.constant for off in offsets]
         properties = {"static_offsets": DenseArrayBase.from_list(builtin.i64, static),
                       "static_sizes": DenseArrayBase.from_list(builtin.i64, sizes),
                       "static_strides": DenseArrayBase.from_list(builtin.i64, [1] * len(sizes))}
@@ -374,79 +376,109 @@ def _functionalize(module, abi):
         return cls.build(operands=[source, destination, dynamic, [], []], properties=properties,
                          result_types=[] if parallel_insert else [destination.type])
 
-    for op in function.regions[0].block.ops:
-        name = opcode(op)
-        if name == "bufferization.alloc_tensor":
-            if op.operands or len(op.results) != 1 or not isinstance(op.results[0].type, TensorType) or DYNAMIC_INDEX in op.results[0].type.get_shape():
-                raise ConversionError("only static, copy-free allocation tensors can become tensor.empty", opcode=name)
-            mapping[op.results[0]] = append(tensor.EmptyOp([], op.results[0].type), op).tensor
-        elif name in ("tt.get_program_id", "tt.get_num_programs"):
-            axis = op.properties["axis"].value.data
-            size = abi.grid[axis] if axis < len(abi.grid) else 1
-            if name == "tt.get_num_programs" or size == 1:
-                value = append(arith.ConstantOp(IntegerAttr(size if name == "tt.get_num_programs" else 0, op.results[0].type)), op).result
+    def translate(source_block):
+        nonlocal body, loop_counter
+        for op in source_block.ops:
+            name = opcode(op)
+            if name == "scf.for":
+                arguments = op.body.block.args
+                if any(isinstance(v.type, builtin.UnregisteredAttr) or
+                       isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr)
+                       for v in arguments):
+                    raise ConversionError("loop-carried pointers need a descriptor recurrence adapter", opcode=name)
+                limits = [mapping[v] for v in op.operands[:3]]
+                lb, ub, step = map(_integer, limits)
+                if step <= 0 or ub <= lb:
+                    raise ConversionError("memory/compute loop needs a positive nonempty static iteration domain", opcode=name)
+                source_loops.append({"source_ids": _source_ids(op.location), "lower": lb, "upper": ub,
+                                     "step": step, "iterations": (ub - lb + step - 1) // step,
+                                     "memory_effects": "functional-loop-carried-tensor-versions"})
+                memory_inputs = [states[b.name] for b in writable]
+                nested = Block(arg_types=[*[v.type for v in arguments], *[b.type for b in writable]])
+                mapping.update(zip(arguments, nested.args[:len(arguments)], strict=True))
+                states.update((b.name, v) for b, v in zip(writable, nested.args[len(arguments):], strict=True))
+                facts[nested.args[0]] = Linear(loops=((loop_counter, lb, lb + ((ub - lb - 1) // step) * step, 1),))
+                loop_counter += 1
+                previous, body = body, nested
+                translate(op.body.block)
+                body = previous
+                loop = append(scf.ForOp(*limits, [*[mapping[v] for v in op.operands[3:]], *memory_inputs], Region(nested)), op)
+                mapping.update(zip(op.results, loop.results[:len(op.results)], strict=True))
+                states.update((b.name, v) for b, v in zip(writable, loop.results[len(op.results):], strict=True))
+            elif name == "scf.yield":
+                append(scf.YieldOp(*[mapping[v] for v in op.operands], *[states[b.name] for b in writable]), op)
+            elif name == "bufferization.alloc_tensor":
+                if op.operands or len(op.results) != 1 or not isinstance(op.results[0].type, TensorType) or DYNAMIC_INDEX in op.results[0].type.get_shape():
+                    raise ConversionError("only static, copy-free allocation tensors can become tensor.empty", opcode=name)
+                mapping[op.results[0]] = append(tensor.EmptyOp([], op.results[0].type), op).tensor
+            elif name in ("tt.get_program_id", "tt.get_num_programs"):
+                axis = op.properties["axis"].value.data
+                size = abi.grid[axis] if axis < len(abi.grid) else 1
+                if name == "tt.get_num_programs" or size == 1:
+                    value = append(arith.ConstantOp(IntegerAttr(size if name == "tt.get_num_programs" else 0, op.results[0].type)), op).result
+                else:
+                    value = launch_iv
+                    divisor = host_math.prod(abi.grid[axis + 1:])
+                    if divisor != 1:
+                        c = append(arith.ConstantOp.from_int_and_width(divisor, IndexType()), op).result
+                        value = append(arith.DivUIOp(value, c), op).result
+                    c = append(arith.ConstantOp.from_int_and_width(size, IndexType()), op).result
+                    value = append(arith.RemUIOp(value, c), op).result
+                    value = append(arith.IndexCastOp(value, op.results[0].type), op).result
+                    facts[value] = Linear(0, tuple(int(i == axis) for i in range(3)))
+                mapping[op.results[0]] = value
+            elif name == "tts.make_tptr":
+                descriptors[op.results[0]] = descriptor(op)
+            elif name == "tts.load":
+                if op.operands[0] not in descriptors:
+                    raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
+                buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]])
+                if parallel and buffer.effect == "readwrite":
+                    reads.append((buffer.name, tuple(off.form for off in offsets), active))
+                loaded = append(slice_op(states[buffer.name], offsets, active), op).result
+                if active != sizes:
+                    segments = _array(op, "operandSegmentSizes")
+                    if segments[2] != 1:
+                        raise ConversionError("masked load without other needs defined-lane propagation", opcode=name)
+                    fill = mapping.get(op.operands[-1])
+                    if fill is None:
+                        raise ConversionError("masked load fill is not a translated scalar", opcode=name)
+                    padding = Block(arg_types=[IndexType()] * len(sizes))
+                    padding.add_op(tensor.YieldOp(fill))
+                    loaded = append(tensor.PadOp(loaded, [], [], Region(padding), [0] * len(sizes),
+                                    [size - n for size, n in zip(sizes, active, strict=True)],
+                                    TensorType(buffer.type.get_element_type(), sizes)), op).result
+                mapping[op.results[0]] = loaded
+            elif name == "tts.store":
+                if op.operands[0] not in descriptors:
+                    raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
+                buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]], store=True)
+                if buffer.effect != "readwrite":
+                    raise ConversionError("source stores into a declared read-only buffer", opcode=name)
+                if parallel:
+                    footprint = (tuple(off.form for off in offsets), active)
+                    independent_tile(*footprint, abi.grid)
+                    if buffer.name in writes and writes[buffer.name][0] != footprint:
+                        raise ConversionError("parallel local stores need one established owned tile per output")
+                    writes[buffer.name] = (footprint, offsets, op)
+                value = mapping[op.operands[1]]
+                if active != sizes:
+                    value = append(tensor.ExtractSliceOp.from_static_parameters(value, [0] * len(sizes), active), op).result
+                states[buffer.name] = append(slice_op(value, offsets, active, destination=states[buffer.name]), op).result
+            elif name == "tt.return":
+                if not parallel:
+                    append(func.ReturnOp(*(states[b.name] for b in writable)), op)
             else:
-                value = body.args[0]
-                divisor = host_math.prod(abi.grid[axis + 1:])
-                if divisor != 1:
-                    c = append(arith.ConstantOp.from_int_and_width(divisor, IndexType()), op).result
-                    value = append(arith.DivUIOp(value, c), op).result
-                c = append(arith.ConstantOp.from_int_and_width(size, IndexType()), op).result
-                value = append(arith.RemUIOp(value, c), op).result
-                value = append(arith.IndexCastOp(value, op.results[0].type), op).result
-                facts[value] = Linear(0, tuple(int(i == axis) for i in range(3)))
-            mapping[op.results[0]] = value
-        elif name == "tts.make_tptr":
-            descriptors[op.results[0]] = descriptor(op)
-        elif name == "tts.load":
-            if op.operands[0] not in descriptors:
-                raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
-            buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]])
-            if parallel and buffer.effect == "readwrite":
-                reads.append((buffer.name, tuple(off.form for off in offsets), active))
-            loaded = append(slice_op(states[buffer.name], offsets, active), op).result
-            if active != sizes:
-                segments = _array(op, "operandSegmentSizes")
-                if segments[2] != 1:
-                    raise ConversionError("masked load without other needs defined-lane propagation", opcode=name)
-                fill = mapping.get(op.operands[-1])
-                if fill is None:
-                    raise ConversionError("masked load fill is not a translated scalar", opcode=name)
-                padding = Block(arg_types=[IndexType()] * len(sizes))
-                padding.add_op(tensor.YieldOp(fill))
-                loaded = append(tensor.PadOp(loaded, [], [], Region(padding), [0] * len(sizes),
-                                [size - n for size, n in zip(sizes, active, strict=True)],
-                                TensorType(buffer.type.get_element_type(), sizes)), op).result
-            mapping[op.results[0]] = loaded
-        elif name == "tts.store":
-            if op.operands[0] not in descriptors:
-                raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
-            buffer, sizes, offsets, active = access(op, descriptors[op.operands[0]], store=True)
-            if buffer.effect != "readwrite":
-                raise ConversionError("source stores into a declared read-only buffer", opcode=name)
-            if parallel:
-                footprint = (tuple(off.form for off in offsets), active)
-                independent_tile(*footprint, abi.grid)
-                if buffer.name in writes and writes[buffer.name][0] != footprint:
-                    raise ConversionError("parallel local stores need one established owned tile per output")
-                writes[buffer.name] = (footprint, offsets, op)
-            value = mapping[op.operands[1]]
-            if active != sizes:
-                value = append(tensor.ExtractSliceOp.from_static_parameters(value, [0] * len(sizes), active), op).result
-            states[buffer.name] = append(slice_op(value, offsets, active, destination=states[buffer.name]), op).result
-        elif name == "tt.return":
-            if not parallel:
-                append(func.ReturnOp(*(states[b.name] for b in writable)), op)
-        else:
-            for child in op.walk():
-                child_name = opcode(child)
-                if child.name == "builtin.unregistered" or child_name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "scf", "cf") or child_name in ("cf.br", "cf.cond_br"):
-                    raise ConversionError("upstream left an operation requiring a tensor/effect adapter",
-                                          source_id=next(iter(_source_ids(child.location)), None), opcode=child_name)
-                if child_name == "builtin.unregistered" or any(v not in mapping and v in buffers for v in child.operands):
-                    raise ConversionError("pointer escaped structured memory conversion", opcode=child_name)
-            cloned = op.clone(value_mapper=mapping)
-            append(cloned, op)
+                for child in op.walk():
+                    child_name = opcode(child)
+                    if child.name == "builtin.unregistered" or child_name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "scf", "cf") or child_name in ("cf.br", "cf.cond_br"):
+                        raise ConversionError("upstream left an operation requiring a tensor/effect adapter",
+                                              source_id=next(iter(_source_ids(child.location)), None), opcode=child_name)
+                    if child_name == "builtin.unregistered" or any(v not in mapping and v in buffers for v in child.operands):
+                        raise ConversionError("pointer escaped structured memory conversion", opcode=child_name)
+                cloned = op.clone(value_mapper=mapping)
+                append(cloned, op)
+    translate(function.regions[0].block)
     if parallel:
         for name, offsets, active in reads:
             if name not in writes or writes[name][0] != (offsets, active):
@@ -470,14 +502,18 @@ def _functionalize(module, abi):
     output = func.FuncOp(abi.entry, ([b.type for b in abi.buffers], [b.type for b in writable]), Region(outer))
     output.attributes.update({"prov.family": StringAttr("triton"), "prov.op": StringAttr("kernel"),
                               "prov.intent": StringAttr(abi.intent),
+                              "prov.intent_origin": StringAttr("caller-description"),
                               "prov.numeric_profile": StringAttr("upstream-standard-expansion")})
     output.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
+    output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
             "offsets": [asdict(off) for off in info[0][0]], "tile_sizes": info[0][1],
             "write_independence": "distinct-axis-affine-tile-strides",
             "readwrite_reads": "owned-tile-only"} for name, info in writes.items()}, sort_keys=True))
     result = ModuleOp([output])
+    result.attributes.update({"prov.level": StringAttr("linalg-on-tensors"),
+                              "prov.frontend": StringAttr("triton2mlir.shared")})
     for op in result.walk():
         if op.name == "builtin.unregistered" or opcode(op).split(".")[0] not in ("builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf"):
             raise ConversionError("nonstandard operation survived tensor functionalization", opcode=opcode(op))
@@ -543,6 +579,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
              "source_sha256": hashlib.sha256(source_text.encode()).hexdigest(),
              "mlir_sha256": hashlib.sha256(text(result).encode()).hexdigest(),
              "spec": abi.as_dict(), "optimizer": intake["optimizer"],
+             "intent": {"description": abi.intent, "origin": "caller-description", "grants_semantics": False},
              "pipeline": stage["command"][1:-1],
              "correspondence": "upstream-preserved-source-name-locations; missing descendants are not independent dead-code proofs",
              "memory": {"bounds": "checked-static-domain-rectangular-accesses", "ordering": "functional-buffer-versions",
@@ -553,6 +590,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
              "native_verification": "not-performed", "consumer_execution": "not-performed",
              "abi_difference": "all writable buffers are incoming tensors and returned values; no implicit uninitialized outputs"}
     entry = next(iter(result.ops))
+    trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)
     return SharedTensorResult(result, abi, trace, source_text)

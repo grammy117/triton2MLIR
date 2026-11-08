@@ -20,6 +20,7 @@ export TRITON_SHARED_OPT=$PWD/.scratch/shared-opt/triton-shared-opt
 python -m t2m shared-demo --kernel softmax --out out/shared_softmax --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel matmul --out out/shared_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel tiled-matmul --out out/shared_tiled_matmul --python /path/to/native-env/bin/python
+python -m t2m shared-demo --kernel loop-matmul --out out/shared_loop_matmul --python /path/to/native-env/bin/python
 python -m t2m verify-bundle out/shared_softmax
 ```
 

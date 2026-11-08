@@ -180,3 +180,56 @@ def test_parallel_readwrite_load_cannot_observe_another_programs_tile(tmp_path):
     abi = TensorABI("cross_tile_read", (TensorBuffer("out", (16,), "readwrite"),), grid=(2,))
     with pytest.raises(ConversionError, match="crosses a program's.*owned tile"):
         convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing optimizer and native environment required")
+def test_k_loop_memory_and_accumulator_recurrence_are_retained(tmp_path):
+    from t2m.examples.tensor_kernels import loop_matmul
+    constants = {"N": 32, "K": 32, "BM": 16, "BN": 16, "BK": 16}
+    source = tmp_path / "kernel.ttir"
+    names = ("x", "y", "out")
+    source.write_text(capture_ttir(loop_matmul, {**{n: "*fp32" for n in names},
+                                              **{n: "constexpr" for n in constants}}, constants))
+    abi = TensorABI("loop_matmul", tuple(TensorBuffer(n, (32, 32), "readwrite" if n == "out" else "read")
+                    for n in names), grid=(2, 2))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)
+    assert sum(op.name == "scf.for" for op in result.module.walk()) == 1
+    assert sum(op.name == "linalg.matmul" for op in result.module.walk()) == 1
+    assert result.trace["memory"]["source_loops"][0]["iterations"] == 2
+    assert result.trace["transformations"][0]["kind"] == "restore-source-contraction-accumulator"
+    rng = np.random.default_rng(19)
+    arrays = [rng.normal(size=(32, 32)).astype("float32") for _ in names]
+    (actual,), _ = execute_native(result.mlir_text, arrays, tmp_path / "native", python=NATIVE)
+    np.testing.assert_allclose(actual, arrays[0] @ arrays[1], rtol=1e-5, atol=5e-6)
+    smaller = TensorABI(abi.entry, (abi.buffers[0], TensorBuffer("y", (16, 32)), abi.buffers[2]), grid=abi.grid)
+    with pytest.raises(ConversionError, match="bounds"):
+        from t2m.shared_tensor import _restore_accumulators
+        lowered = parse_shared((tmp_path / "translation/tensor-ir/lowered.mlir").read_text())
+        _restore_accumulators(lowered, result.trace["source_operations"])
+        _functionalize(lowered, smaller)
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing optimizer and native environment required")
+def test_loop_stores_use_loop_carried_memory_versions(tmp_path):
+    from t2m.examples.tensor_kernels import loop_stores
+    source = tmp_path / "kernel.ttir"
+    source.write_text(capture_ttir(loop_stores, {"x": "*fp32", "out": "*fp32", "B": "constexpr"}, {"B": 8}))
+    abi = TensorABI("loop_stores", (TensorBuffer("x", (8,)), TensorBuffer("out", (8,), "readwrite")))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)
+    assert any(op.name == "scf.for" for op in result.module.walk())
+    x = np.arange(8, dtype=np.float32)
+    (actual,), _ = execute_native(result.mlir_text, [x, np.full_like(x, 99)], tmp_path / "native", python=NATIVE)
+    np.testing.assert_array_equal(actual, x + 3)
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing optimizer and native environment required")
+def test_nested_loops_preserve_read_modify_write_versions_under_grid(tmp_path):
+    from t2m.examples.tensor_kernels import nested_updates
+    source = tmp_path / "kernel.ttir"
+    source.write_text(capture_ttir(nested_updates, {"out": "*fp32", "B": "constexpr"}, {"B": 8}))
+    abi = TensorABI("nested_updates", (TensorBuffer("out", (16,), "readwrite"),), grid=(2,))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT)
+    initial = np.arange(16, dtype=np.float32)
+    (actual,), _ = execute_native(result.mlir_text, [initial], tmp_path / "native", python=NATIVE)
+    np.testing.assert_array_equal(actual, initial + 6)
+    assert len(result.trace["memory"]["source_loops"]) == 2

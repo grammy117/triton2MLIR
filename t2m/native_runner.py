@@ -16,6 +16,7 @@ DTYPES = {"f32": np.float32, "f64": np.float64, "i8": np.int8,
 
 def main(work):
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_DATA, (512 * 1024 * 1024, 512 * 1024 * 1024))
     work = Path(work)
     with np.load(work / "inputs.npz", allow_pickle=False) as saved:
         arrays = [saved[f"in{i}"].copy() for i in range(len(saved.files))]
@@ -41,7 +42,7 @@ def main(work):
         name = ir.StringAttr(function.attributes["sym_name"]).value
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         pipelines = (
-            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-results-to-out-params{modify-public-functions})",
+            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions})",
             "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:

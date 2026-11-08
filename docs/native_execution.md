@@ -13,10 +13,13 @@ strided-copy callback supports the MLIR unranked-memref runtime ABI without buil
 runner-utils. Tests execute a genuinely strided copy and check multiple-result order.
 
 Execution is limited to 30 seconds, one native thread, 64 MiB of input/results and
-one million elements per generic runtime copy. The initial runner accepts f32/f64
+one million elements per generic runtime copy, with a 512 MiB data-allocation
+limit in the native subprocess. The initial runner accepts f32/f64
 and signed i8/i16/i32/i64 storage. Other types and missing native legalizations fail.
 The subprocess releases JIT allocations on exit; this is a qualification tool,
-not a persistent production runtime or a security sandbox.
+not a persistent production runtime or a security sandbox. Temporary bufferization
+permits source loops to return newly computed buffers; this does not change the
+functional tensor ABI of the exported module.
 
 Native results still need an independently supplied reference. A numerical match
 is evidence for those inputs and the stated tolerance; it does not prove all

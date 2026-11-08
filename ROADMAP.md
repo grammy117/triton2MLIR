@@ -32,17 +32,24 @@ triton-shared already implements substantial parts of R1/R2/R3/R6. Those milesto
 are acceptance requirements for this product, not instructions to reimplement all upstream passes.
 Use the [source-backed reuse map and stage adapter](docs/triton_shared.md) before adding converters.
 
-The `shared-lower` adapter now exposes structured, tensor-compute and complete upstream stages,
-with exact input/tool/output hashes, safe mask options and bounded execution. A licensed upstream
-2-D fixture is retained for real-tool qualification. The present host has the source checkout but
-no installed optimizer; three explicit integration checks remain skipped until one is configured.
+The shared tensor frontend now runs the actual upstream passes, functionalizes structured
+memory, and preserves source intent through native name/callsite locations. A content-pinned
+standalone optimizer is available without a native build or installing a target backend.
+The complete pinned Meta corpus was measured: 310/339 tensor-stage and 314/339 full-stage
+successes, with stage-specific/negative fixtures retained. These are middle-layer observations,
+not product or universal opcode coverage; see [the measured scope](docs/coverage.md).
 
-Next, qualify a version-matched upstream binary/corpus, then bridge structured descriptors and
-upstream tensor computation into the declared whole-launch tensor ABI. Concentrate new work on
-functional outputs, bounds/effects/aliasing, numeric contracts, source intent/correspondence and
-model2MLIR/Merlin packaging. Reuse upstream region/arithmetic conversion as those contracts become
-qualified. The current stock-wheel frontend remains a small working reference and compatibility
-path while the broader upstream integration is developed.
+The [functional tensor adapter](docs/shared_tensor.md) now supports static contiguous tensors,
+affine multi-axis grids with unmapped forall/ownership checks, bounded K loops and source
+accumulators, nested tensor memory versions, masked softmax, helper inlining, and multiple results.
+It reuses upstream computation conversion rather than enumerating local arithmetic handlers.
+Complete example packages execute serialized standard MLIR through native LLVM and compare
+all results against supplied independent references. [Package v2 differences](docs/package.md)
+remain explicit. The stock-wheel reference frontend remains useful for its rank-one symbolic
+mask/strided-view guarantees and regression cases.
+
+Next, extend this qualified boundary to pointer recurrences, permuted/block/irregular descriptors,
+dynamic masks/control flow and numeric profiles, then connect the consumer's actual model-call ABI.
 
 An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
 arguments and missing source correspondence must remain explicit. Native toolchain builds require
@@ -96,6 +103,11 @@ mask handling, multiple-store/local memory-version sequencing, richer source-reg
 snapshots and the typed rule registry. LLVM legalization is tested, but native host execution and
 staged consumer execution are not yet qualified.
 
+That list describes the small reference frontend. The shared path now adds rank-N contiguous
+logical tensors, specialized integer scalars, ordered multiple stores/results and bounded nested
+memory loops, with a separate tensor ABI and native execution checks. Runtime scalars, permuted
+storage and aliasing remain open across that broader profile; staged execution remains unqualified.
+
 Expand the native adapter's region/block/attribute snapshot and version probes before translating
 control flow. Refactor the small MVP dispatcher into a typed rule registry, preserving its
 failures as regression cases. Each rule declares supported types, semantic prerequisites,
@@ -107,6 +119,12 @@ and explicit refusal of unproved aliases or conflicting writes. Add a stock MLIR
 native host execution job using an existing/pinned toolchain, separate from the IR interpreter.
 
 ## R2 — tiled GEMM and source control flow
+
+**Implemented slice:** real multi-program 2-D tiled GEMM, a retained bounded K loop, IEEE source
+accumulator restoration, affine logical-grid decoding, symbolic bounds/source-width checks and
+disjoint owned output tiles. Serialized IR passes native host numerical checks. Bounded nested
+loops carry functional buffer versions. Ragged contractions, pointer-valued loop recurrences,
+grouped traversal, effectful branches/while and mixed-precision profiles remain open.
 
 Translate `scf.for`/`if` and their block/yield arguments, pointer recurrences, reduction loops and
 the source accumulator. Add multiaxis/flattened grids, batch dimensions, constant div/rem and
@@ -122,6 +140,11 @@ Numeric profiles beyond directly representable source arithmetic are individual 
 TF32/mixed precision cannot be legalized by dropping a precision attribute into provenance.
 
 ## R3 — reductions, scans and composite intent
+
+**Implemented slice:** masked f32 softmax with native inlining of private reduction/combiner
+helpers, exact negative-infinity fill, standard linalg reductions/math, and native numerical
+checks. General combiners/scans, numeric edge policies and optional composite recognition remain
+capability work; no dense attention replacement or universal reduction coverage is claimed.
 
 Translate combiner regions, multi-result reductions, arg-reduction tie rules and ordered scans.
 Add fused softmax/norm kernels with tails and source-defined NaN/empty-row behavior. Recognize
@@ -225,8 +248,13 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 
 ## Immediate next work
 
-Qualify the reusable upstream stages and their versioned input/output boundary, then adapt their
-structured/tensor results to the existing functional ABI and provenance contract. Use that path
-for multi-dimensional/region coverage while retaining the current small numerical/refusal tests.
-A native verifier and LLVM legalization path already exist; host execution is a separate remaining
-gate. The small demos stay GPU-free for fast contributor regression checks.
+Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
+pointer-valued recurrences, permuted/block and irregular descriptors, guarded runtime shapes,
+effectful `if`/`while`, scans and explicitly qualified mixed precision. Preserve earlier mask,
+ownership, source accounting and native numerical regressions. Inventory all remaining failures
+against the [measured corpus](docs/coverage.md), not a claimed opcode percentage.
+
+The package writer now handles ordered multiple results and native execution, but model2MLIR's
+`prov.kernel` binding, learned parameters, consumer schema agreement and Merlin staged support
+remain separate unimplemented gates. Backend-observing operations still need the explicit
+effectful/backend-bound profiles defined above; they cannot silently become pure tensor math.
