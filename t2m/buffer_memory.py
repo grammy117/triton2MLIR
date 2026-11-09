@@ -16,7 +16,7 @@ from .ir import context
 from .scalar_abi import guard_scalar
 from .dynamic_abi import GridExtent
 from .shape_lowering import bind_dimensions, launch_sizes, product, program_id
-from .shared_tensor import SharedParser, opcode
+from .shared_tensor import SharedParser, opcode, _source_ids
 from .standard_bufferization import MaterializeInDestinationOp, ToTensorOp
 from .standard_memref import memref_dialect
 from .standard_ops import ForallOp, InParallelOp
@@ -30,6 +30,8 @@ def parse_memory(source):
         else ToTensorOp if op is bufferization.ToTensorOp else op for op in bufferization.Bufferization.operations], []))
     ctx.allow_unregistered = True
     module = SharedParser(ctx, source).parse_module()
+    from .arith_compat import normalize_truncation_defaults
+    normalize_truncation_defaults(module, _source_ids)
     for op in module.walk():
         if op.name == "builtin.unregistered" or op.name.split(".")[0] not in {
                 "builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf", "memref", "bufferization"}:

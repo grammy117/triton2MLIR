@@ -1149,7 +1149,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
     from .histogram import expand_histograms
     histogram_reports = expand_histograms(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports:
+    from .integer_products import expand_high_products
+    product_reports = expand_high_products(middle_module, _source_ids)
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1174,11 +1176,14 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
+    from .arith_compat import normalize_truncation_defaults
+    transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
     transformations.extend(scan_reports)
     transformations.extend(pointer_control_reports)
     transformations.extend(gather_reports)
     transformations.extend(map_reports)
     transformations.extend(histogram_reports)
+    transformations.extend(product_reports)
     if isolated_events:
         transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
             "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",

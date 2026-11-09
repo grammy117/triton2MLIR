@@ -331,7 +331,8 @@ separate access/coverage proofs. Mixed unmasked rows and clipped columns also
 qualify after exact dense uniform-origin recovery. Independent ownership,
 source-word arithmetic and fresh-output checks remain intact.
 
-Latest complete regression on 2026-11-09: **660 passed**, four legacy block-pointer
+Complete regression after the grid/event extension on 2026-11-09:
+**718 passed**, four legacy block-pointer
 warnings, with all existing native/model2MLIR/Merlin environments enabled.
 The tensor histogram demo at `out/histogram-tensor/` passes separate compiler
 staging/native execution under `out/histogram-tensor-merlin/`, with all 38
@@ -358,6 +359,17 @@ and tiled memory in `for`/`while`, raw fill/result bits through native and actua
 Merlin libraries, and rehashed evidence/type tampering. A real model2MLIR GEMM
 package also qualifies branch-local tile contractions and K loops with original
 weights and independent PyTorch goldens retained.
+
+The subsequent [unsigned high-product/Philox extension](integer_products.md)
+passes 35 new focused cases and the 21 existing shared-tensor/buffer regressions.
+It adapts Ascend's standard extended unsigned multiply, retaining i32/i64 word
+semantics and parallel tensor dataflow. Original Triton integer Philox rounds
+execute through actual Merlin libraries with runtime seed/counter bindings and
+all four results, against an independent reference checked by three published
+known-answer vectors. A checked neutral-default adapter resolves native
+`arith.trunci overflow<none>` versus the older xDSL schema; poison-producing
+flags still refuse. The complete 718-case run predates this arithmetic addition;
+the 35+21 results qualify the changed production path separately.
 
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer

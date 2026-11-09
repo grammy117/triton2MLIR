@@ -18,6 +18,9 @@ runtime output coverage. Source-word memory inside structured regions also
 uses typed native event templates, retaining branch/loop placement and exact
 fills. The explicit v2 evidence chain preserves both native stage reports;
 see [source-word memory](docs/source_words.md).
+Unsigned i32/i64 high products and Triton's integer Philox now also execute
+through Merlin, preserving source word arithmetic and runtime seed/counter
+inputs in standard MLIR; see [the numeric contract](docs/integer_products.md).
 
 ## The product contract
 

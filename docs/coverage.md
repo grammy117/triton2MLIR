@@ -5,6 +5,12 @@ operation definitions, extracted with TableGen and partitioned by semantic
 family. It establishes an opcode denominator, not universal operation, type,
 attribute or composition support. Standard dialects remain additional gates.
 
+[Unsigned high products](integer_products.md) now qualify i32/i64 scalar and
+tiled words in all three memory profiles through actual Merlin libraries.
+Triton's original Philox rounds also retain runtime seeds/counters and four
+exact result streams, checked against an independent published-vector-tested
+reference. All 35 focused cases pass; other RNG/numeric policies remain open.
+
 [Actual logical-grid bounds](logical_grid_bounds.md) now prove unmasked dense
 unit rows and exact runtime output partitions, including mixed clipped columns.
 The initial focused suite passed 87 cases with two strict expected failures.

@@ -27,7 +27,7 @@ implementation paths and open requirements.
 | Structured descriptors | `advance`, `make_tensor_ptr`, `make_tensor_descriptor`, `descriptor_load`, `descriptor_store` | Official pre-layout normalization for measured local descriptor forms. External descriptor ABI remains open. |
 | Casts | `bitcast`, `fp_to_fp` | Native arithmetic conversion where its numeric contract agrees. All formats, rounding modes and pointer/pointee casts are not qualified. |
 | Scalar math | `clampf`, `precise_divf`, `precise_sqrt` | Reused native conversions; per-dtype exceptional-value and implementation policies need complete independent coverage. |
-| Integer high product | `mulhiui` | i32/i64 standard unsigned extended-product expansion under qualification; retains source bits and parallel tensor dataflow. |
+| Integer high product | `mulhiui` | [Qualified i32/i64 unsigned extended-product expansion](integer_products.md), including Triton's integer Philox. Other widths and RNG policies remain separate. |
 | Tile shape | `broadcast`, `cat`, `expand_dims`, `join`, `reshape`, `splat`, `split`, `trans`, `unsplat` | Native arithmetic/shape conversion plus explicit cat/version and pointer-state adapters. Layout/type compositions remain bounded. |
 | Tile gather | `gather` | Standard parallel tensor generic/extract with active signed index checks. Distinct from an indexed memory access. |
 | Contractions | `dot` | IEEE measured profiles retain original destinations, tiling and K loops. Other precision/accumulation policies require separate qualification. |
