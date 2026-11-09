@@ -231,6 +231,29 @@ closure run is retained in `.scratch/branch-state-complete.log` and its eight
 cases pass in `.scratch/branch-state-regressions.log`. See the maintained
 [attention profile and explicit numerical scope](attention.md).
 
+The final conditional-state regression run passed 506 tests with all existing
+toolchains enabled (four block-pointer deprecation warnings), and Merlin's
+destination/deallocation suites passed 76 tests. After that run, attention's
+profile matrix was expanded: all nine profile tests pass for tensor, standard
+buffer and guarded source-word emission, including eight independent query/key
+shapes per compiled library. Extra tensor output state is checked as invariant.
+The maintained tensor demo is `out/online-attention-tensor/`, with separately
+verified compiler/native execution under `out/online-attention-tensor-merlin/`.
+The guarded demo and qualification remain under `out/online-attention/` and
+`out/online-attention-merlin/`. Accelerator execution remains unperformed.
+
+Next memory composition: finite mixed-base pointer joins/backedges and lane
+selection. Reuse the current fixed-point base sets, but represent a selected
+base together with its element offset. At the original memory event, select
+the corresponding logical buffer/access; do not hoist a load across intervening
+writes. Preserve masks/fills, original integer words, source IDs and grid/reuse.
+Qualify scalar/tiled selections, changing loop bases, intervening mutations,
+inactive invalid offsets and actual selected out-of-bounds cases through one
+unchanged Merlin library. Mixed-base state is still refused today. Consult the
+pinned Meta structured mixed-pointer branch implementation/tests before adding
+the source-word control adapter; its index promotion does not itself establish
+source-word equivalence. General alias groups remain a separate ABI requirement.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

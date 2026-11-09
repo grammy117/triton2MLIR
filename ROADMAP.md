@@ -393,6 +393,9 @@ changing query/key dimensions, empty keys and ragged tails. The finite f32
 profile and independent reference tolerance are explicit in
 [the attention contract](docs/attention.md); this is not general attention,
 all numeric policies or accelerator execution.
+Tensor, standard buffer and guarded source-word emission each qualify through
+their own unchanged Merlin library. Tensor emission keeps an additional output
+carrier invariant alongside the three changing online states.
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,

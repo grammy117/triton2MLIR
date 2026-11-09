@@ -12,13 +12,14 @@ matrix or an opaque attention operation. It keeps the source algorithm:
 The example uses `D=BM=BN=16` and explicit IEEE dot input precision. Actual
 runtime query/key counts use ABI v5, with tested bounds `M=0..35`, `N=0..37`.
 Source code explicitly defines zero output when there are no keys. Fresh output
-allocation, source access checks and provenance use the existing
-[source-word guarded package](source_words.md), with the same public functional
+allocation, source access checks and provenance use the default tensor path or
+the declared buffer/source-word profiles, with the same public functional
 tensor/scalar ABI and [explicit model2MLIR package differences](package.md).
+The tensor form carries three changing online states; an extra output-tensor
+carrier is invariant. It introduces no whole score matrix or memory guard arrays.
 
 ```bash
 python -m t2m shared-demo --kernel online-attention \
-  --memory-profile guarded-buffer --address-policy source-words \
   --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python \
   --out out/online-attention
 
@@ -27,6 +28,10 @@ python -m t2m qualify-merlin out/online-attention \
   --python /path/to/native-env/bin/python --merlin-clang /path/to/clang \
   --rtol 2e-5 --atol 2e-6 --out out/online-attention-merlin
 ```
+
+`--memory-profile buffer` retains the full standard memory payload behind that
+interface. `--memory-profile guarded-buffer --address-policy source-words`
+selects the separately declared [runtime admission profile](source_words.md).
 
 ## Consumer state and granularity
 
@@ -54,6 +59,7 @@ multiple tiles and ragged tails. Every result is compared with an independent
 dense float64 reference at `rtol=2e-5`, `atol=2e-6`; original inputs and compiled
 library bytes remain unchanged. Dense reference computation is evaluator-only
 and stays outside compiler staging.
+Each emission profile has its own unchanged compiled library and independent checks.
 
 This qualifies the finite f32 example and its interface. It does not establish
 device-bit equivalence, all floating-point edge policies, causal/dropout/batched

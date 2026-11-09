@@ -18,7 +18,7 @@ CASES = ((0, 0), (0, 19), (1, 0), (1, 1), (16, 16), (17, 19), (35, 37), (33, 3))
 RTOL, ATOL = 2e-5, 2e-6
 
 
-def capture(root):
+def capture(root, profile="tensor"):
     from t2m.examples.attention_kernels import online_attention
     from t2m.frontend import capture_ttir
     source = root / "source.ttir"
@@ -30,7 +30,7 @@ def capture(root):
         runtime_scalars=(RuntimeScalar("m", "i32", 4, bounds=(0, 35)), RuntimeScalar("n", "i32", 5, bounds=(0, 37))),
         intent="Tiled online softmax; running maximum, normalizer and accumulator; zero output for zero keys.")
     return convert_shared(source, abi, root / "translation", optimizer=OPT,
-                          memory_profile="guarded-buffer", address_policy="source-words")
+                          memory_profile=profile, address_policy="source-words" if profile == "guarded-buffer" else "structured")
 
 
 def arguments(m, n):
@@ -48,16 +48,28 @@ def arguments(m, n):
     return [q, k, v, np.asarray(m, dtype=np.int32), np.asarray(n, dtype=np.int32)], expected
 
 
-def test_tiled_attention_keeps_online_state_and_executes_independent_shapes(tmp_path):
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_tiled_attention_keeps_online_state_and_executes_independent_shapes(tmp_path, profile):
     from t2m.native import execute_native
-    result = capture(tmp_path)
+    result = capture(tmp_path, profile)
     source = result.trace["source_operations"]
     assert sum(op["opcode"] == "tt.dot" for op in source) == 2
     assert any(t["kind"] == "restore-source-contraction-accumulator" for t in result.trace["transformations"])
     assert "scf.forall" in result.mlir_text and "gpu." not in result.mlir_text
-    loops = [op for op in result.module.walk() if op.name == "scf.for" and len(op.results) == 3]
-    assert any(sorted(v.type.get_shape() for v in op.results if isinstance(v.type, TensorType))
-               == [(16,), (16,), (16, 16)] for op in loops)
+    loops = []
+    for op in result.module.walk():
+        if op.name != "scf.for":
+            continue
+        shapes = [v.type.get_shape() if isinstance(v.type, TensorType) else None for v in op.results]
+        if shapes.count((16,)) != 2 or shapes.count((16, 16)) != 1:
+            continue
+        loops.append(op)
+        # The tensor adapter may thread an unchanged output memory version.
+        # All additional carriers must be invariant, not extra score/state data.
+        for shape, yielded, argument in zip(shapes, op.body.block.last_op.operands, op.body.block.args[1:], strict=True):
+            if shape not in ((16,), (16, 16)):
+                assert yielded == argument
+    assert loops
     assert sum(op.name == "linalg.matmul" for op in result.module.walk()) == 2
     for op in result.module.walk():
         for value in (*op.operands, *op.results):
@@ -72,12 +84,13 @@ def test_tiled_attention_keeps_online_state_and_executes_independent_shapes(tmp_
 
 
 @pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
-def test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state(tmp_path):
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state(tmp_path, profile):
     from t2m.bundle import _record, verify_bundle
     from t2m.invocation import invoke_kernel, verify_invocation
     from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
     from t2m.shared_bundle import write_shared_bundle
-    result = capture(tmp_path)
+    result = capture(tmp_path, profile)
     arrays, expected = arguments(17, 19)
     bundle, compiled = tmp_path / "capture", tmp_path / "merlin"
     write_shared_bundle(result, bundle, arrays, [expected], work=tmp_path / "native", python=NATIVE, rtol=RTOL, atol=ATOL)
@@ -97,12 +110,14 @@ def test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state(t
     assert verify_kernel_qualification(compiled) == receipt and _record(compiled / "host/model.so") == library
 
 
-def test_online_attention_demo_packages_the_tiled_source_and_evidence(tmp_path):
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_online_attention_demo_packages_the_tiled_source_and_evidence(tmp_path, profile):
     from t2m.bundle import verify_bundle
     from t2m.cli import main
     output = tmp_path / "demo"
+    flags = ["--address-policy", "source-words"] if profile == "guarded-buffer" else []
     assert main(["shared-demo", "--kernel", "online-attention", "--out", str(output), "--optimizer", OPT,
-                 "--python", NATIVE, "--memory-profile", "guarded-buffer", "--address-policy", "source-words"]) == 0
+                 "--python", NATIVE, "--memory-profile", profile, *flags]) == 0
     receipt = verify_bundle(output)
-    assert "word-input.mlir" in receipt["artifacts"]
+    assert ("word-input.mlir" in receipt["artifacts"]) == (profile == "guarded-buffer")
     assert "linalg.matmul" in (output / "model.mlir").read_text()
