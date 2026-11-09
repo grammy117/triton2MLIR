@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+The explicit [guarded memory profile](guarded_memory.md) additionally executes
+loaded i32/i64 index stores through the full upstream continuation and Merlin's
+real host-library interface. It retains masks, source loops, partial incoming
+state and an unmapped logical grid. Runtime admission rejects active bounds
+violations, duplicate active lanes, cross-program conflicts and fresh-output
+holes. This broadens irregular store support beyond affine tile proofs, with
+an explicit 16-byte-per-output-element guard cost. Writable-buffer reads, aliases
+and general pointer state remain open for this profile; this is not universal
+TTIR coverage.
+
 Use `shared-coverage` to rerun a fixed, bounded native pipeline against actual
 upstream fixtures. It inventories operations structurally, retains every input,
 output and diagnostic, and records content hashes and the corpus Git revision.

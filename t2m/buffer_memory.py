@@ -40,13 +40,17 @@ def parse_memory(source):
     return module
 
 
-def functionalize_memory(module, abi):
+def functionalize_memory(module, abi, *, guards=None):
     functions = list(module.ops)
     if len(functions) != 1 or not isinstance(functions[0], func.FuncOp):
         raise ConversionError("memory continuation requires one standard kernel function")
     original = functions[0]
+    from .guarded_memory import internal_arguments
+    internal = internal_arguments(abi) if guards is not None else []
+    if guards is not None and guards.get("internal_arguments") != internal:
+        raise ConversionError("memory guard ABI differs from its internal declaration")
     if (original.sym_name.data != abi.entry or len(original.body.blocks) != 1
-            or original.function_type.outputs or len(original.body.block.args) != len(abi.source_bindings) + 6):
+            or original.function_type.outputs or len(original.body.block.args) != len(abi.source_bindings) + len(internal) + 6):
         raise ConversionError("memory continuation differs from the declared source/launcher ABI")
     entry = Block(arg_types=[value.type for value in abi.inputs])
     inputs = {value.name: arg for value, arg in zip(abi.inputs, entry.args, strict=True)}
@@ -59,6 +63,12 @@ def functionalize_memory(module, abi):
         block.add_op(op)
         return op
 
+    body = Block(arg_types=[IndexType()])
+    launch = launch_sizes(abi, dimensions, entry, original.location) if abi.dynamic else None
+    guard_state = None
+    if guards is not None:
+        from .guard_runtime import allocate
+        guard_state = allocate(abi, dimensions, entry, body, append)
     values, states = [], {}
     for source, (kind, declared) in zip(original.body.block.args, abi.source_bindings):
         if kind == "constant":
@@ -93,8 +103,8 @@ def functionalize_memory(module, abi):
                 result_types=[MemRefType(type_.element_type, [builtin.DYNAMIC_INDEX if any(isinstance(n, str) for n in declared.shape) else math.prod(declared.shape)])],
                 properties={"reassociation": reassociation}), role="linear-raw-pointer-view").result
         values.append(append(entry, memref.CastOp.get(value, expected), role="bind-upstream-raw-buffer").dest)
-    body = Block(arg_types=[IndexType()])
-    launch = launch_sizes(abi, dimensions, entry, original.location) if abi.dynamic else None
+    if guard_state is not None:
+        values.extend(guard_state[0])
     counts = (*abi.grid_bounds, *((1,) * (3 - len(abi.grid))))
     if launch is not None:
         one = append(entry, arith.ConstantOp.from_int_and_width(1, IndexType())).result
@@ -131,11 +141,16 @@ def functionalize_memory(module, abi):
         "staticLowerBound": DenseArrayBase.from_list(builtin.i64, [0]),
         "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [builtin.DYNAMIC_INDEX if dynamic_launch else math.prod(abi.grid_bounds)]),
         "staticStep": DenseArrayBase.from_list(builtin.i64, [1])}), role="unmapped-logical-launch")
+    if guard_state is not None:
+        from .guard_runtime import finish
+        finish(abi, entry, guard_state, append)
     outputs = [append(entry, ToTensorOp.build(operands=[states[value.name]], result_types=[value.type],
                 properties={"restrict": UnitAttr(), "writable": UnitAttr()}), role="functional-output-state").tensor
                for value in abi.outputs]
     entry.add_op(func.ReturnOp(*outputs))
     function = func.FuncOp(abi.entry, ([value.type for value in abi.inputs], [value.type for value in abi.outputs]), Region(entry))
+    if guards is not None:
+        function.attributes["prov.memory_guard_bytes_per_result_element"] = IntegerAttr(16, builtin.i64)
     function.attributes["prov.logical_grid_bounds" if abi.dynamic else "prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid_bounds)
     result = ModuleOp([function])
     result.attributes.update({"prov.level": StringAttr("functional-tensor-with-standard-memory"),

@@ -105,7 +105,10 @@ def execute_model(staged, work, arguments, *, evaluation=None):
         if declared.get("kind") == "scalar" and "bounds" in declared:
             if not declared["bounds"][0] <= array.item() <= declared["bounds"][1]:
                 raise ValueError("Merlin host runtime scalar is outside its guarded ABI bounds")
-    if sum(a.nbytes for a in arrays) + sum(math.prod(shape) * np.dtype(dtypes[value["dtype"]]).itemsize
+    guard_size = signature.get("guard_storage_bytes_per_result_element", 0)
+    if guard_size not in (0, 16):
+        raise ValueError("unknown Merlin memory guard storage contract")
+    if sum(a.nbytes for a in arrays) + sum(math.prod(shape) * (np.dtype(dtypes[value["dtype"]]).itemsize + guard_size)
                                          for shape, value in zip(shapes, signature["outputs"], strict=True)) > 128 * 1024 * 1024:
         raise ValueError("Merlin host invocation exceeds its 128MiB array budget")
     outputs = [np.zeros(shape, dtype=dtypes[value["dtype"]]) for shape, value in zip(shapes, signature["outputs"], strict=True)]

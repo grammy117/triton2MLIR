@@ -1,5 +1,10 @@
 # Reuse the full shared pipeline through a functional memory boundary
 
+The explicit [guarded memory profile](guarded_memory.md) now also uses this
+continuation with independent executable memory admission. It removes the
+tensor-witness dependency for its qualified private-output/indirect-store
+scope; the `buffer` profile described below retains its existing witness.
+
 The closed integration test [test_full_memory_bridge.py](../tests/test_full_memory_bridge.py)
 now captures real runtime-prefix TTIR, runs triton-shared's full pipeline, clones
 its complete standard body into a functional tensor wrapper, and compiles that

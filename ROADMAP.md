@@ -345,6 +345,16 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 
 ## Immediate next work
 
+The explicit `guarded-buffer` profile now admits loaded-index stores through the
+full shared memory pipeline without requiring the tensor functionalizer as a
+witness. Executable active bounds, program ownership, per-store lane uniqueness
+and fresh-output coverage checks preserve the original payload and unmapped
+logical grid. Native tests and one reused actual Merlin library cover changing
+runtime shapes, ordered repeated writes and masked/empty cases. Metadata costs
+16 bytes per writable element. Writable reads, pointer-carried state, general
+descriptor forms and derived-model scratch accounting remain open for this
+profile; see [the contract and evidence](docs/guarded_memory.md).
+
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,
 general `while`, scans and explicitly qualified mixed precision. Preserve earlier mask,

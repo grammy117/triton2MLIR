@@ -54,6 +54,9 @@ qualified library with new scalar values and separate invocation evidence; see
 including zero trips. The explicit `--memory-profile buffer` also retains the
 upstream standard memory payload behind the same public tensor/scalar ABI;
 see [its proof scope and package differences](docs/full_memory_bridge.md).
+The explicit `--memory-profile guarded-buffer` additionally supports loaded
+store indices with executable bounds/conflict/coverage checks through Merlin;
+see [the memory contract and metadata cost](docs/guarded_memory.md).
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

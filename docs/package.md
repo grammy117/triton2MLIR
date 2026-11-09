@@ -87,6 +87,16 @@ opcode admission. See [the memory boundary](full_memory_bridge.md).
 
 ## Shared core artifacts
 
+The additional explicit `shared-guarded-buffer` profile uses the same public
+tensor/scalar ABI with runtime memory admission instead of an affine tensor
+witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three
+memory continuation artifacts remain. The report and function attribute declare
+16 guard bytes per writable element, included in standalone evaluator budgets.
+Checks retain source masks, loops and payload while rejecting active bounds
+violations, conflicting writers and fresh-output holes. This initial profile
+supports standalone staging/execution; derived-model resource accounting is
+separate work. See [the exact memory scope](guarded_memory.md).
+
 | Artifact | MVP convention |
 |---|---|
 | `model.mlir` | One `forward` with tensor inputs/result, standard dialect operations, `prov.level="linalg-on-tensors"`. Generic assembly preserves discardable annotations. |

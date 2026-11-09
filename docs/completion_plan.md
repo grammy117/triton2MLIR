@@ -153,6 +153,17 @@ The full memory profile currently uses the same proof witness; independent
 memory admission, broader headers/while/pointer state and non-dense runtime layouts
 remain required.
 
+Workstream B now additionally has independent memory admission through the
+explicit `guarded-buffer` profile. Loaded-index writes retain the full upstream
+payload while executable checks enforce active bounds, per-program ownership,
+per-store lane uniqueness and fresh-output coverage. i32/i64 indices, repeated
+source stores, partial updates and zero/extreme inactive cases execute natively;
+one actual Merlin library also runs independent runtime shapes. The package
+replaces the tensor witness with a byte-bound admission report and declares its
+16-byte per-output-element guard cost. This closes that witness dependency for
+the qualified private-output profile. Writable observations, aliasing, general
+pointer state and source effects remain open; see [guarded memory](guarded_memory.md).
+
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
 input preservation. The old categorical consumer incompatibility is therefore

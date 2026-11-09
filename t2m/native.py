@@ -35,7 +35,7 @@ def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None):
     except subprocess.TimeoutExpired as exc:
         raise ValueError("native execution exceeded its 30-second budget") from exc
     if process.returncode:
-        raise ValueError("native host execution failed: " + process.stderr[-4000:])
+        raise ValueError(f"native host execution failed (exit {process.returncode}): " + process.stderr[-4000:])
     report = json.loads((work / "execution.json").read_text())
     report["input_sha256"] = hashlib.sha256(mlir_text.encode()).hexdigest()
     with np.load(work / "outputs.npz", allow_pickle=False) as data:

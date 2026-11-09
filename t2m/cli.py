@@ -62,6 +62,11 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         if kernel == "ragged-matmul":
             constants["TRANSPOSED"] = False
         shapes = [(m, k), (k, n), (m, n)]
+    elif kernel == "indirect-store":
+        fn, constants = kernels.indirect_store, {"B": 8, "REPEAT": 3, "READ_OUTPUT": False, "STORE_INPUT": False}
+        shapes, grid = [("n",), ("n",), ("m",)], (GridExtent("n", 8),)
+        runtime_scalars = (RuntimeScalar("n", "i32", 3, bounds=(0, 31)), RuntimeScalar("m", "i32", 4, bounds=(0, 31)))
+        example_dimensions = {"n": 13, "m": 23}
     elif kernel == "matrix-add":
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
@@ -117,7 +122,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
     if kernel == "tuple-scan":
         names = ["a", "b", "out_a", "out_b"]
-    elif kernel in ("indexed-gather", "dynamic-gather"):
+    elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
     output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
@@ -133,6 +138,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     additional = []
     if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
+    elif kernel == "indirect-store":
+        arrays[1] = np.array([17, 5, 11, -99, 3, 8, 7, 16, 0, 14, 12, -1, 6], dtype=np.int32)
+        arrays[3:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("n", "m")]
+        golden = arrays[2].copy()
+        active = arrays[1] >= 0
+        golden[arrays[1][active]] = (arrays[0][active] + np.float32(2)) + np.float32(1)
     elif kernel == "runtime-affine":
         arrays[1:] = [np.asarray(1.5, dtype=np.float32), np.asarray(-3, dtype=np.float32)]
         golden = arrays[0] * arrays[1] + arrays[2]
@@ -234,7 +245,7 @@ def main(argv=None):
     tensor.add_argument("--abi", type=Path, required=True)
     tensor.add_argument("--out", type=Path, required=True)
     tensor.add_argument("--optimizer", type=Path)
-    tensor.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
+    tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
@@ -242,9 +253,9 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
-    sd.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
+    sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
     coverage.add_argument("corpus", type=Path)
