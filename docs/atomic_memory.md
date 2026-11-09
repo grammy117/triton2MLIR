@@ -292,20 +292,14 @@ A real model2MLIR capture additionally retains weights and both tuple results.
 The general package comparator uses numerical tolerance with equal-NaN semantics;
 these dedicated word comparisons establish the stronger exchange bit contract.
 
-Floating min/max need a further typed-view extension. Triton 3.7.1
+Floating min/max now use the typed word-region extension below. Triton 3.7.1
 `language/semantic.py` implements them using same-width integer pointer bitcasts
-and signed/unsigned atomic min/max selected by the input sign bit. Replacing
-that source algorithm with floating min/max can change NaN payloads and signed
-zero. Preserve the integer operations as updates on logical word views of the
-floating buffer, expanding only each event to a standard atomic region. Do not
-copy or reinterpret the whole public buffer into a different physical ABI.
-Meta's `TritonToUnstructuredPass.cpp` and
-`test/Conversion/TritonToUnstructured/bitcast_ptr_unstructured.mlir` already
-provide equal-storage-byte pointer-offset propagation; the remaining work is
-guarded logical view admission, typed region expansion, native legalization
-and evidence/model qualification. Different storage widths need explicit address
-rescaling and bounds/alias reasoning. Floating add separately needs a source
-rounding/subnormal/NaN contract rather than an assumed device behavior.
+and signed/unsigned atomic min/max selected by the input sign bit. Preserve that
+source algorithm rather than substituting floating min/max: NaN payloads and
+signed zero are part of its word behavior. Meta's pointer-offset propagation
+supplies the equal-storage-byte foundation. Changed storage widths still need
+explicit rescaling/bounds/alias reasoning, and floating add separately needs a
+rounding/subnormal/NaN contract.
 
 Measured exchange delivery: 43 focused exchange/model/CAS-compatibility cases
 passed in `.scratch/typed-atomic-final.log`. The broader run passed all 116
@@ -369,3 +363,24 @@ explicit `T2M_MERLIN_ROOT` compiler-support path.
 source for binding. Word CAS views, differently typed selected roots and broader
 address/alias contracts remain further work; floating addition requires its own
 rounding/subnormal/NaN contract. Accelerator execution remains separate.
+
+### Canonical atomic identities and assignments
+
+Merlin's pre-bufferization passes can simplify an update without removing its
+atomic effect. For example, integer `add 0` or `and -1` can leave only inverse
+current-word bitcasts; signed extrema can become current-independent writes.
+The checked native legalization recognizes exact current identities, inverse
+bitcasts, scalarized integer constants, outside floating assignments and actual
+floating constant assignments. Identities still perform a real integer RMW;
+assignments retain their old result. Constants are cloned as native operations,
+so signaling-NaN payloads never pass through Python float conversion. Unknown
+extra arithmetic/effects and changed borrowing declarations remain refusals.
+
+Measured word delivery: 26 native numerical cases and 22 actual Merlin cases
+pass, with independent raw-word oracles for all nine integer updates and floating
+min/max. Thirteen evidence/demo cases and ten constant-normalization cases also
+pass. The 15 existing atomic model cases and ten new min/max model cases pass
+across their measured runs. The 131 pointer/view/exchange/CAS/region/schema
+regressions pass; 242 final Merlin compiler/staging/loop cases and the
+code-derived documentation/structure gates pass. None of these finite suites is
+universal TTIR or accelerator coverage.

@@ -188,3 +188,36 @@ def test_floating_minmax_demo_retains_the_standard_merlin_package(tmp_path, oper
     assert receipt["materialized_abi"]["outputs"] == 2
     assert "memref.generic_atomic_rmw" in (out / "model.mlir").read_text()
     assert "integer word atomics" in (out / "compatibility.json").read_text()
+
+
+@REQUIRED
+@pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
+@pytest.mark.parametrize("width", [32, 64])
+@pytest.mark.parametrize("operation", ["add", "and", "max", "min", "exch"])
+def test_merlin_preserves_constant_identity_and_assignment_atomics(tmp_path, width, operation):
+    from t2m.examples.atomic_kernels import constant_word_atomic
+    from t2m.frontend import capture_ttir
+    from test_atomic_memory import operation_reference, signed
+    from test_integer_products import replay_library
+    value = {"add": 0, "and": -1, "max": (1 << (width - 1)) - 1, "min": -(1 << (width - 1)),
+        "exch": 0x7f801234 if width == 32 else 0x7ff0000000001234}[operation]
+    constants = {"B": 8, "WIDTH": width, "OP": operation, "VALUE": value}
+    source = tmp_path / "source.ttir"
+    source.write_text(capture_ttir(constant_word_atomic, {"state": f"*fp{width}", "old": f"*fp{width}",
+        **{name: "constexpr" for name in constants}}, constants))
+    abi = TensorABI("constant_word_atomic", (TensorBuffer("state", (8,), "readwrite", dtype=f"f{width}"),
+        TensorBuffer("old", (8,), "write", dtype=f"f{width}")))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile="guarded-buffer",
+        address_policy="source-words", effect_profile="typed-atomics")
+    uint, fp = getattr(np, f"uint{width}"), getattr(np, f"float{width}")
+    maximum, sign = (1 << width) - 1, 1 << (width - 1)
+    samples = np.array([0, sign, 1, sign + 1, maximum, value & maximum, 0x12345678, 0x7f801234], dtype=uint)
+    cases = []
+    for incoming in (samples, samples[::-1].copy()):
+        updated = np.array([operation_reference(signed(int(word), width), value, operation, width) & maximum
+            for word in incoming], dtype=uint)
+        cases.append(([incoming.view(fp)], [updated.view(fp), incoming.view(fp)]))
+    replay_library(tmp_path, result, cases)
+    for i, (_, expected) in enumerate(cases):
+        with np.load(tmp_path / f"invoke{i}/evaluation/outputs.npz", allow_pickle=False) as outputs:
+            exact([outputs[f"out{j}"] for j in range(2)], expected, width)

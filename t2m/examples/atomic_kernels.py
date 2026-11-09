@@ -211,3 +211,22 @@ def indexed_word_atomic(x, index, state, old, n, m, B: tl.constexpr, OP: tl.cons
     else:
         previous = tl.atomic_xchg(pointer, value, active, sem="acq_rel", scope="gpu")
     tl.store(old + lane, previous.to(old.dtype.element_ty, bitcast=True), lane < n)
+
+
+@triton.jit
+def constant_word_atomic(state, old, B: tl.constexpr, WIDTH: tl.constexpr, OP: tl.constexpr, VALUE: tl.constexpr):
+    lane = tl.arange(0, B)
+    word: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    pointer = (state + lane).to(tl.pointer_type(word), bitcast=True)
+    value = tl.full((B,), VALUE, word)
+    if OP == "and":
+        previous = tl.atomic_and(pointer, value)
+    elif OP == "max":
+        previous = tl.atomic_max(pointer, value)
+    elif OP == "min":
+        previous = tl.atomic_min(pointer, value)
+    elif OP == "exch":
+        previous = tl.atomic_xchg(pointer, value)
+    else:
+        previous = tl.atomic_add(pointer, value)
+    tl.store(old + lane, previous.to(old.dtype.element_ty, bitcast=True))
