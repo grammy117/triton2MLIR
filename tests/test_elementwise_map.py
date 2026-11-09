@@ -15,13 +15,13 @@ pytestmark = pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/na
 PROFILES = ["tensor", "buffer", "guarded-buffer"]
 
 
-def capture(root, profile, dtype):
+def capture(root, profile, dtype, while_loop):
     from t2m.examples.elementwise_map_kernels import elementwise_map_values
     from t2m.frontend import capture_ttir
     names = ("x", "y", "out_a", "out_b")
     source = root / "source.ttir"
     source.write_text(capture_ttir(elementwise_map_values, {**{name: "*fp32" if dtype == "f32" else "*i32" for name in names},
-        "n": "i32", "iterations": "i32", "B": "constexpr"}, {"B": 8}))
+        "n": "i32", "iterations": "i32", "B": "constexpr", "WHILE_LOOP": "constexpr"}, {"B": 8, "WHILE_LOOP": while_loop}))
     abi = TensorABI("elementwise_map_values", tuple(TensorBuffer(name, ("n",), "write" if name.startswith("out") else "read", dtype=dtype)
         for name in names), grid=(GridExtent("n", 8),), runtime_scalars=(RuntimeScalar("n", "i32", 4, bounds=(0, 31)),
         RuntimeScalar("iterations", "i32", 5, bounds=(0, 4))))
@@ -44,9 +44,10 @@ def arguments(n, count, dtype):
 
 @pytest.mark.parametrize("profile", PROFILES)
 @pytest.mark.parametrize("dtype", ["f32", "i32"])
-def test_scalar_map_keeps_branches_tuples_and_runtime_recurrences(tmp_path, profile, dtype):
+@pytest.mark.parametrize("while_loop", [False, True], ids=["for", "while"])
+def test_scalar_map_keeps_branches_tuples_and_runtime_recurrences(tmp_path, profile, dtype, while_loop):
     from t2m.native import execute_native
-    result = capture(tmp_path, profile, dtype)
+    result = capture(tmp_path, profile, dtype, while_loop)
     assert any(t["kind"] == "ttir-elementwise-map" for t in result.trace["transformations"])
     assert any("prov.composite_family" in op.attributes for op in result.module.walk())
     for i, (n, count) in enumerate(((0, 0), (1, 4), (13, 0), (31, 3))):
@@ -60,12 +61,13 @@ def test_scalar_map_keeps_branches_tuples_and_runtime_recurrences(tmp_path, prof
 @pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
 @pytest.mark.parametrize("profile", PROFILES)
 @pytest.mark.parametrize("dtype", ["f32", "i32"])
-def test_one_merlin_library_retains_scalar_map_control_and_inputs(tmp_path, profile, dtype):
+@pytest.mark.parametrize("while_loop", [False, True], ids=["for", "while"])
+def test_one_merlin_library_retains_scalar_map_control_and_inputs(tmp_path, profile, dtype, while_loop):
     from t2m.bundle import _record
     from t2m.invocation import invoke_kernel
     from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
     from t2m.shared_bundle import write_shared_bundle
-    result = capture(tmp_path, profile, dtype)
+    result = capture(tmp_path, profile, dtype, while_loop)
     arrays, expected = arguments(13, 3, dtype)
     bundle, compiled = tmp_path / "capture", tmp_path / "merlin"
     write_shared_bundle(result, bundle, arrays, expected, work=tmp_path / "native", python=NATIVE)

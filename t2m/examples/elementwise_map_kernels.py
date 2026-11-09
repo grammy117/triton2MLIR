@@ -5,21 +5,40 @@ import triton.language as tl
 
 
 @triton.jit
-def _map_scalar(a, b, iterations):
+def _map_initial(a, b):
     if b != 0:
         value = a / b if a.dtype.is_floating() else a // b
     else:
         value = tl.full((), -7, a.dtype)
+    return value
+
+
+@triton.jit
+def _map_scalar(a, b, iterations):
+    value = _map_initial(a, b)
     for step in range(iterations):
         value = value + b * step
     return value, a + b
 
 
 @triton.jit
-def elementwise_map_values(x, y, out_a, out_b, n, iterations, B: tl.constexpr):
+def _map_scalar_while(a, b, iterations):
+    value = _map_initial(a, b)
+    step = 0
+    while step < iterations:
+        value = value + b * step
+        step += 1
+    return value, a + b
+
+
+@triton.jit
+def elementwise_map_values(x, y, out_a, out_b, n, iterations, B: tl.constexpr, WHILE_LOOP: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     a, b = tl.load(x + lane, lane < n, other=0), tl.load(y + lane, lane < n, other=0)
-    first, second = tl.map_elementwise(_map_scalar, a, b, iterations)
+    if WHILE_LOOP:
+        first, second = tl.map_elementwise(_map_scalar_while, a, b, iterations)
+    else:
+        first, second = tl.map_elementwise(_map_scalar, a, b, iterations)
     tl.store(out_a + lane, first, lane < n)
     tl.store(out_b + lane, second, lane < n)
 

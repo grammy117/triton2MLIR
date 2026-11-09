@@ -309,6 +309,12 @@ rejected it. That gate now admits two-byte elements; both actual model dtype
 cases and the existing half profile pass all nine tests. This extends real
 model-package qualification without changing tensor storage or the ABI.
 
+Scalar-map qualification now covers original scalar while recurrences as well
+as for loops: all 26 map cases pass with native and actual Merlin tools. The
+source-backed Ascend comparison is recorded in the map contract; promoting a
+scalar branch to a tensor select or duplicating packed lane arguments is not
+used to justify these semantics.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

@@ -26,12 +26,21 @@ from Triton 3.7.1 `TritonOps.td`, `Ops.cpp::MapElementwiseOp::verifyRegions` and
 `language/core.py::map_elementwise`. Existing upstream helper inlining,
 arithmetic lowering, memory adaptation and Merlin lowering remain reused.
 
-Fourteen maintained cases pass with native and actual Merlin tools enabled.
+Twenty-six maintained cases pass with native and actual Merlin tools enabled.
 Tensor, buffer and guarded source-word profiles execute f32/i32 maps with tuple
-results, per-element zero-divisor branches and runtime loop recurrences. One
+results, per-element zero-divisor branches and runtime for/while recurrences. One
 library per dtype/profile runs empty, scalar and ragged inputs with different
 iteration counts; inputs and library bytes remain unchanged. The finite numeric
 references do not establish every floating or integer exceptional policy.
+
+Ascend `8f0ade66580245e30ad97093526a4018e4e18fc7` additionally has a
+`MapElementwiseDecomposeConverter` in `TritonOpConverter.cpp` and executable
+`test_map_elementwise_ops.py` fixtures. Its boundary promotes scalar operations
+to tensor operations, converts if regions to tensor selects, maps packed
+arguments to whole input tensors and does not support scalar while. That is
+different from retaining the scalar region. This adapter keeps branch execution
+and while conditions scalar inside the generic; its grouping gate does not
+assume that packed lanes are identical. No Ascend backend or custom op is needed.
 
 Packed maps remain a separate grouping contract: flattening physical packed
 groups into independent elements could change cross-element dataflow. Pointer
