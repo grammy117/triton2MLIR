@@ -118,13 +118,21 @@ the same public ABI. Original source/inventory remain separate.
 See [source-word semantics and evidence](source_words.md).
 
 `--effect-profile atomics` additionally requires guarded-buffer/source-words and
-selects the explicit private-invocation integer RMW contract. Public arguments
+selects the explicit private-invocation integer RMW/CAS contract. Public arguments
 and results retain their tensor/scalar ABI. `memory-admission.v3` binds thirty-bit
 owner fragments, atomic-compatible participation, actual payload accounting and
 source operation/order/scope. Standard RMW events retain old values inside
 exactly-once SCF regions; source-undefined inactive old values explicitly refine
 to zero. Package differences name this policy, its stronger standard ordering
 and grid-derived guard cost. See [atomic memory](atomic_memory.md).
+Integer CAS additionally supports i16/i32/i64 through a standard generic atomic
+comparison/select region. It remains unmasked, including tail lanes unless
+source control flow suppresses them. Finite buffer selection branches inside
+parallel tensor tiles. The pinned native ownership toolchain requires Merlin's
+checked compare/exchange legalization; this dependency and the executed prelude/
+prepared-body hashes are explicit native evidence. Exported MLIR and the public
+tensor/scalar ABI remain portable, with no opaque or LLVM helper in the package
+source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
 
 The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor

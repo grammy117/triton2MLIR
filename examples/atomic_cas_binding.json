@@ -1,0 +1,25 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::atomic_update",
+      "ttir": "../out/atomic-cas/source.ttir",
+      "abi": {
+        "schema": "t2m.shared-tensor-abi.v2",
+        "entry": "indexed_cas",
+        "buffers": [
+          {"name": "state", "shape": [17], "effect": "readwrite", "dtype": "i32"},
+          {"name": "comparison", "shape": [16], "effect": "read", "dtype": "i32"},
+          {"name": "value", "shape": [16], "effect": "read", "dtype": "i32"},
+          {"name": "old", "shape": [16], "effect": "write", "dtype": "i32"}
+        ],
+        "grid": [2]
+      },
+      "operands": {"state": "state", "comparison": "index", "value": "x"},
+      "results": ["state", "old"],
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "effect_profile": "atomics"
+    }
+  ]
+}

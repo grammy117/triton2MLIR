@@ -297,7 +297,7 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False):
                         "properties": {k: str(v) for k, v in op.properties.items()},
                         "attributes": {k: str(v) for k, v in op.attributes.items() if k != "op_name"}})
         op.location = NameLoc(StringAttr(source_id), op.location)
-        if name == "tt.atomic_rmw" and atomics:
+        if name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
             records[-1]["atomic"] = contract(op, _source_ids)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise",
@@ -1221,6 +1221,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     memory_stage = None
     if memory_profile in ("buffer", "guarded-buffer"):
         from .buffer_memory import functionalize_memory, parse_memory
+        if atomics:
+            from .compare_exchange import expand
+            transformations.extend(expand(lowered, _source_ids))
         witness_text = text(witness) if witness is not None else None
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(lowered)

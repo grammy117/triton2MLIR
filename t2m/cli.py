@@ -121,6 +121,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3)))
         example_dimensions = {"n": 23, "tiles": 2}
         buffer_effects, buffer_dtypes = {"out": "write"}, {"x": "i32", "out": "i32"}
+    elif kernel == "atomic-cas":
+        from .examples.atomic_kernels import indexed_cas
+        fn, constants = indexed_cas, {"B": 8, "SCALAR": False, "SEM": "relaxed", "SCOPE": "gpu"}
+        shapes, grid = [(16,)] * 4, (2,)
+        buffer_effects = {"state": "readwrite", "old": "write"}
+        buffer_dtypes = {name: "i32" for name in ("state", "comparison", "value", "old")}
     elif kernel == "atomic-rmw":
         from .examples.atomic_kernels import indexed_atomic
         fn, constants = indexed_atomic, {"B": 8, "OP": "add", "SCALAR": False, "MASK": True, "FRESH": False,
@@ -167,6 +173,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["q", "k", "v", "out"]
     elif kernel == "atomic-rmw":
         names = ["x", "index", "state", "old"]
+    elif kernel == "atomic-cas":
+        names = ["state", "comparison", "value", "old"]
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
     output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
@@ -181,7 +189,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
     additional = []
-    if kernel == "atomic-rmw":
+    if kernel == "atomic-cas":
+        state = np.arange(16, dtype=np.int32) + 50
+        comparison, value = state.copy(), np.arange(16, dtype=np.int32) - 5
+        comparison[1::3] += 1
+        arrays = [state, comparison, value]
+        golden, additional = np.where(state == comparison, value, state), [state.copy()]
+    elif kernel == "atomic-rmw":
         n, m = (example_dimensions[name] for name in ("n", "m"))
         values, index, state = np.arange(n, dtype=np.int32) - 5, np.arange(n, dtype=np.int32), np.arange(m, dtype=np.int32) + 50
         active = np.arange(n) % 3 != 1
@@ -343,7 +357,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

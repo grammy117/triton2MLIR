@@ -13,7 +13,9 @@ from m2m.capture.bundle import write_bundle
 from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 
 
-def capture(out):
+def capture(out, kind="add"):
+    if kind not in ("add", "cas"):
+        raise ValueError("atomic model kind must be add or cas")
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -27,15 +29,23 @@ def capture(out):
     def atomic_update(x: torch.Tensor, index: torch.Tensor, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         updated = state.clone()
         old = torch.empty_like(x)
-        wrap_triton(kernels.indexed_atomic)[(2,)](x, index, updated, old, n=13, m=17, B=8,
-            OP="add", SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
+        if kind == "cas":
+            wrap_triton(kernels.indexed_cas)[(2,)](updated, index, x, old, B=8,
+                SCALAR=False, SEM="relaxed", SCOPE="gpu")
+        else:
+            wrap_triton(kernels.indexed_atomic)[(2,)](x, index, updated, old, n=13, m=17, B=8,
+                OP="add", SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
         return updated, old
 
     @atomic_update.register_kernel("cpu")
     def reference(x, index, state):
         updated, old = state.clone(), torch.zeros_like(x)
         for lane in range(x.numel()):
-            if lane % 3 != 1:
+            if kind == "cas":
+                old[lane] = updated[lane]
+                if updated[lane] == index[lane]:
+                    updated[lane] = x[lane]
+            elif lane % 3 != 1:
                 target = int(index[lane])
                 old[lane] = updated[target]
                 updated[target] += x[lane]
@@ -45,8 +55,12 @@ def capture(out):
         def __init__(self):
             super().__init__()
             self.state = torch.nn.Parameter(torch.arange(17, dtype=torch.int32) + 50, requires_grad=False)
-            index = torch.arange(13, dtype=torch.int32)
-            index[torch.arange(13) % 3 == 1] = -1000
+            index = torch.arange(16 if kind == "cas" else 13, dtype=torch.int32)
+            if kind == "cas":
+                index += 50
+                index[1::3] += 1
+            else:
+                index[torch.arange(13) % 3 == 1] = -1000
             self.register_buffer("index", index)
 
         def forward(self, x):
@@ -56,7 +70,7 @@ def capture(out):
     KERNEL_REGISTRY[qualname] = KernelSpec(qualname)
     try:
         torch.set_num_threads(1)
-        model, values = Model().eval(), (torch.arange(13, dtype=torch.int32) - 5,)
+        model, values = Model().eval(), (torch.arange(16 if kind == "cas" else 13, dtype=torch.int32) - 5,)
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(model, values, backend="fx_importer", weights_path=str(out / "weights.safetensors"), capture_trace=True)
         if not result.ok:
@@ -74,4 +88,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--kind", choices=("add", "cas"), default="add")
+    arguments = parser.parse_args()
+    print(capture(arguments.out, arguments.kind))

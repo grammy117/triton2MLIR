@@ -26,4 +26,6 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     if trace.get("memory", {}).get("effect_profile") == "private-invocation-integer-atomics-v1":
         differences.append("explicit private-invocation integer atomics use standard memref RMW operations and original old values; v3 thirty-bit owner fragments permit atomic collisions while rejecting ordinary races; source scope/order are retained with stronger standard acq_rel semantics; inactive undefined old values refine to zero; tensor/scalar ABI is unchanged")
+        if any(item.get("operation") == "cas" for item in trace.get("memory", {}).get("atomic_payload", [])):
+            differences.append("compare/exchange uses a standard generic atomic comparison/select region, retaining success/failure values and the original old word; selected bases branch inside parallel tiles; the pinned native ownership toolchain additionally requires Merlin's checked integer compare/exchange helper legalization and qualified default 64-bit descriptor/index ABI (T2M_MERLIN_ROOT for native qualification); portable model.mlir retains no LLVM operations or opaque helper calls")
     return differences

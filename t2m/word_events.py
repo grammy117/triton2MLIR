@@ -19,7 +19,7 @@ from .diagnostics import ConversionError
 from .upstream import lower_with_shared
 
 MEMORY_EVENTS = {"tt.load": "tts.gather", "tt.store": "tts.scatter",
-                 "tt.atomic_rmw": "tts.unstructured_atomic_rmw"}
+                 "tt.atomic_rmw": "tts.unstructured_atomic_rmw", "tt.atomic_cas": "tt.atomic_cas"}
 
 
 def print_ir(module):
@@ -30,7 +30,7 @@ def print_ir(module):
 
 def needs_isolation(module):
     from .shared_tensor import opcode
-    return any(opcode(op) in ("scf.if", "scf.while")
+    return any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while")
                and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()) for op in module.walk())
 
 
@@ -67,7 +67,11 @@ def templates(module, source_ids):
             refuse("isolated memory offsets must retain the signed i64 source-word accumulator")
         other, mask = None, None
         write_or_atomic = opcode(op) in ("tt.store", "tt.atomic_rmw")
-        if write_or_atomic:
+        if opcode(op) == "tt.atomic_cas":
+            if len(op.operands) != 3:
+                refuse("isolated CAS requires exact comparison/value operands")
+            captures = [base, offset, *op.operands[1:]]
+        elif write_or_atomic:
             if len(op.operands) not in (2, 3):
                 refuse("isolated store/RMW requires a value and optional mask")
             if len(op.operands) == 3:
@@ -91,25 +95,30 @@ def templates(module, source_ids):
             generated = builtin.UnregisteredOp.with_name(name).create(location=op.location, **kwargs)
             body.add_op(generated)
             return generated
-        if isinstance(pointer.type, builtin.TensorType):
-            local_base = emit("tt.splat", operands=[local_base], result_types=[pointer.type]).results[0]
-        ptr = emit("tt.addptr", operands=[local_base, local_offset], result_types=[pointer.type]).results[0]
-        operands = [ptr, *body.args[2:]]
-        if other is not None:
-            type_ = op.results[0].type
-            element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
-            zero = (arith.ConstantOp(builtin.FloatAttr(0.0, element)) if isinstance(element, builtin.AnyFloat)
-                    else arith.ConstantOp.from_int_and_width(0, element))
-            zero.location = op.location
-            body.add_op(zero)
-            fill = zero.result
-            if isinstance(type_, builtin.TensorType):
-                fill = emit("tt.splat", operands=[fill], result_types=[type_]).results[0]
-            operands.append(fill)
-        memory = type(op).create(operands=operands, result_types=[v.type for v in op.results],
-                                properties=op.properties, attributes=op.attributes, location=op.location)
-        body.add_op(memory)
-        emit("tt.return", operands=list(memory.results))
+        if opcode(op) == "tt.atomic_cas":
+            from .compare_exchange import template
+            returned = [template(body, op, body.args)]
+        else:
+            if isinstance(pointer.type, builtin.TensorType):
+                local_base = emit("tt.splat", operands=[local_base], result_types=[pointer.type]).results[0]
+            ptr = emit("tt.addptr", operands=[local_base, local_offset], result_types=[pointer.type]).results[0]
+            operands = [ptr, *body.args[2:]]
+            if other is not None:
+                type_ = op.results[0].type
+                element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
+                zero = (arith.ConstantOp(builtin.FloatAttr(0.0, element)) if isinstance(element, builtin.AnyFloat)
+                        else arith.ConstantOp.from_int_and_width(0, element))
+                zero.location = op.location
+                body.add_op(zero)
+                fill = zero.result
+                if isinstance(type_, builtin.TensorType):
+                    fill = emit("tt.splat", operands=[fill], result_types=[type_]).results[0]
+                operands.append(fill)
+            memory = type(op).create(operands=operands, result_types=[v.type for v in op.results],
+                                    properties=op.properties, attributes=op.attributes, location=op.location)
+            body.add_op(memory)
+            returned = list(memory.results)
+        emit("tt.return", operands=returned)
         name = f"__t2m_memory_event_{index}"
         functions.append(builtin.UnregisteredOp.with_name("tt.func").create(
             properties={"function_type": builtin.FunctionType.from_lists([v.type for v in captures], [v.type for v in op.results]),
@@ -143,13 +152,13 @@ def substitute(module, converted, bindings, calls):
         expected = MEMORY_EVENTS[record["opcode"]]
         memories = [op for op in body.walk() if opcode(op) in MEMORY_EVENTS.values()]
         if (len(memories) != 1 or opcode(memories[0]) != expected or opcode(operations[-1]) != "tt.return"
-                or any(opcode(op) in {*MEMORY_EVENTS, "tt.addptr", "tt.call"} for op in body.walk())):
+                or any(opcode(op) in {*MEMORY_EVENTS.keys() - {"tt.atomic_cas"}, "tt.addptr", "tt.call"} for op in body.walk())):
             raise ConversionError("isolated event conversion did not retain exactly one memory observation")
-        if record["opcode"] == "tt.atomic_rmw":
+        if record["opcode"] in ("tt.atomic_rmw", "tt.atomic_cas"):
             def attribute(op, key):
                 return op.properties.get(key, op.attributes.get(key))
-            if any(attribute(memories[0], key) != attribute(original, key)
-                   for key in ("atomic_rmw_op", "sem", "scope")):
+            keys = ("sem", "scope") + (("atomic_rmw_op",) if record["opcode"] == "tt.atomic_rmw" else ())
+            if any(attribute(memories[0], key) != attribute(original, key) for key in keys):
                 raise ConversionError("isolated atomic event changed its source operation/order/scope")
         mapping = dict(zip(body.args, captures, strict=True))
         emitted = [op.clone(value_mapper=mapping) for op in operations[:-1]]

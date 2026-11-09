@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline():
+def tensor_pipeline(*, compare_exchange=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -25,7 +25,11 @@ def tensor_pipeline():
             entry = entry[:-1] + " allow-return-allocs-from-loops}"
             adapted += 1
         passes.append(entry)
-    result = _splice(edit_pipeline(passes))
+    passes = edit_pipeline(passes)
+    if compare_exchange:
+        from merlin.llvmlower.atomic_compare_exchange import edit_pipeline as edit_compare_exchange
+        passes = edit_compare_exchange(passes)
+    result = _splice(passes)
     if adapted != 1 or "ownership-based-buffer-deallocation" not in result:
         raise ValueError("Merlin scalar pipeline lacks the qualified loop/ownership boundary")
     return result
@@ -59,9 +63,12 @@ def compile_model(staged, work):
     add_c_interface(module)
     prepared = text(module, generic=True)
     (work / "prepared.mlir").write_text(prepared)
-    pipeline = tensor_pipeline()
+    features = COMPILER_FEATURES
+    if any(op.name == "memref.generic_atomic_rmw" for op in module.walk()):
+        features = features | {"lower_integer_compare_exchange"}
+    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,
-                            timeout=30, features=COMPILER_FEATURES, retain_llvm_dialect=True)
+                            timeout=30, features=features, retain_llvm_dialect=True)
     ll = work / "model.ll"
     ll.write_text(llvm)
     library = build_host_shared(ll, work / "model.so")
@@ -69,7 +76,7 @@ def compile_model(staged, work):
               "whole_body_lowering": "passed", "native_object_and_link": "passed",
               "source_program": record(staged / "program.mlir"), "prepared_program": record(work / "prepared.mlir"),
               "llvm": record(ll), "shared_library": record(library), "pipeline": pipeline,
-              "features": sorted(COMPILER_FEATURES),
+              "features": sorted(features),
               "lowering_api": "merlin.llvmlower.pipeline.lower_to_llvm_ir",
               "codegen_api": "merlin.llvmlower.codegen.build_host_shared",
               "compiler_python": str(compiler_python()), "codegen_tool": str(clang()),

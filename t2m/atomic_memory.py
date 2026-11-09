@@ -11,6 +11,7 @@ from xdsl.dialects.linalg.ops import GenericOp
 from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
+from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 # Source enum -> source name, standard arith::AtomicRMWKind.
@@ -27,7 +28,8 @@ def validate_evidence(admission, memory, records, buffers):
             or not isinstance(admission.get("atomic_adaptations"), list)
             or admission["atomic_adaptations"] != memory.get("atomic_payload")):
         raise ValueError("atomic memory evidence lacks its explicit private-invocation effect contract")
-    source = {r["id"]: r.get("atomic") for r in records if r.get("opcode") == "tt.atomic_rmw"}
+    source = {r["id"]: r.get("atomic") for r in records if r.get("opcode") in ("tt.atomic_rmw", "tt.atomic_cas")}
+    opcodes = {r["id"]: r.get("opcode") for r in records}
     accesses = [a for a in admission["accesses"] if a["effect"] == "atomic-readwrite"]
     if len(accesses) != len(admission["atomic_adaptations"]):
         raise ValueError("atomic memory evidence does not account for every payload event")
@@ -37,8 +39,11 @@ def validate_evidence(admission, memory, records, buffers):
         candidates = [source[s] for s in access["source_ids"] if s in source]
         if (not isinstance(info, dict) or not candidates or any(c != info for c in candidates)
                 or buffer.get("dtype") != "i" + str(info.get("word_bits"))
-                or info.get("word_bits") not in (32, 64)
-                or (info.get("operation"), info.get("standard_kind")) not in RMW.values()
+                or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64))
+                or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
+                or access.get("opcode") != ("tt.atomic_cas" if info["operation"] == "cas" else "tts.unstructured_atomic_rmw")
+                or any(opcodes[s] != ("tt.atomic_cas" if info["operation"] == "cas" else "tt.atomic_rmw") for s in access["source_ids"] if s in source)
+                or info["operation"] == "cas" and access.get("mask") != "unmasked"
                 or info.get("source_order") not in ORDERS.values() or info.get("source_scope") not in SCOPES.values()
                 or info.get("standard_order") != "acq_rel"
                 or info.get("logical_scope") != ("one-logical-program" if info["source_scope"] == "cta"
@@ -47,7 +52,8 @@ def validate_evidence(admission, memory, records, buffers):
                 or not isinstance(actual, dict) or any(actual.get(key) != value for key, value in info.items())
                 or actual.get("buffer") != buffer["name"] or not actual.get("source_ids")
                 or not set(actual["source_ids"]) & set(access["source_ids"])
-                or actual.get("payload") != "standard-memref-atomic-rmw-with-original-returned-old-value"
+                or actual.get("payload") != ("standard-memref-generic-compare-exchange-with-original-returned-old-value"
+                    if info["operation"] == "cas" else "standard-memref-atomic-rmw-with-original-returned-old-value")
                 or actual.get("effect_boundary") != "standard-execute-region-no-inline"
                 or actual.get("inactive_old_value") != ("zero-refinement-of-source-undefined-old-value"
                     if access["mask"] == "source-per-lane" else "no-inactive-lanes")):
@@ -61,16 +67,20 @@ def contract(op, source_ids):
         raise ConversionError(message, opcode=opcode(op), source_id=next(iter(ids), None))
     type_ = op.results[0].type if len(op.results) == 1 else None
     element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
-    if element not in (builtin.i32, builtin.i64):
+    cas = opcode(op) in ("tt.atomic_cas", "tts.atomic_cas")
+    if element not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
+        if cas:
+            refuse("atomic CAS needs a qualified integer i16/i32/i64 numeric profile")
         refuse("atomic RMW needs a qualified integer i32/i64 numeric profile")
-    values = []
-    for name, allowed in (("atomic_rmw_op", RMW), ("sem", ORDERS), ("scope", SCOPES)):
+    values = [None] if cas else []
+    for name, allowed in ((("atomic_rmw_op", RMW),) if not cas else ()) + (("sem", ORDERS), ("scope", SCOPES)):
         value = op.properties.get(name, op.attributes.get(name))
         if not isinstance(value, builtin.IntegerAttr) or value.value.data not in allowed:
             refuse("atomic RMW has an unqualified operation/order/scope")
         values.append(value.value.data)
     kind, order, scope = values
-    return {"operation": RMW[kind][0], "standard_kind": RMW[kind][1], "word_bits": element.width.data,
+    operation, standard_kind = ("cas", "compare-exchange") if cas else RMW[kind]
+    return {"operation": operation, "standard_kind": standard_kind, "word_bits": element.width.data,
         "source_order": ORDERS[order], "source_scope": SCOPES[scope],
         "logical_scope": "one-logical-program" if scope == 2 else "all-logical-programs-in-private-invocation",
         "standard_order": "acq_rel", "external_participants": "excluded-by-private-buffer-ABI"}
@@ -92,14 +102,15 @@ def adapt_payload(module, abi, admission, source_ids):
         return buffers[value]
     reports, generics = [], []
     for op in list(function.walk()):
-        if not isinstance(op, memref.AtomicRMWOp) or (buffer := root(op.operands[1])) is None:
+        cas = isinstance(op, GenericAtomicRMWOp)
+        if not isinstance(op, (memref.AtomicRMWOp, GenericAtomicRMWOp)) or (buffer := root(op.operands[0 if cas else 1])) is None:
             continue  # Compiler-owned guard atomics use separate arguments.
         ids = source_ids(op.location)
         matches = [i for i, access in enumerate(accesses)
                    if access["buffer"] == buffer.name and set(ids) & set(access["source_ids"])]
         kind = op.properties.get("kind")
-        if (len(matches) != 1 or not isinstance(kind, builtin.IntegerAttr)
-                or kind.value.data != accesses[matches[0]]["atomic"]["standard_kind"]):
+        if (len(matches) != 1 or ("compare-exchange" if cas else kind.value.data if isinstance(kind, builtin.IntegerAttr) else None)
+                != accesses[matches[0]]["atomic"]["standard_kind"]):
             raise ConversionError("native source-buffer atomic differs from its typed admission inventory",
                                   opcode=op.name, source_id=next(iter(ids), None))
         index = matches[0]
@@ -111,10 +122,23 @@ def adapt_payload(module, abi, admission, source_ids):
             generic = generic.parent_op()
         if generic is None:
             raise ConversionError("native atomic left its parallel tensor event")
-        if generic not in generics:
-            generics.append(generic)
+        ancestor = generic
+        while ancestor is not None:
+            if isinstance(ancestor, GenericOp) and ancestor not in generics:
+                generics.append(ancestor)
+            ancestor = ancestor.parent_op()
         if op.results[0].type != buffer.type.element_type:
             raise ConversionError("native atomic old-value type differs from its logical buffer")
+        if cas:
+            body = op.body.block
+            operations = list(body.ops)
+            if (len(operations) != 3 or not isinstance(operations[0], arith.CmpiOp)
+                    or not isinstance(operations[1], arith.SelectOp) or not isinstance(operations[2], AtomicYieldOp)
+                    or operations[0].predicate.value.data != 0
+                    or tuple(operations[0].operands) != (body.args[0], generic.body.block.args[1])
+                    or tuple(operations[1].operands) != (operations[0].result, generic.body.block.args[2], body.args[0])
+                    or operations[2].value is not operations[1].result):
+                raise ConversionError("native CAS region differs from exact compare/exchange and returned-old-value semantics")
         refinement = "no-inactive-lanes"
         if access["mask"] == "source-per-lane":
             control = op.parent_op()
@@ -140,7 +164,8 @@ def adapt_payload(module, abi, admission, source_ids):
             "prov.atomic_standard_order": builtin.StringAttr("acq_rel")})
         reports.append({"source_ids": ids, "buffer": buffer.name, **info, "inactive_old_value": refinement,
                         "effect_boundary": "standard-execute-region-no-inline",
-                        "payload": "standard-memref-atomic-rmw-with-original-returned-old-value"})
+                        "payload": "standard-memref-generic-compare-exchange-with-original-returned-old-value" if cas
+                            else "standard-memref-atomic-rmw-with-original-returned-old-value"})
     if any(count != 1 for count in observed):
         raise ConversionError("native atomic payload does not account for every admitted memory event exactly once")
     for generic in generics:

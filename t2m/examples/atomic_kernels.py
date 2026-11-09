@@ -5,6 +5,85 @@ import triton.language as tl
 
 
 @triton.jit
+def indexed_cas(state, comparison, value, old, B: tl.constexpr, SCALAR: tl.constexpr,
+                SEM: tl.constexpr, SCOPE: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    expected = tl.load(comparison + lane)
+    desired = tl.load(value + lane)
+    previous = tl.atomic_cas(state + lane, expected, desired, sem=SEM, scope=SCOPE)
+    tl.store(old + lane, previous)
+
+
+@triton.jit
+def selected_cas(a, b, comparison, value, old, choice,
+                 B: tl.constexpr, SCALAR: tl.constexpr, LANE: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = a + lane
+    if LANE:
+        pointer = tl.where(lane % 2 == 0, pointer, b + lane)
+    else:
+        if choice:
+            pointer = b + lane
+    expected = tl.load(comparison + lane)
+    desired = tl.load(value + lane)
+    previous = tl.atomic_cas(pointer, expected, desired, sem="acq_rel", scope="gpu")
+    tl.store(old + lane, previous)
+
+
+@triton.jit
+def matrix_cas(state, comparison, value, old):
+    row = tl.program_id(0) * 2 + tl.arange(0, 2)
+    column = tl.arange(0, 4)
+    lane = row[:, None] * 4 + column[None, :]
+    previous = tl.atomic_cas(state + lane, tl.load(comparison + lane), tl.load(value + lane), sem="acquire", scope="cta")
+    tl.store(old + lane, previous)
+
+
+@triton.jit
+def region_cas(state, out, n, steps, enabled, shift,
+               B: tl.constexpr, SCALAR: tl.constexpr, WHILE: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = state + lane + shift
+    total = (lane * 0).to(state.dtype.element_ty)
+    if enabled:
+        if WHILE:
+            i = 0
+            while i < steps:
+                comparison = tl.full((B,) if not SCALAR else (), 0, state.dtype.element_ty) + (i - 11).to(state.dtype.element_ty)
+                value = tl.full((B,) if not SCALAR else (), 0, state.dtype.element_ty) + (i + 1).to(state.dtype.element_ty)
+                previous = tl.atomic_cas(pointer, comparison, value, sem="relaxed", scope="gpu")
+                total += previous
+                pointer += n
+                i += 1
+        else:
+            for i in range(steps):
+                comparison = tl.full((B,) if not SCALAR else (), 0, state.dtype.element_ty) + (i - 11).to(state.dtype.element_ty)
+                value = tl.full((B,) if not SCALAR else (), 0, state.dtype.element_ty) + (i + 1).to(state.dtype.element_ty)
+                previous = tl.atomic_cas(pointer, comparison, value, sem="relaxed", scope="gpu")
+                total += previous
+                pointer += n
+        last = tl.atomic_cas(pointer, total, total + 7, sem="release", scope="sys")
+        total += last
+    tl.store(out + lane, total, lane < n)
+
+
+@triton.jit
+def cas_collision(state, old):
+    program = tl.program_id(0)
+    previous = tl.atomic_cas(state, tl.full((), 0, state.dtype.element_ty), tl.full((), 1, state.dtype.element_ty), sem="acq_rel", scope="gpu")
+    tl.store(old + program, previous)
+
+
+@triton.jit
 def indexed_atomic(x, index, state, old, n, m, B: tl.constexpr, OP: tl.constexpr,
                    SCALAR: tl.constexpr, MASK: tl.constexpr, FRESH: tl.constexpr,
                    SEM: tl.constexpr, SCOPE: tl.constexpr):

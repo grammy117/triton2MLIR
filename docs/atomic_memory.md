@@ -1,10 +1,10 @@
 # Private-invocation atomic memory through the tensor interface
 
-Status: implemented for the explicit private-invocation integer RMW profile.
+Status: implemented for the explicit private-invocation integer RMW/CAS profile.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
-CAS, floating atomics, external publication/synchronization and broader
+Floating atomics, external publication/synchronization and broader
 alias/ownership state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
@@ -86,11 +86,10 @@ atomic update remain executable operations.
    Use exact references where ordering is unique; for colliding old values,
    check a valid linearization/permutation instead of imposing a GPU schedule.
    Reuse unchanged Merlin libraries over independent domains and preserve inputs.
-5. Region-local RMW now extends the isolated event/pointer-control converter.
-   Next implement CAS from exact compare/exchange semantics using a standard
-   atomic region/consumer implementation: the current unstructured converter
-   has no CAS case. Reuse official/shared patterns where available and retain
-   a complete, replayable disposition for every source event.
+5. Region-local RMW and integer CAS now extend the isolated event/pointer-control
+   converter. CAS uses an exact standard atomic comparison/select region and
+   checked consumer legalization; the upstream unstructured converter has no
+   CAS case. Retain a complete, replayable disposition for every source event.
 6. Add the float/numeric, descriptor-reduction, synchronization/external-effect
    and target materialization contracts required by the universal objective.
 
@@ -138,8 +137,8 @@ custody, v3 cost/protocol and declared atomic facts, excluding evaluator values.
 Actual source/guard/linearization and accelerator proofs remain separate.
 
 A real model2MLIR tuple-result atomic capture now preserves both updated state
-and old values through native and actual Merlin execution. Its integer learned
-state, index buffer, inputs and every independent PyTorch reference remain
+and old values through native and actual Merlin execution. Its integer state
+parameter, index buffer, inputs and every independent PyTorch reference remain
 byte-identical to the parent capture. Model2MLIR's additive `goldens.npz` archive
 captures all flat tensor results while retaining the legacy `golden.npy` first
 result. Both execution reports bind the complete reference set. Merlin compiler
@@ -188,3 +187,65 @@ package passes native comparison and all 20 artifact checks. Its separate
 `out/atomic-rmw-merlin/` qualification passes actual Merlin host execution,
 unchanged-input/reference comparison and all 45 artifact checks. Accelerator
 execution remains unperformed.
+
+## Integer compare/exchange
+
+CAS now qualifies i16/i32/i64, matching Triton v3.7.1's public integer width
+domain. All four source orders and three scopes retain their original facts.
+It reuses the official rank-one gather descriptor and the existing base/offset,
+region-event, initialization and atomic participation analyses. Scalar and
+rank-N events retain value order through checked unit/reshape normalization.
+Finite selected bases branch inside an ordinary parallel tensor generic;
+only the selected buffer participates. No frontend loop serializes tile lanes.
+Every enclosing effectful generic retains an exactly-once region to prevent
+tensor fusion from cloning an atomic nested in a scalar branch.
+
+The pinned optimizer does not register the `tts.atomic_cas` found in the current
+Meta sources. The adapted event therefore retains the original `tt.atomic_cas`
+over its official logical descriptor until expansion. The exported operation is
+standard `memref.generic_atomic_rmw`: compare the current integer word with the
+original comparison, select the original new word or unchanged current word,
+and return the old value. Guard and payload inventories check operation/type,
+source IDs, source scope/order and exact comparison/select/yield edges.
+
+CAS has no source mask. An output-store mask cannot make an invalid CAS lane
+inactive; active bounds and completed initialization remain mandatory. Actual
+branch placement can suppress an event, and selected buffers use executable
+branches rather than inventing a CAS mask or dropping an unselected effect.
+
+The pinned native ownership pass cannot process MemRef's scalar-result atomic
+region. Native qualification therefore requires the explicitly supplied Merlin
+compiler support (`T2M_MERLIN_ROOT`; model binding also accepts `--merlin-root`).
+Merlin's `lower_integer_compare_exchange` legalization uses a private synchronous
+helper with one LLVM cmpxchg, acq_rel success/acquire failure ordering, no pointer
+escape and no allocation. Its complete body is retained while ownership sees
+the typed declaration, then restored with unchanged declaration attributes before
+liveness verification and final LLVM conversion. Borrowing grants reconstruct
+the current body, types and symbol scope. Portable `model.mlir` contains the
+standard atomic region and no LLVM operations or opaque helper calls. These
+native-toolchain requirements are explicit package differences.
+The currently qualified native pointer/index ABI is the default 64-bit host
+ABI. Narrower index conversion and explicit layout/triple overrides refuse;
+portable atomic semantics remain independent of this native materializer limit.
+
+The 56 focused profile cases and visible-demo test pass. They cover integer
+widths, scalar/tiled and rank-two events, both selected-base forms, recurrences,
+final pointers, zero trips, collisions/old values, every source order/scope,
+active-address/initialization failures and rehashed scope/order changes.
+Both RMW and CAS model captures also pass all ten model cases with original
+weights, buffers and complete tuple references preserved. Merlin's 207 native
+legalization/lifetime/staging regressions pass at
+`9d066f6ff155e0105d0d444424d5b469c66932aa`. These measurements do not close float
+policies, external synchronization, aliases or accelerator materialization.
+
+```bash
+export T2M_MERLIN_ROOT=/path/to/merlin
+python -m t2m shared-demo --kernel atomic-cas \
+  --memory-profile guarded-buffer --address-policy source-words \
+  --effect-profile atomics --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python --out out/atomic-cas
+python -m t2m qualify-merlin out/atomic-cas --out out/atomic-cas-merlin \
+  --merlin-root "$T2M_MERLIN_ROOT" --merlin-python /path/to/merlin-env/bin/python \
+  --python /path/to/native-env/bin/python --merlin-clang /path/to/clang
+python -m t2m verify-merlin out/atomic-cas-merlin
+```

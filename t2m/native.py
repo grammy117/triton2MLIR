@@ -14,7 +14,7 @@ import sys
 import numpy as np
 
 
-def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None):
+def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None):
     work = Path(work)
     arrays = [np.asarray(x) for x in inputs]
     if sum(x.nbytes for x in arrays) > 64 * 1024 * 1024:
@@ -31,7 +31,8 @@ def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None):
         process = subprocess.run([str(python or sys.executable), str(runner), str(work.resolve())],
                                  capture_output=True, text=True, timeout=30,
                                  env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
-                                          TMPDIR=str(work.resolve())))
+                                          TMPDIR=str(work.resolve()),
+                                          **({"T2M_MERLIN_ROOT": str(compiler_support_root)} if compiler_support_root is not None else {})))
     except subprocess.TimeoutExpired as exc:
         raise ValueError("native execution exceeded its 30-second budget") from exc
     if process.returncode:

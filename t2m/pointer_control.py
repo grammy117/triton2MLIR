@@ -76,7 +76,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     if isolate_memory:
         controls.extend(op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for")
                         and op not in controls and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()))
-    if not controls:
+    if not controls and not isolate_memory:
         return []
 
     def refuse(op, message):
@@ -85,7 +85,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
 
     functions = [op for op in original if opcode(op) == "tt.func"]
     if len(functions) != 1 or len(functions[0].regions[0].blocks) != 1:
-        refuse(controls[0], "pointer control needs one fully inlined entry block")
+        refuse(controls[0] if controls else next((op for op in original if opcode(op) in MEMORY_EVENTS), module),
+               "pointer control needs one fully inlined entry block")
     entry = functions[0].regions[0].block
     values = [v for op in original for v in (*op.results,
               *(a for region in op.regions for block in region.blocks for a in block.args))
@@ -216,4 +217,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
              "opcode": opcode(op), "pointer_offset_bits": 64,
              "base_contract": "single-source-entry-buffer-on-all-edges",
              "source_integer_arithmetic": "unchanged-before-signed-extension",
-             "control_flow": "original-regions-and-edge-order"} for op in controls]
+             "control_flow": "original-regions-and-edge-order"} for op in controls] or [
+        {"kind": "source-word-memory-addresses", "pointer_offset_bits": 64,
+         "source_ids": sorted({s for op in memory for s in source_ids(op.location)}),
+         "source_integer_arithmetic": "unchanged-before-signed-extension"}]

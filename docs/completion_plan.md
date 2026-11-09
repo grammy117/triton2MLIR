@@ -17,11 +17,18 @@ execution. The 32 model regressions and 23 compiler-staging tests pass.
 Region-local RMW now also preserves branches, loop recurrences and finite
 selected-buffer pointer state through native and Merlin execution: 17 new
 producer cases, 93 staging cases and 90 native consumer loop/lifetime cases
-pass. See [atomic memory](atomic_memory.md). CAS, floating atomics, broader
+pass. See [atomic memory](atomic_memory.md). Floating atomics, broader
 effects and external synchronization still require executable implementations.
 The following 145-case pointer/event/atomic/model regression also passes;
 `out/atomic-rmw/` and its separate Merlin qualification provide a visible,
 fully verified host-executed package. Accelerator coverage remains open.
+Integer CAS now additionally qualifies all public Triton integer widths
+(i16/i32/i64), scalar/tiled/rank-two dataflow, selected bases, branch/loop state
+and original old values. Its 56 focused cases and visible-demo test pass, as do
+ten RMW/CAS model cases and 207 Merlin compiler/staging/lifetime cases. Portable
+MLIR keeps a standard atomic region; the native ownership compatibility path
+and toolchain dependency are explicit in the package contract. Float policies,
+external synchronization and accelerator materialization remain required work.
 
 For each operation/type/attribute/composition, track these separately:
 

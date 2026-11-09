@@ -178,6 +178,15 @@ def normalize_selected(state, source_ids):
         if len(roots) == 1:
             op.operands = [address(roots[0]), *op.operands[1:]]
             continue
+        if name == "tt.atomic_cas":
+            from .compare_exchange import dispatch
+            ids = source_ids(op.location)
+            dispatch(op, roots, offset, tag(pointer))
+            memory_reports.append({"kind": "selected-pointer-memory", "source_ids": ids, "opcode": name,
+                "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
+                "memory_position": "original-event; conditional-CAS-in-parallel-logical-tile",
+                "missing_other_zero_refinement": False})
+            continue
         write = name == "tt.store"
         atomic = name == "tt.atomic_rmw"
         if write or atomic:

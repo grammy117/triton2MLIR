@@ -20,29 +20,39 @@ MERLIN, CLANG = os.environ.get("T2M_MERLIN_ROOT"), os.environ.get("T2M_MERLIN_CL
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module")
-def atomic_model_inputs(tmp_path_factory):
+@pytest.fixture(scope="module", params=["add", "cas"])
+def atomic_model_inputs(tmp_path_factory, request):
+    kind = request.param
     tmp_path = tmp_path_factory.mktemp("actual-atomic-model")
-    from t2m.examples.atomic_kernels import indexed_atomic
+    from t2m.examples.atomic_kernels import indexed_atomic, indexed_cas
     capture = tmp_path / "capture"
     script = Path(__file__).resolve().parents[1] / "scripts/capture_atomic_model.py"
-    process = subprocess.run([M2M, str(script), "--out", str(capture)], capture_output=True, text=True, timeout=60,
+    process = subprocess.run([M2M, str(script), "--out", str(capture), "--kind", kind], capture_output=True, text=True, timeout=60,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
     assert process.returncode == 0, process.stderr
     constants = {"n": 13, "m": 17, "B": 8, "OP": "add", "SCALAR": False, "MASK": True, "FRESH": False,
                  "SEM": "relaxed", "SCOPE": "gpu"}
     source = tmp_path / "source.ttir"
-    source.write_text(capture_ttir(indexed_atomic, {"x": "*i32", "index": "*i32", "state": "*i32", "old": "*i32",
-        **{name: "constexpr" for name in constants}}, constants))
-    abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype="i32"), TensorBuffer("index", (13,), dtype="i32"),
-        TensorBuffer("state", (17,), "readwrite", dtype="i32"), TensorBuffer("old", (13,), "write", dtype="i32")), grid=(2,))
+    if kind == "cas":
+        constants = {"B": 8, "SCALAR": False, "SEM": "relaxed", "SCOPE": "gpu"}
+        source.write_text(capture_ttir(indexed_cas, {**{n: "*i32" for n in ("state", "comparison", "value", "old")},
+            **{name: "constexpr" for name in constants}}, constants))
+        abi = TensorABI("indexed_cas", (TensorBuffer("state", (17,), "readwrite", dtype="i32"),
+            TensorBuffer("comparison", (16,), dtype="i32"), TensorBuffer("value", (16,), dtype="i32"),
+            TensorBuffer("old", (16,), "write", dtype="i32")), grid=(2,))
+    else:
+        source.write_text(capture_ttir(indexed_atomic, {"x": "*i32", "index": "*i32", "state": "*i32", "old": "*i32",
+            **{name: "constexpr" for name in constants}}, constants))
+        abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype="i32"), TensorBuffer("index", (13,), dtype="i32"),
+            TensorBuffer("state", (17,), "readwrite", dtype="i32"), TensorBuffer("old", (13,), "write", dtype="i32")), grid=(2,))
     result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile="guarded-buffer",
                             address_policy="source-words", effect_profile="atomics")
-    return capture, KernelBinding("t2m_demo::atomic_update", result)
+    return capture, KernelBinding("t2m_demo::atomic_update", result,
+        operands={"state": "state", "comparison": "index", "value": "x"} if kind == "cas" else {}), kind
 
 
 def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_path, atomic_model_inputs):
-    capture, binding = atomic_model_inputs
+    capture, binding, kind = atomic_model_inputs
     out = tmp_path / "bound"
     write_model_bundle(capture, [binding], out, work=tmp_path / "qualification", python=NATIVE,
         merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"), merlin_host=bool(MERLIN and CLANG), merlin_clang=CLANG)
@@ -50,7 +60,7 @@ def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_pa
     assert "kernels/0/memory-admission.json" in receipt["artifacts"]
     admission = json.loads((out / "kernels/0/memory-admission.json").read_text())
     assert admission["schema"] == "t2m.memory-admission.v3"
-    assert admission["atomic_adaptations"][0]["operation"] == "add"
+    assert admission["atomic_adaptations"][0]["operation"] == kind
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "golden.npy", "goldens.npz", "extra.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
     execution = json.loads((out / "execution.json").read_text())
@@ -77,7 +87,7 @@ def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_pa
 
 @pytest.mark.parametrize("change", ["missing", "shape", "dtype", "unbound"])
 def test_all_parent_result_references_must_match_the_complete_model_abi(tmp_path, atomic_model_inputs, change):
-    capture, binding = atomic_model_inputs
+    capture, binding, _ = atomic_model_inputs
     broken = tmp_path / "parent"
     shutil.copytree(capture, broken)
     receipt = json.loads((broken / "capture_receipt.json").read_text())

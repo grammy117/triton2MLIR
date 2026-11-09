@@ -4,6 +4,7 @@ import ctypes
 from importlib.metadata import version
 import json
 import math
+import os
 from pathlib import Path
 import resource
 import sys
@@ -80,12 +81,38 @@ def main(work):
         outputs = [np.zeros(shape, dtype=dtype) for shape, dtype in zip(shapes, dtypes, strict=True)]
         name = ir.StringAttr(function.attributes["sym_name"]).value
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
+        adapters = []
+        def operations(op):
+            yield op
+            for region in op.regions:
+                for block in region.blocks:
+                    for item in block.operations:
+                        yield from operations(item.operation)
+        if any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation)):
+            root = os.environ.get("T2M_MERLIN_ROOT")
+            if not root:
+                raise ValueError("native compare/exchange requires the explicit T2M_MERLIN_ROOT compiler support path")
+            sys.path.insert(0, str(Path(root).resolve() / "src"))
+            from merlin.llvmlower import atomic_compare_exchange
+            namespace = {"ir": ir}
+            exec(atomic_compare_exchange.SUPPORT, namespace)
+            count = namespace["_cas_rewrite"](context, module)
+            prepared = work / "prepared-compare-exchange.mlir"
+            prepared.write_text(str(module))
+            import hashlib
+            adapters.append({"name": "merlin-exact-integer-compare-exchange", "events": count,
+                "support_form": "embedded-native-python-prelude",
+                "support_sha256": hashlib.sha256(atomic_compare_exchange.SUPPORT.encode()).hexdigest(),
+                "prepared_sha256": hashlib.sha256(prepared.read_bytes()).hexdigest()})
+            namespace["_cas_suspend"](module)
         pipelines = (
             "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
             "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
             passmanager.PassManager.parse(pipeline).run(module.operation)
+            if adapters and pipeline == pipelines[0]:
+                namespace["_cas_restore"](module)
         (work / "lowered-llvm.mlir").write_text(str(module))
 
         def check(operation):
@@ -145,7 +172,8 @@ def main(work):
         "native_mlir_verified": True, "llvm_lowering_verified": True,
         "execution": "native-host-LLVM-JIT", "provider": "torch-mlir",
         "provider_version": version("torch-mlir"), "runtime": "bounded-generic-strided-copy",
-        "source_triton_executed": False, "consumer_execution": "not-performed"}, indent=2) + "\n")
+        "source_triton_executed": False, "consumer_execution": "not-performed",
+        **({"compiler_adapters": adapters} if adapters else {})}, indent=2) + "\n")
 
 
 if __name__ == "__main__":

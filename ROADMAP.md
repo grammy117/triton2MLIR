@@ -25,7 +25,10 @@ inputs in standard MLIR; see [the numeric contract](docs/integer_products.md).
 masks and source order/scope through actual Merlin execution under an explicit
 private-invocation profile. A real atomic model also preserves every tuple
 result and original weight through native and Merlin execution, using complete
-receipt-bound references. CAS and broader effects remain completion requirements.
+receipt-bound references. Integer CAS now also qualifies i16/i32/i64, selected
+buffers, rank-two tiles, recurrences and original old values through actual
+Merlin execution. Float policies, broader effects and accelerator materialization
+remain completion requirements; native CAS toolchain requirements are explicit.
 Branch/loop-local atomics now also retain old-value recurrences and final
 same/selected-buffer pointers, with pure accumulator destination reuse through
 Merlin and all native lifetime checks retained.

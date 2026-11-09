@@ -4,7 +4,13 @@
 profile through actual Merlin execution: all nine integer operations, scalar/
 tiled i32/i64, collisions, original old values, initialization and race checks.
 The 102 focused cases and the independent 4,663-history ownership oracle do not
-close CAS, floating atomics, publication/synchronization, aliases or target work.
+close floating atomics, publication/synchronization, aliases or target work.
+Integer CAS now additionally qualifies i16/i32/i64 scalar/tiled/rank-two events,
+selected buffers, recurrences, collisions and all source orders/scopes through
+actual Merlin execution. All 56 focused cases plus the visible-demo test pass;
+both atomic model kinds pass ten model cases. Portable input retains a standard
+generic atomic region, and the native compatibility requirement is explicit in
+[the CAS contract](atomic_memory.md#integer-compareexchange).
 An actual model2MLIR atomic model now returns both updated state and old values
 through native and Merlin libraries, preserving learned weights and all parent
 tuple references. The 32 atomic/existing model regressions and 23 compiler-only

@@ -109,7 +109,7 @@ def instrument(module, abi, source_ids, *, atomics=False):
     supported = {"tt.func", "tt.return", "tt.get_program_id", "tt.get_num_programs", "tts.make_tptr",
                  "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter"}
     if atomics:
-        supported.add("tts.unstructured_atomic_rmw")
+        supported.update(("tts.unstructured_atomic_rmw", "tt.atomic_cas"))
     controls = {"scf.for", "scf.if", "scf.while", "scf.condition", "scf.yield"}
 
     def refuse(op, message):
@@ -129,7 +129,7 @@ def instrument(module, abi, source_ids, *, atomics=False):
     for value in (*buffers, *(v for op in original for v in op.results if _pointer_type(v.type))):
         for use in value.uses:
             if use.index != 0 or opcode(use.operation) not in {
-                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw"}:
+                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw", "tt.atomic_cas"}:
                 refuse(use.operation, "pointer escaped the guarded logical buffer boundary")
 
     arguments = internal_arguments(abi)
@@ -178,7 +178,11 @@ def instrument(module, abi, source_ids, *, atomics=False):
         if pointer is None:
             refuse(op, "structured memory requires a normalized declared base pointer")
         buffer, sizes, offsets, strides, gather = pointer
-        if write:
+        if name == "tt.atomic_cas":
+            if len(op.operands) != 3 or op.operands[1].type != op.operands[2].type or op.results[0].type != op.operands[1].type:
+                refuse(op, "CAS requires matching comparison/value/result tensor types")
+            prefixes = ()
+        elif write:
             # StoreOp has one variadic operand group, hence no segment array.
             # LoadOp also carries optional `other` and uses three segments.
             if len(op.operands) < 2:
@@ -189,7 +193,8 @@ def instrument(module, abi, source_ids, *, atomics=False):
             if len(segments) != 3 or segments[0] != 1 or sum(segments) != len(op.operands):
                 refuse(op, "structured memory operand schema is not qualified")
             mask_operands = op.operands[1:1 + segments[1]]
-        prefixes = mixed(op, "static_mask_dims", mask_operands)
+        if name != "tt.atomic_cas":
+            prefixes = mixed(op, "static_mask_dims", mask_operands)
         if prefixes and len(prefixes) != len(sizes):
             refuse(op, "structured prefix mask rank differs from its tile")
         type_ = op.operands[1].type if write else op.results[0].type
@@ -234,9 +239,9 @@ def instrument(module, abi, source_ids, *, atomics=False):
         if name in ("tts.make_tptr", "tts.make_gather_scatter_tptr"):
             descriptors[op.results[0]] = pointer(op)
             continue
-        if name not in ("tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw"):
+        if name not in ("tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw", "tt.atomic_cas"):
             continue
-        atomic = name == "tts.unstructured_atomic_rmw"
+        atomic = name in ("tts.unstructured_atomic_rmw", "tt.atomic_cas")
         write = name in ("tts.store", "tts.scatter") or atomic
         atomic_contract = None
         if atomic:

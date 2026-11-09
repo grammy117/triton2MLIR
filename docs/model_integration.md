@@ -71,6 +71,40 @@ stager now admits this derived receipt with separate original/derived source
 correspondence. Optional `--merlin-host` compiles and executes the staged whole
 program; see [the measured consumer path](merlin_consumer.md).
 
+## Integer atomic model demo
+
+`scripts/capture_atomic_model.py --kind cas` captures an actual functional
+`torch.library.triton_op` call returning updated state and original old values.
+The model has an integer state parameter and comparison buffer; its registered
+CPU reference supplies both independent PyTorch results. Original weights,
+buffers, inputs, `golden.npy` and the complete `goldens.npz` archive remain
+byte-identical in the bound package. The existing default `--kind add` demo
+continues to qualify the RMW path.
+
+After creating `out/atomic-cas/` as described in [atomic memory](atomic_memory.md),
+the checked [binding configuration](../examples/atomic_cas_binding.json) reuses
+its source with the model's explicit 17-element state ABI. The source accesses
+the first sixteen elements and returns the remaining incoming state unchanged;
+the standalone demo's state extent is sixteen. Comparison/value inputs and old
+results each contain sixteen elements. Source names map explicitly to model
+schema names, and both model results cross the interface in their declared order.
+
+```bash
+/path/to/m2m-env/bin/python scripts/capture_atomic_model.py \
+  --kind cas --out out/cas_model_capture
+python -m t2m bind-model out/cas_model_capture \
+  --bindings examples/atomic_cas_binding.json --out out/cas_model \
+  --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python \
+  --merlin-root /path/to/merlin --merlin-python /path/to/merlin-env/bin/python \
+  --merlin-host --merlin-clang /path/to/clang
+python -m t2m verify-bundle out/cas_model
+```
+
+The supplied Merlin root also supplies the pinned native CAS ownership
+compatibility adapter. Compiler-only staging excludes every evaluator input and
+reference. Whole-model native and actual Merlin execution compare both original
+results and retain functional inputs; accelerator execution remains unperformed.
+
 ## Ragged tiled model demo
 
 The same model capture and binding path now covers a 35×37 by 37×21 GEMM.
