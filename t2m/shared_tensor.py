@@ -373,7 +373,28 @@ def _functionalize(module, abi):
         total = Linear()
         for off in offsets:
             total = total + off.form
-        forms = logical_coordinates(total, buffer.strides, abi.grid)
+        try:
+            forms = logical_coordinates(total, buffer.strides, abi.grid)
+        except ConversionError:
+            # Upstream sums per-axis *element* offsets (PtrState::
+            # accumulateTargetOffset). A surplus masked column can cross the
+            # row stride, so splitting that sum by quotient/remainder loses
+            # the original axes. Recover aligned contributions individually.
+            # Actual mask-dependent bounds are still checked at each access.
+            low, high = total.bounds(abi.grid)
+            if not -(1 << 63) <= low <= high < 1 << 63:
+                raise ConversionError("logical address arithmetic may overflow")
+            axes = axis_permutation(buffer, strides, [Linear()] * len(sizes),
+                                    [1] * len(sizes), abi.grid, physical_offsets=True)
+            coordinates = [None] * len(sizes)
+            for off, stride, axis in zip(offsets, strides, axes, strict=True):
+                form = off.form.divide(stride)
+                value = off.value
+                if form.dynamic and stride != 1:
+                    divisor = append(arith.ConstantOp.from_int_and_width(stride, IndexType()), op).result
+                    value = append(arith.DivSIOp(value, divisor), op).result
+                coordinates[axis] = Coordinate(form, value)
+            return buffer, sizes, tuple(coordinates), strides
         value = None
         if any(form.dynamic for form in forms):
             for off in offsets:

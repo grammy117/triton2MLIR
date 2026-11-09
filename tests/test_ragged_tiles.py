@@ -57,13 +57,14 @@ def test_large_ragged_fresh_result_uses_a_symbolic_partition(tmp_path):
 
 
 @pytest.mark.parametrize("transposed", [False, True])
-def test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse(tmp_path, transposed):
+@pytest.mark.parametrize("grid", [(3, 2), (4, 3)], ids=["minimal-grid", "surplus-grid"])
+def test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse(tmp_path, transposed, grid):
     from t2m.examples.tensor_kernels import ragged_matmul
     m, n, k = 35, 21, 37
     buffers = (TensorBuffer("x", (m, k)), TensorBuffer("y", (n, k) if transposed else (k, n)),
                TensorBuffer("out", (m, n), "write"))
     result = translate(ragged_matmul, buffers, {"M": m, "N": n, "K": k, "BM": 16, "BN": 16,
-                                              "BK": 16, "TRANSPOSED": transposed}, (3, 2), tmp_path)
+                                              "BK": 16, "TRANSPOSED": transposed}, grid, tmp_path)
     rng = np.random.default_rng(28)
     x, y = [rng.normal(size=b.shape).astype("float32") for b in buffers[:2]]
     (actual,), _ = execute_native(result.mlir_text, [x, y], tmp_path / "native", python=NATIVE)
@@ -87,3 +88,12 @@ def test_dynamic_nonzero_fill_contributes_to_reduction_and_both_branch_results(t
     (actual,), _ = execute_native(result.mlir_text, [x], tmp_path / "native", python=NATIVE)
     np.testing.assert_array_equal(actual, expected)
     assert len(result.trace["memory"]["source_conditionals"]) == 1
+
+
+def test_surplus_grid_axis_recovery_still_checks_the_observed_mask_bounds(tmp_path):
+    from t2m.examples.tensor_kernels import ragged_matmul
+    buffers = (TensorBuffer("x", (35, 37)), TensorBuffer("y", (37, 21)),
+               TensorBuffer("out", (35, 21), "write"))
+    with pytest.raises(ConversionError, match="bounds"):
+        translate(ragged_matmul, buffers, {"M": 36, "N": 21, "K": 37, "BM": 16, "BN": 16,
+                                         "BK": 16, "TRANSPOSED": False}, (4, 3), tmp_path)

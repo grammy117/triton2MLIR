@@ -127,6 +127,14 @@ before insertion. All-inactive extra programs use bounded zero-length slices.
 Axis permutations retain dynamic dimensions through `linalg.transpose`.
 No padding value is invented for an omitted source `other`.
 
+When surplus columns cross a row stride, quotient/remainder of the flattened
+base offset loses the original axis boundary. The adapter instead recovers
+upstream's separate element-offset contributions when each divides exactly by
+its matched logical stride. Their weighted sum preserves the original address;
+each access still needs a bounded mask and a bijective axis mapping. Native
+GEMM checks cover surplus programs in both grid dimensions, including transposed
+weights, and refuse masks extending past the actual declared buffer.
+
 Fresh output coverage uses a closed-form clipped affine partition check,
 including ragged final tiles and surplus inactive programs. Equal nominal tile
 cardinality would be incorrect here. Publication coordinates/extents are
