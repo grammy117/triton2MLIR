@@ -120,6 +120,21 @@ def test_unselected_empty_buffer_is_not_read_but_selected_bounds_are_checked(tmp
                        shape_abi=result.spec.runtime_shapes())
 
 
+def test_selected_memory_demo_packages_three_ordered_results(tmp_path):
+    import json
+    from t2m.bundle import verify_bundle
+    from t2m.cli import main
+    output = tmp_path / "demo"
+    assert main(["shared-demo", "--kernel", "selected-memory", "--out", str(output), "--optimizer", OPT,
+                 "--python", NATIVE, "--memory-profile", "guarded-buffer", "--address-policy", "source-words"]) == 0
+    verify_bundle(output)
+    assert np.load(output / "golden.npy", allow_pickle=False).shape == (13,)
+    with np.load(output / "extra.npz", allow_pickle=False) as reference:
+        assert [reference[name].shape for name in ("out1", "out2")] == [(15,), (13,)]
+    trace = json.loads((output / "provenance.json").read_text())
+    assert any(t["kind"] == "selected-pointer-memory" for t in trace["transformations"])
+
+
 @pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
 @pytest.mark.parametrize("kind,lanes", [("access", False), ("access", True), ("loop", False), ("loop", True), ("shape", False)])
 def test_one_merlin_library_retains_selected_memory_and_input_values(tmp_path, kind, lanes):

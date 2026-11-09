@@ -47,6 +47,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     grid = (1,)
     runtime_scalars = ()
     example_dimensions = {}
+    buffer_effects = {}
     if kernel == "tiled-add":
         fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
     elif kernel == "tiled-matmul":
@@ -97,6 +98,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
                            RuntimeScalar("rows", "i32", 3, bounds=(1, 5)),
                            RuntimeScalar("steps", "i32", 4, bounds=(0, 4)))
         example_dimensions = {"n": 9, "rows": 3}
+    elif kernel == "selected-memory":
+        from .examples.selected_pointer_kernels import selected_access
+        fn, constants = selected_access, {"B": 8, "SCALAR": False, "LANES": True, "STORE_SELECTED": True}
+        shapes, grid = [("n",), ("m",), ("n",)], (GridExtent("n", 8),)
+        runtime_scalars = (RuntimeScalar("n", "i32", 3, bounds=(0, 31)),
+                           RuntimeScalar("m", "i32", 4, bounds=(0, 37)),
+                           RuntimeScalar("choice", "i32", 5, bounds=(0, 3)))
+        example_dimensions = {"n": 13, "m": 15}
+        buffer_effects = {"x": "readwrite", "y": "readwrite", "out": "write"}
     elif kernel == "online-attention":
         from .examples.attention_kernels import online_attention
         fn, constants = online_attention, {"D": 16, "BM": 16, "BN": 16}
@@ -141,7 +151,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
     output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
-    abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
+    abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, buffer_effects.get(n, output_effect if n.startswith("out") else "read"),
                     dtype="i32" if n == "indices" else "f32")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
     source = work / "kernel.ttir"
@@ -181,6 +191,17 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         arrays[1:] = [np.asarray(value, dtype=np.int32) for value in
                       (example_dimensions["n"], example_dimensions["rows"], example_dimensions["rows"] - 1)]
         golden = arrays[0].sum(axis=0)
+    elif kernel == "selected-memory":
+        n, m, choice = example_dimensions["n"], example_dimensions["m"], 1
+        arrays[2:] = [np.asarray(value, dtype=np.int32) for value in (n, m, choice)]
+        index = np.arange(n)
+        take_x = (index + choice) % 2 == 0
+        golden, y = arrays[0] + np.float32(3), arrays[1].copy()
+        golden[take_x] *= np.float32(2)
+        y[m - 1 - index[~take_x]] *= np.float32(2)
+        selected = golden.copy()
+        selected[~take_x] = y[m - 1 - index[~take_x]]
+        additional = [y, selected]
     elif kernel == "online-attention":
         arrays[3:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n")]
         scores = (arrays[0].astype(np.float64) @ arrays[1].astype(np.float64).T) * 0.25
@@ -282,7 +303,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

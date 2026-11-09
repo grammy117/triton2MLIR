@@ -242,17 +242,24 @@ verified compiler/native execution under `out/online-attention-tensor-merlin/`.
 The guarded demo and qualification remain under `out/online-attention/` and
 `out/online-attention-merlin/`. Accelerator execution remains unperformed.
 
-Next memory composition: finite mixed-base pointer joins/backedges and lane
-selection. Reuse the current fixed-point base sets, but represent a selected
-base together with its element offset. At the original memory event, select
-the corresponding logical buffer/access; do not hoist a load across intervening
-writes. Preserve masks/fills, original integer words, source IDs and grid/reuse.
-Qualify scalar/tiled selections, changing loop bases, intervening mutations,
-inactive invalid offsets and actual selected out-of-bounds cases through one
-unchanged Merlin library. Mixed-base state is still refused today. Consult the
-pinned Meta structured mixed-pointer branch implementation/tests before adding
-the source-word control adapter; its index promotion does not itself establish
-source-word equivalence. General alias groups remain a separate ABI requirement.
+Finite mixed-base pointer joins/backedges and lane selection now execute through
+the source-word path. The fixed-point source-entry base sets become logical
+buffer selectors paired with element offsets. Predicated accesses stay at each
+original memory event, preserving intervening mutations, masks/fills, integer
+words and source IDs. Actual Merlin libraries qualify scalar/tiled selections,
+changing for/while bases, selected updates, shape transforms and independent
+empty/tail inputs. An unselected empty buffer is valid; selecting an invalid
+active address aborts. A narrow Merlin extension recognizes immutable tensor
+read captures and private snapshots when proving fresh loop-state ownership;
+the destination/deallocation suites pass 83 cases. See the maintained
+[selected-pointer contract and source reuse boundary](selected_pointers.md).
+
+Additional native/Merlin cases preserve raw FP16/32/64 transport bits and i32
+values, nonuniform fills, wrapped i32 address producers and cancellation across
+separately widened increments. These 13 cases pass; provenance and compatibility
+metadata explicitly record the upstream zero refinement of absent masked fills.
+General alias groups, non-dense views, pointer observations, broader loop
+ownership, numeric/effect profiles and target materialization remain open.
 
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer

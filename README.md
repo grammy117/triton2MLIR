@@ -64,6 +64,8 @@ through Merlin, retaining their control flow, word math and final pointers.
 [The policy and package differences](docs/source_words.md) are explicit.
 Finite mixed-buffer branches, lane selections and changing loop bases also
 qualify through that path; [selectors keep each original memory event](docs/selected_pointers.md).
+`shared-demo --kernel selected-memory --memory-profile guarded-buffer --address-policy source-words`
+packages lane-selected reads/writes with three ordered results and source provenance.
 `shared-demo --kernel online-attention` retains query-tile reuse, two tile
 contractions and running softmax state through Merlin's tensor interface. See
 [the measured attention profile](docs/attention.md).

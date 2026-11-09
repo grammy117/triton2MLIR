@@ -58,6 +58,17 @@ empty domains and actual selected out-of-bounds errors. Actual Merlin libraries
 reuse independent inputs, choices, counts and shapes without recompilation;
 original input bytes and compiled library bytes remain unchanged.
 
+The runnable package example exercises an intervening write followed by a
+lane-selected read/modify/write. Results are the new X state, new Y state and
+selected values, in ABI declaration order:
+
+```bash
+python -m t2m shared-demo --kernel selected-memory \
+  --memory-profile guarded-buffer --address-policy source-words \
+  --optimizer .scratch/toolchain/triton-shared-opt \
+  --python /path/to/native-env/bin/python --out out/selected-memory
+```
+
 Additional native and Merlin cases compare raw FP16/FP32/FP64 value bits,
 including signed zeros, infinities and quiet NaN payloads, and i32 values.
 Nonuniform tensor fills remain observable on inactive lanes. Two address cases
