@@ -5,6 +5,11 @@ Use its analyses, converters and corpus as the primary reuse path for broader ke
 triton2MLIR supplies the functional tensor ABI, logical launch normalization, intent/provenance,
 semantic qualification and model2MLIR/Merlin package contract.
 
+The [full memory bridge probe and plan](full_memory_bridge.md) now demonstrates
+the full shared pipeline through Merlin's actual whole-body compiler. Its later
+memory form is usable at that consumer boundary; general functional ABI,
+memory/numeric/source admission and dynamic profiles still require the stated work.
+
 The surveyed source is pinned to **17f0c234ce474bee334af36e351c62eca7852836**, with Triton pin
 **142586f90aac9b917af1081e4697b085027e13b2**. The stock-wheel path currently uses Triton 3.7.1;
 these are separate version contracts, not assumed to be interchangeable.

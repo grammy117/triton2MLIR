@@ -106,3 +106,11 @@ evidence. General source loop/while domains, strides and alias/mutation remain
 open. The remaining dynamic-shape work must introduce dimensions bound to
 actual tensor extents, corresponding runtime launch bounds and result allocation;
 it cannot relabel static capacities as dynamic tensors. See [the runtime contract](runtime_abi.md).
+
+A closed full-pipeline integration probe now compiles triton-shared's later
+mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
+input preservation. The old categorical consumer incompatibility is therefore
+not a reason to avoid the full shared pipeline. Follow [the full memory bridge
+requirements](full_memory_bridge.md) to generalize its typed functional boundary,
+memory/numeric contract, source correspondence and true dynamic dimensions.
+The probe is not a supported generic conversion profile or universal coverage.
