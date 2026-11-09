@@ -56,8 +56,8 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("memory evidence differs from source provenance: " + name)
     stage = json.loads(artifacts["memory-stage.json"])
     admission = json.loads(artifacts["memory-admission.json"]) if profile in GUARDED_PROFILES else None
-    version3 = admission is not None and admission.get("schema") == "t2m.memory-admission.v3"
-    version2 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v2", "t2m.memory-admission.v3")
+    version3 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
+    version2 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4")
     if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != ("memory-effects" if version2 else "memory-ir")
             or stage.get("stage_completed") is not True
             or stage.get("artifacts", {}).get("source.ttir") != record(artifacts["memory-input.mlir"])
@@ -69,7 +69,7 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
         layout = guard_layout(spec, atomics=version3) if version2 else {"guard_storage_bytes_per_output_element": 16}
         from .guard_protocol import ATOMIC, ORDINARY
-        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2", "t2m.memory-admission.v3")
+        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4")
                 or admission.get("strategy") != "runtime-guarded-private-output-state"
                 or admission.get("spec") != spec or admission.get("internal_arguments") != guarded_arguments(spec)
                 or admission.get("guarded_input_sha256") != record(artifacts["memory-input.mlir"])["sha256"]

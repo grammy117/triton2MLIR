@@ -127,15 +127,16 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         shapes, grid = [(16,)] * 4, (2,)
         buffer_effects = {"state": "readwrite", "old": "write"}
         buffer_dtypes = {name: "i32" for name in ("state", "comparison", "value", "old")}
-    elif kernel == "atomic-rmw":
+    elif kernel in ("atomic-rmw", "atomic-exchange"):
         from .examples.atomic_kernels import indexed_atomic
-        fn, constants = indexed_atomic, {"B": 8, "OP": "add", "SCALAR": False, "MASK": True, "FRESH": False,
+        fn, constants = indexed_atomic, {"B": 8, "OP": "exch" if kernel == "atomic-exchange" else "add", "SCALAR": False, "MASK": True, "FRESH": False,
                                          "SEM": "relaxed", "SCOPE": "gpu"}
         shapes, grid = [("n",), ("n",), ("m",), ("n",)], (GridExtent("n", 8),)
         runtime_scalars = (RuntimeScalar("n", "i32", 4, bounds=(0, 31)), RuntimeScalar("m", "i32", 5, bounds=(0, 37)))
         example_dimensions = {"n": 13, "m": 17}
         buffer_effects = {"state": "readwrite", "old": "write"}
-        buffer_dtypes = {name: "i32" for name in ("x", "index", "state", "old")}
+        buffer_dtypes = {name: "f32" if kernel == "atomic-exchange" and name != "index" else "i32"
+                         for name in ("x", "index", "state", "old")}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
@@ -171,7 +172,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
-    elif kernel == "atomic-rmw":
+    elif kernel in ("atomic-rmw", "atomic-exchange"):
         names = ["x", "index", "state", "old"]
     elif kernel == "atomic-cas":
         names = ["state", "comparison", "value", "old"]
@@ -195,15 +196,20 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         comparison[1::3] += 1
         arrays = [state, comparison, value]
         golden, additional = np.where(state == comparison, value, state), [state.copy()]
-    elif kernel == "atomic-rmw":
+    elif kernel in ("atomic-rmw", "atomic-exchange"):
         n, m = (example_dimensions[name] for name in ("n", "m"))
         values, index, state = np.arange(n, dtype=np.int32) - 5, np.arange(n, dtype=np.int32), np.arange(m, dtype=np.int32) + 50
+        if kernel == "atomic-exchange":
+            values, state = values.astype(np.float32), state.astype(np.float32)
         active = np.arange(n) % 3 != 1
         index[~active] = -1000
         arrays = [values, index, state, np.asarray(n, np.int32), np.asarray(m, np.int32)]
-        golden, old = state.copy(), np.zeros(n, np.int32)
+        golden, old = state.copy(), np.zeros(n, state.dtype)
         old[active] = state[index[active]]
-        golden[index[active]] += values[active]
+        if kernel == "atomic-exchange":
+            golden[index[active]] = values[active]
+        else:
+            golden[index[active]] += values[active]
         additional = [old]
     elif kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
@@ -349,7 +355,7 @@ def main(argv=None):
     tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     tensor.add_argument("--address-policy", choices=("structured", "source-words"), default="structured",
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
-    tensor.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
+    tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
@@ -357,11 +363,11 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
-    sd.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
+    sd.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
     coverage.add_argument("corpus", type=Path)
@@ -377,7 +383,7 @@ def main(argv=None):
     bind.add_argument("--optimizer", type=Path)
     bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
-    bind.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
+    bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)

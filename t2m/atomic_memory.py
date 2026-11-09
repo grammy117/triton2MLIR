@@ -14,6 +14,8 @@ from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
+TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
+ATOMIC_SCHEMAS = ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
 # Source enum -> source name, standard arith::AtomicRMWKind.
 RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1),
        6: ("max", 6), 7: ("min", 10), 8: ("umax", 7), 9: ("umin", 11), 10: ("exch", 3)}
@@ -23,7 +25,8 @@ SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 
 def validate_evidence(admission, memory, records, buffers):
     """Validate declared atomic custody; this does not prove source equivalence."""
-    if (admission.get("effect_profile") != EFFECT_PROFILE or memory.get("effect_profile") != EFFECT_PROFILE
+    profile = TYPED_EFFECT_PROFILE if admission.get("schema") == ATOMIC_SCHEMAS[1] else EFFECT_PROFILE
+    if (admission.get("effect_profile") != profile or memory.get("effect_profile") != profile
             or admission.get("address_policy") != "source-words-offset64"
             or not isinstance(admission.get("atomic_adaptations"), list)
             or admission["atomic_adaptations"] != memory.get("atomic_payload")):
@@ -37,8 +40,13 @@ def validate_evidence(admission, memory, records, buffers):
         info = access.get("atomic")
         buffer = buffers[access["buffer"]]
         candidates = [source[s] for s in access["source_ids"] if s in source]
+        floating = isinstance(info, dict) and info.get("value_dtype") in ("f32", "f64")
+        dtype = info.get("value_dtype") if floating else "i" + str(info.get("word_bits")) if isinstance(info, dict) else None
         if (not isinstance(info, dict) or not candidates or any(c != info for c in candidates)
-                or buffer.get("dtype") != "i" + str(info.get("word_bits"))
+                or buffer.get("dtype") != dtype
+                or floating and (profile != TYPED_EFFECT_PROFILE or info.get("operation") != "exch"
+                    or dtype != "f" + str(info.get("word_bits")) or info.get("numeric_contract") != "bitwise-exchange")
+                or not floating and ("value_dtype" in info or "numeric_contract" in info)
                 or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64))
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
                 or access.get("opcode") != ("tt.atomic_cas" if info["operation"] == "cas" else "tts.unstructured_atomic_rmw")
@@ -60,7 +68,7 @@ def validate_evidence(admission, memory, records, buffers):
             raise ValueError("atomic memory payload differs from its typed source operation/order/scope inventory")
 
 
-def contract(op, source_ids):
+def contract(op, source_ids, *, typed=False):
     from .shared_tensor import opcode
     ids = source_ids(op.location)
     def refuse(message):
@@ -68,7 +76,8 @@ def contract(op, source_ids):
     type_ = op.results[0].type if len(op.results) == 1 else None
     element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
     cas = opcode(op) in ("tt.atomic_cas", "tts.atomic_cas")
-    if element not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
+    floating = element in (builtin.f32, builtin.f64)
+    if not (typed and floating and not cas) and element not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
         if cas:
             refuse("atomic CAS needs a qualified integer i16/i32/i64 numeric profile")
         refuse("atomic RMW needs a qualified integer i32/i64 numeric profile")
@@ -80,7 +89,10 @@ def contract(op, source_ids):
         values.append(value.value.data)
     kind, order, scope = values
     operation, standard_kind = ("cas", "compare-exchange") if cas else RMW[kind]
-    return {"operation": operation, "standard_kind": standard_kind, "word_bits": element.width.data,
+    if floating and operation != "exch":
+        refuse("floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract")
+    return {"operation": operation, "standard_kind": standard_kind, "word_bits": element.bitwidth,
+        **({"value_dtype": str(element), "numeric_contract": "bitwise-exchange"} if floating else {}),
         "source_order": ORDERS[order], "source_scope": SCOPES[scope],
         "logical_scope": "one-logical-program" if scope == 2 else "all-logical-programs-in-private-invocation",
         "standard_order": "acq_rel", "external_participants": "excluded-by-private-buffer-ABI"}
@@ -152,7 +164,9 @@ def adapt_payload(module, abi, admission, source_ids):
             if (not isinstance(end, scf.YieldOp) or len(end.operands) != 1
                     or end.operands[0] is not generic.body.block.args[-1]):
                 raise ConversionError("native atomic inactive branch differs from the undefined output iter-arg")
-            zero = arith.ConstantOp.from_int_and_width(0, op.results[0].type)
+            element = op.results[0].type
+            zero = (arith.ConstantOp(builtin.FloatAttr(0.0, element)) if isinstance(element, builtin.AnyFloat)
+                    else arith.ConstantOp.from_int_and_width(0, element))
             zero.location = op.location
             inactive.insert_op_before(zero, end)
             end.operands = [zero.result]

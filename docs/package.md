@@ -134,6 +134,16 @@ prepared-body hashes are explicit native evidence. Exported MLIR and the public
 tensor/scalar ABI remain portable, with no opaque or LLVM helper in the package
 source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
 
+`--effect-profile typed-atomics` selects the separate
+`private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
+bitwise f32/f64 exchange to integer RMW/CAS while retaining the same public
+tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
+value dtype and `bitwise-exchange` in their source/access/payload declarations.
+Standard `memref.atomic_rmw assign` preserves old and new representations;
+inactive undefined old values refine to typed zero. No numeric policy for
+floating arithmetic atomics is implied. Compatibility metadata names these
+differences for standalone and model packages.
+
 The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor
 witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three

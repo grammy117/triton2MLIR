@@ -96,7 +96,7 @@ def normalize_scalars(module, source_ids):
     return reports
 
 
-def instrument(module, abi, source_ids, *, atomics=False):
+def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
@@ -246,7 +246,7 @@ def instrument(module, abi, source_ids, *, atomics=False):
         atomic_contract = None
         if atomic:
             from .atomic_memory import contract
-            atomic_contract = contract(op, source_ids)
+            atomic_contract = contract(op, source_ids, typed=typed_atomics)
         access = describe(op, write)
         if not access.sizes or any(n <= 0 for n in access.sizes):
             refuse(op, "memory guards require a positive static tile shape")
@@ -262,8 +262,8 @@ def instrument(module, abi, source_ids, *, atomics=False):
                          "guard": "bounds-atomic-compatibility-initialization" if atomic else "bounds-owner-lane-uniqueness" if write else "active-bounds" if access.buffer.effect == "read" else "bounds-read-ownership-initialization",
                          "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked",
                          **({"atomic": atomic_contract} if atomic else {})})
-    from .atomic_memory import EFFECT_PROFILE
-    return {"schema": "t2m.memory-admission.v3" if atomics else "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
+    from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
+    return {"schema": "t2m.memory-admission.v4" if typed_atomics else "t2m.memory-admission.v3" if atomics else "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
             "spec": abi.as_dict(), "internal_arguments": arguments, "accesses": accesses,
             "scalar_normalizations": scalar_normalizations,
             "control_flow": [{"opcode": opcode(op), "source_ids": source_ids(op.location)} for op in original
@@ -271,7 +271,7 @@ def instrument(module, abi, source_ids, *, atomics=False):
             "writable_reads": "shared-readers-or-single-writer-program", "fresh_initialization": "post-grid-complete-write-coverage",
             "ownership_protocol": protocol.name,
             "parallelism": "original-logical-grid-and-payload-retained",
-            **({"effect_profile": EFFECT_PROFILE} if atomics else {}),
+            **({"effect_profile": TYPED_EFFECT_PROFILE if typed_atomics else EFFECT_PROFILE} if atomics else {}),
             **layout}
 
 

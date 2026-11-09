@@ -440,3 +440,15 @@ and native whole-body materialization are implemented. Direct standalone TTIR st
 general mutation/model-result schemas and accelerator materialization remain consumer gates.
 Backend-observing operations still need the effectful/backend-bound profiles defined above;
 they cannot silently become pure tensor math.
+
+### Typed atomic follow-through
+
+The separately selected typed atomic profile now extends integer RMW/CAS with
+bitwise f32/f64 exchange through standard MLIR, native execution, standalone
+Merlin packaging and actual model2MLIR tuple-result binding. V4 memory admission
+retains v3 ownership/initialization costs and binds the floating bit contract.
+This is additional qualified coverage, not full arbitrary-kernel completion.
+Next: same-width logical pointer views for the source integer-word min/max
+algorithm, preserving NaN/signed-zero behavior without whole-buffer conversion;
+then floating-add numeric contracts and the remaining universal intake gaps.
+See [atomic memory](docs/atomic_memory.md).

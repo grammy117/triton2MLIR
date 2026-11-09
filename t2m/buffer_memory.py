@@ -70,7 +70,7 @@ def functionalize_memory(module, abi, *, guards=None):
     guard_state = None
     if guards is not None:
         from .guard_runtime import allocate
-        guard_state = allocate(abi, dimensions, entry, body, append, atomics=guards.get("schema") == "t2m.memory-admission.v3")
+        guard_state = allocate(abi, dimensions, entry, body, append, atomics=guards.get("schema") in ("t2m.memory-admission.v3", "t2m.memory-admission.v4"))
     values, states = [], {}
     for source, (kind, declared) in zip(original.body.block.args, abi.source_bindings):
         if kind == "constant":

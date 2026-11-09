@@ -258,7 +258,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False):
+def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False):
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
     entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
@@ -299,7 +299,7 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False):
         op.location = NameLoc(StringAttr(source_id), op.location)
         if name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
-            records[-1]["atomic"] = contract(op, _source_ids)
+            records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise",
                     "tt.print", "tt.assert") or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
@@ -1090,9 +1090,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if address_policy not in ("structured", "source-words"):
         raise ValueError("address policy must be explicitly structured or source-words")
     source_words = address_policy == "source-words"
-    if effect_profile not in ("ordinary", "atomics"):
-        raise ValueError("effect profile must be explicitly ordinary or atomics")
-    atomics = effect_profile == "atomics"
+    if effect_profile not in ("ordinary", "atomics", "typed-atomics"):
+        raise ValueError("effect profile must be explicitly ordinary, atomics or typed-atomics")
+    atomics = effect_profile in ("atomics", "typed-atomics")
+    typed_atomics = effect_profile == "typed-atomics"
     if atomics and (memory_profile != "guarded-buffer" or not source_words):
         raise ValueError("atomic effects require guarded-buffer memory and source-words addresses")
     if source_words and memory_profile != "guarded-buffer":
@@ -1118,7 +1119,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
-    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics)
+    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics)
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1204,7 +1205,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     admission = None
     if memory_profile == "guarded-buffer":
         from .guarded_memory import instrument
-        admission = instrument(lowered, abi, _source_ids, atomics=atomics)
+        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics)
         result = witness = None
     else:
         result = witness = _functionalize(lowered, abi)
@@ -1354,10 +1355,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         trace["abi_difference"] += "; source-word address policy uses indirect offset tensors instead of recovered structured slices"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     if atomics:
-        from .atomic_memory import EFFECT_PROFILE
+        from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
+        actual_effect_profile = TYPED_EFFECT_PROFILE if typed_atomics else EFFECT_PROFILE
         for op in (next(iter(result.ops)), *(op for op in result.walk() if op.name == "scf.forall")):
-            op.attributes["prov.effect_profile"] = StringAttr(EFFECT_PROFILE)
-        trace["memory"].update(effect_profile=EFFECT_PROFILE, atomic_payload=admission["atomic_adaptations"],
+            op.attributes["prov.effect_profile"] = StringAttr(actual_effect_profile)
+        trace["memory"].update(effect_profile=actual_effect_profile, atomic_payload=admission["atomic_adaptations"],
             grid="unmapped-logical-forall; shared-atomic-state; sticky-ordinary-memory-ownership",
             ordering="source-program-order; linearizable-RMW-with-standard-acq_rel; ordinary-races-refused")
         trace["abi_difference"] += "; private-invocation atomic payload; atomic collisions permitted; ordinary races still guarded"

@@ -77,6 +77,9 @@ and i16/i32/i64 CAS through actual Merlin execution, retaining old values,
 selected-buffer effects and source recurrences. `shared-demo --kernel atomic-cas`
 and a real model2MLIR tuple-result demo are described in
 [atomic memory](docs/atomic_memory.md), including native-toolchain requirements.
+The separate `--effect-profile typed-atomics` adds bitwise f32/f64 exchange;
+`shared-demo --kernel atomic-exchange` produces a working floating example
+with guarded-buffer/source-words memory and the unchanged public tensor ABI.
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

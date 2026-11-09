@@ -1,10 +1,11 @@
 # Private-invocation atomic memory through the tensor interface
 
-Status: implemented for the explicit private-invocation integer RMW/CAS profile.
+Status: implemented for the explicit private-invocation integer RMW/CAS profile
+and the separately selected typed profile with bitwise f32/f64 exchange.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
-Floating atomics, external publication/synchronization and broader
+Floating arithmetic atomics, external publication/synchronization and broader
 alias/ownership state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
@@ -263,3 +264,44 @@ comparison and all 80 derived-package artifact checks. Both actual LLVM modules
 contain internal CAS helpers; portable model source remains standard tensor/
 SCF/memory IR. Earlier qualification directories remain unchanged. The source
 capture's original weights and all model result references stay byte-identical.
+
+## Typed profile and floating exchange
+
+`--effect-profile typed-atomics` selects
+`private-invocation-typed-atomics-v2` with `t2m.memory-admission.v4`. It retains
+the existing integer RMW/CAS contract and additionally admits f32/f64 exchange.
+`shared-demo --kernel atomic-exchange --memory-profile guarded-buffer
+--address-policy source-words --effect-profile typed-atomics` emits a standalone
+example; `scripts/capture_atomic_model.py --kind exch` captures the tuple-result
+model2MLIR source for later binding.
+Each floating event binds its actual value dtype and `bitwise-exchange` numeric
+contract in source inventory, access, adaptation and staged intent. The v3
+integer profile still refuses floats. V4 retains the same thirty-bit ownership
+protocol, initialization requirements, scopes, ordering and allocation costs.
+
+Meta's existing unstructured atomic converter supplies `memref.atomic_rmw
+assign`; the frontend adds typed inactive zero and an exactly-once SCF boundary.
+There is no floating arithmetic, whole-buffer representation copy, LLVM operation
+or opaque helper in exported MLIR. Native and Merlin execution tests compare
+raw words for f32/f64 quiet/signaling NaNs with payloads, signed zeros,
+infinities, subnormals and maximal finite values. They check both returned old
+values and final state across scalar/vector programs, masked invalid addresses
+and dynamic empty/tail grids. Repeated Merlin invocation reuses the same library.
+A real model2MLIR capture additionally retains weights and both tuple results.
+The general package comparator uses numerical tolerance with equal-NaN semantics;
+these dedicated word comparisons establish the stronger exchange bit contract.
+
+Floating min/max need a further typed-view extension. Triton 3.7.1
+`language/semantic.py` implements them using same-width integer pointer bitcasts
+and signed/unsigned atomic min/max selected by the input sign bit. Replacing
+that source algorithm with floating min/max can change NaN payloads and signed
+zero. Preserve the integer operations as updates on logical word views of the
+floating buffer, expanding only each event to a standard atomic region. Do not
+copy or reinterpret the whole public buffer into a different physical ABI.
+Meta's `TritonToUnstructuredPass.cpp` and
+`test/Conversion/TritonToUnstructured/bitcast_ptr_unstructured.mlir` already
+provide equal-storage-byte pointer-offset propagation; the remaining work is
+guarded logical view admission, typed region expansion, native legalization
+and evidence/model qualification. Different storage widths need explicit address
+rescaling and bounds/alias reasoning. Floating add separately needs a source
+rounding/subnormal/NaN contract rather than an assumed device behavior.

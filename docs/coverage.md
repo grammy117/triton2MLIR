@@ -263,3 +263,14 @@ and regressions. Its monolithic converter imports many of the same patterns as
 the staged pipeline, including reductions, matmul, reshape and a cumsum-specific
 scan converter. It is not another complete universal converter that removes these
 ABI/numeric obligations. See the [pinned source comparison](triton_shared.md).
+
+### Typed atomic profile
+
+`typed-atomics` adds bitwise f32/f64 `tt.atomic_rmw xchg` through upstream
+unstructured conversion, exactly-once standard `memref.atomic_rmw assign`,
+native and actual Merlin execution. Source operation/order/scope and value dtype
+are retained under memory admission v4. Integer RMW/CAS remain available; the
+v3 integer-only profile is unchanged. Dedicated raw-word tests cover NaN payloads,
+signaling NaNs, signed zeros and subnormals; a real model2MLIR capture checks
+weights and both tuple results. Floating min/max's integer pointer views and
+floating-add numeric policy remain open; see [atomic memory](atomic_memory.md).

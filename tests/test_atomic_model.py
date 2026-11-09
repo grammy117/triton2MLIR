@@ -20,7 +20,7 @@ MERLIN, CLANG = os.environ.get("T2M_MERLIN_ROOT"), os.environ.get("T2M_MERLIN_CL
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module", params=["add", "cas"])
+@pytest.fixture(scope="module", params=["add", "cas", "exch"])
 def atomic_model_inputs(tmp_path_factory, request):
     kind = request.param
     tmp_path = tmp_path_factory.mktemp("actual-atomic-model")
@@ -30,7 +30,7 @@ def atomic_model_inputs(tmp_path_factory, request):
     process = subprocess.run([M2M, str(script), "--out", str(capture), "--kind", kind], capture_output=True, text=True, timeout=60,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
     assert process.returncode == 0, process.stderr
-    constants = {"n": 13, "m": 17, "B": 8, "OP": "add", "SCALAR": False, "MASK": True, "FRESH": False,
+    constants = {"n": 13, "m": 17, "B": 8, "OP": kind, "SCALAR": False, "MASK": True, "FRESH": False,
                  "SEM": "relaxed", "SCOPE": "gpu"}
     source = tmp_path / "source.ttir"
     if kind == "cas":
@@ -41,12 +41,13 @@ def atomic_model_inputs(tmp_path_factory, request):
             TensorBuffer("comparison", (16,), dtype="i32"), TensorBuffer("value", (16,), dtype="i32"),
             TensorBuffer("old", (16,), "write", dtype="i32")), grid=(2,))
     else:
-        source.write_text(capture_ttir(indexed_atomic, {"x": "*i32", "index": "*i32", "state": "*i32", "old": "*i32",
+        dtype, pointer = ("f32", "*fp32") if kind == "exch" else ("i32", "*i32")
+        source.write_text(capture_ttir(indexed_atomic, {"x": pointer, "index": "*i32", "state": pointer, "old": pointer,
             **{name: "constexpr" for name in constants}}, constants))
-        abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype="i32"), TensorBuffer("index", (13,), dtype="i32"),
-            TensorBuffer("state", (17,), "readwrite", dtype="i32"), TensorBuffer("old", (13,), "write", dtype="i32")), grid=(2,))
+        abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype=dtype), TensorBuffer("index", (13,), dtype="i32"),
+            TensorBuffer("state", (17,), "readwrite", dtype=dtype), TensorBuffer("old", (13,), "write", dtype=dtype)), grid=(2,))
     result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile="guarded-buffer",
-                            address_policy="source-words", effect_profile="atomics")
+                            address_policy="source-words", effect_profile="typed-atomics" if kind == "exch" else "atomics")
     return capture, KernelBinding("t2m_demo::atomic_update", result,
         operands={"state": "state", "comparison": "index", "value": "x"} if kind == "cas" else {}), kind
 
@@ -59,14 +60,14 @@ def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_pa
     receipt = verify_bundle(out)
     assert "kernels/0/memory-admission.json" in receipt["artifacts"]
     admission = json.loads((out / "kernels/0/memory-admission.json").read_text())
-    assert admission["schema"] == "t2m.memory-admission.v3"
+    assert admission["schema"] == ("t2m.memory-admission.v4" if kind == "exch" else "t2m.memory-admission.v3")
     assert admission["atomic_adaptations"][0]["operation"] == kind
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "golden.npy", "goldens.npz", "extra.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
     execution = json.loads((out / "execution.json").read_text())
     assert execution["result_count"] == 2 and set(execution["result_reference_members"]) == {"golden.npy", "goldens.npz"}
     differences = json.loads((out / "compatibility.json").read_text())["kernel_profiles"]["kernels/0"]["differences"]
-    assert any("private-invocation integer atomics" in item for item in differences)
+    assert any(("bitwise f32/f64 exchange" if kind == "exch" else "private-invocation integer atomics") in item for item in differences)
     if MERLIN:
         assert (out / "consumer/compiler/source/kernels/0/memory-admission.json").read_bytes() == (out / "kernels/0/memory-admission.json").read_bytes()
         if CLANG:
@@ -104,8 +105,9 @@ def test_all_parent_result_references_must_match_the_complete_model_abi(tmp_path
                 arrays["out1"] = arrays["out1"][:-1]
                 metadata["output_abi"][1]["shape"] = list(arrays["out1"].shape)
             else:
-                arrays["out1"] = arrays["out1"].astype(np.float32)
-                metadata["result_references"]["storage_dtypes"][1] = "float32"
+                changed_dtype = np.int32 if arrays["out1"].dtype == np.float32 else np.float32
+                arrays["out1"] = arrays["out1"].astype(changed_dtype)
+                metadata["result_references"]["storage_dtypes"][1] = arrays["out1"].dtype.name
             (broken / "meta.json").write_text(json.dumps(metadata))
             receipt["artifacts"]["meta.json"] = _record(broken / "meta.json")
         np.savez(broken / "goldens.npz", **arrays)
