@@ -19,21 +19,25 @@ MERLIN = os.environ.get("T2M_MERLIN_ROOT")
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module", params=[False, True], ids=["exact-tiles", "ragged-tiles"])
+@pytest.fixture(scope="module", params=["exact-tiles", "ragged-tiles", "block-pointers"])
 def model_inputs(tmp_path_factory, request):
     root = tmp_path_factory.mktemp("actual-model2mlir")
     script = Path(__file__).resolve().parents[1] / "scripts/capture_model_binding_demo.py"
-    ragged = request.param
-    process = subprocess.run([M2M, str(script), "--out", str(root / "capture"), *(["--ragged"] if ragged else [])],
+    block_pointers = request.param == "block-pointers"
+    ragged = request.param != "exact-tiles"
+    flags = ["--block-pointers"] if block_pointers else ["--ragged"] if ragged else []
+    process = subprocess.run([M2M, str(script), "--out", str(root / "capture"), *flags],
                              capture_output=True, text=True, timeout=60,
                              env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(root)))
     assert process.returncode == 0, process.stderr
-    from t2m.examples.tensor_kernels import loop_matmul, ragged_matmul
-    kernel = ragged_matmul if ragged else loop_matmul
+    from t2m.examples.tensor_kernels import loop_matmul, ragged_matmul, blockptr_matmul
+    kernel = blockptr_matmul if block_pointers else ragged_matmul if ragged else loop_matmul
     m, n, k = (35, 21, 37) if ragged else (32, 32, 32)
     constants = {"N": n, "K": k, "BM": 16, "BN": 16, "BK": 16}
     if ragged:
-        constants.update(M=m, TRANSPOSED=False)
+        constants.update(M=m)
+        if not block_pointers:
+            constants.update(TRANSPOSED=False)
     source = root / "kernel.ttir"
     source.write_text(capture_ttir(kernel, {**{n: "*fp32" for n in ("x", "y", "out")},
                                               **{n: "constexpr" for n in constants}}, constants))

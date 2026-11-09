@@ -18,7 +18,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 import m2m
 
 
-def capture(out, *, ragged=False):
+def capture(out, *, ragged=False, block_pointers=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -30,13 +30,18 @@ def capture(out, *, ragged=False):
     spec.loader.exec_module(kernels)
     loop_matmul = kernels.loop_matmul
     ragged_matmul = kernels.ragged_matmul
+    blockptr_matmul = kernels.blockptr_matmul
+    ragged = ragged or block_pointers
 
     @triton_op("t2m_demo::gemm", mutates_args={})
     def gemm(x: torch.Tensor, y: torch.Tensor, alpha: int = 1) -> torch.Tensor:
         m, k = x.shape
         n = y.shape[1]
         out = torch.empty((m, n), dtype=x.dtype, device=x.device)
-        if ragged:
+        if block_pointers:
+            wrap_triton(blockptr_matmul)[((m + 15) // 16, (n + 15) // 16)](
+                x, y, out, M=m, N=n, K=k, BM=16, BN=16, BK=16)
+        elif ragged:
             wrap_triton(ragged_matmul)[((m + 15) // 16, (n + 15) // 16)](
                 x, y, out, M=m, N=n, K=k, BM=16, BN=16, BK=16, TRANSPOSED=False)
         else:
@@ -84,5 +89,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--ragged", action="store_true", help="capture a 35x37 by 37x21 tiled GEMM")
+    parser.add_argument("--block-pointers", action="store_true", help="capture ragged GEMM with block pointers and advance")
     args = parser.parse_args()
-    print(capture(args.out, ragged=args.ragged))
+    print(capture(args.out, ragged=args.ragged, block_pointers=args.block_pointers))

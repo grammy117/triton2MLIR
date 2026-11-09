@@ -1,0 +1,20 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::gemm",
+      "ttir": "../out/shared_blockptr_matmul/source.ttir",
+      "abi": {
+        "schema": "t2m.shared-tensor-abi.v2",
+        "entry": "blockptr_matmul",
+        "buffers": [
+          {"name": "x", "shape": [35, 37], "effect": "read"},
+          {"name": "y", "shape": [37, 21], "effect": "read"},
+          {"name": "out", "shape": [35, 21], "effect": "write"}
+        ],
+        "grid": [3, 2]
+      },
+      "scalar_arguments": {"alpha": 1}
+    }
+  ]
+}

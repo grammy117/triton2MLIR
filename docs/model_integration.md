@@ -88,6 +88,14 @@ epilogue, against the unchanged captured PyTorch golden, then invoke Merlin's
 actual interface reader/runtime generator. The derived receipt and target
 execution boundaries are the same as for the exact-tile model above.
 
+For the legacy block-pointer form, use
+`scripts/capture_model_binding_demo.py --block-pointers --out out/blockptr_model_capture`,
+`shared-demo --kernel blockptr-matmul --out out/shared_blockptr_matmul`, and
+`examples/model_blockptr_binding.json` with `bind-model`. Supply the same native
+and Merlin environment arguments as above. This captures real `make_block_ptr`
+and `advance`, retains separate original/normalized provenance, and qualifies
+the complete model against its unchanged PyTorch golden and Merlin interface.
+
 ## Original MLP pair
 
 `scripts/capture_mlp_pair.py` captures model2MLIR's existing `mlp_basic` and

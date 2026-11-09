@@ -22,6 +22,7 @@ python -m t2m shared-demo --kernel matmul --out out/shared_matmul --python /path
 python -m t2m shared-demo --kernel tiled-matmul --out out/shared_tiled_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel loop-matmul --out out/shared_loop_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel ragged-matmul --out out/shared_ragged_matmul --python /path/to/native-env/bin/python
+python -m t2m shared-demo --kernel blockptr-matmul --out out/shared_blockptr_matmul --python /path/to/native-env/bin/python
 python -m t2m verify-bundle out/shared_softmax
 ```
 
