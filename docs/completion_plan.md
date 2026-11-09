@@ -221,6 +221,16 @@ inputs across independent invocations. Computed/permuted while before-state,
 broader shape/ownership, mixed-base joins, alias groups and broader effects
 remain open. Do not infer universal coverage from this composition.
 
+Tiled online attention now retains two contractions and three online softmax
+states through actual Merlin execution. Late state copies preserve old maximum
+reads before updates; independently synthesized state may read actual private
+snapshots without claiming those buffers are immutable. Loop-local capture
+producers and pure padding/conditional values remain checked. This also restores
+the earlier tensor/buffer runtime-read-loop qualification; the failed broader
+closure run is retained in `.scratch/branch-state-complete.log` and its eight
+cases pass in `.scratch/branch-state-regressions.log`. See the maintained
+[attention profile and explicit numerical scope](attention.md).
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

@@ -32,6 +32,13 @@ Mixed-base joins/backedges refuse;
 broader while ownership and aliases remain open. These checks do not imply
 universal opcode/attribute coverage.
 
+[Tiled online attention](attention.md) now also qualifies through the actual
+Merlin library interface with two tile contractions, query reuse and three
+running softmax states retained. Empty/exact/ragged query/key domains reuse one
+library against an independent finite-f32 reference tolerance; dense reference
+scores stay evaluator-only. This does not establish all attention variants,
+floating-point policies or accelerator execution.
+
 Use `shared-coverage` to rerun a fixed, bounded native pipeline against actual
 upstream fixtures. It inventories operations structurally, retains every input,
 output and diagnostic, and records content hashes and the corpus Git revision.

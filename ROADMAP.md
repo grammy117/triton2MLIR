@@ -385,6 +385,15 @@ where needed and leaves native alias/lifetime checks enabled.
 Mixed-base joins, broader while ownership, aliases and broader effects
 still need work. See [the contract](docs/source_words.md).
 
+Tiled online attention now also qualifies through Merlin: two contractions,
+query-tile reuse and `(maximum, normalization, accumulator)` remain inside the
+key-tile loop. Consumer destination timing preserves old-state reads before
+updates, with native alias/lifetime checks. One library handles independently
+changing query/key dimensions, empty keys and ragged tails. The finite f32
+profile and independent reference tolerance are explicit in
+[the attention contract](docs/attention.md); this is not general attention,
+all numeric policies or accelerator execution.
+
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,
 general `while`, scans and explicitly qualified mixed precision. Preserve earlier mask,

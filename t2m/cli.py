@@ -97,6 +97,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
                            RuntimeScalar("rows", "i32", 3, bounds=(1, 5)),
                            RuntimeScalar("steps", "i32", 4, bounds=(0, 4)))
         example_dimensions = {"n": 9, "rows": 3}
+    elif kernel == "online-attention":
+        from .examples.attention_kernels import online_attention
+        fn, constants = online_attention, {"D": 16, "BM": 16, "BN": 16}
+        shapes, grid = [("m", 16), ("n", 16), ("n", 16), ("m", 16)], (GridExtent("m", 16),)
+        runtime_scalars = (RuntimeScalar("m", "i32", 4, bounds=(0, 35)), RuntimeScalar("n", "i32", 5, bounds=(0, 37)))
+        example_dimensions = {"m": 17, "n": 19}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
@@ -130,9 +136,11 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
     if kernel == "tuple-scan":
         names = ["a", "b", "out_a", "out_b"]
+    elif kernel == "online-attention":
+        names = ["q", "k", "v", "out"]
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
                     dtype="i32" if n == "indices" else "f32")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
@@ -173,6 +181,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         arrays[1:] = [np.asarray(value, dtype=np.int32) for value in
                       (example_dimensions["n"], example_dimensions["rows"], example_dimensions["rows"] - 1)]
         golden = arrays[0].sum(axis=0)
+    elif kernel == "online-attention":
+        arrays[3:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n")]
+        scores = (arrays[0].astype(np.float64) @ arrays[1].astype(np.float64).T) * 0.25
+        probability = np.exp(scores - scores.max(axis=1, keepdims=True))
+        probability /= probability.sum(axis=1, keepdims=True)
+        golden = (probability @ arrays[2].astype(np.float64)).astype(np.float32)
     elif kernel == "runtime-memory-store":
         arrays[2] = np.asarray(3, dtype=np.int32)
         golden = arrays[1].copy()
@@ -221,7 +235,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         e = np.exp(arrays[0] - arrays[0].max())
         golden = e / e.sum()
     write_shared_bundle(result, out, arrays, [golden, *additional], work=work / "native", python=python,
-                        rtol=1e-5, atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "dynamic-matmul") else 2e-6)
+                        rtol=2e-5 if kernel == "online-attention" else 1e-5,
+                        atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "dynamic-matmul") else 2e-6)
     return {"bundle": str(out), "kernel": fn.__name__, "native_numerical_check": "passed",
             "profile": result.trace.get("profile", "shared-functional-tensor"), "merlin_staged_execution": "not-certified"}
 
@@ -267,7 +282,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

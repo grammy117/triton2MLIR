@@ -62,6 +62,9 @@ pointer recurrences and nonlinear grids through the official unstructured
 converter. Same-base pointer branches and runtime while loops also qualify
 through Merlin, retaining their control flow, word math and final pointers.
 [The policy and package differences](docs/source_words.md) are explicit.
+`shared-demo --kernel online-attention` with those flags retains query-tile reuse,
+two tile contractions and running softmax state through Merlin. See
+[the measured attention profile](docs/attention.md).
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence
