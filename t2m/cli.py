@@ -62,11 +62,17 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
         fn, constants, shapes = kernels.block_matmul, {"M": 16, "N": 16, "K": 16}, [(16, 16)] * 3
+    elif kernel == "scan":
+        fn, constants, shapes, grid = kernels.scan_tiles, {"N": 53, "B": 16, "KIND": 0, "REVERSE": True}, [(53,)] * 2, (4,)
+    elif kernel == "tuple-scan":
+        fn, constants, shapes = kernels.tuple_scan, {"R": 2, "S": 8, "AXIS": 1, "REVERSE": True}, [(2, 8)] * 4
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul") else "readwrite"
-    abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n == "out" else "read")
+    if kernel == "tuple-scan":
+        names = ["a", "b", "out_a", "out_b"]
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan") else "readwrite"
+    abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example")
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(fn, {**{n: "*fp32" for n in names},
@@ -74,14 +80,26 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=b.shape).astype("float32") for b in abi.inputs]
+    additional = []
     if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
     elif kernel in ("matmul", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul"):
         golden = arrays[0] @ arrays[1]
+    elif kernel == "scan":
+        golden = np.concatenate([np.cumsum(arrays[0][start:start + 16][::-1])[::-1] for start in range(0, 53, 16)])
+    elif kernel == "tuple-scan":
+        arrays = [rng.integers(0, 3, (2, 8)).astype("float32"), rng.integers(-2, 3, (2, 8)).astype("float32")]
+        golden, second = np.empty_like(arrays[0]), np.empty_like(arrays[1])
+        a = b = None
+        for index in reversed(range(8)):
+            a, b = ((arrays[0][:, index], arrays[1][:, index]) if a is None else
+                    (arrays[0][:, index] * a, arrays[0][:, index] * b + arrays[1][:, index]))
+            golden[:, index], second[:, index] = a, b
+        additional = [second]
     else:
         e = np.exp(arrays[0] - arrays[0].max())
         golden = e / e.sum()
-    write_shared_bundle(result, out, arrays, [golden], work=work / "native", python=python,
+    write_shared_bundle(result, out, arrays, [golden, *additional], work=work / "native", python=python,
                         rtol=1e-5, atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul") else 2e-6)
     return {"bundle": str(out), "kernel": fn.__name__, "native_numerical_check": "passed",
             "profile": "shared-functional-tensor", "merlin_staged_execution": "not-certified"}
@@ -123,9 +141,9 @@ def main(argv=None):
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
     tensor.add_argument("--rtol", type=float, default=0)
     tensor.add_argument("--atol", type=float, default=0)
-    sd = commands.add_parser("shared-demo", help="package source-captured add, masked softmax or matmul after native execution")
+    sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")

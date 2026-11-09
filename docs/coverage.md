@@ -80,13 +80,16 @@ expansion for inlined pure scalar combiners. Native checks cover f32/i32
 sum/product/maximum, forward/reverse tails, noncommutative tuple combiners on
 two axes and the no-invented-identity case. This does not qualify arbitrary
 effectful combiners or all floating-point edge policies.
+Real reverse-sum/product and noncommutative tuple-scan models additionally pass
+the model2MLIR binding and Merlin interface/runtime path, including consumption
+of both kernel results by the enclosing model.
 The principal work still needed is:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
 2. General strided/block descriptors, runtime shapes/scalars, arbitrary masks and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.
-3. Mixed-precision, cast, scan/combiner and contraction numeric policies. A source
+3. Mixed-precision, cast, richer combiner/effect and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.
 4. Derived-receipt admission, general mutation/result schemas and staged support
    for all retained payloads. Interface ingestion and host execution do not discharge these.

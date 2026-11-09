@@ -36,3 +36,7 @@ have structured stride zero; broadcast nonunit axes remain outside that rule.
 Upstream's all-unit constant-zero gather/scatter spelling is adapted to the same
 single-element tensor versions. Nonzero indices or nonunit buffers do not gain
 general irregular-memory support from this rule.
+
+Actual model2MLIR sum/product and tuple-result scan models now pass complete
+native comparison against their unchanged PyTorch captures and optional Merlin
+interface/runtime generation. See [the model recipe](model_integration.md).

@@ -1,0 +1,19 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::scan",
+      "ttir": "../out/shared_scan/source.ttir",
+      "abi": {
+        "schema": "t2m.shared-tensor-abi.v2",
+        "entry": "scan_tiles",
+        "buffers": [
+          {"name": "x", "shape": [53], "effect": "read"},
+          {"name": "out", "shape": [53], "effect": "write"}
+        ],
+        "grid": [4]
+      },
+      "scalar_arguments": {"reverse": true, "kind": 0}
+    }
+  ]
+}

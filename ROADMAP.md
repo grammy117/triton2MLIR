@@ -168,6 +168,8 @@ TF32/mixed precision cannot be legalized by dropping a precision attribute into 
 helpers, exact negative-infinity fill, standard linalg reductions/math, and native numerical
 checks. General pure scalar associative scans now have a parallel tensor expansion,
 including reverse traversal, tuple results and retained combiner/algorithm provenance.
+Real sum/product and tuple-result model2MLIR calls also pass complete-model native
+comparison and Merlin interface/runtime generation with unchanged weights/goldens.
 Numeric edge policies and optional composite recognition remain
 capability work; no dense attention replacement or universal reduction coverage is claimed.
 See [the scan expansion and qualifications](docs/scans.md).

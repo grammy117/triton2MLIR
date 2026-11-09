@@ -1,0 +1,21 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::affine_scan",
+      "ttir": "../out/shared_tuple_scan/source.ttir",
+      "abi": {
+        "schema": "t2m.shared-tensor-abi.v2",
+        "entry": "tuple_scan",
+        "buffers": [
+          {"name": "a", "shape": [2, 8], "effect": "read"},
+          {"name": "b", "shape": [2, 8], "effect": "read"},
+          {"name": "out_a", "shape": [2, 8], "effect": "write"},
+          {"name": "out_b", "shape": [2, 8], "effect": "write"}
+        ],
+        "grid": [1]
+      },
+      "scalar_arguments": {"reverse": true}
+    }
+  ]
+}

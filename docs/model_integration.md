@@ -103,6 +103,31 @@ GEMM with `make_tensor_descriptor` / descriptor loads/stores. Complete-model nat
 comparison and Merlin interface/runtime generation use the same package and
 qualification path, with the original descriptor source retained in provenance.
 
+## Scan models and tuple kernel results
+
+`scripts/capture_scan_model.py` captures actual sum, product and two-result
+affine-composition `triton_op` models. A registered eager PyTorch CPU reference
+supplies the parent golden; no Triton target backend executes. The tuple model
+consumes both kernel results in surrounding model math and retains learned weights.
+Tests bind every result and compare the complete model before Merlin interface/
+runtime generation. A multiple-result component does not require a multiple-output
+model package; the existing single-model-output receipt boundary stays explicit.
+
+```bash
+/path/to/m2m-env/bin/python scripts/capture_scan_model.py --kind tuple --reverse --out out/tuple_scan_model_capture
+python -m t2m shared-demo --kernel tuple-scan --out out/shared_tuple_scan --python /path/to/native-env/bin/python
+python -m t2m bind-model out/tuple_scan_model_capture --bindings examples/model_tuple_scan_binding.json \
+  --out out/merlin_tuple_scan_model --python /path/to/native-env/bin/python \
+  --merlin-root /path/to/merlin --merlin-python /path/to/merlin-env/bin/python \
+  --rtol 1e-5 --atol 3e-6
+python -m t2m verify-bundle out/merlin_tuple_scan_model
+```
+
+For a reverse sum, use `--kind sum --reverse`, `shared-demo --kernel scan`, and
+`examples/model_scan_binding.json`. The retained scan stage/composite annotations
+describe parallel tensor computation; source tuple ordering and reverse traversal
+remain executable semantics.
+
 ## Original MLP pair
 
 `scripts/capture_mlp_pair.py` captures model2MLIR's existing `mlp_basic` and

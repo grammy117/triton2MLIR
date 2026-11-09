@@ -1,7 +1,8 @@
 # triton2MLIR
 
 Translate Triton TTIR into portable tensor MLIR while retaining the kernel's original dataflow
-and intent in annotations and provenance. Exact tiles and the first tensor-memory milestone are implemented; see the
+and intent in annotations and provenance. Examples now include ragged tiled GEMM,
+descriptor memory and associative scans; see the
 [roadmap](ROADMAP.md) for the path through tiled GEMM, attention and broader kernel semantics,
 and [plan.md](plan.md) for the architecture.
 
@@ -9,7 +10,7 @@ Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will re
 [triton-shared's existing passes and analyses](docs/triton_shared.md).
 
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
-masked softmax and IEEE matmul, emitting functional tensor/linalg IR. Its packages are checked
+masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
 static tensor shapes, clipped affine tail masks and disjoint output tiles over logical grids;
 this is not full arbitrary-kernel coverage.
@@ -24,6 +25,7 @@ python -m t2m shared-demo --kernel loop-matmul --out out/shared_loop_matmul --py
 python -m t2m shared-demo --kernel ragged-matmul --out out/shared_ragged_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel blockptr-matmul --out out/shared_blockptr_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel descriptor-matmul --out out/shared_descriptor_matmul --python /path/to/native-env/bin/python
+python -m t2m shared-demo --kernel tuple-scan --out out/shared_tuple_scan --python /path/to/native-env/bin/python
 python -m t2m verify-bundle out/shared_softmax
 ```
 
