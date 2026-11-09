@@ -53,7 +53,10 @@ def test_one_merlin_library_gathers_from_changing_and_empty_allocations(tmp_path
     result, abi = convert(tmp_path, profile, dtype)
     if profile == "tensor":
         assert result.trace["memory"]["source_gathers"]
-        assert any(op.name == "arith.maxui" for op in result.module.walk())
+        assert any(op.name == "tensor.collapse_shape" for op in result.module.walk())
+        for extract in (op for op in result.module.walk() if op.name == "tensor.extract"):
+            assert len(extract.indices) == 1
+            assert not {"arith.divui", "arith.remui"} & {op.name for op in extract.parent_op().walk()}
     arrays, golden = arguments(3, 5, 13, dtype)
     capture, compiled = tmp_path / "capture", tmp_path / "merlin"
     write_shared_bundle(result, capture, arrays, [golden], work=tmp_path / "native", python=NATIVE)
@@ -106,3 +109,32 @@ def test_dynamic_gather_cli_keeps_allocation_and_result_symbols(tmp_path):
     spec = json.loads((out / "spec.json").read_text())
     assert spec["buffers"][0]["shape"] == ["m", "n"]
     assert spec["buffers"][2]["shape"] == ["count"]
+
+
+def test_native_dense_gather_view_does_not_copy_source_allocation(tmp_path):
+    import subprocess
+    from t2m.shared_tensor import parse_shared
+    result, _ = convert(tmp_path, "tensor")
+    source, output, script = (tmp_path / name for name in ("tensor.mlir", "bufferized.mlir", "bufferize.py"))
+    source.write_text(result.mlir_text)
+    script.write_text('''import sys
+from pathlib import Path
+from torch_mlir import ir, passmanager
+with ir.Context():
+    module = ir.Module.parse(Path(sys.argv[1]).read_text())
+    pipeline = "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops})"
+    passmanager.PassManager.parse(pipeline).run(module.operation)
+    Path(sys.argv[2]).write_text(module.operation.get_asm(print_generic_op_form=True))
+''')
+    subprocess.run([NATIVE, str(script), str(source), str(output)], check=True, capture_output=True, text=True, timeout=30,
+                   env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
+    module = parse_shared(output.read_text())
+    entry = next(op for op in module.ops if op.name == "func.func")
+    original = entry.body.block.args[0]
+    def root(value):
+        while getattr(value.owner, "name", "") in ("memref.cast", "memref.subview", "memref.collapse_shape", "memref.reinterpret_cast"):
+            value = value.owner.operands[0]
+        return value
+    views = [op for op in module.walk() if op.name == "memref.collapse_shape" and root(op.operands[0]) is original]
+    assert views and all(len(op.results[0].type.get_shape()) == 1 for op in views)
+    assert not any(op.name == "memref.copy" and root(op.operands[0]) is original for op in module.walk())

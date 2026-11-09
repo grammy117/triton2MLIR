@@ -16,8 +16,11 @@ correctness oracle.
 The executable expansion retains the logical launch grid and result tiles. A
 `linalg.generic` consumes the index tensor and any per-lane boolean mask. Its
 active branch checks the signed i32/i64 offset in i64 arithmetic before casting
-to `index` and extracting from the logical tensor. Row-major div/rem recovers
-coordinates for multidimensional allocations, including trailing unit axes.
+to `index` and extracting from the logical tensor. A standard
+`tensor.collapse_shape` view preserves the original flat offset for dense
+multidimensional allocations, including trailing unit axes. It introduces no
+per-lane row/column division. A native identity-layout bufferization check
+confirms the source allocation remains a memory view without an input copy.
 The inactive branch yields the exact explicit scalar `other`, without executing
 a bounds check or extraction. Structured gather descriptors retain their exact
 prefix predicate through `linalg.index`; they do not depend on the general mask
@@ -58,9 +61,9 @@ The corpus includes empty storage with all lanes inactive, repeated indices,
 ragged counts and i32/i64 extreme-negative inactive indices. The tensor profile
 additionally checks that an active index below the maximum capacity but outside
 the actual allocation fails before extraction, including zero-sized storage.
-Dynamic coordinate div/rem uses a divisor of at least one, so a zero extent
-cannot introduce speculative division by zero. That does not permit any active
-read from empty storage. The buffer profile retains upstream memory operations
+The collapsed tensor's actual dimension supplies the active limit; no runtime
+coordinate division is introduced. Empty storage permits no active read.
+The buffer profile retains upstream memory operations
 and the checked tensor witness; undefined source accesses are not qualified.
 General indexed writes and writable-buffer observations remain separate gates.
 

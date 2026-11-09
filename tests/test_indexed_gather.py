@@ -62,6 +62,9 @@ def test_irregular_reads_masks_tails_duplicates_and_unit_dimensions(tmp_path, dt
     guards = [op for op in result.module.walk() if op.name == "cf.assert"]
     assert all(op.attributes["prov.family"].data == "memory" for op in guards)
     assert all(op.parent_op().name == "scf.if" for op in guards)
+    for extract in (op for op in result.module.walk() if op.name == "tensor.extract"):
+        assert len(extract.indices) == 1
+        assert not {"arith.divui", "arith.remui"} & {op.name for op in extract.parent_op().walk()}
     # Runtime indices are data, so a second all-inactive input uses the exact
     # same emitted program and never extracts an out-of-bounds logical element.
     if masked:

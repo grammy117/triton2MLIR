@@ -791,7 +791,7 @@ def _functionalize(module, abi):
                     raise ConversionError("structured gather base must be a declared logical allocation", opcode=name)
                 buffer = buffers[pointer.operands[0]]
                 mapping[op.results[0]] = structured_gather(op, pointer, buffer, states[buffer.name], mapping, append,
-                    dimensions=dimensions, maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "rectangular-prefix-branch-no-inactive-extraction",
@@ -799,7 +799,7 @@ def _functionalize(module, abi):
             elif name == "tts.gather" and op.operands[0] in buffers and buffers[op.operands[0]].effect == "read":
                 buffer = buffers[op.operands[0]]
                 mapping[op.results[0]] = gather(op, buffer, states[buffer.name], mapping, append,
-                    dimensions=dimensions, maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "per-lane-branch-no-inactive-extraction",
