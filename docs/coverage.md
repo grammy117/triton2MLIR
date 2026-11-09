@@ -274,3 +274,13 @@ v3 integer-only profile is unchanged. Dedicated raw-word tests cover NaN payload
 signaling NaNs, signed zeros and subnormals; a real model2MLIR capture checks
 weights and both tuple results. Floating min/max's integer pointer views and
 floating-add numeric policy remain open; see [atomic memory](atomic_memory.md).
+
+### Ordinary logical word views
+
+Equal-width, byte-aligned pointer `tt.bitcast` now works for ordinary loads/stores
+on the guarded source-word path. Native and actual Merlin execution retain
+f16/i16, f32/i32 and f64/i64 bits through masks/fills, selected roots and
+for/while recurrences. Exported MLIR retains original storage tensors and
+register bitcasts, with `prov.logical_word_views` annotations. Differing widths,
+address-space changes and atomic word views still need further contracts and
+expansions; see [logical pointer views](pointer_views.md).

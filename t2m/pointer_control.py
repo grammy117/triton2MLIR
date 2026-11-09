@@ -37,6 +37,8 @@ def offset_type(type_):
 def lower_offsets(state):
     """Shared source-word conversion for single- and selected-base state."""
     from .shared_tensor import opcode
+    bitcasts = {op for op in state.operations if opcode(op) == "tt.bitcast"
+                and op.results and op.results[0] in state.types}
     offsets = {}
     for value in state.values:
         if isinstance(value, BlockArgument) and value.block is state.entry:
@@ -49,6 +51,9 @@ def lower_offsets(state):
     for op in state.operations:
         op.operands = [offsets.get(v, v) for v in op.operands]
     for op in state.operations:
+        if op in bitcasts:
+            Rewriter.replace_op(op, [], [op.operands[0]])
+            continue
         if opcode(op) != "tt.addptr":
             continue
         lhs, rhs = op.operands
@@ -67,12 +72,14 @@ def lower_offsets(state):
 def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS
+    from .pointer_views import compatible, normalize as normalize_word_views
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
-                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat")
-                and any(_pointer_type(v.type) for v in (*op.results,
-                    *(a for region in op.regions for block in region.blocks for a in block.args)))]
+                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat", "tt.bitcast")
+                and (any(_pointer_type(v.type) for v in (*op.results,
+                    *(a for region in op.regions for block in region.blocks for a in block.args)))
+                    or opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.operands))]
     if isolate_memory:
         controls.extend(op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for")
                         and op not in controls and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()))
@@ -95,7 +102,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     bases = {v: {v} if isinstance(v, BlockArgument) and v.block is entry else set() for v in values}
     edges = {}
     shape_ops = {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.reshape", "tt.trans",
-                 "tt.cat", "tt.join", "tt.split", "tt.gather", "tt.unsplat"}
+                 "tt.cat", "tt.join", "tt.split", "tt.gather", "tt.unsplat", "tt.bitcast"}
 
     def block(op, index):
         if index >= len(op.regions) or len(op.regions[index].blocks) != 1:
@@ -162,12 +169,13 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
         if not bases[value]:
             refuse(owner, "pointer control has no established source-entry base")
         element = value.type.element_type if isinstance(value.type, TensorType) else value.type
-        if any(element != base.type for base in bases[value]):
-            refuse(owner, "pointer control cannot change the logical buffer element type")
+        if any(element != base.type and not compatible(element, base.type) for base in bases[value]):
+            refuse(owner, "pointer views require equal byte-aligned element widths without address-space changes")
         for use in value.uses:
             op, position = use.operation, use.index
             name = opcode(op)
-            allowed = (name == "tt.addptr" and position == 0 or name in shape_ops
+            allowed = (name == "tt.addptr" and position == 0
+                       or name in shape_ops and (name != "tt.bitcast" or position == 0 and len(op.results) == 1 and _pointer_type(op.results[0].type))
                        or name == "arith.select" and position in (1, 2)
                        or name == "scf.for" and position >= 3 or name == "scf.while"
                        or name == "scf.yield" or name == "scf.condition" and position >= 1
@@ -185,9 +193,10 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
                 refuse(op, "pointer control requires integer element offsets no wider than i64")
 
     state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges)
+    views = normalize_word_views(state, source_ids)
     if any(len(roots) > 1 for roots in bases.values()):
         from .pointer_select import normalize_selected
-        return normalize_selected(state, source_ids)
+        return views + normalize_selected(state, source_ids)
     # The official converter already handles same-base for state. Leave that
     # supported case upstream when no other pointer control needs this adapter.
     if not isolate_memory and all(opcode(op) == "scf.for" for op in controls):
@@ -213,7 +222,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
         op.parent.insert_ops_before(emitted, op)
         op.operands = [address.results[0], *op.operands[1:]]
 
-    return [{"kind": "same-base-pointer-control", "source_ids": source_ids(op.location),
+    reports = [{"kind": "same-base-pointer-control", "source_ids": source_ids(op.location),
              "opcode": opcode(op), "pointer_offset_bits": 64,
              "base_contract": "single-source-entry-buffer-on-all-edges",
              "source_integer_arithmetic": "unchanged-before-signed-extension",
@@ -221,3 +230,4 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
         {"kind": "source-word-memory-addresses", "pointer_offset_bits": 64,
          "source_ids": sorted({s for op in memory for s in source_ids(op.location)}),
          "source_integer_arithmetic": "unchanged-before-signed-extension"}]
+    return views + reports

@@ -144,6 +144,13 @@ inactive undefined old values refine to typed zero. No numeric policy for
 floating arithmetic atomics is implied. Compatibility metadata names these
 differences for standalone and model packages.
 
+Equal-width ordinary pointer views retain the storage tensor type and insert
+register bitcasts at each load/store. `prov.logical_word_views` and source
+transformation records retain storage/view dtypes and root positions. Integer
+fill bits are restored by a mask select after a zero-filled storage load.
+Compatibility metadata names this expansion; the public tensor/scalar ABI and
+guard costs are unchanged. See [logical views](pointer_views.md).
+
 The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor
 witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three

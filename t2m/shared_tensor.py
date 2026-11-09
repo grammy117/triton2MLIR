@@ -1258,6 +1258,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind": "functional-standard-memory-boundary",
                                "semantic_gate": "executable-guarded-memory-admission" if admission is not None else "existing-source-tensor-initialization-bounds-and-ownership-analysis",
                                "launcher": "internal-counts-xyz-then-ids-xyz; public-tensor-scalar-ABI"})
+    word_views = [r for r in transformations if r.get("kind") == "logical-pointer-word-view"]
+    if word_views:
+        next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []
     source_names = {r["id"]: r["opcode"] for r in records}
     for op in result.walk():
@@ -1265,6 +1268,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             op.attributes.setdefault("prov.family", StringAttr("triton"))
             op.attributes.setdefault("prov.op", StringAttr(op.name.split(".")[-1]))
         ids = _source_ids(op.location)
+        if op.name == "arith.bitcast" and word_views:
+            views = [r for r in word_views if set(ids) & set(r["source_ids"])]
+            if views:
+                op.attributes["prov.logical_word_views"] = StringAttr(json.dumps(views, sort_keys=True))
         if ids:
             op.attributes["prov.source_ids"] = ArrayAttr(StringAttr(s) for s in ids)
             op.attributes["prov.original_ops"] = ArrayAttr(StringAttr(source_names[s]) for s in ids)

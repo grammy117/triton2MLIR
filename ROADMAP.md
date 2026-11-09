@@ -448,7 +448,14 @@ bitwise f32/f64 exchange through standard MLIR, native execution, standalone
 Merlin packaging and actual model2MLIR tuple-result binding. V4 memory admission
 retains v3 ownership/initialization costs and binds the floating bit contract.
 This is additional qualified coverage, not full arbitrary-kernel completion.
-Next: same-width logical pointer views for the source integer-word min/max
+Next: atomic updates on same-width logical pointer views for the source integer-word min/max
 algorithm, preserving NaN/signed-zero behavior without whole-buffer conversion;
 then floating-add numeric contracts and the remaining universal intake gaps.
 See [atomic memory](docs/atomic_memory.md).
+
+The ordinary-memory foundation for same-width logical pointer views is also
+implemented: loads/stores retain actual storage types and reinterpret values,
+including exact integer fill bits, finite root selection and pointer recurrences.
+Native/Merlin tests cover f16/i16, f32/i32 and f64/i64 with explicit provenance.
+Atomic views remain the next region/legalization extension rather than an
+assumed equivalence to floating min/max. See [logical views](docs/pointer_views.md).

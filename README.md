@@ -80,6 +80,9 @@ and a real model2MLIR tuple-result demo are described in
 The separate `--effect-profile typed-atomics` adds bitwise f32/f64 exchange;
 `shared-demo --kernel atomic-exchange` produces a working floating example
 with guarded-buffer/source-words memory and the unchanged public tensor ABI.
+[Logical pointer word views](docs/pointer_views.md) also preserve equal-width
+reinterpretation through selected buffers and runtime loops, with register
+bitcasts on the original tensor storage types.
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

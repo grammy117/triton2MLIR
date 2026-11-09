@@ -416,3 +416,27 @@ complete package/model binding and Merlin compiler/library qualification within
 the existing tensor memory proof scope. Its additional artifacts bind the actual
 continuation bytes. Independent memory admission, non-dense runtime layouts and
 broader effects remain open; this is not universal source coverage.
+
+### Typed atomic and logical-view extension
+
+The typed atomic profile now admits bitwise f32/f64 exchange while preserving
+integer RMW/CAS, scopes, original old values and the public tensor/scalar ABI.
+V4 memory admission makes the new numeric contract explicit; Merlin staging
+independently checks it. Native/Merlin raw-word comparisons cover exceptional
+float representations, masks and collisions. A real model2MLIR capture keeps
+weights and both tuple results. See [atomic memory](atomic_memory.md).
+
+Ordinary equal-width pointer views now use original-storage memory events with
+register bitcasts and `prov.logical_word_views` annotations. Source integer
+fills remain bit patterns, including those representing NaNs; masks, selected
+roots, source loops and zero trips are retained. f16/i16, f32/i32 and f64/i64
+execute through native and Merlin interfaces without whole-buffer conversion.
+See [logical views](pointer_views.md).
+
+Next, expand atomic word updates on these storage tensors into exact standard
+atomic regions and legalize them through the native ownership/lifetime boundary.
+This is required for Triton's floating min/max source algorithm. Floating add's
+rounding/subnormal/NaN policy is a distinct obligation. Broader packed numeric
+formats, descriptor indexed effects, external implementations/diagnostics,
+aliases/layouts, maintained typed coverage and target materialization remain
+open. Neither a numerical package check nor provenance closes those gaps.

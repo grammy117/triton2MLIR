@@ -305,3 +305,17 @@ guarded logical view admission, typed region expansion, native legalization
 and evidence/model qualification. Different storage widths need explicit address
 rescaling and bounds/alias reasoning. Floating add separately needs a source
 rounding/subnormal/NaN contract rather than an assumed device behavior.
+
+Measured exchange delivery: 43 focused exchange/model/CAS-compatibility cases
+passed in `.scratch/typed-atomic-final.log`. The broader run passed all 116
+existing memory/schema/guard cases; its new float-model negative test initially
+used an unchanged dtype and was corrected/rechecked in the focused run. Merlin
+passed 99 staging tests plus its documentation/structure gates. Native and
+actual Merlin evidence are separately verified in `out/atomic-exchange/`
+(20 artifacts), `out/atomic-exchange-merlin/` (45), and
+`out/exchange-model-native/` (80). The model's weights and both result references
+are preserved. No accelerator execution is claimed.
+
+[Ordinary logical word views](pointer_views.md) now supply the load/store
+foundation described above; atomic view admission and region/native legalization
+remain additional work.
