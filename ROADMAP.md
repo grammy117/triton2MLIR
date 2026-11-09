@@ -4,6 +4,8 @@
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.
+The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
+compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 
 ## The product contract
 
