@@ -54,4 +54,6 @@ def test_existing_plain_and_triton_mlp_have_the_same_complete_native_result(tmp_
     for name, capture, bindings in (("plain", plain, []), ("triton", triton, [binding])):
         write_model_bundle(capture, bindings, tmp_path / (name + "-bound"), work=tmp_path / (name + "-work"),
                            python=NATIVE, merlin_root=os.environ.get("T2M_MERLIN_ROOT"),
-                           merlin_python=os.environ.get("T2M_MERLIN_PYTHON"), rtol=1e-5, atol=1e-6)
+                           merlin_python=os.environ.get("T2M_MERLIN_PYTHON"),
+                           merlin_host=bool(os.environ.get("T2M_MERLIN_ROOT") and os.environ.get("T2M_MERLIN_CLANG")),
+                           merlin_clang=os.environ.get("T2M_MERLIN_CLANG"), rtol=1e-5, atol=1e-6)

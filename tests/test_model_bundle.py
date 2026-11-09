@@ -16,6 +16,7 @@ OPT = os.environ.get("TRITON_SHARED_OPT")
 NATIVE = os.environ.get("T2M_NATIVE_PYTHON")
 M2M = os.environ.get("T2M_MODEL2MLIR_PYTHON")
 MERLIN = os.environ.get("T2M_MERLIN_ROOT")
+CLANG = os.environ.get("T2M_MERLIN_CLANG")
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
@@ -52,7 +53,8 @@ def test_actual_triton_op_model_binds_parameters_and_merlin_interface(tmp_path, 
     capture, binding = model_inputs
     out = tmp_path / "bound"
     write_model_bundle(capture, [binding], out, work=tmp_path / "work", python=NATIVE,
-                       merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"), rtol=1e-5, atol=5e-6)
+                       merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"),
+                       merlin_host=bool(MERLIN and CLANG), merlin_clang=CLANG, rtol=1e-5, atol=5e-6)
     receipt = verify_bundle(out)
     assert receipt["schema"] == "t2m.bound-model-receipt.v1"
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "input_order.json", "extra.npz", "golden.npy"):
@@ -65,8 +67,22 @@ def test_actual_triton_op_model_binds_parameters_and_merlin_interface(tmp_path, 
     if MERLIN:
         consumer = json.loads((out / "consumer/interface.json").read_text())
         assert consumer["interface_ingestion"] == consumer["runtime_generation"] == "passed"
+        assert consumer["compiler_input_staging"] == "passed"
+        assert "consumer/compiler/source-correspondence.json" in receipt["artifacts"]
         assert (out / "consumer/runtime/model_call.c").is_file()
         assert consumer["target_execution"] == "not-performed"
+        if CLANG:
+            host = json.loads((out / "consumer/host/execution.json").read_text())
+            assert host["host_execution"] == host["whole_body_lowering"] == "passed"
+            assert host["evaluation"]["invocations"] == 2 and host["evaluation"]["functional_inputs_preserved"]
+            assert "ownership-based-buffer-deallocation" in host["pipeline"]
+            receipt_bytes = (out / "capture_receipt.json").read_bytes()
+            missing = json.loads(receipt_bytes)
+            missing["artifacts"].pop("consumer/host/execution.json")
+            (out / "capture_receipt.json").write_text(json.dumps(missing))
+            with pytest.raises(ValueError, match="success lacks"):
+                verify_bundle(out)
+            (out / "capture_receipt.json").write_bytes(receipt_bytes)
     (out / "kernels/0/source.ttir").write_text("changed")
     with pytest.raises(ValueError, match="integrity mismatch"):
         verify_bundle(out)
@@ -80,3 +96,18 @@ def test_parent_integrity_failure_prevents_any_model_publication(tmp_path, model
     with pytest.raises(ValueError, match="parent capture integrity mismatch"):
         write_model_bundle(corrupted, [binding], tmp_path / "out", work=tmp_path / "work", python=NATIVE)
     assert not (tmp_path / "out").exists() and not (tmp_path / "work").exists()
+
+
+@pytest.mark.skipif(not MERLIN, reason="selected Merlin checkout required")
+def test_consumer_failure_cannot_leave_a_successful_outer_receipt(tmp_path, model_inputs, monkeypatch):
+    capture, binding = model_inputs
+
+    def fail(*args, **kwargs):
+        raise ValueError("explicit consumer failure")
+
+    monkeypatch.setattr("t2m.model_bundle.check_merlin_host", fail)
+    with pytest.raises(ValueError, match="explicit consumer failure"):
+        write_model_bundle(capture, [binding], tmp_path / "out", work=tmp_path / "work", python=NATIVE,
+                           merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"),
+                           merlin_host=True, rtol=1e-5, atol=5e-6)
+    assert not (tmp_path / "out/capture_receipt.json").exists()

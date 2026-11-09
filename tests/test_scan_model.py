@@ -13,6 +13,7 @@ from t2m.shared_tensor import TensorABI, TensorBuffer, convert_shared
 
 OPT, NATIVE = os.environ.get("TRITON_SHARED_OPT"), os.environ.get("T2M_NATIVE_PYTHON")
 M2M, MERLIN = os.environ.get("T2M_MODEL2MLIR_PYTHON"), os.environ.get("T2M_MERLIN_ROOT")
+CLANG = os.environ.get("T2M_MERLIN_CLANG")
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
@@ -41,7 +42,8 @@ def test_actual_scan_model_preserves_kernel_results_weights_and_merlin_interface
     out = tmp_path / "model"
     write_model_bundle(capture, [KernelBinding(identity, implementation, scalar_arguments=scalar)],
                        out, work=tmp_path / "qualification", python=NATIVE,
-                       merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"), rtol=1e-5, atol=3e-6)
+                       merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"),
+                       merlin_host=bool(MERLIN and CLANG), merlin_clang=CLANG, rtol=1e-5, atol=3e-6)
     assert verify_bundle(out)["schema"] == "t2m.bound-model-receipt.v1"
     for name in ("golden.npy", "weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
@@ -51,3 +53,6 @@ def test_actual_scan_model_preserves_kernel_results_weights_and_merlin_interface
         consumer = json.loads((out / "consumer/interface.json").read_text())
         assert consumer["interface_ingestion"] == consumer["runtime_generation"] == "passed"
         assert consumer["target_execution"] == "not-performed"
+        if CLANG:
+            host = json.loads((out / "consumer/host/execution.json").read_text())
+            assert host["host_execution"] == host["reference_comparison"] == "passed"

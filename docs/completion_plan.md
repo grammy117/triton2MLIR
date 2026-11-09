@@ -62,3 +62,18 @@ Use existing pinned shared/Triton/torch-mlir tools. Keep CPU workers/native
 threads bounded and avoid implicit LLVM/Triton builds. Follow each repository's
 local contribution/identity rules; commits remain local. Update this plan with
 verified evidence and unresolved requirements, not just intentions.
+
+## Execution evidence and next handoff
+
+Merlin now accepts the derived tensor receipt through compiler-only staging,
+registers standard parallel tensor operations, and keeps original FX/TTIR
+lineage separate. The actual whole-body LLVM/codegen/HostModel path is wired
+into optional qualification. Repeated-call checks exposed writable function
+arguments; the staged functional profile now marks them read-only explicitly.
+See [the compiler/execution contract](merlin_consumer.md).
+
+Workstream A remains open for direct standalone TTIR packages, runtime/effectful
+signature admission and accelerator staged materialization. The next frontend
+vertical slice is loaded-index memory with exact inactive-lane behavior and
+runtime bounds, then scalar/dynamic ABI expansion. Do not replace either with
+an opaque successful wrapper or treat this native host result as all-target closure.

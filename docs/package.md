@@ -36,6 +36,11 @@ The [bound-model profile](model_integration.md) keeps model2MLIR's actual core
 data files, function ABI and learned weights. It uses a distinct
 `t2m.bound-model-receipt.v1`, with original capture/FX evidence retained under
 `parent/` and explicit TTIR binding/native/consumer evidence for the derived IR.
+Optional compiler staging and native Merlin materialization add explicit
+`consumer/compiler/` and `consumer/host/` products; the qualification input receipt
+is retained separately before the final receipt is augmented. These products
+do not change the portable model ABI or claim accelerator execution. See
+[the consumer contract](merlin_consumer.md).
 
 `t2m.shared-tensor-provenance.v2` is used when original TTIR needs an official
 intake rewrite before the shared optimizer can parse it. It records the original

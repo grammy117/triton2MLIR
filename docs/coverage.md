@@ -91,7 +91,7 @@ The principal work still needed is:
    defined gather/scatter conflict behavior and supported alias/effect contracts.
 3. Mixed-precision, cast, richer combiner/effect and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.
-4. Derived-receipt admission, general mutation/result schemas and staged support
+4. Direct standalone-kernel intake, general mutation/result schemas and staged support
    for all retained payloads. Interface ingestion and host execution do not discharge these.
 5. Explicit effectful/backend profiles for atomics, synchronization, volatile
    observations and hardware intrinsics. Arbitrary hardware-observing assembly

@@ -63,8 +63,10 @@ FX trace and metadata remain under `parent/`; unchanged data artifacts satisfy
 the parent receipt without duplicating weight files. The transformed MLIR has its
 own binding/native evidence and bundled TTIR implementations. Its parent FX trace
 is never relabeled as correspondence for changed IR. Merlin paths requiring a
-Torch-only capture receipt still need explicit derived-receipt admission; generic
-model interface/runtime generation accepts the actual tensor ABI.
+Torch-only capture receipt retain their own admission gates. Merlin's compiler-only
+stager now admits this derived receipt with separate original/derived source
+correspondence. Optional `--merlin-host` compiles and executes the staged whole
+program; see [the measured consumer path](merlin_consumer.md).
 
 ## Ragged tiled model demo
 

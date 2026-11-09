@@ -56,7 +56,8 @@ incoming buffers only after initialization/coverage checks. Derived model bundle
 weights, manifests, runtime inputs, constants and PyTorch goldens, with parent capture evidence
 kept separate from changed-IR provenance. Native tests cover a real `triton_op` model and the
 original `mlp_basic` / `mlp_basic_triton` pair. Merlin's actual reader and C runtime generator
-accept both model interfaces; target/staged execution remains unqualified.
+accept both model interfaces. Compiler-only staging and actual native Merlin
+library execution now have separate qualification; accelerator staged execution remains open.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.
@@ -205,9 +206,11 @@ performance, since a new target may select different physical storage and tile s
 **Implemented slice:** typed `prov.kernel` body binding, fresh-output initialization checks,
 learned-weight/manifest preservation, unchanged model ABI, complete native comparison against
 the parent capture, and actual Merlin interface/runtime generation. The original plain/Triton
-MLP pair passes with identical source weights and eager goldens. Derived receipts are explicit;
-Torch-only receipt admission, general mutation schemas, multiple-model-output references and
-staged/device execution remain separate gates.
+MLP pair passes with identical source weights and eager goldens. Derived receipts now
+cross Merlin's compiler-only staging boundary. Optional actual Merlin host compilation
+and repeated invocation preserve input bytes and compare unchanged goldens. General
+mutation schemas, multiple-model-output references and accelerator staged/device
+execution remain separate gates.
 
 Converge the packaging schema with the consumer rather than merely matching filenames. Add external
 parameters/constants, multiple results, precise dtype/storage metadata, optional trace adapters,
@@ -292,7 +295,8 @@ ownership, source accounting and native numerical regressions. Inventory all rem
 against the [measured corpus](docs/coverage.md), not a claimed opcode percentage.
 
 The binder now preserves model2MLIR's actual model ABI and learned parameters, and Merlin's
-reader/runtime-generation interface is checked. Derived-receipt admission, general mutation and
-model-result schemas, plus staged/device materialization, remain explicit consumer gates.
+reader/runtime-generation interface is checked. Compiler-only derived-receipt admission
+and native whole-body materialization are implemented. Direct standalone TTIR staging,
+general mutation/model-result schemas and accelerator materialization remain consumer gates.
 Backend-observing operations still need the effectful/backend-bound profiles defined above;
 they cannot silently become pure tensor math.

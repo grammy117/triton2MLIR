@@ -15,7 +15,7 @@ from xdsl.dialects import func
 from xdsl.dialects.builtin import StringAttr, TensorType
 
 from .bundle import _json, _record
-from .consumer import check_merlin_interface
+from .consumer import check_merlin_host, check_merlin_interface
 from .ir import text
 from .model_binding import bind_model
 from .native import execute_native
@@ -75,12 +75,14 @@ def _arguments(capture, module, work, python):
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
-                       merlin_python=None, rtol=0, atol=0):
+                       merlin_python=None, merlin_host=False, merlin_clang=None, rtol=0, atol=0):
     capture, out, work = Path(capture), Path(out), Path(work)
     if out.exists():
         raise FileExistsError(out)
     if not np.isfinite(rtol) or not np.isfinite(atol) or min(rtol, atol) < 0:
         raise ValueError("model comparison requires finite nonnegative tolerances")
+    if merlin_host and merlin_root is None:
+        raise ValueError("Merlin host qualification requires a selected Merlin checkout")
     parent = _parent(capture)
     parent_receipt_record = _record(capture / "capture_receipt.json")
     bindings = list(bindings)
@@ -125,23 +127,48 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         _json(directory / "spec.json", implementation.spec.as_dict())
         _json(directory / "provenance.json", implementation.trace)
         kernel_artifacts[digest] = str(directory.relative_to(out))
-    if merlin_root is not None:
-        check_merlin_interface(out, out / "consumer", merlin_root=merlin_root, python=merlin_python or python)
     _json(out / "compatibility.json", {"schema": "t2m.bound-model-compatibility.v1",
           "model_abi_and_core_data_files": "unchanged-from-parent-model2MLIR-capture",
           "differences": ["t2m.bound-model-receipt.v1; original m2m receipt retained under parent/",
                           "original FX trace remains under parent/ and binds original model bytes",
                           "kernel-bindings.json binds translated TTIR bodies and callsites",
-                          "model.mlir has relative weights path and no unresolved registered kernel calls"],
+                          "model.mlir has relative weights path and no unresolved registered kernel calls",
+                          "consumer compiler staging retains its input receipt separately from the final augmented receipt",
+                          "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source"],
           "target_execution": "not-performed"})
-    _json(out / "meta.json", {"frontend": "model2MLIR+triton2MLIR", "entry": "forward",
-          "native_model_reference_comparison": "passed", "merlin_target_execution": "not-performed"})
+    metadata = {"frontend": "model2MLIR+triton2MLIR", "entry": "forward",
+                "native_model_reference_comparison": "passed", "merlin_target_execution": "not-performed",
+                "merlin_host_execution": "not-performed"}
+    _json(out / "meta.json", metadata)
     artifacts = {str(p.relative_to(out)): _record(p) for p in sorted(out.rglob("*")) if p.is_file()}
     receipt = {"schema": "t2m.bound-model-receipt.v1", "artifacts": artifacts,
                "parent_artifact_bindings": parent_bindings, "parent_receipt": parent_receipt_record,
                "kernel_artifacts": kernel_artifacts, "materialized_abi": "unchanged-from-parent"}
     _json(out / "capture_receipt.json", receipt)
     verify_model_bundle(out)
+    if merlin_root is not None:
+        try:
+            check_merlin_interface(out, out / "consumer", merlin_root=merlin_root, python=merlin_python or python)
+            if merlin_host:
+                (actual,), host_report = check_merlin_host(out / "consumer", work / "arguments/arguments.npz",
+                    merlin_root=merlin_root, python=merlin_python or python, compiler_python=python,
+                    clang=merlin_clang or os.environ.get("T2M_MERLIN_CLANG"))
+                if actual.shape != golden.shape or actual.dtype != golden.dtype:
+                    raise ValueError("Merlin host result differs from captured model result ABI")
+                np.testing.assert_allclose(actual, golden, rtol=rtol, atol=atol, equal_nan=True)
+                host_report.update(schema="t2m.merlin-host-qualification.v1", host_execution="passed", reference_comparison="passed",
+                                   reference="unchanged-parent-PyTorch-golden", reference_sha256=_record(out / "golden.npy")["sha256"],
+                                   rtol=rtol, atol=atol)
+                _json(out / "consumer/host/execution.json", host_report)
+                metadata["merlin_host_execution"] = "passed"
+                _json(out / "meta.json", metadata)
+            receipt["artifacts"] = {str(p.relative_to(out)): _record(p) for p in sorted(out.rglob("*"))
+                                    if p.is_file() and p != out / "capture_receipt.json"}
+            _json(out / "capture_receipt.json", receipt)
+            verify_model_bundle(out)
+        except BaseException:
+            (out / "capture_receipt.json").unlink(missing_ok=True)
+            raise
     return out
 
 
@@ -171,6 +198,28 @@ def verify_model_bundle(out):
     model_hash = _record(out / "model.mlir")["sha256"]
     if trace["mlir_sha256"] != model_hash or execution["input_sha256"] != model_hash or execution["reference_comparison"] != "passed":
         raise ValueError("binding/native validation does not bind the final model")
+    if "consumer/compiler/compile-inputs.json" in receipt["artifacts"]:
+        staged = json.loads((out / "consumer/compiler/compile-inputs.json").read_text())
+        archived = out / "consumer/input-receipt.json"
+        if staged["source"]["capture_receipt_sha256"] != _record(archived)["sha256"] or staged["source"]["model_mlir_sha256"] != model_hash:
+            raise ValueError("Merlin compiler staging does not bind the qualified model receipt")
+        for name, digest in staged["members"].items():
+            if "consumer/compiler/" + name not in receipt["artifacts"] or _record(out / "consumer/compiler" / name)["sha256"] != digest:
+                raise ValueError("Merlin compiler stage member differs from its manifest")
+    if "consumer/host/execution.json" in receipt["artifacts"]:
+        host = json.loads((out / "consumer/host/execution.json").read_text())
+        if ("consumer/compiler/compile-inputs.json" not in receipt["artifacts"]
+                or host.get("schema") != "t2m.merlin-host-qualification.v1"
+                or host.get("host_execution") != "passed" or host.get("reference_comparison") != "passed"
+                or host.get("reference_sha256") != _record(out / "golden.npy")["sha256"]
+                or host.get("shared_library") != _record(out / "consumer/host/model.so")
+                or host.get("source_program") != _record(out / "consumer/compiler/program.mlir")
+                or host.get("evaluation", {}).get("outputs") != _record(out / "consumer/host/outputs.npz")
+                or host.get("evaluation", {}).get("functional_inputs_preserved") is not True):
+            raise ValueError("Merlin host qualification does not bind its actual source/library/reference")
+    metadata = json.loads((out / "meta.json").read_text())
+    if metadata.get("merlin_host_execution") == "passed" and "consumer/host/execution.json" not in receipt["artifacts"]:
+        raise ValueError("Merlin host success lacks its qualified execution report")
     for digest, directory in receipt["kernel_artifacts"].items():
         if directory + "/model.mlir" not in receipt["artifacts"]:
             raise ValueError("kernel implementation is outside the bound artifact inventory")
