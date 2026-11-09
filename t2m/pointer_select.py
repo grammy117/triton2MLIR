@@ -16,6 +16,7 @@ from xdsl.rewriter import Rewriter
 
 from .pointer_control import lower_offsets
 from .shared_tensor import _array, opcode
+from .word_events import MEMORY_EVENTS
 
 
 def normalize_selected(state, source_ids):
@@ -161,7 +162,7 @@ def normalize_selected(state, source_ids):
     memory_reports = []
     for op in original:
         name = opcode(op)
-        if name not in ("tt.load", "tt.store"):
+        if name not in MEMORY_EVENTS:
             continue
         pointer = operands[op][0]
         type_ = state.types[pointer]
@@ -178,7 +179,8 @@ def normalize_selected(state, source_ids):
             op.operands = [address(roots[0]), *op.operands[1:]]
             continue
         write = name == "tt.store"
-        if write:
+        atomic = name == "tt.atomic_rmw"
+        if write or atomic:
             original_mask = op.operands[2] if len(op.operands) > 2 else None
             other = None
         else:
@@ -209,6 +211,8 @@ def normalize_selected(state, source_ids):
             attributes["prov.pointer_base_ordinal"] = IntegerAttr(base.index, builtin.i32)
             if write:
                 selected = raw(name, [address(base), op.operands[1], mask], [], properties, attributes)
+            elif atomic:
+                selected = raw(name, [address(base), op.operands[1], mask], [op.results[0].type], properties, attributes)
             else:
                 properties["operandSegmentSizes"] = DenseArrayBase.from_list(builtin.i32, [1, 1, 1])
                 attributes.pop("operandSegmentSizes", None)
@@ -220,7 +224,7 @@ def normalize_selected(state, source_ids):
         memory_reports.append({"kind": "selected-pointer-memory", "source_ids": source_ids(op.location),
             "opcode": name, "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
             "memory_position": "original-event; no-hoisting-across-effects",
-            "missing_other_zero_refinement": not write and bool(_array(op, "operandSegmentSizes")[1]) and not bool(_array(op, "operandSegmentSizes")[2])})
+            "missing_other_zero_refinement": not write and not atomic and bool(_array(op, "operandSegmentSizes")[1]) and not bool(_array(op, "operandSegmentSizes")[2])})
         Rewriter.replace_op(op, [], [] if write else [merged])
 
     reports = [{"kind": "selected-pointer-control", "source_ids": source_ids(op.location), "opcode": opcode(op),

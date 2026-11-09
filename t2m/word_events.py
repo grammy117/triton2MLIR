@@ -18,6 +18,9 @@ from xdsl.rewriter import Rewriter
 from .diagnostics import ConversionError
 from .upstream import lower_with_shared
 
+MEMORY_EVENTS = {"tt.load": "tts.gather", "tt.store": "tts.scatter",
+                 "tt.atomic_rmw": "tts.unstructured_atomic_rmw"}
+
 
 def print_ir(module):
     stream = StringIO()
@@ -28,7 +31,7 @@ def print_ir(module):
 def needs_isolation(module):
     from .shared_tensor import opcode
     return any(opcode(op) in ("scf.if", "scf.while")
-               and any(opcode(nested) in ("tt.load", "tt.store") for nested in op.walk()) for op in module.walk())
+               and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()) for op in module.walk())
 
 
 def same_type(left, right):
@@ -43,7 +46,7 @@ def templates(module, source_ids):
     from .shared_tensor import _array, opcode
     function, = module.ops
     entry = function.regions[0].block
-    events = [op for op in function.walk() if opcode(op) in ("tt.load", "tt.store")]
+    events = [op for op in function.walk() if opcode(op) in MEMORY_EVENTS]
     functions, bindings, calls = [], [], []
     for index, op in enumerate(events):
         def refuse(message):
@@ -63,10 +66,10 @@ def templates(module, source_ids):
         if offset_element != builtin.i64:
             refuse("isolated memory offsets must retain the signed i64 source-word accumulator")
         other, mask = None, None
-        write = opcode(op) == "tt.store"
-        if write:
+        write_or_atomic = opcode(op) in ("tt.store", "tt.atomic_rmw")
+        if write_or_atomic:
             if len(op.operands) not in (2, 3):
-                refuse("isolated store requires a value and optional mask")
+                refuse("isolated store/RMW requires a value and optional mask")
             if len(op.operands) == 3:
                 mask = op.operands[2]
             captures = [base, offset, op.operands[1], *([mask] if mask is not None else [])]
@@ -137,11 +140,17 @@ def substitute(module, converted, bindings, calls):
         if len(body.args) != len(captures) or any(not same_type(a.type, b.type) for a, b in zip(body.args, captures)):
             raise ConversionError("isolated event conversion changed its typed capture bindings")
         operations = list(body.ops)
-        expected = "tts.gather" if record["opcode"] == "tt.load" else "tts.scatter"
-        memories = [op for op in body.walk() if opcode(op) in ("tts.gather", "tts.scatter")]
+        expected = MEMORY_EVENTS[record["opcode"]]
+        memories = [op for op in body.walk() if opcode(op) in MEMORY_EVENTS.values()]
         if (len(memories) != 1 or opcode(memories[0]) != expected or opcode(operations[-1]) != "tt.return"
-                or any(opcode(op) in ("tt.load", "tt.store", "tt.addptr", "tt.call") for op in body.walk())):
+                or any(opcode(op) in {*MEMORY_EVENTS, "tt.addptr", "tt.call"} for op in body.walk())):
             raise ConversionError("isolated event conversion did not retain exactly one memory observation")
+        if record["opcode"] == "tt.atomic_rmw":
+            def attribute(op, key):
+                return op.properties.get(key, op.attributes.get(key))
+            if any(attribute(memories[0], key) != attribute(original, key)
+                   for key in ("atomic_rmw_op", "sem", "scope")):
+                raise ConversionError("isolated atomic event changed its source operation/order/scope")
         mapping = dict(zip(body.args, captures, strict=True))
         emitted = [op.clone(value_mapper=mapping) for op in operations[:-1]]
         values = [mapping.get(v, v) for v in operations[-1].operands]

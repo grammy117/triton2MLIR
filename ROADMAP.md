@@ -26,6 +26,9 @@ masks and source order/scope through actual Merlin execution under an explicit
 private-invocation profile. A real atomic model also preserves every tuple
 result and original weight through native and Merlin execution, using complete
 receipt-bound references. CAS and broader effects remain completion requirements.
+Branch/loop-local atomics now also retain old-value recurrences and final
+same/selected-buffer pointers, with pure accumulator destination reuse through
+Merlin and all native lifetime checks retained.
 
 ## The product contract
 

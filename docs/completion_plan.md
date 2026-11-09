@@ -13,8 +13,11 @@ The latest effect/package slice qualifies all nine integer RMW operations under
 an explicit private-invocation profile, preserving masks, old values and source
 order/scope. A real model2MLIR capture now keeps both atomic model results,
 learned weights and complete tuple references through native and Merlin host
-execution. The 32 model regressions and 23 compiler-staging tests pass; see
-[atomic memory](atomic_memory.md). CAS, floating atomics, arbitrary region-local
+execution. The 32 model regressions and 23 compiler-staging tests pass.
+Region-local RMW now also preserves branches, loop recurrences and finite
+selected-buffer pointer state through native and Merlin execution: 17 new
+producer cases, 93 staging cases and 90 native consumer loop/lifetime cases
+pass. See [atomic memory](atomic_memory.md). CAS, floating atomics, broader
 effects and external synchronization still require executable implementations.
 
 For each operation/type/attribute/composition, track these separately:

@@ -10,6 +10,10 @@ through native and Merlin libraries, preserving learned weights and all parent
 tuple references. The 32 atomic/existing model regressions and 23 compiler-only
 staging tests pass. This closes the flat tensor tuple-reference package gap;
 nested results, broader model mutation and dynamic model ABIs remain open.
+Region-local atomics now also preserve branch/loop positions, old-value
+recurrences and final same/selected-buffer pointers through actual Merlin
+execution. All 17 new region cases, 93 staging cases and 90 native consumer
+loop/lifetime cases pass; see [the region contract](atomic_memory.md#branches-recurrences-and-selected-buffers).
 
 The pinned [v3.7.1 source inventory](ttir_operations.md) contains all 50 `tt`
 operation definitions, extracted with TableGen and partitioned by semantic

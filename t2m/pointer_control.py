@@ -66,6 +66,7 @@ def lower_offsets(state):
 
 def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     from .shared_tensor import _pointer_type, opcode
+    from .word_events import MEMORY_EVENTS
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
@@ -74,7 +75,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
                     *(a for region in op.regions for block in region.blocks for a in block.args)))]
     if isolate_memory:
         controls.extend(op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for")
-                        and op not in controls and any(opcode(nested) in ("tt.load", "tt.store") for nested in op.walk()))
+                        and op not in controls and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()))
     if not controls:
         return []
 
@@ -169,7 +170,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
                        or name == "arith.select" and position in (1, 2)
                        or name == "scf.for" and position >= 3 or name == "scf.while"
                        or name == "scf.yield" or name == "scf.condition" and position >= 1
-                       or name in ("tt.load", "tt.store") and position == 0)
+                       or name in MEMORY_EVENTS and position == 0)
             if not allowed:
                 refuse(op, "pointer control cannot observe or escape a logical buffer address")
 
@@ -191,7 +192,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     if not isolate_memory and all(opcode(op) == "scf.for" for op in controls):
         return []
     memory = {op: (types[op.operands[0]], next(iter(bases[op.operands[0]])))
-              for op in original if opcode(op) in ("tt.load", "tt.store")}
+              for op in original if opcode(op) in MEMORY_EVENTS}
     lower_offsets(state)
 
     # Reconstruct pointers only at memory events. Upstream now sees local

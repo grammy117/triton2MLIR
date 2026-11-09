@@ -4,8 +4,8 @@ Status: implemented for the explicit private-invocation integer RMW profile.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
-CAS, floating atomics, external publication/synchronization and arbitrary
-region-local atomic/pointer state remain required extensions for the full goal.
+CAS, floating atomics, external publication/synchronization and broader
+alias/ownership state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
 access-category rules, including differences at bit 30 and bit 60. The eighteen
@@ -86,8 +86,8 @@ atomic update remain executable operations.
    Use exact references where ordering is unique; for colliding old values,
    check a valid linearization/permutation instead of imposing a GPU schedule.
    Reuse unchanged Merlin libraries over independent domains and preserve inputs.
-5. Extend isolated event/pointer-control conversion to region-local atomics.
-   Then implement CAS from exact compare/exchange semantics using a standard
+5. Region-local RMW now extends the isolated event/pointer-control converter.
+   Next implement CAS from exact compare/exchange semantics using a standard
    atomic region/consumer implementation: the current unstructured converter
    has no CAS case. Reuse official/shared patterns where available and retain
    a complete, replayable disposition for every source event.
@@ -150,3 +150,30 @@ including rejection of missing, unbound, reshaped or mistyped result references
 before execution and rehashed execution reports that omit reference custody.
 Merlin's 23 compiler-staging tests also pass with tuple-reference access blocked.
 See [model integration](model_integration.md) for the additive package contract.
+
+## Branches, recurrences and selected buffers
+
+RMW events now reuse the same isolated native templates as loads/stores.
+Source-word pointer normalization retains same-base and finite selected-base
+pointer state through `if`, `for` and `while`; each event stays at its source
+position. Uniform and lane-varying buffer selection emits disjoint predicated
+atomic events and merges their original old values. Operation, scope and order
+are checked against the source after native event conversion, including during
+evidence replay. These are semantic selectors, with no physical address spaces
+or target launch mapping introduced.
+
+The actual Merlin compiler now recognizes a closed atomic snapshot dependency
+in its explicit loop-destination reuse pass. A retained exactly-once region,
+unused-init tensor event, independently synthesized seeds and actual private
+atomic targets permit the downstream pure accumulator to reuse its destination.
+The event itself stays intact. External targets, unknown effects and shared
+seeds grant no permission; native bufferization and lifetime checks stay enabled.
+The original failure was caught by the lifetime check, rather than bypassed.
+
+All 17 new region cases pass: i32/i64 scalar/tiled loops, branch-local add/XOR,
+old-value accumulation, same/selected bases, final-pointer updates, zero trips,
+empty/tail domains, inactive invalid pointers and active bounds failures.
+Twelve combinations execute natively and reuse actual Merlin libraries over
+five independent invocations each. Three rehashed event tests reject changes
+to operation/order/scope. Merlin's 93 staging and 90 native loop/lifetime cases
+pass, including refusal of unknown/external atomic snapshot dependencies.

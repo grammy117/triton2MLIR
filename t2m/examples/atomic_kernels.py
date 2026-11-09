@@ -62,3 +62,42 @@ def atomic_chain(state, out_a, out_b, n, B: tl.constexpr):
     second = tl.atomic_xor(state + lane, first, lane < n, sem="acq_rel", scope="gpu")
     tl.store(out_a + lane, first, lane < n)
     tl.store(out_b + lane, second, lane < n)
+
+
+@triton.jit
+def region_atomic(a, b, out, n, steps, enabled, choice, shift,
+                  B: tl.constexpr, SCALAR: tl.constexpr, WHILE: tl.constexpr,
+                  SELECT: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = a + lane + shift
+    if SELECT == "lane":
+        pointer = tl.where(lane % 2 == 0, pointer, b + lane + shift)
+    elif SELECT == "uniform":
+        if choice:
+            pointer = b + lane + shift
+    total = (lane * 0).to(a.dtype.element_ty)
+    if enabled:
+        if WHILE:
+            i = 0
+            while i < steps:
+                if i % 2 == 0:
+                    previous = tl.atomic_add(pointer, i + 1, lane < n, sem="relaxed", scope="gpu")
+                else:
+                    previous = tl.atomic_xor(pointer, i + 1, lane < n, sem="acquire", scope="cta")
+                total += previous
+                pointer += n
+                i += 1
+        else:
+            for i in range(steps):
+                if i % 2 == 0:
+                    previous = tl.atomic_add(pointer, i + 1, lane < n, sem="relaxed", scope="gpu")
+                else:
+                    previous = tl.atomic_xor(pointer, i + 1, lane < n, sem="acquire", scope="cta")
+                total += previous
+                pointer += n
+        last = tl.atomic_xor(pointer, total, lane < n, sem="release", scope="sys")
+        total += last
+    tl.store(out + lane, total, lane < n)
