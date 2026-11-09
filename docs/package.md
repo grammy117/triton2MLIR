@@ -184,6 +184,17 @@ results, multi-result reference ordering and provenance projection are explicit;
 see [the consumer contract](merlin_consumer.md). This does not rename the source
 receipt or assert accelerator qualification in the original capture metadata.
 
+Bound model packages also support all results of a flat tensor tuple/list. The
+parent model2MLIR capture declares `m2m.flat-tensor-result-references.v1` in its
+metadata and binds `goldens.npz` (`out0`, `out1`, ...) in its receipt. The legacy
+`golden.npy` retains the exact first result. Both archives remain byte-identical
+in the derived package; native and Merlin execution reports bind their hashes
+and compare every result against the complete typed model ABI. The additive
+archive is optional for existing single-result packages. It is evaluator-only
+and excluded from Merlin compiler staging. Nested/non-tensor results and
+general mutation schemas require further contracts; see
+[model integration](model_integration.md).
+
 ABI v3 adds typed runtime scalar declarations with explicit source positions.
 Exported MLIR keeps plain scalar argument types after logical tensor inputs;
 the usual `inputs.npz` keys store zero-dimensional typed values for invocation.

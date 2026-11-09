@@ -24,6 +24,7 @@ from .package_compatibility import kernel_representation_differences
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
+OPTIONAL_DATA = {"goldens.npz"}
 ITEM_BYTES = {"f16": 2, "f32": 4, "f64": 8, "i64": 8, "i32": 4, "i16": 2, "i8": 1, "i1": 1}
 
 
@@ -57,8 +58,8 @@ def _arguments(capture, module, work, python):
         abi.append({"shape": list(type_.get_shape()), "dtype": dtype})
     if sum(prod(a["shape"]) * ITEM_BYTES[a["dtype"]] for a in abi) > 64 * 1024 * 1024:
         raise ValueError("materialized model arguments exceed the 64MiB qualification budget")
-    if len(entry[0].function_type.outputs) != 1:
-        raise ValueError("this model package profile requires one independently captured model golden")
+    if not entry[0].function_type.outputs:
+        raise ValueError("native model qualification requires at least one tensor result")
     work.mkdir(parents=True, exist_ok=False)
     _json(work / "abi.json", abi)
     try:
@@ -74,6 +75,57 @@ def _arguments(capture, module, work, python):
     with np.load(work / "arguments.npz", allow_pickle=False) as data:
         values = [data[f"in{i}"].copy() for i in range(len(abi))]
     return values, json.loads((work / "bindings.json").read_text())
+
+
+def _references(capture, parent, result_types):
+    count = len(result_types)
+    schemas = []
+    for type_ in result_types:
+        if (not isinstance(type_, TensorType) or any(n < 0 for n in type_.get_shape())
+                or str(type_.element_type) not in ITEM_BYTES):
+            raise ValueError("native model result requires a qualified static tensor dtype")
+        dtype = str(type_.element_type)
+        numpy_dtype = np.dtype("bool" if dtype == "i1" else ("float" if dtype.startswith("f") else "int") + dtype[1:])
+        schemas.append((type_.get_shape(), numpy_dtype))
+    if sum(prod(shape) * dtype.itemsize for shape, dtype in schemas) > 64 * 1024 * 1024:
+        raise ValueError("captured model results exceed the 64MiB qualification budget")
+    declared = parent.get("materialized_abi", {}).get("outputs")
+    if declared is not None and declared != count:
+        raise ValueError("captured result-reference count differs from the complete model ABI")
+    first = np.load(capture / "golden.npy", allow_pickle=False)
+    members = {"golden.npy": _record(capture / "golden.npy")}
+    if count == 1:
+        values = [first]
+    else:
+        if count < 1 or "goldens.npz" not in parent["artifacts"] or declared != count:
+            raise ValueError("multi-result models require all independently captured parent result references")
+        pointer = json.loads((capture / "meta.json").read_text()).get("result_references", {})
+        keys = [f"out{i}" for i in range(count)]
+        if (pointer.get("schema") != "m2m.flat-tensor-result-references.v1" or pointer.get("path") != "goldens.npz"
+                or pointer.get("keys") != keys or pointer.get("legacy_first_result") != "golden.npy"):
+            raise ValueError("model result references lack their ordered parent capture declaration")
+        with np.load(capture / "goldens.npz", allow_pickle=False) as saved:
+            if len(saved.files) != count or set(saved.files) != set(keys):
+                raise ValueError("model result references must contain every result exactly once")
+            values = [saved[key].copy() for key in keys]
+        if values[0].shape != first.shape or values[0].dtype != first.dtype or values[0].tobytes() != first.tobytes():
+            raise ValueError("model result references differ from the legacy first golden")
+        if pointer.get("storage_dtypes") != [str(v.dtype) for v in values]:
+            raise ValueError("model result-reference storage differs from its captured declaration")
+        members["goldens.npz"] = _record(capture / "goldens.npz")
+    for value, (shape, dtype) in zip(values, schemas, strict=True):
+        if value.shape != shape or value.dtype != dtype:
+            raise ValueError("captured golden differs from the complete model result ABI")
+    return values, members
+
+
+def _compare_results(actual, expected, rtol, atol):
+    if len(actual) != len(expected):
+        raise ValueError("complete model result count differs from captured references")
+    for value, golden in zip(actual, expected, strict=True):
+        if value.shape != golden.shape or value.dtype != golden.dtype:
+            raise ValueError("captured golden differs from the complete model result ABI")
+        np.testing.assert_allclose(value, golden, rtol=rtol, atol=atol, equal_nan=True)
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
@@ -97,21 +149,21 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     trace["weights_retarget"] = "relative canonical filename; payload bytes unchanged"
     work.mkdir(parents=True, exist_ok=False)
     inputs, sources = _arguments(capture, bound.module, work / "arguments", python)
-    (actual,), execution = execute_native(mlir, inputs, work / "native", python=python)
-    golden = np.load(capture / "golden.npy", allow_pickle=False)
-    if actual.shape != golden.shape or actual.dtype != golden.dtype:
-        raise ValueError("captured golden differs from the complete model result ABI")
-    np.testing.assert_allclose(actual, golden, rtol=rtol, atol=atol, equal_nan=True)
+    entry = next(op for op in bound.module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
+    goldens, reference_members = _references(capture, parent, entry.function_type.outputs)
+    actual, execution = execute_native(mlir, inputs, work / "native", python=python)
+    _compare_results(actual, goldens, rtol, atol)
     if _parent(capture) != parent or _record(capture / "capture_receipt.json") != parent_receipt_record:
         raise ValueError("parent capture changed during qualification")
     execution.update({"reference_comparison": "passed", "reference": "unchanged-parent-PyTorch-golden",
-                      "rtol": rtol, "atol": atol, "materialized_arguments": sources})
+                      "rtol": rtol, "atol": atol, "materialized_arguments": sources,
+                      "result_count": len(goldens), "result_reference_members": reference_members})
     out.mkdir(parents=True, exist_ok=False)
     (out / "parent").mkdir()
     shutil.copyfile(capture / "capture_receipt.json", out / "parent/capture_receipt.json")
     parent_bindings = {}
     for name in parent["artifacts"]:
-        destination = name if name in CORE and name != "model.mlir" else "parent/" + name
+        destination = name if name in CORE | OPTIONAL_DATA and name != "model.mlir" else "parent/" + name
         shutil.copyfile(capture / name, out / destination)
         parent_bindings[name] = destination
     (out / "model.mlir").write_text(mlir)
@@ -142,7 +194,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "kernel-bindings.json binds translated TTIR bodies and callsites",
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
-                          "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source"],
+                          "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
+                          *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else [])],
           "target_execution": "not-performed"})
     metadata = {"frontend": "model2MLIR+triton2MLIR", "entry": "forward",
                 "native_model_reference_comparison": "passed", "merlin_target_execution": "not-performed",
@@ -158,14 +211,13 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         try:
             check_merlin_interface(out, out / "consumer", merlin_root=merlin_root, python=merlin_python or python)
             if merlin_host:
-                (actual,), host_report = check_merlin_host(out / "consumer", work / "arguments/arguments.npz",
+                actual, host_report = check_merlin_host(out / "consumer", work / "arguments/arguments.npz",
                     merlin_root=merlin_root, python=merlin_python or python, compiler_python=python,
                     clang=merlin_clang or os.environ.get("T2M_MERLIN_CLANG"))
-                if actual.shape != golden.shape or actual.dtype != golden.dtype:
-                    raise ValueError("Merlin host result differs from captured model result ABI")
-                np.testing.assert_allclose(actual, golden, rtol=rtol, atol=atol, equal_nan=True)
+                _compare_results(actual, goldens, rtol, atol)
                 host_report.update(schema="t2m.merlin-host-qualification.v1", host_execution="passed", reference_comparison="passed",
                                    reference="unchanged-parent-PyTorch-golden", reference_sha256=_record(out / "golden.npy")["sha256"],
+                                   result_count=len(goldens), result_reference_members=reference_members,
                                    rtol=rtol, atol=atol)
                 _json(out / "consumer/host/execution.json", host_report)
                 metadata["merlin_host_execution"] = "passed"
@@ -206,6 +258,26 @@ def verify_model_bundle(out):
     model_hash = _record(out / "model.mlir")["sha256"]
     if trace["mlir_sha256"] != model_hash or execution["input_sha256"] != model_hash or execution["reference_comparison"] != "passed":
         raise ValueError("binding/native validation does not bind the final model")
+    result_count = execution.get("result_count", 1)
+    if type(result_count) is not int or result_count < 1:
+        raise ValueError("model qualification lacks a positive result-reference count")
+    reference_members = {"golden.npy": _record(out / "golden.npy")}
+    if result_count > 1 or parent.get("materialized_abi", {}).get("outputs", 1) > 1:
+        if (parent.get("materialized_abi", {}).get("outputs") != result_count
+                or receipt["parent_artifact_bindings"].get("goldens.npz") != "goldens.npz"
+                or "goldens.npz" not in receipt["artifacts"]):
+            raise ValueError("multi-result model qualification lacks all original parent references")
+        with np.load(out / "goldens.npz", allow_pickle=False) as references:
+            keys = [f"out{i}" for i in range(result_count)]
+            if len(references.files) != result_count or set(references.files) != set(keys):
+                raise ValueError("model qualification references do not cover every result")
+            first = np.load(out / "golden.npy", allow_pickle=False)
+            if references["out0"].shape != first.shape or references["out0"].dtype != first.dtype or references["out0"].tobytes() != first.tobytes():
+                raise ValueError("model qualification tuple references differ from its legacy first golden")
+        reference_members["goldens.npz"] = _record(out / "goldens.npz")
+    if (("result_count" in execution or len(reference_members) > 1)
+            and execution.get("result_reference_members") != reference_members):
+        raise ValueError("model native qualification does not bind every result-reference member")
     if "consumer/compiler/compile-inputs.json" in receipt["artifacts"]:
         staged = json.loads((out / "consumer/compiler/compile-inputs.json").read_text())
         archived = out / "consumer/input-receipt.json"
@@ -225,6 +297,9 @@ def verify_model_bundle(out):
                 or host.get("evaluation", {}).get("outputs") != _record(out / "consumer/host/outputs.npz")
                 or host.get("evaluation", {}).get("functional_inputs_preserved") is not True):
             raise ValueError("Merlin host qualification does not bind its actual source/library/reference")
+        if (("result_count" in host or result_count > 1)
+                and (host.get("result_count") != result_count or host.get("result_reference_members") != reference_members)):
+            raise ValueError("Merlin host qualification does not bind every model result reference")
     metadata = json.loads((out / "meta.json").read_text())
     if metadata.get("merlin_host_execution") == "passed" and "consumer/host/execution.json" not in receipt["artifacts"]:
         raise ValueError("Merlin host success lacks its qualified execution report")

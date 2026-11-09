@@ -23,8 +23,9 @@ through Merlin, preserving source word arithmetic and runtime seed/counter
 inputs in standard MLIR; see [the numeric contract](docs/integer_products.md).
 [Integer RMW atomics](docs/atomic_memory.md) now retain collisions, old values,
 masks and source order/scope through actual Merlin execution under an explicit
-private-invocation profile. CAS, broader effects and tuple model-reference
-capture remain separate completion requirements.
+private-invocation profile. A real atomic model also preserves every tuple
+result and original weight through native and Merlin execution, using complete
+receipt-bound references. CAS and broader effects remain completion requirements.
 
 ## The product contract
 
@@ -285,8 +286,9 @@ the parent capture, and actual Merlin interface/runtime generation. The original
 MLP pair passes with identical source weights and eager goldens. Derived receipts now
 cross Merlin's compiler-only staging boundary. Optional actual Merlin host compilation
 and repeated invocation preserve input bytes and compare unchanged goldens. General
-mutation schemas, multiple-model-output references and accelerator staged/device
-execution remain separate gates.
+mutation schemas and accelerator staged/device execution remain separate gates.
+Flat tensor tuple results now retain every independent parent reference in the
+additive `goldens.npz` contract; `golden.npy` remains the original first result.
 
 Converge the packaging schema with the consumer rather than merely matching filenames. Add external
 parameters/constants, multiple results, precise dtype/storage metadata, optional trace adapters,

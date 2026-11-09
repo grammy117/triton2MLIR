@@ -38,7 +38,10 @@ parent's real weights, manifest, runtime inputs, constants, input order and gold
 byte-for-byte. A native check materializes arguments by **function argument index**,
 using the manifest and `input_order.json` rather than treating weight positions as
 runtime input positions, and compares the complete model result with the unchanged
-PyTorch golden. The initial model-bundle profile requires one captured model output.
+PyTorch references. Flat tensor tuple results use model2MLIR's additive,
+receipt-bound `goldens.npz` archive in result order. The original first-result
+`golden.npy` remains unchanged. Missing, unbound, reshaped or mistyped references
+fail before native execution; both native and Merlin reports bind every result.
 
 ```bash
 # Existing, independent environments; no GPU or Triton CPU backend required.

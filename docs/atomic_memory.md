@@ -137,7 +137,16 @@ cases. Merlin's 88 standalone/derived intake tests and structure gates pass at
 custody, v3 cost/protocol and declared atomic facts, excluding evaluator values.
 Actual source/guard/linearization and accelerator proofs remain separate.
 
-A real model2MLIR tuple-result atomic capture exposed an additional package
-gap: its bundle currently saves only the first model result golden. Capturing
-and verifying all original tensor result references is the next integration
-requirement; dropping the atomic's old-value result would not satisfy it.
+A real model2MLIR tuple-result atomic capture now preserves both updated state
+and old values through native and actual Merlin execution. Its integer learned
+state, index buffer, inputs and every independent PyTorch reference remain
+byte-identical to the parent capture. Model2MLIR's additive `goldens.npz` archive
+captures all flat tensor results while retaining the legacy `golden.npy` first
+result. Both execution reports bind the complete reference set. Merlin compiler
+staging explicitly excludes the archive and all evaluator values.
+
+The 32 atomic/selected-memory/source-event/model-bundle regression cases pass,
+including rejection of missing, unbound, reshaped or mistyped result references
+before execution and rehashed execution reports that omit reference custody.
+Merlin's 23 compiler-staging tests also pass with tuple-reference access blocked.
+See [model integration](model_integration.md) for the additive package contract.

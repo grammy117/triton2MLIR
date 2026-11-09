@@ -9,6 +9,14 @@ this goal begins with remaining requirements still open.
 
 ## Completion evidence
 
+The latest effect/package slice qualifies all nine integer RMW operations under
+an explicit private-invocation profile, preserving masks, old values and source
+order/scope. A real model2MLIR capture now keeps both atomic model results,
+learned weights and complete tuple references through native and Merlin host
+execution. The 32 model regressions and 23 compiler-staging tests pass; see
+[atomic memory](atomic_memory.md). CAS, floating atomics, arbitrary region-local
+effects and external synchronization still require executable implementations.
+
 For each operation/type/attribute/composition, track these separately:
 
 1. Original native-verified source inventory and disposition, including helper

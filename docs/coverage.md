@@ -5,6 +5,11 @@ profile through actual Merlin execution: all nine integer operations, scalar/
 tiled i32/i64, collisions, original old values, initialization and race checks.
 The 102 focused cases and the independent 4,663-history ownership oracle do not
 close CAS, floating atomics, publication/synchronization, aliases or target work.
+An actual model2MLIR atomic model now returns both updated state and old values
+through native and Merlin libraries, preserving learned weights and all parent
+tuple references. The 32 atomic/existing model regressions and 23 compiler-only
+staging tests pass. This closes the flat tensor tuple-reference package gap;
+nested results, broader model mutation and dynamic model ABIs remain open.
 
 The pinned [v3.7.1 source inventory](ttir_operations.md) contains all 50 `tt`
 operation definitions, extracted with TableGen and partitioned by semantic
