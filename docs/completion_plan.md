@@ -202,6 +202,19 @@ complete while destinations retain reuse when the condition forwards state
 unchanged. Mixed-base pointer tensors, broader while ownership, aliases and
 broader effects remain open. Preserve useful tiling and reuse as those profiles expand.
 
+The next measured control composition is a same-base pointer chosen by a
+branch inside a runtime while: alternate between two rows, accumulate the
+selected row, and read the final pointer after the loop. Frontend conversion
+and independent native execution pass. Merlin still refuses the branch-selected
+i64 offset state's allocation lifetime (three repeating-control violations),
+even though direct generic after-state now qualifies. Preserve that refusal
+until destination/ownership analysis handles branch results and zero-trip final
+ownership; do not disable lifetime checks or count this composition as qualified.
+The local reproducer is `.scratch/nested_pointer_control_probe.py`; its generated
+source, capture, native result and failed consumer receipt are retained under
+`.scratch/nested-pointer-control/`. These disposable diagnostics are evidence
+for the next implementation, not a maintained or passing product case.
+
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
 input preservation. The old categorical consumer incompatibility is therefore
