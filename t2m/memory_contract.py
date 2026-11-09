@@ -7,9 +7,15 @@ import math
 TENSOR_PROFILE = "shared-functional-tensor"
 BUFFER_PROFILE = "shared-functional-buffer"
 GUARDED_PROFILE = "shared-guarded-buffer"
+WORD_PROFILE = "shared-source-word-buffer"
+GUARDED_PROFILES = (GUARDED_PROFILE, WORD_PROFILE)
 MEMORY_FILES = {"memory-witness.mlir", "memory-input.mlir", "memory-stage.mlir", "memory-stage.json"}
 GUARDED_FILES = MEMORY_FILES - {"memory-witness.mlir"} | {"memory-admission.json"}
-PROFILE_FILES = {TENSOR_PROFILE: set(), BUFFER_PROFILE: MEMORY_FILES, GUARDED_PROFILE: GUARDED_FILES}
+WORD_FILES = {"word-input.mlir", "word-tensor.mlir", "word-stage.json"}
+WORD_PIPELINE = ["--triton-to-unstructured=offset-bit-width=64",
+    "--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false", "--remove-dead-values", "--canonicalize"]
+PROFILE_FILES = {TENSOR_PROFILE: set(), BUFFER_PROFILE: MEMORY_FILES, GUARDED_PROFILE: GUARDED_FILES,
+                 WORD_PROFILE: GUARDED_FILES | WORD_FILES}
 
 
 def guard_layout(spec):
@@ -41,19 +47,19 @@ def validate_memory_evidence(trace, artifacts):
         return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
     memory = trace.get("memory", {})
     members = [("memory-input.mlir", "continuation_input_sha256"), ("memory-stage.mlir", "continuation_output_sha256")]
-    members.append(("memory-admission.json", "admission_sha256") if profile == GUARDED_PROFILE else ("memory-witness.mlir", "witness_sha256"))
+    members.append(("memory-admission.json", "admission_sha256") if profile in GUARDED_PROFILES else ("memory-witness.mlir", "witness_sha256"))
     for name, key in members:
         if memory.get(key) != record(artifacts[name])["sha256"]:
             raise ValueError("memory evidence differs from source provenance: " + name)
     stage = json.loads(artifacts["memory-stage.json"])
-    admission = json.loads(artifacts["memory-admission.json"]) if profile == GUARDED_PROFILE else None
+    admission = json.loads(artifacts["memory-admission.json"]) if profile in GUARDED_PROFILES else None
     version2 = admission is not None and admission.get("schema") == "t2m.memory-admission.v2"
     if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != ("memory-effects" if version2 else "memory-ir")
             or stage.get("stage_completed") is not True
             or stage.get("artifacts", {}).get("source.ttir") != record(artifacts["memory-input.mlir"])
             or stage.get("artifacts", {}).get("lowered.mlir") != record(artifacts["memory-stage.mlir"])):
         raise ValueError("memory continuation report does not bind its actual input/output")
-    if profile == GUARDED_PROFILE:
+    if profile in GUARDED_PROFILES:
         spec = json.loads(json.dumps(trace.get("spec")))
         if not isinstance(spec, dict) or not isinstance(spec.get("buffers"), list):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
@@ -82,4 +88,22 @@ def validate_memory_evidence(trace, artifacts):
                     or not access.get("source_ids") or any(s not in inventory for s in access["source_ids"])
                     or not access.get("tile") or any(type(n) is not int or n <= 0 for n in access["tile"])):
                 raise ValueError("guarded memory access inventory differs from its source/effect contract")
+    if profile == WORD_PROFILE:
+        word_stage = json.loads(artifacts["word-stage.json"])
+        command = word_stage.get("command", [])
+        transport = {"--mlir-disable-threading", "--verify-each", "--mlir-print-op-generic",
+                     "--mlir-print-debuginfo", "--mlir-print-local-scope"}
+        pipeline = [flag for flag in (command if isinstance(command, list) else [])
+                    if isinstance(flag, str) and flag.startswith("--") and flag not in transport]
+        if (not version2 or admission.get("address_policy") != "source-words-offset64"
+                or memory.get("address_policy") != "source-words-offset64"
+                or memory.get("word_stage_sha256") != record(artifacts["word-stage.json"])["sha256"]
+                or admission.get("word_input_sha256") != record(artifacts["word-input.mlir"])["sha256"]
+                or admission.get("word_tensor_sha256") != record(artifacts["word-tensor.mlir"])["sha256"]
+                or word_stage.get("schema") != "t2m.triton-shared-stage.v1" or word_stage.get("stage") != "source-word-tensor"
+                or word_stage.get("stage_completed") is not True
+                or word_stage.get("artifacts", {}).get("source.ttir") != record(artifacts["word-input.mlir"])
+                or word_stage.get("artifacts", {}).get("lowered.mlir") != record(artifacts["word-tensor.mlir"])
+                or not isinstance(command, list) or any(type(flag) is not str for flag in command) or pipeline != WORD_PIPELINE):
+            raise ValueError("source-word address evidence does not bind its declared input/output/policy")
     return profile

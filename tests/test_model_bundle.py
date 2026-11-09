@@ -11,7 +11,7 @@ from t2m.bundle import verify_bundle
 from t2m.frontend import capture_ttir
 from t2m.model_binding import KernelBinding
 from t2m.model_bundle import write_model_bundle
-from t2m.shared_tensor import TensorABI, TensorBuffer, convert_shared
+from t2m.shared_tensor import TensorABI, TensorBuffer, convert_shared, parse_shared
 
 OPT = os.environ.get("TRITON_SHARED_OPT")
 NATIVE = os.environ.get("T2M_NATIVE_PYTHON")
@@ -89,12 +89,13 @@ def test_actual_triton_op_model_binds_parameters_and_merlin_interface(tmp_path, 
         verify_bundle(out)
 
 
-@pytest.mark.parametrize("profile", ["buffer", "guarded-buffer"])
-def test_mixed_memory_kernel_binds_real_model_and_preserves_parent_data(tmp_path, model_inputs, profile):
+@pytest.mark.parametrize("profile,policy", [("buffer", "structured"), ("guarded-buffer", "structured"), ("guarded-buffer", "source-words")])
+def test_mixed_memory_kernel_binds_real_model_and_preserves_parent_data(tmp_path, model_inputs, profile, policy):
     capture, original = model_inputs
     source = tmp_path / "source.ttir"
     source.write_text(original.implementation.source_ttir)
-    implementation = convert_shared(source, original.implementation.spec, tmp_path / "implementation", optimizer=OPT, memory_profile=profile)
+    implementation = convert_shared(source, original.implementation.spec, tmp_path / "implementation", optimizer=OPT,
+                                    memory_profile=profile, address_policy=policy)
     binding = KernelBinding(original.qualname, implementation, operands=original.operands,
                             results=original.results, scalar_arguments=original.scalar_arguments)
     out = tmp_path / "bound"
@@ -104,6 +105,11 @@ def test_mixed_memory_kernel_binds_real_model_and_preserves_parent_data(tmp_path
     receipt = verify_bundle(out)
     evidence = "memory-admission.json" if profile == "guarded-buffer" else "memory-witness.mlir"
     assert "kernels/0/" + evidence in receipt["artifacts"]
+    if policy == "source-words":
+        assert "kernels/0/word-stage.json" in receipt["artifacts"]
+        module = parse_shared((out / "model.mlir").read_text())
+        assert any(op.name == "linalg.matmul" for op in module.walk())
+        assert any(op.name == "scf.forall" and "prov.address_policy" in op.attributes for op in module.walk())
     for name in ("weights.safetensors", "inputs.npz", "golden.npy", "extra.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
     if MERLIN:

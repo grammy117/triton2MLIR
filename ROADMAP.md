@@ -365,6 +365,16 @@ bound-model scratch remain open; see [the contract and evidence](docs/guarded_me
 Scalar gathers/scatters now lift to one-element tensors and reuse the same
 upstream converters/checks, retaining their source types, masks and fills.
 
+The explicit `source-words` address policy now uses upstream's supported
+`offset-bit-width=64` option before the guarded memory continuation. Original
+integer computations retain their word types; pointer increments accumulate
+separately as signed i64 offsets. Scalar/tiled wraparound, pointer cancellation,
+runtime pointer loops/final values and nonlinear grid permutations are checked
+natively and through the Merlin interface. Source-word stage bytes/policy and
+access intent are retained in the distinct package profile; static real-model
+bindings preserve contractions and loops. General pointer-valued branches/
+while, aliases and broader effects still need work. See [the contract](docs/source_words.md).
+
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,
 general `while`, scans and explicitly qualified mixed precision. Preserve earlier mask,

@@ -72,7 +72,7 @@ def qualify_corpus(root, out, *, optimizer=None, stage="tensor-ir", limit=1000, 
                 record["source_ops"] = dict(source_ops)
             except Exception as exc:
                 record["inventory_error"] = f"{type(exc).__name__}: {exc}"[:1000]
-            if stage == "tensor-ir":
+            if stage in ("tensor-ir", "source-word-tensor"):
                 lower_with_shared(saved, case_dir / "inline", optimizer=tool, stage="inline", timeout=min(10, budget))
                 saved = case_dir / "inline/lowered.mlir"
             lower_with_shared(saved, case_dir / "stage", optimizer=tool, stage=stage, timeout=min(10, budget))

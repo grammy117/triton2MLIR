@@ -87,6 +87,16 @@ opcode admission. See [the memory boundary](full_memory_bridge.md).
 
 ## Shared core artifacts
 
+`--address-policy source-words` with guarded memory selects the explicit
+`shared-source-word-buffer` profile. It retains the same tensor/scalar ABI and
+guard protocol, while using original integer words with signed i64 pointer
+offset accumulation. Accesses use offset tensors instead of recovered slices.
+The receipt additionally binds `word-input.mlir`, `word-tensor.mlir` and
+`word-stage.json`; admission/provenance bind their policy and hashes. Merlin
+checks/copies these compiler-only members for standalone and static derived
+models. Function/grid annotations retain original access intent through model
+inlining. See [source-word semantics and evidence](source_words.md).
+
 The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor
 witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three

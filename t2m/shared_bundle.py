@@ -11,7 +11,7 @@ import numpy as np
 from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
-from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
+from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, WORD_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
@@ -75,15 +75,17 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     for name, payload in result.auxiliary_artifacts.items():
         (out / name).write_text(payload)
     differences = DIFFERENCES + (["explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained"] if profile == BUFFER_PROFILE else [])
-    if profile == GUARDED_PROFILE:
+    if profile in GUARDED_PROFILES:
         differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, read/write ownership, completed initialization and per-store lane uniqueness are executable; source-base gathers retain memory effects before optimization; grid-derived metadata cost is explicit; no pure tensor witness is asserted")
+    if profile == WORD_PROFILE:
+        differences.append("explicit source-word address policy retains source integer arithmetic before signed i64 pointer-offset accumulation; raw offset tensors replace structured pointer views; word-stage input/output evidence is retained")
     if result.spec.dynamic:
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,
           "baseline": "model2MLIR 035bb5a", "differences": differences,
           "same_core_filenames": True, "merlin_staged_execution": "not-certified"})
     _json(out / "meta.json", {"frontend": "triton-shared-with-t2m-tensor-ABI", "entry": result.spec.entry,
-          "output_type": "functional-tensor-with-standard-memory" if profile in (BUFFER_PROFILE, GUARDED_PROFILE) else "linalg-on-tensors", "execution": "native-host-LLVM-JIT",
+          "output_type": "functional-tensor-with-standard-memory" if profile in (BUFFER_PROFILE, *GUARDED_PROFILES) else "linalg-on-tensors", "execution": "native-host-LLVM-JIT",
           "merlin_staged_execution": "not-certified"})
     receipt = {"schema": "t2m.capture-receipt.v2", "profile": profile,
                "artifacts": {name: _record(out / name) for name in sorted(REQUIRED | PROFILE_FILES[profile])},

@@ -17,7 +17,7 @@ from xdsl.dialects.builtin import (ArrayAttr, DictionaryAttr, FloatAttr, Integer
 from .diagnostics import ConversionError
 from .ir import text
 from .shared_tensor import SharedTensorResult, parse_shared
-from .memory_contract import GUARDED_PROFILE, validate_memory_evidence
+from .memory_contract import GUARDED_PROFILES, validate_memory_evidence
 
 
 def scalar_attribute(value):
@@ -131,7 +131,7 @@ def bind_model(model_mlir, bindings):
             raise ConversionError(f"{identity.data}: expected one matching typed/scalar specialization, found {len(candidates)}",
                                   opcode="func.call")
         binding, function, operands, output_names = candidates[0]
-        if binding.implementation.trace.get("profile") == GUARDED_PROFILE:
+        if binding.implementation.trace.get("profile") in GUARDED_PROFILES:
             outputs = binding.implementation.spec.outputs
             if any(type(n) is not int for b in outputs for n in b.shape):
                 raise ConversionError("guarded model binding needs static kernel scratch dimensions", opcode="func.call")

@@ -181,24 +181,21 @@ enforce read initialization and fresh-output coverage. Typical grids retain
 at fragment boundaries avoid huge launch experiments, and scalar/tiled
 recurrences reuse one actual Merlin library over changing runtime inputs.
 
-The next address-coverage extension should retain the current proved structured
-path and add an explicit unstructured-first source-word policy. Keep original
-integer operations at their declared widths, then sign-extend each `tt.addptr`
-offset at its pointer boundary before upstream offset accumulation. Simply
-removing the existing overflow gate or running unstructured conversion on narrow
-pointer chains is insufficient: upstream combines offsets at their widest
-encountered word type, so two narrow pointer increments can wrap before a later
-wide increment. The pinned [Triton pointer lowering](https://github.com/triton-lang/triton/blob/142586f90aac9b917af1081e4697b085027e13b2/lib/Conversion/TritonGPUToLLVM/ElementwiseOpToLLVM.cpp)
-uses GEP for each source pointer addition; source integer arithmetic and pointer
-offset accumulation must therefore remain separate.
+The explicit `source-words` address policy now reuses upstream's supported
+`offset-bit-width=64` option. Its accumulator sign-extends each pointer operand
+after original integer computation, without a local pointer converter. The
+default structured range gate remains unchanged. Separate source-word stage
+bytes, hashes, pass sequence and function/grid access intent are retained in
+the `shared-source-word-buffer` profile; see [the contract](source_words.md).
 
-Qualification must cover loaded-index i32 wraparound, narrow pointer chains
-with later i64 cancellation, scalar/tiled masks, pointer-carried loops, grouped
-logical grids, source provenance and independent inputs through one Merlin
-library. Two bounded native/Merlin experiments establish a viable conversion
-boundary for the first two cases; they do not admit a production policy or
-authorize disabling the existing source-width check. Preserve useful tile and
-contraction structure, and document representation differences explicitly.
+Qualification covers loaded-index i32 wraparound, narrow chains with later
+i64 cancellation, scalar/tiled masks, runtime `for` pointer state and final
+values, nonlinear grid permutations and independent words/shapes through one
+Merlin library. Real static model bindings retain contractions and loops.
+The consumer's closed readonly-capture destination reuse keeps fused reads and
+ordinary alias/lifetime checks, including zero-trip loops. General pointer-
+valued branches/while, mixed-base pointer tensors, aliases and broader effects
+remain open. Preserve useful tiling and reuse as those profiles expand.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and

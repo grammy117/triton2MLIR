@@ -1067,7 +1067,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured"):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1076,6 +1076,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     """
     if memory_profile not in ("tensor", "buffer", "guarded-buffer"):
         raise ValueError("memory profile must be explicitly tensor, buffer or guarded-buffer")
+    if address_policy not in ("structured", "source-words"):
+        raise ValueError("address policy must be explicitly structured or source-words")
+    source_words = address_policy == "source-words"
+    if source_words and memory_profile != "guarded-buffer":
+        raise ValueError("source-words address policy requires the explicit guarded-buffer memory profile")
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
     optimizer = inspect_optimizer(optimizer)
@@ -1115,14 +1120,21 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         middle_source = work / "expanded-source/lowered.mlir"
     middle_module = parse_shared(middle_source.read_text())
-    check_source_addresses(middle_module, abi)
+    if source_words:
+        for op in middle_module.walk():
+            if opcode(op) in ("tt.ptr_to_int", "tt.int_to_ptr"):
+                raise ConversionError("physical pointer observations require a separate address-space contract",
+                    opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
+    else:
+        check_source_addresses(middle_module, abi)
     scan_reports = expand_scans(middle_module, _source_ids)
     if scan_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-scans.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
-    stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer, stage="tensor-ir")
+    stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
+        stage="source-word-tensor" if source_words else "tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
@@ -1141,6 +1153,15 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     else:
         result = witness = _functionalize(lowered, abi)
     auxiliary = {}
+    if source_words:
+        auxiliary.update({"word-input.mlir": middle_source.read_text(),
+            "word-tensor.mlir": (work / "tensor-ir/lowered.mlir").read_text(),
+            "word-stage.json": json.dumps(stage, indent=2, sort_keys=True) + "\n"})
+        admission.update(address_policy="source-words-offset64",
+            word_input_sha256=hashlib.sha256(auxiliary["word-input.mlir"].encode()).hexdigest(),
+            word_tensor_sha256=hashlib.sha256(auxiliary["word-tensor.mlir"].encode()).hexdigest())
+        transformations.append({"kind": "upstream-source-word-addresses", "pointer_offset_bits": 64,
+            "source_integer_arithmetic": "original-typed-operations", "upstream_option": "offset-bit-width=64"})
     memory_stage = None
     if memory_profile in ("buffer", "guarded-buffer"):
         from .buffer_memory import functionalize_memory, parse_memory
@@ -1161,9 +1182,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                     "adaptations": admission["read_adaptations"],
                     "boundary": "before-memory-CSE; original-source-read-effects-retained"})
         result = functionalize_memory(memory_module, abi, guards=admission)
-        auxiliary = {"memory-input.mlir": memory_input,
+        auxiliary.update({"memory-input.mlir": memory_input,
                      "memory-stage.mlir": memory_source,
-                     "memory-stage.json": json.dumps(memory_stage, indent=2, sort_keys=True) + "\n"}
+                     "memory-stage.json": json.dumps(memory_stage, indent=2, sort_keys=True) + "\n"})
         if admission is not None:
             admission.update(guarded_input_sha256=hashlib.sha256(memory_input.encode()).hexdigest(),
                              continuation_output_sha256=hashlib.sha256(memory_source.encode()).hexdigest())
@@ -1233,7 +1254,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if entry is not None and "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)
     if memory_stage is not None:
-        trace["profile"] = "shared-guarded-buffer" if admission is not None else "shared-functional-buffer"
+        trace["profile"] = "shared-source-word-buffer" if source_words else "shared-guarded-buffer" if admission is not None else "shared-functional-buffer"
         trace["memory"].update(representation="standard-memory-inside-functional-tensor-ABI",
             continuation_input_sha256=hashlib.sha256(auxiliary["memory-input.mlir"].encode()).hexdigest(),
             continuation_output_sha256=hashlib.sha256(auxiliary["memory-stage.mlir"].encode()).hexdigest(),
@@ -1247,4 +1268,14 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         else:
             trace["memory"]["witness_sha256"] = hashlib.sha256(auxiliary["memory-witness.mlir"].encode()).hexdigest()
         trace["abi_difference"] += "; mixed standard tensor/memref payload; writable state privately allocated and readwrite inputs copied"
+    if source_words:
+        entry = next(iter(result.ops))
+        for op in (entry, *(op for op in entry.walk() if op.name == "scf.forall")):
+            op.attributes["prov.address_policy"] = StringAttr("source-words-offset64")
+            op.attributes["prov.source_accesses"] = StringAttr(json.dumps(admission["accesses"], sort_keys=True))
+        trace["memory"].update(address_policy="source-words-offset64",
+            index_overflow="original-integer-word-arithmetic; signed-i64-pointer-offset-accumulation",
+            word_stage_sha256=hashlib.sha256(auxiliary["word-stage.json"].encode()).hexdigest())
+        trace["abi_difference"] += "; source-word address policy uses indirect offset tensors instead of recovered structured slices"
+        trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)
