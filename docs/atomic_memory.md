@@ -249,3 +249,17 @@ python -m t2m qualify-merlin out/atomic-cas --out out/atomic-cas-merlin \
   --python /path/to/native-env/bin/python --merlin-clang /path/to/clang
 python -m t2m verify-merlin out/atomic-cas-merlin
 ```
+
+Final validation at Merlin `a735821a6a0f8ba86931f8ca7491fa4260a1a2a6` passes
+all 215 compiler/staging/lifetime cases. The 167 existing producer pointer,
+event, RMW, region and model regressions also pass. After the native ABI check,
+thirteen focused producer cases pass; the final helper-linkage suite passes
+all 23 cases and inspects actual converted LLVM linkage. These are scoped
+regressions, not a newly claimed complete producer-suite result.
+
+`out/atomic-cas-merlin-native/` passes host execution and all 45 qualification
+artifact checks. `out/cas-model-native/` passes complete native/model/Merlin
+comparison and all 80 derived-package artifact checks. Both actual LLVM modules
+contain internal CAS helpers; portable model source remains standard tensor/
+SCF/memory IR. Earlier qualification directories remain unchanged. The source
+capture's original weights and all model result references stay byte-identical.

@@ -72,6 +72,11 @@ contractions and running softmax state through Merlin's tensor interface. See
 `shared-demo --kernel histogram` retains tile-local integer counts, exact masks
 and histogram intent through standard tensor/SCF operations; see
 [the expansion and measured profiles](docs/histogram.md).
+The explicit `--effect-profile atomics` adds private-invocation integer RMW
+and i16/i32/i64 CAS through actual Merlin execution, retaining old values,
+selected-buffer effects and source recurrences. `shared-demo --kernel atomic-cas`
+and a real model2MLIR tuple-result demo are described in
+[atomic memory](docs/atomic_memory.md), including native-toolchain requirements.
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

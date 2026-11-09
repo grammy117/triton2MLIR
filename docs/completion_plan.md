@@ -29,6 +29,10 @@ ten RMW/CAS model cases and 207 Merlin compiler/staging/lifetime cases. Portable
 MLIR keeps a standard atomic region; the native ownership compatibility path
 and toolchain dependency are explicit in the package contract. Float policies,
 external synchronization and accelerator materialization remain required work.
+Final CAS validation also passes 167 existing producer regressions and 215
+Merlin compiler/staging/lifetime cases. The visible kernel qualification and
+whole-model package retain actual internal native helpers and pass all 45/80
+artifact checks respectively; see the atomic contract for exact evidence scope.
 
 For each operation/type/attribute/composition, track these separately:
 
