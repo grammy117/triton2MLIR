@@ -24,7 +24,7 @@ from .package_compatibility import kernel_representation_differences
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
-ITEM_BYTES = {"f32": 4, "f64": 8, "i64": 8, "i32": 4, "i16": 2, "i8": 1, "i1": 1}
+ITEM_BYTES = {"f16": 2, "f32": 4, "f64": 8, "i64": 8, "i32": 4, "i16": 2, "i8": 1, "i1": 1}
 
 
 def _parent(capture):

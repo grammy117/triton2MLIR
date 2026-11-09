@@ -158,6 +158,10 @@ bytes, both call bindings, native model execution, compiler-only Merlin staging
 and actual Merlin host execution. Neither a GPU nor Triton CPU backend supplies
 the reference. This profile has fresh results and readonly inputs; the existing
 model2MLIR prohibition on argument-mutating custom operations still applies.
+The capture script's `--dtype f16` option separately qualifies real half
+weights/inputs and model arithmetic through the same compiler/native interface.
+The bound-model materialization budget now admits two-byte f16 arguments; no
+ABI widening or schema change is needed.
 
 Bound `compatibility.json` now includes `kernel_profiles`, keyed by each archived
 kernel directory. It lists the same representation differences as standalone

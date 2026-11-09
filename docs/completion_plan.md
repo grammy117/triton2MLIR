@@ -303,6 +303,12 @@ native and actual Merlin execution. These counts describe measured cases, not
 universal opcode/type/effect coverage. The goal remains open for aliases,
 layouts, packed/memory maps, histogram, numeric/effect profiles and target work.
 
+The same real selected-memory model also passes with half weights and inputs.
+The manifest loader already preserved f16, but the bound-model size-budget gate
+rejected it. That gate now admits two-byte elements; both actual model dtype
+cases and the existing half profile pass all nine tests. This extends real
+model-package qualification without changing tensor storage or the ABI.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

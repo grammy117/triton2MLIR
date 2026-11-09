@@ -19,11 +19,12 @@ CLANG = os.environ.get("T2M_MERLIN_CLANG")
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-def test_real_model_retains_selected_pointers_weights_and_two_call_bindings(tmp_path):
+@pytest.mark.parametrize("dtype", ["f32", "f16"])
+def test_real_model_retains_selected_pointers_weights_and_two_call_bindings(tmp_path, dtype):
     from t2m.examples.selected_pointer_kernels import selected_permute
     script = Path(__file__).resolve().parents[1] / "scripts/capture_selected_memory_model.py"
     capture = tmp_path / "capture"
-    process = subprocess.run([M2M, str(script), "--out", str(capture)],
+    process = subprocess.run([M2M, str(script), "--out", str(capture), "--dtype", dtype],
         capture_output=True, text=True, timeout=60,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
     assert process.returncode == 0, process.stderr
@@ -31,10 +32,11 @@ def test_real_model_retains_selected_pointers_weights_and_two_call_bindings(tmp_
     for choice in (0, 1):
         constants = {"n": 13, "m": 29, "choice": choice, "B": 8, "MODE": 2}
         source = tmp_path / f"kernel{choice}.ttir"
-        source.write_text(capture_ttir(selected_permute, {"x": "*fp32", "y": "*fp32", "out": "*fp32",
+        pointer = "*fp32" if dtype == "f32" else "*fp16"
+        source.write_text(capture_ttir(selected_permute, {"x": pointer, "y": pointer, "out": pointer,
             **{name: "constexpr" for name in constants}}, constants))
-        abi = TensorABI("selected_permute", (TensorBuffer("x", (29,)), TensorBuffer("y", (29,)),
-            TensorBuffer("out", (13,), "write")))
+        abi = TensorABI("selected_permute", (TensorBuffer("x", (29,), dtype=dtype), TensorBuffer("y", (29,), dtype=dtype),
+            TensorBuffer("out", (13,), "write", dtype=dtype)))
         result = convert_shared(source, abi, tmp_path / f"translation{choice}", optimizer=OPT,
                                 memory_profile="guarded-buffer", address_policy="source-words")
         bindings.append(KernelBinding("t2m_demo::selected_gather", result, scalar_arguments={"choice": choice}))

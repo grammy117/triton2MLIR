@@ -7,6 +7,16 @@ descriptors address two-byte elements. Model manifest materialization also
 preserves float16 inputs and safetensors weights without widening their storage.
 The materialization fixture is a protocol check, not a fabricated FX capture.
 
+A real model2MLIR selected-pointer model now also qualifies f16 learned weights,
+inputs, two kernel calls and surrounding model arithmetic through actual Merlin
+compilation/execution. Its parent weights, inputs and golden bytes remain intact.
+This exposed and fixed a separate size-budget gate in the bound-model writer:
+f16 arguments now count as two bytes instead of being rejected before the
+already-supported manifest loader. The two real-model dtype cases and existing
+half regression pass all nine tests. `capture_selected_memory_model.py --dtype
+f16` supplies the genuine FX capture; the earlier protocol fixture remains a
+separate materialization check.
+
 The installed torch-mlir runtime already supports half memref descriptors.
 The missing boundary was the runners' dtype tables. Connecting those tables
 does not rewrite arithmetic, change the public signature or add a target

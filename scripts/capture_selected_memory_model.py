@@ -13,7 +13,7 @@ from m2m.capture.bundle import write_bundle
 from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 
 
-def capture(out):
+def capture(out, *, dtype="f32"):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -22,6 +22,7 @@ def capture(out):
     kernels = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(kernels)
     qualname = "t2m_demo::selected_gather"
+    tensor_dtype = {"f32": torch.float32, "f16": torch.float16}[dtype]
 
     @triton_op(qualname, mutates_args={})
     def selected_gather(x: torch.Tensor, y: torch.Tensor, choice: int = 0) -> torch.Tensor:
@@ -37,7 +38,7 @@ def capture(out):
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.weight = torch.nn.Parameter(torch.randn(29))
+            self.weight = torch.nn.Parameter(torch.randn(29, dtype=tensor_dtype))
 
         def forward(self, x):
             return selected_gather(x, self.weight, choice=0) * 0.25 + selected_gather(x, self.weight, choice=1)
@@ -47,7 +48,7 @@ def capture(out):
     try:
         torch.set_num_threads(1)
         torch.manual_seed(53)
-        model, values = Model().eval(), (torch.randn(29),)
+        model, values = Model().eval(), (torch.randn(29, dtype=tensor_dtype),)
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(model, values, backend="fx_importer",
                              weights_path=str(out / "weights.safetensors"), capture_trace=True)
@@ -66,4 +67,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--dtype", choices=("f32", "f16"), default="f32")
+    args = parser.parse_args()
+    print(capture(args.out, dtype=args.dtype))
