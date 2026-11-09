@@ -78,12 +78,15 @@ tensors are admitted; pointer tensors first need the source-word path. The
 12-case pointer-shape/block-pointer regression passes, including the existing
 official descriptor and block-pointer intake paths.
 
-Value-only tile gathers separately pass 24 native/Merlin cases across tensor,
+Value-only tile gathers separately pass 42 native/Merlin cases across tensor,
 buffer and guarded source-word profiles. Both axes of a two-dimensional tile
 retain repeated indices and reduced axis extents. FP32 raw bits (including quiet
 NaN payloads and signed zeros) and i32 values are checked independently. Negative
 and upper-bound indices abort before extraction. One library per axis/profile
 replays three index/value inputs with the capture and original inputs unchanged.
+Both i32 and i64 indices retain their actual width. Bounds are checked in i64
+before any cast to MLIR index; positive and negative values whose low 32 bits
+look in-bounds abort. The captured library and original inputs remain unchanged.
 
 The runnable package example exercises an intervening write followed by a
 lane-selected read/modify/write. Results are the new X state, new Y state and

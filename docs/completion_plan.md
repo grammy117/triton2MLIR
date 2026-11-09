@@ -270,6 +270,15 @@ two-axis value gathers across all three memory profiles, with bit-exact FP32
 transport, i32 values and actual invalid-index aborts. This closes the measured
 composition gap without a target build or physical lane mapping.
 
+The selected-memory regression passed all 541 producer tests with every existing
+native/model2MLIR/Merlin environment enabled (four legacy block-pointer warnings).
+After that run, the version bridge passes 12 pointer-shape/block-pointer cases,
+and direct tile gather passes 42 cases across all three memory profiles. Wide
+i64 indices are checked before index casts, including high-bit truncation traps.
+The runnable `out/selected-memory/` package and its separate qualification at
+`out/selected-memory-merlin/` pass compiler staging, native execution and all 45
+artifact checks. Accelerator execution remains unperformed.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;
