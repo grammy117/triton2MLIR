@@ -49,6 +49,33 @@ def runtime_memory_store(x, iterations, out, N: tl.constexpr, B: tl.constexpr):
 
 
 @triton.jit
+def runtime_memory_accumulate(x, iterations, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    for k in range(iterations):
+        previous = tl.load(out + lane, lane < N, other=0)
+        value = tl.load(x + lane, lane < N, other=0)
+        tl.store(out + lane, previous + value, lane < N)
+
+
+@triton.jit
+def runtime_preinit_store(x, iterations, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    tl.store(out + lane, tl.full((B,), -7, tl.float32), lane < N)
+    for k in range(iterations):
+        value = tl.load(x + lane, lane < N, other=0)
+        tl.store(out + lane, value + k, lane < N)
+
+
+@triton.jit
+def runtime_conditional_store(x, iterations, flag, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    for k in range(iterations):
+        if flag:
+            value = tl.load(x + lane, lane < N, other=0)
+            tl.store(out + lane, value + k, lane < N)
+
+
+@triton.jit
 def runtime_prefix(x, n, out, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=-7.0)

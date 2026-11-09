@@ -125,20 +125,19 @@ def test_runtime_read_loop_range_is_checked_for_every_admitted_count(tmp_path, p
 
 
 @pytest.mark.parametrize("profile", ["tensor", "buffer"])
-@pytest.mark.parametrize("effect", ["write", "readwrite"])
-def test_dynamic_loop_stores_require_a_conditional_state_and_initialization_proof(tmp_path, profile, effect):
+def test_zero_trip_store_loop_does_not_initialize_a_fresh_result(tmp_path, profile):
     from t2m.examples.tensor_kernels import runtime_memory_store
     source = tmp_path / "source.ttir"
     source.write_text(capture_ttir(runtime_memory_store, {"x": "*fp32", "iterations": "i32", "out": "*fp32",
         "N": "constexpr", "B": "constexpr"}, {"N": 13, "B": 8}))
-    abi = TensorABI(runtime_memory_store.__name__, (TensorBuffer("x", (13,)), TensorBuffer("out", (13,), effect)),
+    abi = TensorABI(runtime_memory_store.__name__, (TensorBuffer("x", (13,)), TensorBuffer("out", (13,), "write")),
         grid=(2,), runtime_scalars=(RuntimeScalar("iterations", "i32", 1, bounds=(0, 5)),))
-    with pytest.raises(ConversionError, match="conditional initialization/effect proof"):
+    with pytest.raises(ConversionError, match="no proved complete overwrite"):
         convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile=profile)
     assert not (tmp_path / "translation/memory-ir").exists()
 
 
-@pytest.mark.parametrize("kernel", ["runtime-recurrence", "runtime-memory-loop"])
+@pytest.mark.parametrize("kernel", ["runtime-recurrence", "runtime-memory-loop", "runtime-memory-store"])
 def test_runtime_loops_have_reproducible_cli_demos(tmp_path, kernel):
     from t2m.cli import main
     out = tmp_path / "demo"

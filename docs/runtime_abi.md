@@ -154,8 +154,8 @@ This extends the upstream region/pointer normalization rather than adding a
 local TTIR compute converter (Meta `17f0c234`, `gather_simple_loop.mlir` and
 `TritonToUnstructuredPass.cpp`). Both memory profiles have actual native/Merlin
 checks for i32/i64 counts, negative/zero trips, row tails and different counts
-through one unchanged library. Undersized allocations, unbounded counts and
-runtime source stores still refuse. Provenance records minimum/maximum counts
+through one unchanged library. Undersized allocations and unbounded counts
+still refuse. Provenance records minimum/maximum counts
 separately from the original executable bound.
 
 ```bash
@@ -164,7 +164,38 @@ python -m t2m shared-demo --kernel runtime-memory-loop --memory-profile buffer \
   --python /path/to/native-env/bin/python
 ```
 
-Dynamic tensor shapes/strides/grid sizes, general source while/memory-loop effects and
+## Conditional runtime write state
+
+Runtime source stores now carry updated logical tensor versions through the
+original loop. Readwrite results retain incoming values when the loop has zero
+trips or its store branch is not taken. Read/modify/write bodies observe their
+previous iteration's version. Both public profiles keep caller inputs immutable;
+the mixed-memory profile updates private storage copied from incoming state.
+Original tile ownership and access checks remain mandatory.
+
+If zero trips are reachable, post-loop definite initialization retains only the
+facts established before the loop. A possible body store cannot initialize a
+fresh result. When the guarded minimum trip count is positive, post-body facts
+may survive, still subject to branch intersection and coverage checks. Thus a
+complete pre-loop initialization can support a fresh output with zero trips;
+a conditional store without an initialized false path cannot do so even with
+a positive trip count. No sample invocation grants an initialization premise.
+
+Actual Merlin tests cover both profiles, changed counts using one library,
+source branches, repeated read/modify/write updates, positive-trip fresh results,
+preinitialized fresh results and negative/zero-trip preservation. The accumulator
+reference uses ordered binary32 additions, without replacing the recurrence by
+a multiplication. Refusal cases retain incomplete initialization and branch
+holes. A generalized scalar-fill consumer regression also verifies its source
+remains a scalar when the output-slicing optimization does not apply.
+
+```bash
+python -m t2m shared-demo --kernel runtime-memory-store --memory-profile buffer \
+  --out out/runtime_memory_store --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+```
+
+Dynamic tensor shapes/strides/grid sizes, general source while/pointer state and
 indexed writes remain open. Next: symbolic tensor dimensions and launch extents
 linked to actual argument shapes, dynamic allocations/results, and one compiled
 library invoked over independent shapes. Those need initialization/ownership

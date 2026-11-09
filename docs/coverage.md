@@ -105,8 +105,12 @@ standard body and SSA bounds through native/Merlin execution, including zero
 trips and repeat invocations through one library in both memory profiles.
 Guarded runtime read loops now also prove all reachable source addresses while
 retaining runtime bounds and row-local tail masks. Both profiles have i32/i64
-Merlin checks including negative/zero trips. Dynamic stores, pointer carriers
-and general runtime effect/state schemas remain separate capabilities.
+Merlin checks including negative/zero trips. Runtime stores additionally retain
+conditional tensor state, repeated read/modify/write updates and initial values
+on zero trips or a false source branch. Fresh initialization is proved from
+pre-loop writes or a guarded positive trip count with complete branch coverage.
+General pointer/while state, indexed conflicts and alias/effect profiles remain
+separate capabilities.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.

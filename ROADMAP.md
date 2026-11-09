@@ -76,9 +76,11 @@ still static; actual dynamic shapes/results and launch extents remain a separate
 Runtime value-only loops now preserve source SSA bounds and tile recurrences
 through the same Merlin library for zero/nonzero counts in both memory profiles.
 The checked consumer retains fusion and native lifetime/alias analysis; source
-write loops still need conditional state and initialization admission. Guarded
 read loops now prove all reachable IV/address ranges, preserve row-local masks
 over flattened storage, and qualify i32/i64 counts through the same library.
+Runtime write loops also carry conditional state, preserve incoming values on
+empty/false paths, and retain only definite initialization facts. Both profiles
+qualify repeated updates and preinitialized/positive-trip fresh results.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.

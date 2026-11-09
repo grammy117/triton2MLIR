@@ -642,10 +642,18 @@ def _functionalize(module, abi):
                 identity = loop_counter
                 loop_counter += 1
                 previous, body = body, nested
+                before_loop = initialization.snapshot()
                 translate(op.body.block)
-                if not domain.exact and any(states[b.name] is not nested.args[len(kept_arguments) + i]
-                                            for i, b in enumerate(writable)):
-                    raise ConversionError("runtime memory-loop writes need conditional initialization/effect proof", opcode=name)
+                if not domain.exact:
+                    changed = any(states[b.name] is not nested.args[len(kept_arguments) + i]
+                                  for i, b in enumerate(writable))
+                    if changed:
+                        loop_evidence["memory_effects"] = "conditional-loop-carried-tensor-versions"
+                    if domain.minimum_iterations == 0:
+                        initialization.restore(before_loop)
+                        loop_evidence["initialization"] = "entry-facts-only; zero-trip-reachable"
+                    else:
+                        loop_evidence["initialization"] = "post-body-facts; positive-trip-count-proved"
                 body = previous
                 initial = [mapping[op.operands[i + 3]] for i in kept]
                 zeros = [append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result for _ in range(sum(pointer_ranks))]
