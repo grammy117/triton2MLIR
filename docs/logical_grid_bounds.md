@@ -1,40 +1,31 @@
-# Next tensor-proof extension: bounds from the actual logical grid
+# Bounds from the actual logical grid
 
-Status: planned, not implemented. The guarded profile already executes the
-observed kernels; this work admits their unchanged source into the tensor
-profile without extra memory guards or redundant source masks.
-
-An isolated prototype now establishes the next implementation's feasibility.
-`.scratch/grid_correlation_probe.py` checks 3,484 affine scenarios against
-independently enumerated actual launch domains, including multiple axes,
-coefficient signs, divisors and empty cases. `.scratch/grid_histogram_probe.py`
-combines the candidate access rule with an exact unit-row partition in a child
-process. The unchanged unmasked histogram row source then passes native and
-actual Merlin compilation plus five independent invocations, including empty
-and surplus domains. These probes do not modify production modules or ship an
-admission rule. Integrate the general proof and the negative cases below before
-changing the status of this proposal.
+Status: implemented for matching-rank dense affine tiles. The tensor and
+buffer profiles now admit unmasked unit rows using the actual launch bounds,
+without extra memory guards or redundant source masks. Bounds, ownership and
+fresh-output coverage remain independent gates.
 
 ## Observed gap and two independent gates
 
 A histogram can store one complete row per logical program into
 `out: tensor<tiles x bins x i32>`, launched with `GridExtent("tiles", 1)`.
-Its unmasked row coordinate is `program_id(0)`. The generated forall already
-enforces `0 <= program < tiles`. Nevertheless `views.axis_permutation` compares
-independent worst-case intervals for program and guarded `tiles`, so it cannot
-prove `program + 1 <= tiles`. Adding `rows < tiles` to the source lets the
-existing clipped-prefix proof qualify the row view; the guarded profile also
-qualifies the unchanged unmasked form.
+Its unmasked row coordinate is `program_id(0)`. The generated forall enforces
+`0 <= program < tiles`. Previously `views.axis_permutation` compared independent
+worst-case intervals for program and guarded `tiles`, losing that relation.
+`launch_domains.affine_bounds` now retains it for matching launch dimensions.
 
-Bounds are only the first gate. `DefiniteWrites.finish` currently requires a
-clipped partition for varying grids or runtime result dimensions. Simply
-relaxing the access check would still fail fresh-output coverage. Both gates
-must use the actual launch/shape relation, with independent ownership checks
-and existing initialization rules preserved.
+Bounds are only the first gate. `DefiniteWrites.finish` also proves exact
+runtime partitions, including an unmasked unit row paired with clipped column
+tiles. Sparse readwrite updates preserve incoming holes; the same stores into
+a fresh output still refuse.
 
-Flat rank-one pointers into a dynamic matrix are a separate descriptor-rank
-limit. They already execute through the guarded profile; this proposal does
-not conflate that representation issue with unmasked matching-rank bounds.
+Flat rank-one pointers into a dynamic matrix remain a separate descriptor-rank
+limit. A matching-rank descriptor with one singleton zero-stride axis can now
+recover a combined uniform origin: exact polynomial factors repartition it
+along declared dense strides, with unique stride correspondence and exact
+address reconstruction. No runtime division is introduced. All existing
+access, mask and ownership checks still apply; recovery evidence records the
+coordinates and source IDs.
 
 ## General proof rule
 
@@ -61,7 +52,7 @@ with unit tiles. Wider unclipped tiles also require a genuine divisibility
 fact; a ceil-divided launch alone leaves a partial final tile. Readwrite partial
 updates may preserve incoming holes, while a fresh output must cover them.
 
-## Implementation and qualification order
+## Implementation and qualification
 
 1. Add the bounded affine grid-correlation helper; wire it from the same ABI
    facts that construct forall launch bounds. Keep no-correlation behavior.
@@ -78,6 +69,24 @@ updates may preserve incoming holes, while a fresh output must cover them.
 6. Record the launch relation and partition evidence with the existing
    source/ABI/IR bindings. Do not introduce a target opcode, opaque call or
    semantic meaning for provenance tags.
+
+The focused suite passes **87 cases**, with **2 strict expected failures** for
+branch-local conditional stores in the source-word profile. Those failures
+belong to the pinned unstructured converter's region traversal, not this bounds
+proof; tensor/buffer versions qualify. The suite includes native execution and
+actual Merlin libraries reused over empty, ragged and surplus launch domains,
+unmasked histogram rows in all three profiles, and the negative cases above.
+An independent finite-domain affine oracle covers 3,484 scenarios. Package ABI
+is unchanged; logical-grid and dense-origin proof metadata are additive.
+The existing dynamic-shape, dynamic-matrix, tail-mask and symbolic-layout
+regressions also pass all 43 cases with native/Merlin environments enabled.
+
+Source boundary: LLVM `a47bddccec30255619bb8c37fa59700e661d4e66`,
+`mlir/lib/Dialect/SCF/IR/ValueBoundsOpInterfaceImpl.cpp` and its
+`scf_forall` fixture model bounds from the actual lower/upper/step operands.
+Meta `17f0c234ce474bee334af36e351c62eca7852836` instead exposes program
+IDs/counts as launcher arguments. This adapter owns the whole-launch forall,
+so it establishes the correlation from the same checked ABI constructing it.
 
 This closes a reusable proof gap and improves the emitted abstraction without
 discarding the source's tiling. General aliases, non-dense layouts, packed maps,

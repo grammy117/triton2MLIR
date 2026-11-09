@@ -53,3 +53,38 @@ def test_dynamic_stride_matching_retains_permuted_axes_and_refuses_wrong_layout(
         recover_axes(abi, buffer, (4, 8), (m, 1), (0, 0), facts)
     with pytest.raises(ConversionError, match="rank differs"):
         recover_axes(abi, buffer, (4,), (1,), (0,), facts)
+
+
+def test_uniform_singleton_origin_splits_exactly_without_runtime_division():
+    from t2m.scalar_abi import RuntimeScalar
+    from t2m.shared_tensor import TensorABI, TensorBuffer
+    buffer = TensorBuffer("out", ("m", "n"), "write")
+    abi = TensorABI("layout", (buffer,), runtime_scalars=(
+        RuntimeScalar("m", "i32", 0, bounds=(0, 9)), RuntimeScalar("n", "i32", 1, bounds=(0, 13))))
+    n = P.affine(abi.dimension("n"))
+    row, column = Linear(programs=(1, 0, 0)), Linear(programs=(0, 8, 0))
+    origin = P.affine(row) * n + P.affine(column)
+    evidence = []
+    forms, axes = recover_axes(abi, buffer, (1, 8), (0, 1), (origin, 0), {}, evidence=evidence)
+    assert forms == (row, column) and axes == (0, 1)
+    assert evidence[0]["kind"] == "exact-dense-uniform-origin-partition"
+    # Reconstruct actual flat origins independently, including a zero stride.
+    for width in (0, 1, 13):
+        for r in range(9):
+            for p1 in (0, 1):
+                coordinates = [form.constant + form.programs[0] * r + form.programs[1] * p1 for form in forms]
+                assert coordinates[0] * width + coordinates[1] == r * width + 8 * p1
+    with pytest.raises(ConversionError, match="do not match"):
+        recover_axes(abi, buffer, (4, 8), (0, 1), (origin, 0), {})
+
+
+def test_uniform_origin_recovery_does_not_accept_nonlinear_coordinates():
+    from t2m.scalar_abi import RuntimeScalar
+    from t2m.shared_tensor import TensorABI, TensorBuffer
+    buffer = TensorBuffer("out", ("m", "n"), "write")
+    abi = TensorABI("layout", (buffer,), runtime_scalars=(
+        RuntimeScalar("m", "i32", 0, bounds=(0, 9)), RuntimeScalar("n", "i32", 1, bounds=(0, 13))))
+    n = P.affine(abi.dimension("n"))
+    product = P.affine(Linear(programs=(1, 0, 0))) * P.affine(Linear(programs=(0, 1, 0)))
+    with pytest.raises(ConversionError, match="nonlinear"):
+        recover_axes(abi, buffer, (1, 8), (0, 1), (product * n, 0), {})

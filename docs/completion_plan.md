@@ -325,13 +325,11 @@ counter storage without per-element allocation or full-bin copies. Ascend's
 high-level histogram and target builtin are recorded as source boundaries,
 without introducing an opaque portable fallback. See [the contract](histogram.md).
 
-The next tensor abstraction improvement is [actual logical-grid bounds and exact
-runtime partitions](logical_grid_bounds.md). The histogram investigation exposed
-both gates: independent worst-case intervals lose the row/grid correlation,
-and fresh dynamic results additionally require a complete partition proof.
-The plan records the reusable inequality, required implementation order and
-positive/negative oracles. It is not implemented yet; guarded execution remains
-the measured path for the unchanged unmasked dynamic row form.
+[Actual logical-grid bounds and exact runtime partitions](logical_grid_bounds.md)
+now admit unchanged unmasked dynamic rows in tensor and buffer profiles, with
+separate access/coverage proofs. Mixed unmasked rows and clipped columns also
+qualify after exact dense uniform-origin recovery. Independent ownership,
+source-word arithmetic and fresh-output checks remain intact.
 
 Latest complete regression on 2026-11-09: **660 passed**, four legacy block-pointer
 warnings, with all existing native/model2MLIR/Merlin environments enabled.
@@ -342,12 +340,11 @@ each verify all 101 bound artifacts. Merlin remains at compiler-intake anchor
 `5f989aaf19f1a2326e10012be6d1436456893f4b`; its 83 destination/deallocation tests
 and documentation/structure gates passed for the loop-read extension.
 
-The next grid-proof proposal has an isolated, non-production prototype: 3,484
-small-domain affine scenarios pass an independent enumeration oracle, and the
-unchanged unmasked row kernel passes actual Merlin execution over five domains
-when both proposed proof gates are supplied. Production integration and its
-negative regression cases remain required. Universal opcode/type/effect and
-accelerator coverage are still open; the active goal is not complete.
+The production grid-proof suite passes 87 cases, including native and actual
+Merlin execution over independent domains and the 3,484-scenario affine oracle.
+Two strict expected failures preserve the source-word converter's branch-local
+conditional-store gap; tensor/buffer cases qualify. Universal opcode/type/effect
+and accelerator coverage are still open; the active goal is not complete.
 
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer

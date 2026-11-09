@@ -5,7 +5,8 @@ import triton.language as tl
 
 
 @triton.jit
-def histogram_tiles(x, out, n, tiles, B: tl.constexpr, NB: tl.constexpr, MASKED: tl.constexpr, ROW_VIEW: tl.constexpr):
+def histogram_tiles(x, out, n, tiles, B: tl.constexpr, NB: tl.constexpr, MASKED: tl.constexpr,
+                    ROW_VIEW: tl.constexpr, ROW_MASK: tl.constexpr):
     program = tl.program_id(0)
     lane = program * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=0)
@@ -16,6 +17,9 @@ def histogram_tiles(x, out, n, tiles, B: tl.constexpr, NB: tl.constexpr, MASKED:
     if ROW_VIEW:
         rows = program + tl.arange(0, 1)[:, None]
         columns = tl.arange(0, NB)[None, :]
-        tl.store(out + rows * NB + columns, counts[None, :], rows < tiles)
+        if ROW_MASK:
+            tl.store(out + rows * NB + columns, counts[None, :], rows < tiles)
+        else:
+            tl.store(out + rows * NB + columns, counts[None, :])
     else:
         tl.store(out + program * NB + tl.arange(0, NB), counts)

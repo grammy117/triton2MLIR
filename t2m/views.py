@@ -3,9 +3,11 @@
 from .diagnostics import ConversionError
 from .tail_masks import TailExtent, maximum
 from .shared_indexing import Linear
+from .launch_domains import affine_bounds
 
 
-def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None, proven_axes=None):
+def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None, proven_axes=None,
+                     domains=()):
     rank = len(buffer.shape)
     if len(strides) != rank or len(offsets) != rank:
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
@@ -13,11 +15,11 @@ def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets
     dimensions = buffer.shape if dimensions is None else dimensions
 
     def matches(source, destination):
-        low, high = offsets[destination if physical_offsets else source].bounds(grid)
+        low, high = affine_bounds(offsets[destination if physical_offsets else source], grid, domains)
         size = active[source]
         offset, dimension = offsets[destination if physical_offsets else source], dimensions[destination]
         bounded = size.fits_access(offset, dimension, grid) if isinstance(size, TailExtent) else (
-            (offset + Linear(size) + dimension.scale(-1)).bounds(grid)[1] <= 0 if isinstance(dimension, Linear)
+            affine_bounds(offset + Linear(size) + dimension.scale(-1), grid, domains)[1] <= 0 if isinstance(dimension, Linear)
             else high + size <= dimension)
         matched_stride = proven_axes is not None and proven_axes[source] == destination or (
             proven_axes is None and (strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1))

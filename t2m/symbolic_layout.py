@@ -7,7 +7,7 @@ introduced; only a proved affine logical coordinate is returned.
 """
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from .diagnostics import ConversionError
 from .shared_indexing import Linear, linear
@@ -77,6 +77,21 @@ class Polynomial:
             values.append((tuple(a for a in sorted(remaining) for _ in range(remaining[a])), coefficient // scale))
         return self.make(values).to_linear()
 
+    def split_stride(self, divisor):
+        """Partition a uniform origin by exact monomial factors, without division in IR."""
+        if len(divisor.terms) != 1 or divisor.terms[0][1] <= 0:
+            raise ConversionError("dense stride needs a positive monomial layout proof")
+        factors, scale = divisor.terms[0]
+        required, aligned, remainder = Counter(factors), [], []
+        for atoms, coefficient in self.terms:
+            available = Counter(atoms)
+            if coefficient % scale or any(available[a] < n for a, n in required.items()):
+                remainder.append((atoms, coefficient))
+            else:
+                remaining = available - required
+                aligned.append((tuple(a for a in sorted(remaining) for _ in range(remaining[a])), coefficient // scale))
+        return self.make(aligned), self.make(remainder)
+
     def to_linear(self):
         result = Linear()
         for atoms, coefficient in self.terms:
@@ -136,26 +151,30 @@ def dense_strides(abi, buffer):
     return tuple(strides)
 
 
-def recover_axes(abi, buffer, sizes, strides, offsets, facts):
+def recover_axes(abi, buffer, sizes, strides, offsets, facts, *, evidence=None):
     if not len(sizes) == len(strides) == len(offsets) == len(buffer.shape):
         raise ConversionError("dynamic dense descriptor rank differs from its declared tensor")
     if len(sizes) > 8:
         raise ConversionError("dynamic dense axis recovery exceeds the eight-axis analysis budget")
     expected = dense_strides(abi, buffer)
-    candidates = []
+    candidates, stride_candidates, values, observed_strides = [], [], [], []
     for size, stride, offset in zip(sizes, strides, offsets, strict=True):
         observed = stride if isinstance(stride, Polynomial) else expression(stride, facts, abi.grid_bounds) if not isinstance(stride, int) else Polynomial.constant(stride)
         value = offset if isinstance(offset, Polynomial) else expression(offset, facts, abi.grid_bounds) if not isinstance(offset, int) else Polynomial.constant(offset)
-        choices = []
+        values.append(value)
+        observed_strides.append(observed)
+        choices, stride_choices = [], []
         for axis, layout in enumerate(expected):
             if observed != layout and not (observed == Polynomial.constant(0) and size == 1):
                 continue
+            stride_choices.append(axis)
             try:
                 coordinate = value.divide_stride(layout)
             except ConversionError:
                 continue
             choices.append((axis, coordinate))
         candidates.append(choices)
+        stride_candidates.append(stride_choices)
     solutions, attempts = [], [0]
     def solve(index, used, coordinates, axes):
         attempts[0] += 1
@@ -173,6 +192,32 @@ def recover_axes(abi, buffer, sizes, strides, offsets, facts):
                 solve(index + 1, used | {axis}, current, [*axes, axis])
     solve(0, set(), [None] * len(expected), [])
     if not solutions:
+        # A singleton source axis has no lane variation. PtrAnalysis may put
+        # several uniform address contributions there. Repartition their sum
+        # only when the stride correspondence is unique, with exactly one
+        # degenerate axis; retain independent bounds/mask/ownership gates.
+        degenerate = [i for i, (size, stride) in enumerate(zip(sizes, observed_strides, strict=True))
+                      if size == 1 and stride == Polynomial.constant(0)]
+        if len(degenerate) == 1:
+            candidates = [[(axis, Linear()) for axis in choices] for choices in stride_candidates]
+            attempts[0] = 0
+            solve(0, set(), [None] * len(expected), [])
+            if len(solutions) == 1:
+                total = sum(values, Polynomial.constant(0))
+                remainder, coordinates = total, []
+                for stride in expected[:-1]:
+                    coordinate, remainder = remainder.split_stride(stride)
+                    coordinates.append(coordinate.to_linear())
+                coordinates.append(remainder.divide_stride(expected[-1]))
+                reconstructed = sum((Polynomial.affine(c) * stride for c, stride in zip(coordinates, expected, strict=True)),
+                                    Polynomial.constant(0))
+                if reconstructed != total:
+                    raise ConversionError("dense uniform origin reconstruction failed")
+                axes = solutions[0][1]
+                if evidence is not None:
+                    evidence.append({"kind": "exact-dense-uniform-origin-partition", "buffer": buffer.name,
+                                     "axes": list(axes), "coordinates": [asdict(c) for c in coordinates]})
+                return tuple(coordinates), axes
         raise ConversionError("upstream dynamic offsets/strides do not match the declared dense logical axes")
     if len(solutions) > 1 and any(result != solutions[0] for result in solutions[1:]):
         raise ConversionError("dynamic dense axis correspondence is ambiguous")

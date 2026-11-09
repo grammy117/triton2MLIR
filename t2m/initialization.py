@@ -70,6 +70,11 @@ class DefiniteWrites:
                         break
                     continue
                 if self.varying_axes or any(isinstance(n, Linear) for n in shape):
+                    if self._exact_runtime_partition(offsets, sizes, shape):
+                        evidence[name] = {"initial_value_required": False,
+                                          "coverage": "disjoint-exact-runtime-grid-partition",
+                                          "reads": "dominated-by-covering-source-stores"}
+                        break
                     continue
                 if all(off.bounds(self.grid)[0] == 0 and off.bounds(self.grid)[1] + size == extent
                        for off, size, extent in zip(offsets, sizes, buffer.shape, strict=True)):
@@ -83,6 +88,41 @@ class DefiniteWrites:
             else:
                 raise ConversionError(f"fresh output {name} has no proved complete overwrite", source_id=source_id)
         return evidence
+
+    def _exact_runtime_partition(self, offsets, sizes, shape):
+        """Complete unclipped tiles, independently of access/ownership checks."""
+        used = set()
+        for off, size, dimension in zip(offsets, sizes, shape, strict=True):
+            if not isinstance(size, int) or size <= 0 or off.constant or off.loops or off.parameters:
+                return False
+            axes = [i for i, coefficient in enumerate(off.programs)
+                    if coefficient and i < len(self.grid) and self.grid[i] > 1]
+            axes.extend(i for i in self.varying_axes if self.grid[i] == 1
+                        and self.abi.dimension(self.abi.grid[i].dimension) == dimension
+                        and self.abi.grid[i].divisor == size)
+            if len(axes) > 1:
+                return False
+            programs = self.grid[axes[0]] if axes else 1
+            axis = axes[0] if axes else None
+            if axis is not None:
+                if axis in used or self.grid[axis] > 1 and off.programs[axis] != size:
+                    return False
+                used.add(axis)
+            if not self._exact_axis(dimension, size, axis, programs):
+                return False
+        return used == {i for i, count in enumerate(self.grid) if count > 1} | self.varying_axes
+
+    def _exact_axis(self, dimension, size, axis, programs):
+        if isinstance(dimension, Linear):
+            bounds = dimension.bounds(self.grid)
+            launch = self.abi.grid[axis] if axis is not None else None
+            if (isinstance(launch, GridExtent) and self.abi.dimension(launch.dimension) == dimension
+                    and launch.divisor == size):
+                # A contiguous guarded interval establishes divisibility only
+                # for unit tiles or a fixed, aligned dimension value.
+                return size == 1 or bounds[0] == bounds[1] and bounds[0] % size == 0
+            return axis not in self.varying_axes and bounds == (programs * size, programs * size)
+        return axis not in self.varying_axes and programs * size == dimension
 
     def _clipped_partition(self, offsets, sizes, shape):
         used = set()
@@ -110,6 +150,6 @@ class DefiniteWrites:
                 bound = dimension.bounds(self.grid)[1] if isinstance(dimension, Linear) else dimension
                 if not size.fits(off, dimension) or limit != (dimension if isinstance(dimension, Linear) else Linear(dimension)) or programs * cap < bound:
                     return False
-            elif programs * size != dimension:
+            elif not self._exact_axis(dimension, size, axes[0] if axes else None, programs):
                 return False
         return used == {i for i, count in enumerate(self.grid) if count > 1} | self.varying_axes

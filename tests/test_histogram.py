@@ -15,13 +15,13 @@ pytestmark = pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/na
 PROFILES = [("tensor", True), ("buffer", True), ("guarded-buffer", True), ("guarded-buffer", False)]
 
 
-def capture(root, profile, dtype, masked, row_view):
+def capture(root, profile, dtype, masked, row_view, *, row_mask=True):
     from t2m.examples.histogram_kernels import histogram_tiles
     from t2m.frontend import capture_ttir
     source = root / "source.ttir"
     source.write_text(capture_ttir(histogram_tiles, {"x": "*" + dtype, "out": "*i32", "n": "i32", "tiles": "i32",
-        "B": "constexpr", "NB": "constexpr", "MASKED": "constexpr", "ROW_VIEW": "constexpr"},
-        {"B": 16, "NB": 8, "MASKED": masked, "ROW_VIEW": row_view}))
+        "B": "constexpr", "NB": "constexpr", "MASKED": "constexpr", "ROW_VIEW": "constexpr", "ROW_MASK": "constexpr"},
+        {"B": 16, "NB": 8, "MASKED": masked, "ROW_VIEW": row_view, "ROW_MASK": row_mask}))
     abi = TensorABI("histogram_tiles", (TensorBuffer("x", ("n",), dtype=dtype),
         TensorBuffer("out", ("tiles", 8), "write", dtype="i32")), grid=(GridExtent("tiles", 1),),
         runtime_scalars=(RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3))))
@@ -64,16 +64,11 @@ def test_histogram_keeps_repeated_counts_masks_and_padding_values(tmp_path, prof
         np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
-@pytest.mark.parametrize("profile,row_view", PROFILES)
-@pytest.mark.parametrize("dtype", ["i32", "i64"])
-@pytest.mark.parametrize("masked", [False, True])
-def test_one_merlin_library_retains_histogram_counts_and_tile_domain(tmp_path, profile, dtype, masked, row_view):
+def qualify_and_replay(tmp_path, result, dtype, masked):
     from t2m.bundle import _record
     from t2m.invocation import invoke_kernel
     from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
     from t2m.shared_bundle import write_shared_bundle
-    result = capture(tmp_path, profile, dtype, masked, row_view)
     arrays, expected = arguments(13, 1, dtype, masked, 0)
     bundle, compiled = tmp_path / "capture", tmp_path / "merlin"
     write_shared_bundle(result, bundle, arrays, [expected], work=tmp_path / "native", python=NATIVE)
@@ -88,6 +83,23 @@ def test_one_merlin_library_retains_histogram_counts_and_tile_domain(tmp_path, p
         report = invoke_kernel(compiled, inputs, reference, tmp_path / f"invoke{i}", merlin_root=root, python=python)
         assert report["evaluation"]["functional_inputs_preserved"]
     assert verify_kernel_qualification(compiled) == receipt and _record(compiled / "host/model.so") == library
+
+
+@pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
+@pytest.mark.parametrize("profile,row_view", PROFILES)
+@pytest.mark.parametrize("dtype", ["i32", "i64"])
+@pytest.mark.parametrize("masked", [False, True])
+def test_one_merlin_library_retains_histogram_counts_and_tile_domain(tmp_path, profile, dtype, masked, row_view):
+    qualify_and_replay(tmp_path, capture(tmp_path, profile, dtype, masked, row_view), dtype, masked)
+
+
+@pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_unmasked_histogram_rows_use_actual_grid_for_bounds_and_coverage(tmp_path, profile):
+    result = capture(tmp_path, profile, "i64", True, True, row_mask=False)
+    if profile != "guarded-buffer":
+        assert result.trace["memory"]["output_initialization"]["out"]["coverage"] == "disjoint-exact-runtime-grid-partition"
+    qualify_and_replay(tmp_path, result, "i64", True)
 
 
 @pytest.mark.parametrize("profile", ["tensor", "buffer"])

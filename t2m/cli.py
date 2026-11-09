@@ -116,7 +116,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         example_dimensions = {"m": 17, "n": 19}
     elif kernel == "histogram":
         from .examples.histogram_kernels import histogram_tiles
-        fn, constants = histogram_tiles, {"B": 16, "NB": 8, "MASKED": True, "ROW_VIEW": True}
+        fn, constants = histogram_tiles, {"B": 16, "NB": 8, "MASKED": True, "ROW_VIEW": True, "ROW_MASK": True}
         shapes, grid = [("n",), ("tiles", 8)], (GridExtent("tiles", 1),)
         runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3)))
         example_dimensions = {"n": 23, "tiles": 2}

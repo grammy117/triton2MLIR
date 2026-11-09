@@ -27,6 +27,7 @@ from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .loop_domains import bounded_loop, require_signed_loop
+from .launch_domains import launch_domains
 from .scans import expand_scans
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
@@ -367,10 +368,12 @@ def _functionalize(module, abi):
     outer = Block(arg_types=[b.type for b in abi.inputs])
     writable = list(abi.outputs)
     grid = abi.grid_bounds
+    domains = launch_domains(abi)
     parallel = host_math.prod(grid) > 1 or any(isinstance(g, GridExtent) for g in abi.grid)
     body = Block(arg_types=[IndexType(), *[b.type for b in writable]]) if parallel else outer
     mapping, buffers, descriptors, facts = {}, {}, {}, {}
     gather_descriptors = {}
+    dense_origins = []
     states = {b.name: arg for b, arg in zip(abi.inputs, outer.args, strict=True)}
     for scalar in abi.runtime_scalars:
         guard_scalar(scalar, states[scalar.name], outer, function.location)
@@ -457,7 +460,10 @@ def _functionalize(module, abi):
         if any(isinstance(n, str) for n in buffer.shape):
             strides = resolve(op, "static_strides", slices[0], raw=True)
             offsets = resolve(op, "static_offsets", slices[1], raw=True)
-            forms, axes = recover_axes(abi, buffer, sizes, strides, offsets, facts)
+            before = len(dense_origins)
+            forms, axes = recover_axes(abi, buffer, sizes, strides, offsets, facts, evidence=dense_origins)
+            for record in dense_origins[before:]:
+                record["source_ids"] = _source_ids(op.location)
             coordinates = tuple(Coordinate(form, affine_index(form, launch_iv, grid, launch, states,
                 loop_values, lambda value: append(value, op)) if form.dynamic else None) for form in forms)
             return buffer, sizes, coordinates, DenseAxes(axes)
@@ -540,7 +546,7 @@ def _functionalize(module, abi):
         axes = axis_permutation(buffer, [None] * len(sizes) if isinstance(strides, DenseAxes) else strides,
                                 [off.form for off in offsets], active, grid, physical_offsets=True,
                                 dimensions=tuple(abi.dimension(n) for n in buffer.shape),
-                                proven_axes=strides.axes if isinstance(strides, DenseAxes) else None)
+                                proven_axes=strides.axes if isinstance(strides, DenseAxes) else None, domains=domains)
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
@@ -1036,6 +1042,8 @@ def _functionalize(module, abi):
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
     output.attributes["prov.source_scatters"] = StringAttr(json.dumps(source_scatters, sort_keys=True))
+    if dense_origins:
+        output.attributes["prov.source_dense_origins"] = StringAttr(json.dumps(dense_origins, sort_keys=True))
     if abi.runtime_scalars:
         output.attributes["prov.runtime_scalars"] = StringAttr(json.dumps([s.as_dict() for s in abi.runtime_scalars], sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
@@ -1252,11 +1260,19 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                      source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
                      original_attributes=original_inventory["attributes"],
                      correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
+    if any(isinstance(g, GridExtent) for g in abi.grid):
+        trace["memory"]["logical_grid_relations"] = [
+            {"axis": axis, "dimension": g.dimension, "ceil_divisor": g.divisor,
+             "relation": "0 <= program_id < ceildiv(runtime_dimension, divisor)",
+             "established_by": "emitted-forall-bounds-and-entry-dimension-guards"}
+            for axis, g in enumerate(abi.grid) if isinstance(g, GridExtent)]
     entry = next(iter(witness.ops)) if witness is not None else None
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data) if entry else [r for r in admission["control_flow"] if r["opcode"] != "scf.if"]
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data) if entry else [r for r in admission["control_flow"] if r["opcode"] == "scf.if"]
     trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data) if entry else [r for r in admission["accesses"] if r["opcode"] == "tts.gather"]
     trace["memory"]["source_scatters"] = json.loads(entry.attributes["prov.source_scatters"].data) if entry else [r for r in admission["accesses"] if r["opcode"] == "tts.scatter"]
+    if entry is not None and "prov.source_dense_origins" in entry.attributes:
+        trace["memory"]["dense_origin_recoveries"] = json.loads(entry.attributes["prov.source_dense_origins"].data)
     if admission is not None:
         trace["memory"]["source_accesses"] = admission["accesses"]
     if trace["memory"]["source_gathers"]:

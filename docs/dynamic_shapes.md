@@ -84,6 +84,11 @@ independent index/result counts, zero-element inactive reads and repeated-index
 reuse in both profiles through one Merlin library per profile/index type.
 See [the active bounds and effect contract](indexed_memory.md).
 
+Unmasked unit rows now use the actual runtime logical launch bound, with
+independent exact-partition coverage for fresh results. Mixed unmasked rows and
+clipped column tiles retain their dense coordinates via exact uniform-origin
+recovery. See [the launch-domain proof and negative cases](logical_grid_bounds.md).
+
 Non-dense multidimensional runtime strides, general indexed writes, arbitrary shape
 expressions, model-call signature adaptation and aliasing still need their own
 proofs. Compiler staging establishes declared type/binding consistency; actual

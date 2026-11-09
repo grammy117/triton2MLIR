@@ -55,12 +55,13 @@ python -m t2m shared-demo --kernel histogram --out out/histogram-tensor \
   --python /path/to/native-env/bin/python
 ```
 
-All 34 histogram cases pass native and actual Merlin checks. Tensor, buffer and
+All 34 original histogram cases pass native and actual Merlin checks. Tensor, buffer and
 guarded source-word profiles qualify matching row views with runtime row masks.
 The guarded profile additionally retains flat output pointers into the same
 dynamic rank-two result ABI. The tensor witness currently refuses that rank
-mismatch; maintained negative cases retain this existing proof limit. Unmasked
-dynamic row bounds also remain an independent tensor-proof requirement.
+mismatch; maintained negative cases retain this existing proof limit. Three
+additional profile cases now qualify unmasked dynamic rows through actual
+Merlin libraries using [logical-grid bounds and exact partitions](logical_grid_bounds.md).
 
 One compiled library per source width/mask/profile/layout handles changing input
 and program counts, empty inputs/results, surplus tiles, tails, repeated bins,
