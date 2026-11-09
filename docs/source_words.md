@@ -51,8 +51,49 @@ Source pin: Meta triton-shared `17f0c234ce474bee334af36e351c62eca7852836`:
 The pinned [Triton pointer lowering](https://github.com/triton-lang/triton/blob/142586f90aac9b917af1081e4697b085027e13b2/lib/Conversion/TritonGPUToLLVM/ElementwiseOpToLLVM.cpp)
 uses a GEP for each source pointer addition. The policy's software offset domain
 is i64; it introduces no GPU address space, lane layout or hardware launcher ABI.
-No pointer converter is reimplemented or vendored. The optimizer executable has
-its separately recorded pin, as described in [the reuse map](triton_shared.md).
+The native converter remains upstream. A narrow control-state adapter below
+supplies missing region edges. The optimizer executable has its separately
+recorded pin, as described in [the reuse map](triton_shared.md).
+
+## Pointer-valued structured control
+
+The pinned unstructured converter handles pointer-valued `scf.for` state but
+does not reconcile pointer-valued `scf.if` or traverse `scf.while`. Its structured
+converter has useful branch analysis, including
+`test/Conversion/TritonToStructured/if_simple_addptr.mlir` and
+`if_returning_mixed_structured_ptrs.mlir`, but does not supply this source-word
+path with a qualified logical-buffer boundary for those cases.
+
+`t2m/pointer_control.py` therefore runs before the unchanged native source-word
+pipeline when those control edges are present:
+
+1. Propagate source-entry buffer identities over pointer construction, shape
+   transformations, selections, branch yields, loop initial values and every
+   backedge to a fixed point. Every pointer must have exactly one base on all
+   paths and retain its element type. A mixed-base branch or backedge refuses
+   before native lowering; it needs an explicit buffer-selector representation.
+2. Represent pointer-valued region arguments/results as scalar/tensor i64
+   element offsets. Follow `scf.condition` and `scf.yield` separately; while
+   input/output state can have different arities. Preserve source predicates,
+   region structure, value-state order and original narrow integer computation.
+   Only the operand at each original pointer addition is sign-extended.
+3. Reconstruct a local base-plus-offset pointer at each original load/store.
+   The upstream converter then owns gather/scatter and arithmetic conversion;
+   the existing guarded memory continuation checks the original active accesses.
+
+The transformation report retains the affected source IDs and base/width
+contract. `word-input.mlir` binds the exact resulting input to the native
+stage. Original TTIR and its typed inventory remain retained independently.
+Unknown pointer producers/observations, pointee-changing casts and address
+escapes refuse; intent annotations do not bypass these checks.
+
+Real scalar/tiled branches and runtime pointer/accumulator while loops now
+execute natively and through Merlin. One unchanged library handles zero trips,
+different loop counts, empty/tail dimensions and final pointer observations.
+Actual invalid loop accesses abort. The consumer reuses complete after-region
+destinations only when the while condition forwards the complete state unchanged;
+computed/permuted condition state needs separate consumer ownership support.
+Source word wraparound and wide cancellation remain checked across branches.
 
 ## Granularity and source intent
 
@@ -100,6 +141,6 @@ runtime shapes; another retains changing pointer-loop counts. Real model2MLIR
 GEMM captures retain learned parameters, surrounding model math, contractions
 and loops through the same interface, including block/descriptor intake.
 
-Mixed-base pointer tensors, general pointer-valued branches/while, alias groups,
+Mixed-base pointer tensors, broader while ownership profiles, alias groups,
 physical pointer observations and broader numeric/effect profiles remain open.
 This policy expands address coverage; it is not full TTIR coverage.

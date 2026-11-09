@@ -193,9 +193,14 @@ i64 cancellation, scalar/tiled masks, runtime `for` pointer state and final
 values, nonlinear grid permutations and independent words/shapes through one
 Merlin library. Real static model bindings retain contractions and loops.
 The consumer's closed readonly-capture destination reuse keeps fused reads and
-ordinary alias/lifetime checks, including zero-trip loops. General pointer-
-valued branches/while, mixed-base pointer tensors, aliases and broader effects
-remain open. Preserve useful tiling and reuse as those profiles expand.
+ordinary alias/lifetime checks, including zero-trip loops. Same-base pointer
+branches and while state now have a narrow control-edge adapter before the
+unchanged upstream stage. All branch/backedge roots participate in a fixed
+point; source word math, masks, regions and final pointer results remain.
+Actual Merlin libraries qualify independent shapes/counts and zero trips;
+complete while destinations retain reuse when the condition forwards state
+unchanged. Mixed-base pointer tensors, broader while ownership, aliases and
+broader effects remain open. Preserve useful tiling and reuse as those profiles expand.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and

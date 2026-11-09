@@ -372,8 +372,14 @@ separately as signed i64 offsets. Scalar/tiled wraparound, pointer cancellation,
 runtime pointer loops/final values and nonlinear grid permutations are checked
 natively and through the Merlin interface. Source-word stage bytes/policy and
 access intent are retained in the distinct package profile; static real-model
-bindings preserve contractions and loops. General pointer-valued branches/
-while, aliases and broader effects still need work. See [the contract](docs/source_words.md).
+bindings preserve contractions and loops. Same-base pointer-valued branches
+and runtime while state now qualify through the actual Merlin interface,
+including zero trips, empty/tail dimensions and final pointer observations.
+A fixed-point base analysis checks every branch/backedge; original word math,
+regions and source IDs remain. Merlin retains complete while destinations
+when the condition forwards state unchanged, with ordinary alias/lifetime
+checks. Mixed-base joins, broader while ownership, aliases and broader effects
+still need work. See [the contract](docs/source_words.md).
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,

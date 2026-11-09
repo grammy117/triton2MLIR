@@ -22,8 +22,11 @@ Scalar/tiled wraparound, mixed-width pointer chains, runtime `for` pointer
 state/final results and nonlinear grid permutations now execute through that
 policy. Independent words/shapes and pointer-loop counts reuse Merlin libraries;
 real model2MLIR GEMM captures retain contractions and loops. The default
-structured range gate is unchanged. Broader pointer branches/while and aliases
-remain open; these checks do not imply universal opcode/attribute coverage.
+structured range gate is unchanged. Same-base pointer branches and runtime
+while state now also execute through Merlin, preserving masks, zero trips,
+final pointers and narrow word arithmetic. Mixed-base joins/backedges refuse;
+broader while ownership and aliases remain open. These checks do not imply
+universal opcode/attribute coverage.
 
 Use `shared-coverage` to rerun a fixed, bounded native pipeline against actual
 upstream fixtures. It inventories operations structurally, retains every input,

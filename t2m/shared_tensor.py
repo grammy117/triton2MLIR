@@ -1127,11 +1127,15 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
     else:
         check_source_addresses(middle_module, abi)
+    pointer_control_reports = []
+    if source_words:
+        from .pointer_control import normalize_pointer_control
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids)
     scan_reports = expand_scans(middle_module, _source_ids)
-    if scan_reports:
+    if scan_reports or pointer_control_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
-        middle_source = work / "expanded-scans.ttir"
+        middle_source = work / "expanded-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
     stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
         stage="source-word-tensor" if source_words else "tensor-ir")
@@ -1140,6 +1144,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
     transformations.extend(scan_reports)
+    transformations.extend(pointer_control_reports)
     if pointer_report:
         transformations.append({**pointer_report, "source_ids": [r["id"] for r in
                                (original_inventory["operations"] if original_inventory else records)

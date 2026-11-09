@@ -59,7 +59,9 @@ store indices with executable bounds/conflict/coverage checks through Merlin;
 see [the memory contract and metadata cost](docs/guarded_memory.md).
 Add `--address-policy source-words` to retain original integer-word arithmetic,
 pointer recurrences and nonlinear grids through the official unstructured
-converter. [The policy and package differences](docs/source_words.md) are explicit.
+converter. Same-base pointer branches and runtime while loops also qualify
+through Merlin, retaining their control flow, word math and final pointers.
+[The policy and package differences](docs/source_words.md) are explicit.
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence
