@@ -47,6 +47,6 @@ groups into independent elements could change cross-element dataflow. Pointer
 inputs or source-memory operations inside a map also need an effect adapter
 that preserves each event, mask and source order. Both forms currently produce
 located refusals, with real source regression cases. They are retained in the
-completion scope; no opaque successful fallback is emitted. Histogram remains
-another independently observed gap from the same source probe. Numerical
+completion scope; no opaque successful fallback is emitted. Tile-local histogram
+now has [a separate standard expansion and qualification](histogram.md). Numerical
 unsplat already lowers through the shared path.

@@ -315,6 +315,16 @@ source-backed Ascend comparison is recorded in the map contract; promoting a
 scalar branch to a tensor select or duplicating packed lane arguments is not
 used to justify these semantics.
 
+Tile-local histogram now also reaches actual Merlin execution through a linear
+indexed tensor-state expansion, retaining histogram composite intent. All 34
+cases qualify runtime tiles, both integer input widths, exact masks/padding and
+extreme values. Matching masked row views pass all three profiles; flat output
+pointers into dynamic matrix results pass the guarded profile and retain the
+existing tensor-witness rank refusal. The initial compiled LLVM probe reuses
+counter storage without per-element allocation or full-bin copies. Ascend's
+high-level histogram and target builtin are recorded as source boundaries,
+without introducing an opaque portable fallback. See [the contract](histogram.md).
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

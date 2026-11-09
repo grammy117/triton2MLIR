@@ -1136,7 +1136,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     map_reports = expand_elementwise_maps(middle_module, _source_ids)
     from .tile_gather import expand_tile_gathers
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports:
+    from .histogram import expand_histograms
+    histogram_reports = expand_histograms(middle_module, _source_ids)
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1151,6 +1153,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(pointer_control_reports)
     transformations.extend(gather_reports)
     transformations.extend(map_reports)
+    transformations.extend(histogram_reports)
     if pointer_report:
         transformations.append({**pointer_report, "source_ids": [r["id"] for r in
                                (original_inventory["operations"] if original_inventory else records)

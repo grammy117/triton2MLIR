@@ -150,7 +150,11 @@ The [scalar map profile](elementwise_map.md) now additionally qualifies
 `tt.map_elementwise` and its return with `pack=1`, original scalar branches,
 tuple results and runtime recurrences. Fourteen cases include actual Merlin
 execution over changing/empty inputs in all three memory profiles. Packed
-cross-element groups, mapped source memory and histogram remain explicit gaps.
+cross-element groups and mapped source memory remain explicit gaps.
+Tile-local [histogram](histogram.md) now retains exact masks, padding values and
+indexed counter state in standard MLIR, with 34 native/Merlin cases covering
+both i32/i64 inputs and runtime logical tile domains. Global atomic histogram
+accumulation and broader types/effects remain separate capabilities.
 
 The source-word selected-buffer path additionally qualifies cat/split and
 repeated intra-tile `tt.gather` through actual Merlin libraries. A checked native
