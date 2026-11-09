@@ -1136,9 +1136,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     else:
         check_source_addresses(middle_module, abi)
     pointer_control_reports = []
+    isolated_events = False
     if source_words:
         from .pointer_control import normalize_pointer_control
-        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids)
+        from .word_events import needs_isolation
+        isolated_events = needs_isolation(middle_module)
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events)
     scan_reports = expand_scans(middle_module, _source_ids)
     from .elementwise_map import expand_elementwise_maps
     map_reports = expand_elementwise_maps(middle_module, _source_ids)
@@ -1151,8 +1154,22 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
-    stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
-        stage="source-word-tensor" if source_words else "tensor-ir")
+    word_input = middle_source.read_text() if source_words else None
+    if isolated_events:
+        from .word_events import convert_events, print_ir
+        from .word_evidence import record as word_record
+        events = convert_events(middle_module, work / "word-events", optimizer, _source_ids)
+        compute_input = print_ir(middle_module)
+        compute_source = work / "word-compute.mlir"
+        compute_source.write_text(compute_input)
+        compute_stage = lower_with_shared(compute_source, work / "tensor-ir", optimizer=optimizer, stage="source-word-compute")
+        stage = {"schema": "t2m.source-word-stages.v2", "stage_completed": True,
+            "reconstruction": "same-region-same-event-order", "input": word_record(word_input),
+            "output": word_record((work / "tensor-ir/lowered.mlir").read_bytes()),
+            "events": events, "compute": {"input": compute_input, "native_stage": compute_stage}}
+    else:
+        stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
+            stage="source-word-tensor" if source_words else "tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
@@ -1162,6 +1179,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(gather_reports)
     transformations.extend(map_reports)
     transformations.extend(histogram_reports)
+    if isolated_events:
+        transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
+            "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",
+            "parent_conversion": "arithmetic-only; no pointer pass on already-converted events"})
     if pointer_report:
         transformations.append({**pointer_report, "source_ids": [r["id"] for r in
                                (original_inventory["operations"] if original_inventory else records)
@@ -1176,7 +1197,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         result = witness = _functionalize(lowered, abi)
     auxiliary = {}
     if source_words:
-        auxiliary.update({"word-input.mlir": middle_source.read_text(),
+        auxiliary.update({"word-input.mlir": word_input,
             "word-tensor.mlir": (work / "tensor-ir/lowered.mlir").read_text(),
             "word-stage.json": json.dumps(stage, indent=2, sort_keys=True) + "\n"})
         admission.update(address_policy="source-words-offset64",
@@ -1246,7 +1267,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
              "mlir_sha256": hashlib.sha256(text(result).encode()).hexdigest(),
              "spec": abi.as_dict(), "optimizer": intake["optimizer"],
              "intent": {"description": abi.intent, "origin": "caller-description", "grants_semantics": False},
-             "pipeline": stage["command"][1:-1],
+             "pipeline": ([{"stage": report["stage"], "command": report["command"][1:-1]}
+                           for report in (events["native_stage"], compute_stage)] if isolated_events
+                          else stage["command"][1:-1]),
              "correspondence": "upstream-preserved-source-name-locations; missing descendants are not independent dead-code proofs",
              "memory": {"bounds": "checked-affine-domain-clipped-rectangular-accesses", "ordering": "functional-buffer-versions",
                         "index_overflow": "checked-source-address-widths-before-index-promotion",
@@ -1306,6 +1329,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         trace["memory"].update(address_policy="source-words-offset64",
             index_overflow="original-integer-word-arithmetic; signed-i64-pointer-offset-accumulation",
             word_stage_sha256=hashlib.sha256(auxiliary["word-stage.json"].encode()).hexdigest())
+        if isolated_events:
+            trace["memory"]["word_conversion"] = "native-isolated-events-v2"
         trace["abi_difference"] += "; source-word address policy uses indirect offset tensors instead of recovered structured slices"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)

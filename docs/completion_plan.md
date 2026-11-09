@@ -340,11 +340,24 @@ each verify all 101 bound artifacts. Merlin remains at compiler-intake anchor
 `5f989aaf19f1a2326e10012be6d1436456893f4b`; its 83 destination/deallocation tests
 and documentation/structure gates passed for the loop-read extension.
 
-The production grid-proof suite passes 87 cases, including native and actual
-Merlin execution over independent domains and the 3,484-scenario affine oracle.
-Two strict expected failures preserve the source-word converter's branch-local
-conditional-store gap; tensor/buffer cases qualify. Universal opcode/type/effect
-and accelerator coverage are still open; the active goal is not complete.
+The initial production grid-proof suite passed 87 cases, including native and
+actual Merlin execution over independent domains and the 3,484-scenario affine
+oracle, with two strict expected failures. Both source-word conditional-store
+cases now pass through actual Merlin after [isolated native event conversion](source_words.md#memory-inside-structured-regions).
+Every event is converted by the official pointer pass in a typed straight-line
+template and substituted at its original region position. The parent receives
+arithmetic conversion only. V2 word evidence retains both actual native reports
+and intermediate bytes; bundle checks reconstruct the complete typed event
+inventory/placement. Merlin's 77 standalone/derived intake tests and structure/
+documentation gates pass at anchor `0aae21d4aee40b1aadf76caf745edb501fc326d5`.
+Universal opcode/type/effect and accelerator coverage remain open.
+
+The region-event extension also passes 97 existing source-word/pointer/control/
+selected-memory/model/runtime-memory regressions. Nine new cases check scalar
+and tiled memory in `for`/`while`, raw fill/result bits through native and actual
+Merlin libraries, and rehashed evidence/type tampering. A real model2MLIR GEMM
+package also qualifies branch-local tile contractions and K loops with original
+weights and independent PyTorch goldens retained.
 
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer

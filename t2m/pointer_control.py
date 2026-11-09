@@ -64,7 +64,7 @@ def lower_offsets(state):
         Rewriter.replace_op(op, added)
 
 
-def normalize_pointer_control(module, source_ids):
+def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     from .shared_tensor import _pointer_type, opcode
 
     original = list(module.walk())
@@ -72,6 +72,9 @@ def normalize_pointer_control(module, source_ids):
                                                      "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat")
                 and any(_pointer_type(v.type) for v in (*op.results,
                     *(a for region in op.regions for block in region.blocks for a in block.args)))]
+    if isolate_memory:
+        controls.extend(op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for")
+                        and op not in controls and any(opcode(nested) in ("tt.load", "tt.store") for nested in op.walk()))
     if not controls:
         return []
 
@@ -185,7 +188,7 @@ def normalize_pointer_control(module, source_ids):
         return normalize_selected(state, source_ids)
     # The official converter already handles same-base for state. Leave that
     # supported case upstream when no other pointer control needs this adapter.
-    if all(opcode(op) == "scf.for" for op in controls):
+    if not isolate_memory and all(opcode(op) == "scf.for" for op in controls):
         return []
     memory = {op: (types[op.operands[0]], next(iter(bases[op.operands[0]])))
               for op in original if opcode(op) in ("tt.load", "tt.store")}

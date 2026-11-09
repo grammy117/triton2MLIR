@@ -2,10 +2,12 @@
 
 [Actual logical-grid bounds](logical_grid_bounds.md) now prove unmasked dense
 unit rows and exact runtime output partitions, including mixed clipped columns.
-The focused suite passes 87 cases with two strict expected failures for the
-source-word converter's branch-local conditional-store gap. Bounds, ownership
-and initialization checks remain separate; this does not establish general
-irregular memory coverage.
+The initial focused suite passed 87 cases with two strict expected failures.
+The [isolated native memory-event bridge](source_words.md#memory-inside-structured-regions)
+now closes both conditional-store failures through actual Merlin execution.
+New scalar/tiled branch/loop cases also qualify nonuniform fills and observed
+writable state. Bounds, ownership and initialization checks remain separate;
+this does not establish general irregular memory coverage.
 
 The explicit [guarded memory profile](guarded_memory.md) additionally executes
 loaded i32/i64 index stores through the full upstream continuation and Merlin's

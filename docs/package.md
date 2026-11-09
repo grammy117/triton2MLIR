@@ -99,7 +99,15 @@ guard protocol, while using original integer words with signed i64 pointer
 offset accumulation. Accesses use offset tensors instead of recovered slices.
 The receipt additionally binds `word-input.mlir`, `word-tensor.mlir` and
 `word-stage.json`; admission/provenance bind their policy and hashes. Merlin
-checks/copies these compiler-only members for standalone and static derived
+also admits the explicit `t2m.source-word-stages.v2` chain for region-local
+events. It embeds event input/output, typed source bindings, parent arithmetic
+input and both actual native reports inside the same three artifacts. The
+producer reconstructs every event placement; Merlin validates declared byte
+custody. `memory.word_conversion` and package differences explicitly identify
+this version. The tensor/scalar ABI and guarded memory protocol are unchanged.
+The provenance pipeline records the two ordered native stages explicitly.
+
+Merlin checks/copies these compiler-only members for standalone and static derived
 models. Function/grid annotations retain original access intent through model
 inlining. Pointer branches/loops normalize region state to i64 offsets before
 that native stage; finite mixed bases add logical i32 selectors and predicated

@@ -13,6 +13,11 @@ and learned weights; per-kernel package differences are explicit.
 Tile-local [histogram](docs/histogram.md) also retains composite intent with a
 linear indexed-state expansion and exact source masks. The visible
 `shared-demo --kernel histogram` route supports all three memory profiles.
+Actual logical-grid bounds now admit unmasked dense unit rows with independent
+runtime output coverage. Source-word memory inside structured regions also
+uses typed native event templates, retaining branch/loop placement and exact
+fills. The explicit v2 evidence chain preserves both native stage reports;
+see [source-word memory](docs/source_words.md).
 
 ## The product contract
 

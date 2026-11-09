@@ -89,21 +89,16 @@ def validate_memory_evidence(trace, artifacts):
                     or not access.get("tile") or any(type(n) is not int or n <= 0 for n in access["tile"])):
                 raise ValueError("guarded memory access inventory differs from its source/effect contract")
     if profile == WORD_PROFILE:
+        from .word_evidence import check_word_stage, replay_events
         word_stage = json.loads(artifacts["word-stage.json"])
-        command = word_stage.get("command", [])
-        transport = {"--mlir-disable-threading", "--verify-each", "--mlir-print-op-generic",
-                     "--mlir-print-debuginfo", "--mlir-print-local-scope"}
-        pipeline = [flag for flag in (command if isinstance(command, list) else [])
-                    if isinstance(flag, str) and flag.startswith("--") and flag not in transport]
         if (not version2 or admission.get("address_policy") != "source-words-offset64"
                 or memory.get("address_policy") != "source-words-offset64"
                 or memory.get("word_stage_sha256") != record(artifacts["word-stage.json"])["sha256"]
                 or admission.get("word_input_sha256") != record(artifacts["word-input.mlir"])["sha256"]
-                or admission.get("word_tensor_sha256") != record(artifacts["word-tensor.mlir"])["sha256"]
-                or word_stage.get("schema") != "t2m.triton-shared-stage.v1" or word_stage.get("stage") != "source-word-tensor"
-                or word_stage.get("stage_completed") is not True
-                or word_stage.get("artifacts", {}).get("source.ttir") != record(artifacts["word-input.mlir"])
-                or word_stage.get("artifacts", {}).get("lowered.mlir") != record(artifacts["word-tensor.mlir"])
-                or not isinstance(command, list) or any(type(flag) is not str for flag in command) or pipeline != WORD_PIPELINE):
+                or admission.get("word_tensor_sha256") != record(artifacts["word-tensor.mlir"])["sha256"]):
             raise ValueError("source-word address evidence does not bind its declared input/output/policy")
+        check_word_stage(word_stage, artifacts["word-input.mlir"], artifacts["word-tensor.mlir"])
+        if memory.get("word_conversion") != ("native-isolated-events-v2" if word_stage.get("schema") == "t2m.source-word-stages.v2" else None):
+            raise ValueError("source-word event conversion lacks its explicit representation difference")
+        replay_events(word_stage, artifacts["word-input.mlir"])
     return profile

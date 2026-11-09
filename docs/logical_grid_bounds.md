@@ -70,10 +70,11 @@ updates may preserve incoming holes, while a fresh output must cover them.
    source/ABI/IR bindings. Do not introduce a target opcode, opaque call or
    semantic meaning for provenance tags.
 
-The focused suite passes **87 cases**, with **2 strict expected failures** for
-branch-local conditional stores in the source-word profile. Those failures
-belong to the pinned unstructured converter's region traversal, not this bounds
-proof; tensor/buffer versions qualify. The suite includes native execution and
+The initial focused suite passed **87 cases**, with **2 strict expected failures**
+for branch-local conditional stores in the source-word profile. The subsequent
+[isolated native memory-event bridge](source_words.md#memory-inside-structured-regions)
+now makes both conditional cases pass through native and actual Merlin execution;
+the expected-failure markers are removed. The suite includes native execution and
 actual Merlin libraries reused over empty, ragged and surplus launch domains,
 unmasked histogram rows in all three profiles, and the negative cases above.
 An independent finite-domain affine oracle covers 3,484 scenarios. Package ABI

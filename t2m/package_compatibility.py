@@ -12,6 +12,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, read/write ownership, completed initialization and per-store lane uniqueness are executable; source-base gathers retain memory effects before optimization; grid-derived metadata cost is explicit; no pure tensor witness is asserted")
     if profile == WORD_PROFILE:
         differences.append("explicit source-word address policy retains source integer arithmetic before signed i64 pointer-offset accumulation; raw offset tensors replace structured pointer views; word-stage input/output evidence is retained")
+        if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
+            differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
     selected = [t for t in transformations if t.get("kind") == "selected-pointer-memory"]
     if selected:

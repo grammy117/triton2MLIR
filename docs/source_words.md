@@ -93,6 +93,34 @@ stage. Original TTIR and its typed inventory remain retained independently.
 Unknown pointer producers/observations, pointee-changing casts and address
 escapes refuse; intent annotations do not bypass these checks.
 
+## Memory inside structured regions
+
+The pinned binary can also leave branch-local pointer preparation unresolved
+when no pointer-valued result crosses the branch. `word_events.py` supplies a
+version bridge for memory under `scf.if`/`scf.while`, including nested `for`:
+
+1. The existing pointer-state analysis exposes entry bases plus exact i64
+   offsets, retaining the computations producing each source word.
+2. Every source load/store becomes a separate typed, straight-line template.
+   One batched native `source-word-events` stage runs the official unstructured
+   converter. No pointer-valued helper calls are inserted in the parent.
+3. Exactly one converted gather/scatter replaces each event at its original
+   position. Captures and results are checked structurally across parser
+   contexts. Regions, branches, loop state and memory ordering stay intact.
+4. A masked load with an explicit fill uses local zero in the template, then
+   selects the original scalar/tensor fill with the original mask. This avoids
+   upstream scalar-fill inference without changing nonuniform fills or their
+   bits. Missing source fills retain the existing upstream refinement policy.
+5. The parent runs `source-word-compute`, an arithmetic-only stage. Running the
+   pointer pass again on already-unstructured events is unsupported by the
+   pinned converter and is deliberately excluded.
+
+The pinned source is Meta's `TritonToUnstructuredPass.cpp` and
+`test/Conversion/TritonToUnstructured/gather_no_loop.mlir` at the revision above.
+The adapter adds region placement and typed correspondence; native pointer and
+arithmetic lowering remain upstream. It supplies no hardware mapping or opaque
+portable calls. Source-word arithmetic, guard protocol and public ABI are unchanged.
+
 Real scalar/tiled branches and runtime pointer/accumulator while loops now
 execute natively and through Merlin. One unchanged library handles zero trips,
 different loop counts, empty/tail dimensions and final pointer observations.
@@ -134,7 +162,7 @@ In addition to guarded memory's four artifacts, the receipt binds:
 |---|---|
 | `word-input.mlir` | Exact inlined/intake-normalized input before the source-word stage. |
 | `word-tensor.mlir` | Exact native upstream output before guard insertion. |
-| `word-stage.json` | Native stage report binding those input/output bytes and the explicit pass sequence. |
+| `word-stage.json` | V1 native stage report, or explicit `t2m.source-word-stages.v2` chain with both actual native reports, event template input/output, typed bindings and parent computation input. |
 
 Admission/provenance bind the policy and stage hashes. Merlin independently
 checks the inventory, byte relations, declared pipeline and access-intent
@@ -143,6 +171,26 @@ bindings retain it under each kernel. Evaluator arrays and goldens stay outside
 the compiler view. These checks establish custody/consistency, not universal
 source equivalence. Native execution, independent references and actual Merlin
 library execution remain separate evidence.
+
+For v2, bundle validation reconstructs the complete template inventory from
+`word-input.mlir`, substitutes the converted events with checked types at the
+original positions, and compares the resulting parent bytes to the actual
+compute input. Hashes alone cannot replace this reconstruction. Merlin checks
+the declared version, byte/pipeline chain, same optimizer identity and source
+binding inventory, retaining the existing custody-only boundary. The existing
+three artifact names are retained; package differences explicitly name v2.
+
+New scalar/tiled `for`/`while` tests reuse actual Merlin libraries over false
+branches, negative/zero trips, empty/ragged domains and repeated observations
+of writable state. Native and Merlin outputs are separately compared as raw
+f32 words for signed zero, NaN payloads, infinities and nonuniform fills. These
+cases do not establish other numeric/effect profiles or device execution.
+
+A real model2MLIR GEMM capture additionally binds branch-local tiled GEMM
+through the v2 path. Actual Merlin execution retains contractions and K loops,
+compares independent PyTorch goldens, and preserves original model weights and
+evaluator artifacts. Standalone and derived packages share the same evidence
+checks; no FX trace is invented for the Triton implementation.
 
 Tests cover scalar/tiled i32 wraparound, narrow pointer chains with i64
 cancellation, runtime pointer recurrences and final pointers, zero trips,

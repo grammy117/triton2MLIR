@@ -14,9 +14,7 @@ OPT, NATIVE = os.environ.get("TRITON_SHARED_OPT"), os.environ.get("T2M_NATIVE_PY
 MERLIN = all(os.environ.get(n) for n in ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYTHON", "T2M_MERLIN_CLANG"))
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/native environments required")
 PROFILES = ["tensor", "buffer", "guarded-buffer"]
-SCENARIOS = [pytest.param(profile, kind, marks=pytest.mark.xfail(strict=True, raises=ConversionError,
-    reason="pinned unstructured converter leaves branch-local pointer preparation; tensor/buffer forms qualify"))
-    if profile == "guarded-buffer" and kind == "conditional-update" else (profile, kind)
+SCENARIOS = [(profile, kind)
     for profile in PROFILES for kind in ("rows", "sparse-update", "conditional-update", "matrix")]
 
 

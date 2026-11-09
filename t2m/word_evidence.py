@@ -1,0 +1,68 @@
+"""Versioned source-word stage custody; no numerical-equivalence claim."""
+
+import hashlib
+
+POINTER_FLAGS = ["--triton-to-unstructured=offset-bit-width=64"]
+COMPUTE_FLAGS = ["--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
+                 "--remove-dead-values", "--canonicalize"]
+TRANSPORT = {"--mlir-disable-threading", "--verify-each", "--mlir-print-op-generic",
+             "--mlir-print-debuginfo", "--mlir-print-local-scope"}
+
+
+def record(raw):
+    raw = raw.encode() if isinstance(raw, str) else raw
+    return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+def check_native(stage, name, flags, source, output):
+    if not isinstance(stage, dict):
+        raise ValueError("source-word native stage must be an object")
+    command = stage.get("command", [])
+    pipeline = [flag for flag in (command if isinstance(command, list) else [])
+                if isinstance(flag, str) and flag.startswith("--") and flag not in TRANSPORT]
+    if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != name
+            or stage.get("stage_completed") is not True
+            or not isinstance(command, list) or any(type(flag) is not str for flag in command) or pipeline != flags
+            or stage.get("artifacts", {}).get("source.ttir") != record(source)
+            or stage.get("artifacts", {}).get("lowered.mlir") != record(output)):
+        raise ValueError("source-word native stage does not bind its declared pipeline/input/output")
+
+
+def check_word_stage(stage, source, output):
+    if not isinstance(stage, dict):
+        raise ValueError("source-word evidence must be an object")
+    if stage.get("schema") == "t2m.triton-shared-stage.v1":
+        check_native(stage, "source-word-tensor", POINTER_FLAGS + COMPUTE_FLAGS, source, output)
+        return
+    if (stage.get("schema") != "t2m.source-word-stages.v2" or stage.get("stage_completed") is not True
+            or stage.get("input") != record(source) or stage.get("output") != record(output)
+            or stage.get("reconstruction") != "same-region-same-event-order"
+            or not isinstance(stage.get("events"), dict) or not isinstance(stage.get("compute"), dict)):
+        raise ValueError("source-word event conversion lacks its versioned input/output chain")
+    events, compute = stage["events"], stage["compute"]
+    if (any(type(events.get(key)) is not str for key in ("input", "output"))
+            or type(compute.get("input")) is not str or not isinstance(events.get("native_stage"), dict)
+            or not isinstance(compute.get("native_stage"), dict) or not isinstance(events.get("bindings"), list)
+            or not events["bindings"]):
+        raise ValueError("source-word event conversion lacks its actual intermediate bytes")
+    check_native(events["native_stage"], "source-word-events", POINTER_FLAGS, events["input"], events["output"])
+    check_native(compute["native_stage"], "source-word-compute", COMPUTE_FLAGS, compute["input"], output)
+    event_tool = events["native_stage"].get("optimizer", {}).get("sha256")
+    if not isinstance(event_tool, str) or len(event_tool) != 64 or event_tool != compute["native_stage"].get("optimizer", {}).get("sha256"):
+        raise ValueError("source-word event and computation stages used different optimizers")
+
+
+def replay_events(stage, source):
+    """Reconstruct every typed event disposition from the retained parent IR."""
+    if stage.get("schema") != "t2m.source-word-stages.v2":
+        return
+    from .shared_tensor import parse_shared, _source_ids
+    from .word_events import print_ir, substitute, templates
+    module = parse_shared(source.decode() if isinstance(source, bytes) else source)
+    isolated, bindings, calls = templates(module, _source_ids)
+    events = stage["events"]
+    if print_ir(isolated) != events["input"] or bindings != events["bindings"]:
+        raise ValueError("source-word event templates differ from the complete typed source event inventory")
+    substitute(module, parse_shared(events["output"]), bindings, calls)
+    if print_ir(module) != stage["compute"]["input"]:
+        raise ValueError("source-word event reconstruction differs from the actual computation input")
