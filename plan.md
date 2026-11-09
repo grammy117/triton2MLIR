@@ -576,7 +576,7 @@ Reference checkouts on a26:
 
 | Reference | Local path and surveyed revision |
 |---|---|
-| Initial plan | `/scratch/grammy/triton2MLIR-plan/triton2MLIR`, `0e6bc34ffdb526edf93d92fc99b6ac637769ffd7` |
+| This repository / initial plan | `/scratch/grammy/blast/triton2MLIR`, initial commit `0e6bc34ffdb526edf93d92fc99b6ac637769ffd7` |
 | Merlin bridge used in original survey | `/scratch/grammy/blast/merlin`, original survey `e45205bf9`; this revision does not assume every worktree is identical. |
 | Merlin IDE checkout used for this revision | `/scratch/grammy/blast/merlin-graph-proof-intake`, `e47c4fd16999d44371e70f931288afba26da48d6`; `src/merlin/triton/`, `src/merlin/xdsl_dialects/lowering/interface_lowering.py`, `docs/design/macro_scheduling.md`. |
 | model2MLIR | `/scratch/grammy/blast/model2MLIR`, `feat/triton-integration`, `035bb5a371cb463a0ac75186beb754c5f7200395`. |
