@@ -440,3 +440,14 @@ rounding/subnormal/NaN policy is a distinct obligation. Broader packed numeric
 formats, descriptor indexed effects, external implementations/diagnostics,
 aliases/layouts, maintained typed coverage and target materialization remain
 open. Neither a numerical package check nor provenance closes those gaps.
+
+The atomic word-region extension now implements all nine i32/i64 RMWs on
+f32/f64 storage and preserves Triton's sign-conditioned floating min/max
+algorithm. Standard generic atomic regions retain source bits and old values;
+a checked native feature emits one integer LLVM atomic per primitive while
+retaining ownership/lifetime gates. Native and actual Merlin raw-word tests
+cover exceptional float representations, and real min/max model2MLIR captures
+retain weights and tuple results. Next, qualify source region/selection
+compositions, then extend the distinct floating-add numeric contract and other
+universal gaps. This remains bounded coverage rather than arbitrary-kernel
+completion.

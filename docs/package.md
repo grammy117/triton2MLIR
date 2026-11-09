@@ -136,13 +136,20 @@ source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
 
 `--effect-profile typed-atomics` selects the separate
 `private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
-bitwise f32/f64 exchange to integer RMW/CAS while retaining the same public
+bitwise f32/f64 exchange and integer word RMWs on equal-width f32/f64 storage
+to integer RMW/CAS while retaining the same public
 tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
 value dtype and `bitwise-exchange` in their source/access/payload declarations.
 Standard `memref.atomic_rmw assign` preserves old and new representations;
 inactive undefined old values refine to typed zero. No numeric policy for
 floating arithmetic atomics is implied. Compatibility metadata names these
-differences for standalone and model packages.
+differences for standalone and model packages. Word events additionally bind
+storage/value types and unchanged element address units in `word_view`. Their
+standard generic atomic regions retain source integer updates and returned bits;
+Merlin's explicit native word legalization supplies a checked internal helper
+through ownership/lifetime conversion. This is a native-toolchain compatibility
+requirement, with no helper in the portable package. Source floating min/max
+retains its two sign-conditioned integer atomics, including NaN/zero behavior.
 
 Equal-width ordinary pointer views retain the storage tensor type and insert
 register bitcasts at each load/store. `prov.logical_word_views` and source

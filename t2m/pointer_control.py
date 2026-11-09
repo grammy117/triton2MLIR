@@ -28,6 +28,7 @@ class PointerState:
     types: dict
     bases: dict
     edges: dict
+    memory_types: dict
 
 
 def offset_type(type_):
@@ -69,7 +70,7 @@ def lower_offsets(state):
         Rewriter.replace_op(op, added)
 
 
-def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
+def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False):
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS
     from .pointer_views import compatible, normalize as normalize_word_views
@@ -192,8 +193,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
             if not isinstance(rhs, IntegerType) or not 1 <= rhs.width.data <= 64:
                 refuse(op, "pointer control requires integer element offsets no wider than i64")
 
-    state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges)
-    views = normalize_word_views(state, source_ids)
+    state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges, {})
+    views = normalize_word_views(state, source_ids, typed_atomics=typed_atomics)
     if any(len(roots) > 1 for roots in bases.values()):
         from .pointer_select import normalize_selected
         return views + normalize_selected(state, source_ids)
@@ -201,7 +202,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     # supported case upstream when no other pointer control needs this adapter.
     if not isolate_memory and all(opcode(op) == "scf.for" for op in controls):
         return []
-    memory = {op: (types[op.operands[0]], next(iter(bases[op.operands[0]])))
+    memory = {op: (state.memory_types.get(op, types[op.operands[0]]), next(iter(bases[op.operands[0]])))
               for op in original if opcode(op) in MEMORY_EVENTS}
     lower_offsets(state)
 
@@ -210,8 +211,13 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False):
     for op, (type_, base) in memory.items():
         pointer = base
         emitted = []
+        scalar = type_.element_type if isinstance(type_, TensorType) else type_
+        if scalar != base.type:
+            viewed = builtin.UnregisteredOp.with_name("tt.bitcast").create(operands=[base], result_types=[scalar])
+            emitted.append(viewed)
+            pointer = viewed.results[0]
         if isinstance(type_, TensorType):
-            splat = builtin.UnregisteredOp.with_name("tt.splat").create(operands=[base], result_types=[type_])
+            splat = builtin.UnregisteredOp.with_name("tt.splat").create(operands=[pointer], result_types=[type_])
             emitted.append(splat)
             pointer = splat.results[0]
         address = builtin.UnregisteredOp.with_name("tt.addptr").create(

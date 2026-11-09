@@ -20,7 +20,7 @@ MERLIN, CLANG = os.environ.get("T2M_MERLIN_ROOT"), os.environ.get("T2M_MERLIN_CL
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module", params=["add", "cas", "exch"])
+@pytest.fixture(scope="module", params=["add", "cas", "exch", "min", "max"])
 def atomic_model_inputs(tmp_path_factory, request):
     kind = request.param
     tmp_path = tmp_path_factory.mktemp("actual-atomic-model")
@@ -41,13 +41,13 @@ def atomic_model_inputs(tmp_path_factory, request):
             TensorBuffer("comparison", (16,), dtype="i32"), TensorBuffer("value", (16,), dtype="i32"),
             TensorBuffer("old", (16,), "write", dtype="i32")), grid=(2,))
     else:
-        dtype, pointer = ("f32", "*fp32") if kind == "exch" else ("i32", "*i32")
+        dtype, pointer = ("f32", "*fp32") if kind in ("exch", "min", "max") else ("i32", "*i32")
         source.write_text(capture_ttir(indexed_atomic, {"x": pointer, "index": "*i32", "state": pointer, "old": pointer,
             **{name: "constexpr" for name in constants}}, constants))
         abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype=dtype), TensorBuffer("index", (13,), dtype="i32"),
             TensorBuffer("state", (17,), "readwrite", dtype=dtype), TensorBuffer("old", (13,), "write", dtype=dtype)), grid=(2,))
     result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile="guarded-buffer",
-                            address_policy="source-words", effect_profile="typed-atomics" if kind == "exch" else "atomics")
+                            address_policy="source-words", effect_profile="typed-atomics" if kind in ("exch", "min", "max") else "atomics")
     return capture, KernelBinding("t2m_demo::atomic_update", result,
         operands={"state": "state", "comparison": "index", "value": "x"} if kind == "cas" else {}), kind
 
@@ -60,14 +60,14 @@ def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_pa
     receipt = verify_bundle(out)
     assert "kernels/0/memory-admission.json" in receipt["artifacts"]
     admission = json.loads((out / "kernels/0/memory-admission.json").read_text())
-    assert admission["schema"] == ("t2m.memory-admission.v4" if kind == "exch" else "t2m.memory-admission.v3")
+    assert admission["schema"] == ("t2m.memory-admission.v4" if kind in ("exch", "min", "max") else "t2m.memory-admission.v3")
     assert admission["atomic_adaptations"][0]["operation"] == kind
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "golden.npy", "goldens.npz", "extra.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
     execution = json.loads((out / "execution.json").read_text())
     assert execution["result_count"] == 2 and set(execution["result_reference_members"]) == {"golden.npy", "goldens.npz"}
     differences = json.loads((out / "compatibility.json").read_text())["kernel_profiles"]["kernels/0"]["differences"]
-    assert any(("bitwise f32/f64 exchange" if kind == "exch" else "private-invocation integer atomics") in item for item in differences)
+    assert any(("integer word atomics" if kind in ("min", "max") else "bitwise f32/f64 exchange" if kind == "exch" else "private-invocation integer atomics") in item for item in differences)
     if MERLIN:
         assert (out / "consumer/compiler/source/kernels/0/memory-admission.json").read_bytes() == (out / "kernels/0/memory-admission.json").read_bytes()
         if CLANG:

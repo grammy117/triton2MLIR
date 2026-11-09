@@ -23,6 +23,14 @@ ORDERS = {1: "relaxed", 2: "acquire", 3: "release", 4: "acq_rel"}
 SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 
 
+def payload(info):
+    if "word_view" in info:
+        from .atomic_word_views import PAYLOAD
+        return PAYLOAD
+    return ("standard-memref-generic-compare-exchange-with-original-returned-old-value" if info["operation"] == "cas"
+            else "standard-memref-atomic-rmw-with-original-returned-old-value")
+
+
 def validate_evidence(admission, memory, records, buffers):
     """Validate declared atomic custody; this does not prove source equivalence."""
     profile = TYPED_EFFECT_PROFILE if admission.get("schema") == ATOMIC_SCHEMAS[1] else EFFECT_PROFILE
@@ -42,8 +50,15 @@ def validate_evidence(admission, memory, records, buffers):
         candidates = [source[s] for s in access["source_ids"] if s in source]
         floating = isinstance(info, dict) and info.get("value_dtype") in ("f32", "f64")
         dtype = info.get("value_dtype") if floating else "i" + str(info.get("word_bits")) if isinstance(info, dict) else None
+        word = isinstance(info, dict) and "word_view" in info
+        expected_view = {"storage_dtype": "f" + str(info.get("word_bits")), "value_dtype": "i" + str(info.get("word_bits")),
+            "element_bits": info.get("word_bits"), "address_units": "equal-width-elements"} if word else None
+        if word:
+            dtype = expected_view["storage_dtype"]
         if (not isinstance(info, dict) or not candidates or any(c != info for c in candidates)
                 or buffer.get("dtype") != dtype
+                or word and (profile != TYPED_EFFECT_PROFILE or floating or info.get("operation") == "cas"
+                    or info.get("word_bits") not in (32, 64) or info["word_view"] != expected_view)
                 or floating and (profile != TYPED_EFFECT_PROFILE or info.get("operation") != "exch"
                     or dtype != "f" + str(info.get("word_bits")) or info.get("numeric_contract") != "bitwise-exchange")
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
@@ -60,8 +75,7 @@ def validate_evidence(admission, memory, records, buffers):
                 or not isinstance(actual, dict) or any(actual.get(key) != value for key, value in info.items())
                 or actual.get("buffer") != buffer["name"] or not actual.get("source_ids")
                 or not set(actual["source_ids"]) & set(access["source_ids"])
-                or actual.get("payload") != ("standard-memref-generic-compare-exchange-with-original-returned-old-value"
-                    if info["operation"] == "cas" else "standard-memref-atomic-rmw-with-original-returned-old-value")
+                or actual.get("payload") != payload(info)
                 or actual.get("effect_boundary") != "standard-execute-region-no-inline"
                 or actual.get("inactive_old_value") != ("zero-refinement-of-source-undefined-old-value"
                     if access["mask"] == "source-per-lane" else "no-inactive-lanes")):
@@ -114,26 +128,40 @@ def adapt_payload(module, abi, admission, source_ids):
         return buffers[value]
     reports, generics = [], []
     for op in list(function.walk()):
-        cas = isinstance(op, GenericAtomicRMWOp)
-        if not isinstance(op, (memref.AtomicRMWOp, GenericAtomicRMWOp)) or (buffer := root(op.operands[0 if cas else 1])) is None:
+        region = isinstance(op, GenericAtomicRMWOp)
+        word = region and op.result.type in (builtin.f32, builtin.f64)
+        cas = region and not word
+        if not isinstance(op, (memref.AtomicRMWOp, GenericAtomicRMWOp)) or (buffer := root(op.operands[0 if region else 1])) is None:
             continue  # Compiler-owned guard atomics use separate arguments.
         ids = source_ids(op.location)
         matches = [i for i, access in enumerate(accesses)
                    if access["buffer"] == buffer.name and set(ids) & set(access["source_ids"])]
+        generic = op.parent_op()
+        while generic is not None and not isinstance(generic, GenericOp):
+            generic = generic.parent_op()
+        if generic is None:
+            raise ConversionError("native atomic left its parallel tensor event")
         kind = op.properties.get("kind")
-        if (len(matches) != 1 or ("compare-exchange" if cas else kind.value.data if isinstance(kind, builtin.IntegerAttr) else None)
-                != accesses[matches[0]]["atomic"]["standard_kind"]):
+        standard_kind = "compare-exchange" if cas else kind.value.data if isinstance(kind, builtin.IntegerAttr) else None
+        word_info = None
+        if word:
+            from .atomic_word_views import match
+            word_kind, word_info = match(op, generic.body.block.args[1])
+            standard_kind = dict(RMW.values())[word_kind]
+            uses = tuple(op.result.uses)
+            if (len(uses) != 1 or not isinstance(uses[0].operation, arith.BitcastOp)
+                    or uses[0].operation.parent is not op.parent
+                    or uses[0].operation.result.type != generic.body.block.args[1].type
+                    or tuple(op.parent.last_op.operands) != (uses[0].operation.result,)):
+                raise ConversionError("native word atomic lost its original returned old word")
+        if (len(matches) != 1 or standard_kind != accesses[matches[0]]["atomic"]["standard_kind"]
+                or word_info != accesses[matches[0]]["atomic"].get("word_view")):
             raise ConversionError("native source-buffer atomic differs from its typed admission inventory",
                                   opcode=op.name, source_id=next(iter(ids), None))
         index = matches[0]
         observed[index] += 1
         access = accesses[index]
         info = access["atomic"]
-        generic = op.parent_op()
-        while generic is not None and not isinstance(generic, GenericOp):
-            generic = generic.parent_op()
-        if generic is None:
-            raise ConversionError("native atomic left its parallel tensor event")
         ancestor = generic
         while ancestor is not None:
             if isinstance(ancestor, GenericOp) and ancestor not in generics:
@@ -164,7 +192,7 @@ def adapt_payload(module, abi, admission, source_ids):
             if (not isinstance(end, scf.YieldOp) or len(end.operands) != 1
                     or end.operands[0] is not generic.body.block.args[-1]):
                 raise ConversionError("native atomic inactive branch differs from the undefined output iter-arg")
-            element = op.results[0].type
+            element = end.operands[0].type
             zero = (arith.ConstantOp(builtin.FloatAttr(0.0, element)) if isinstance(element, builtin.AnyFloat)
                     else arith.ConstantOp.from_int_and_width(0, element))
             zero.location = op.location
@@ -178,8 +206,7 @@ def adapt_payload(module, abi, admission, source_ids):
             "prov.atomic_standard_order": builtin.StringAttr("acq_rel")})
         reports.append({"source_ids": ids, "buffer": buffer.name, **info, "inactive_old_value": refinement,
                         "effect_boundary": "standard-execute-region-no-inline",
-                        "payload": "standard-memref-generic-compare-exchange-with-original-returned-old-value" if cas
-                            else "standard-memref-atomic-rmw-with-original-returned-old-value"})
+                        "payload": payload(info)})
     if any(count != 1 for count in observed):
         raise ConversionError("native atomic payload does not account for every admitted memory event exactly once")
     for generic in generics:

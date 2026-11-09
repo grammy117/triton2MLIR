@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline(*, compare_exchange=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -26,7 +26,10 @@ def tensor_pipeline(*, compare_exchange=False):
             adapted += 1
         passes.append(entry)
     passes = edit_pipeline(passes)
-    if compare_exchange:
+    if word_views:
+        from merlin.llvmlower.atomic_word_views import edit_pipeline as edit_word_views
+        passes = edit_word_views(passes)
+    elif compare_exchange:
         from merlin.llvmlower.atomic_compare_exchange import edit_pipeline as edit_compare_exchange
         passes = edit_compare_exchange(passes)
     result = _splice(passes)
@@ -64,9 +67,12 @@ def compile_model(staged, work):
     prepared = text(module, generic=True)
     (work / "prepared.mlir").write_text(prepared)
     features = COMPILER_FEATURES
-    if any(op.name == "memref.generic_atomic_rmw" for op in module.walk()):
+    regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
+    if any(str(op.results[0].type) in ("f32", "f64") for op in regions):
+        features = features | {"lower_atomic_word_views"}
+    elif regions:
         features = features | {"lower_integer_compare_exchange"}
-    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features)
+    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,
                             timeout=30, features=features, retain_llvm_dialect=True)
     ll = work / "model.ll"

@@ -101,10 +101,10 @@ def test_changed_storage_stride_is_a_located_refusal(tmp_path, storage_width, vi
 
 @NATIVE_REQUIRED
 @pytest.mark.parametrize("operation", ["min", "max"])
-def test_floating_atomic_word_views_still_require_real_atomic_region_expansion(tmp_path, operation):
+def test_legacy_atomic_profile_does_not_admit_floating_word_views(tmp_path, operation):
     from test_float_atomics import capture as capture_float_atomic
     with pytest.raises(ConversionError, match="atomic word views") as error:
-        capture_float_atomic(tmp_path, operation=operation)
+        capture_float_atomic(tmp_path, operation=operation, effect_profile="atomics")
     assert error.value.opcode == "tt.atomic_rmw" and error.value.source_id
 
 

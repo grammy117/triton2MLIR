@@ -91,16 +91,18 @@ def main(work):
         if any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation)):
             root = os.environ.get("T2M_MERLIN_ROOT")
             if not root:
-                raise ValueError("native compare/exchange requires the explicit T2M_MERLIN_ROOT compiler support path")
+                raise ValueError("native generic atomics require the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0, str(Path(root).resolve() / "src"))
             from merlin.llvmlower import atomic_compare_exchange
             namespace = {"ir": ir}
             exec(atomic_compare_exchange.SUPPORT, namespace)
-            count = namespace["_cas_rewrite"](context, module)
-            prepared = work / "prepared-compare-exchange.mlir"
+            word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f32", "f64")
+                for op in operations(module.operation))
+            count = namespace["_cas_rewrite"](context, module, word_views=word_views)
+            prepared = work / ("prepared-atomic-word-views.mlir" if word_views else "prepared-compare-exchange.mlir")
             prepared.write_text(str(module))
             import hashlib
-            adapters.append({"name": "merlin-exact-integer-compare-exchange", "events": count,
+            adapters.append({"name": "merlin-exact-atomic-word-views" if word_views else "merlin-exact-integer-compare-exchange", "events": count,
                 "support_form": "embedded-native-python-prelude",
                 "support_sha256": hashlib.sha256(atomic_compare_exchange.SUPPORT.encode()).hexdigest(),
                 "prepared_sha256": hashlib.sha256(prepared.read_bytes()).hexdigest()})

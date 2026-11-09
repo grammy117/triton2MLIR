@@ -103,6 +103,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
     scalar_normalizations = normalize_scalars(module, source_ids)
     original = list(function.walk())
     buffers = {arg: value for arg, (kind, value) in zip(entry.args, abi.source_bindings, strict=True) if kind == "buffer"}
+    word_views = {}
     descriptors = {}
     layout = guard_layout(abi.as_dict(), atomics=atomics)
     protocol = ATOMIC if atomics else ORDINARY
@@ -115,21 +116,41 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
     def refuse(op, message):
         raise ConversionError(message, source_id=next(iter(source_ids(op.location)), None), opcode=opcode(op))
 
+    if typed_atomics:
+        from .pointer_views import element
+        from .atomic_word_views import view_info
+        for op in original:
+            if opcode(op) != "tt.bitcast" or len(op.results) != 1 or not _pointer_type(op.results[0].type):
+                continue
+            if (len(op.operands) != 1 or op.operands[0] not in buffers
+                    or isinstance(op.results[0].type, TensorType) or isinstance(op.operands[0].type, TensorType)):
+                refuse(op, "atomic pointer views require one scalar declared logical base")
+            buffer = buffers[op.operands[0]]
+            try:
+                info = view_info(buffer.type.element_type, element(op.results[0].type))
+            except ValueError:
+                refuse(op, "atomic pointer view differs from equal-width floating storage")
+            buffers[op.results[0]] = buffer
+            word_views[op.results[0]] = info
+        supported.add("tt.bitcast")
+
     # Reject source memory/calls/physical pointers before adding our own memrefs.
     # An input attribute cannot authorize a synthetic runtime guard operation.
     for op in original:
         name = opcode(op)
+        if name == "tt.bitcast" and (len(op.results) != 1 or op.results[0] not in word_views):
+            refuse(op, "guarded memory requires a checked logical atomic pointer view")
         if name not in supported | controls and name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "cf"):
             refuse(op, "guarded memory has an unqualified operation/effect")
         if name.startswith("cf.") and name != "cf.assert":
             refuse(op, "guarded memory requires structured source control flow")
         for value in op.results:
-            if _pointer_type(value.type) and name not in ("tts.make_tptr", "tts.make_gather_scatter_tptr"):
+            if _pointer_type(value.type) and name not in ("tts.make_tptr", "tts.make_gather_scatter_tptr") and value not in word_views:
                 refuse(op, "guarded pointer state needs explicit base/offset normalization")
     for value in (*buffers, *(v for op in original for v in op.results if _pointer_type(v.type))):
         for use in value.uses:
             if use.index != 0 or opcode(use.operation) not in {
-                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw", "tt.atomic_cas"}:
+                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw", "tt.atomic_cas"} | ({"tt.bitcast"} if typed_atomics else set()):
                 refuse(use.operation, "pointer escaped the guarded logical buffer boundary")
 
     arguments = internal_arguments(abi)
@@ -167,8 +188,13 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
                     refuse(op, "gather operand schema is not qualified")
                 mask = op.operands[2] if segments[2] else None
                 type_ = op.results[0].type
+            element_type = buffer.type.element_type
+            if op.operands[0] in word_views:
+                if name != "tts.unstructured_atomic_rmw":
+                    refuse(op, "raw atomic word views cannot authorize ordinary memory observations")
+                element_type = {"i32": builtin.i32, "i64": builtin.i64}[word_views[op.operands[0]]["value_dtype"]]
             if (not isinstance(type_, TensorType) or type_.get_shape() != index.type.get_shape()
-                    or type_.element_type != buffer.type.element_type
+                    or type_.element_type != element_type
                     or mask is not None and mask.type != TensorType(builtin.i1, index.type.get_shape())):
                 refuse(op, "indirect memory index/value/mask types do not match")
             if index.type.element_type not in (builtin.i32, builtin.i64):
@@ -247,6 +273,8 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
         if atomic:
             from .atomic_memory import contract
             atomic_contract = contract(op, source_ids, typed=typed_atomics)
+            if op.operands[0] in word_views:
+                atomic_contract["word_view"] = word_views[op.operands[0]]
         access = describe(op, write)
         if not access.sizes or any(n <= 0 for n in access.sizes):
             refuse(op, "memory guards require a positive static tile shape")

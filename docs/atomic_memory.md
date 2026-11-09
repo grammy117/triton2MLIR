@@ -1,11 +1,12 @@
 # Private-invocation atomic memory through the tensor interface
 
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
-and the separately selected typed profile with bitwise f32/f64 exchange.
+and the separately selected typed profile with bitwise f32/f64 exchange and
+integer-word RMWs on f32/f64 storage, including Triton floating min/max.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
-Floating arithmetic atomics, external publication/synchronization and broader
+Floating addition, external publication/synchronization and broader
 alias/ownership state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
@@ -319,3 +320,52 @@ are preserved. No accelerator execution is claimed.
 [Ordinary logical word views](pointer_views.md) now supply the load/store
 foundation described above; atomic view admission and region/native legalization
 remain additional work.
+
+## Integer word updates and floating min/max
+
+The v4 `typed-atomics` profile now additionally retains all nine i32/i64 RMW
+operations on equal-width f32/f64 storage. Each source operation, access and
+payload binds a `word_view` with storage/value dtypes, element bits and
+`equal-width-elements` address units. Legacy integer-only admission still refuses
+these views. No floating-add rounding policy is inferred.
+
+The address analysis keeps the original pointer type and an event-specific
+storage/view type. Ordinary loads/stores may use storage/register bitcasts while
+an atomic retains its source integer view. Isolated native event templates
+capture the actual floating root and reconstruct the view internally; their
+retained input/output and replay bind that distinction. Runtime guards validate
+bounds, ownership and completed initialization against the actual storage buffer.
+
+After guards, each word update expands to a parallel standard tensor generic.
+Its `memref.generic_atomic_rmw` region bitcasts the current floating word to an
+integer, applies the original integer operation and bitcasts the update back.
+Exchange uses the original outside integer word. The returned old floating word
+is bitcast back to the exact source result bits; masked undefined old values
+retain the explicit integer-zero refinement. Provenance includes logical word
+views, source scope/order and the source-to-standard event correspondence.
+
+Merlin's explicit `lower_atomic_word_views` feature recognizes these closed
+regions and emits one integer LLVM atomic RMW per primitive, with internal
+linkage and a typed synchronous floating-memref borrowing boundary. It uses the
+same retained-body ownership suspension/restoration and actual-body liveness
+checks as integer CAS. The default 64-bit descriptor/index ABI remains required.
+Exported MLIR has no LLVM helper, physical reinterpretation or whole-buffer
+representation copy. The feature also handles ordinary integer CAS, and both
+explicit atomic features compose at one pre-bufferization seam.
+
+Triton's f32/f64 min/max now use this path without changing their source
+signed/unsigned, sign-conditioned algorithm. Both source RMWs, original masks
+and old values remain represented; substituting generic floating min/max could
+change NaNs and signed zero. Independent raw-integer oracles check all nine
+word operations and floating min/max, including quiet/signaling NaN payloads,
+zeros, infinities, subnormals, empty/tail grids and scalar/vector min/max.
+Actual Merlin libraries are reused across domains. Real model2MLIR min/max
+captures retain learned weights and both state/old-value tuple results.
+
+Run `shared-demo --kernel atomic-min` or `atomic-max` with guarded-buffer,
+source-words and typed-atomics. Native qualification additionally requires the
+explicit `T2M_MERLIN_ROOT` compiler-support path.
+`scripts/capture_atomic_model.py --kind min` / `--kind max` captures the model
+source for binding. Word CAS views, differently typed selected roots and broader
+address/alias contracts remain further work; floating addition requires its own
+rounding/subnormal/NaN contract. Accelerator execution remains separate.

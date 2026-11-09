@@ -30,7 +30,10 @@ def print_ir(module):
 
 def needs_isolation(module):
     from .shared_tensor import opcode
-    return any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while")
+    from .shared_tensor import _pointer_type
+    word_atomics = (any(opcode(op) == "tt.atomic_rmw" for op in module.walk())
+        and any(opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.results) for op in module.walk()))
+    return word_atomics or any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while")
                and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()) for op in module.walk())
 
 
@@ -60,6 +63,16 @@ def templates(module, source_ids):
             if not hasattr(base.owner, "operands") or opcode(base.owner) != "tt.splat":
                 refuse("isolated tensor memory needs a scalar logical entry base")
             base, = base.owner.operands
+        view_type, view = None, None
+        if hasattr(base.owner, "operands") and opcode(base.owner) == "tt.bitcast":
+            from .pointer_views import compatible, element
+            cast = base.owner
+            if len(cast.operands) != 1 or not compatible(cast.operands[0].type, base.type):
+                refuse("isolated word view requires equal-width logical storage")
+            view_type = base.type
+            base, = cast.operands
+            view = {"storage_dtype": str(element(base.type)), "value_dtype": str(element(view_type)),
+                    "element_bits": element(view_type).bitwidth, "address_units": "equal-width-elements"}
         if not isinstance(base, BlockArgument) or base.block is not entry:
             refuse("isolated memory base must be a source-entry logical buffer")
         offset_element = offset.type.element_type if isinstance(offset.type, builtin.TensorType) else offset.type
@@ -95,6 +108,8 @@ def templates(module, source_ids):
             generated = builtin.UnregisteredOp.with_name(name).create(location=op.location, **kwargs)
             body.add_op(generated)
             return generated
+        if view_type is not None:
+            local_base = emit("tt.bitcast", operands=[local_base], result_types=[view_type]).results[0]
         if opcode(op) == "tt.atomic_cas":
             from .compare_exchange import template
             returned = [template(body, op, body.args)]
@@ -126,7 +141,8 @@ def templates(module, source_ids):
             attributes={"noinline": builtin.IntegerAttr(0, builtin.i1)}, regions=[Region(body)], location=op.location))
         bindings.append({"symbol": name, "opcode": opcode(op), "source_ids": source_ids(op.location),
                          "input_types": [str(v.type) for v in captures], "result_types": [str(v.type) for v in op.results],
-                         "fill": "source-mask-select-after-zero-filled-load" if other is not None else "unchanged"})
+                         "fill": "source-mask-select-after-zero-filled-load" if other is not None else "unchanged",
+                         **({"word_view": view} if view else {})})
         calls.append((op, captures, mask, other))
     if not events:
         raise ConversionError("isolated memory conversion requires source memory events")

@@ -180,3 +180,34 @@ def region_atomic(a, b, out, n, steps, enabled, choice, shift,
         last = tl.atomic_xor(pointer, total, lane < n, sem="release", scope="sys")
         total += last
     tl.store(out + lane, total, lane < n)
+
+
+@triton.jit
+def indexed_word_atomic(x, index, state, old, n, m, B: tl.constexpr, OP: tl.constexpr,
+                        WIDTH: tl.constexpr, SCALAR: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    signed: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    unsigned: tl.constexpr = tl.uint32 if WIDTH == 32 else tl.uint64
+    word: tl.constexpr = unsigned if OP == "umax" or OP == "umin" else signed
+    at = tl.load(index + lane, lane < n, other=-123)
+    value = tl.load(x + lane, lane < n, other=0).to(word, bitcast=True)
+    pointer = (state + at).to(tl.pointer_type(word), bitcast=True)
+    active = (lane < n) & (lane % 3 != 1)
+    if OP == "add":
+        previous = tl.atomic_add(pointer, value, active, sem="acq_rel", scope="gpu")
+    elif OP == "and":
+        previous = tl.atomic_and(pointer, value, active, sem="acq_rel", scope="gpu")
+    elif OP == "or":
+        previous = tl.atomic_or(pointer, value, active, sem="acq_rel", scope="gpu")
+    elif OP == "xor":
+        previous = tl.atomic_xor(pointer, value, active, sem="acq_rel", scope="gpu")
+    elif OP == "max" or OP == "umax":
+        previous = tl.atomic_max(pointer, value, active, sem="acq_rel", scope="gpu")
+    elif OP == "min" or OP == "umin":
+        previous = tl.atomic_min(pointer, value, active, sem="acq_rel", scope="gpu")
+    else:
+        previous = tl.atomic_xchg(pointer, value, active, sem="acq_rel", scope="gpu")
+    tl.store(old + lane, previous.to(old.dtype.element_ty, bitcast=True), lane < n)

@@ -17,6 +17,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
     transformations = trace.get("transformations", [])
     if any(t.get("kind") == "logical-pointer-word-view" for t in transformations):
         differences.append("equal-width logical pointer views retain original storage tensor types and source-word offsets; loads/stores use register bitcasts rather than physical aliases or whole-buffer representation copies; source integer fill bits are selected after a masked zero-filled storage load; word-view provenance is retained")
+    if any(t.get("kind") == "logical-atomic-word-view" for t in transformations):
+        differences.append("integer word atomics retain floating tensor storage and exact source integer updates in standard generic atomic regions; word-view dtypes and unchanged element address units are explicit v4 source/access/payload facts; old words are preserved with typed inactive zero refinement; the native ownership toolchain requires Merlin's checked atomic-word-view legalization and default 64-bit descriptor/index ABI; portable MLIR contains no physical alias or opaque helper")
     selected = [t for t in transformations if t.get("kind") == "selected-pointer-memory"]
     if selected:
         differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")

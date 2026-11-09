@@ -165,14 +165,17 @@ def normalize_selected(state, source_ids):
         if name not in MEMORY_EVENTS:
             continue
         pointer = operands[op][0]
-        type_ = state.types[pointer]
+        type_ = state.memory_types.get(op, state.types[pointer])
         roots = sorted(state.bases[pointer], key=lambda value: value.index)
         offset = op.operands[0]
 
         def address(base):
             root = base
+            scalar = type_.element_type if isinstance(type_, TensorType) else type_
+            if scalar != base.type:
+                root = at(op, raw("tt.bitcast", [base], [scalar]))
             if isinstance(type_, TensorType):
-                root = at(op, raw("tt.splat", [base], [type_]))
+                root = at(op, raw("tt.splat", [root], [type_]))
             return at(op, raw("tt.addptr", [root, offset], [type_]))
 
         if len(roots) == 1:

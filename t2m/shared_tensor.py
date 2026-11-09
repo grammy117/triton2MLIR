@@ -1150,7 +1150,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         from .pointer_control import normalize_pointer_control
         from .word_events import needs_isolation
         isolated_events = needs_isolation(middle_module)
-        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events)
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics)
+        from .atomic_word_views import bind_source
+        bind_source(records, pointer_control_reports)
     scan_reports = expand_scans(middle_module, _source_ids)
     from .elementwise_map import expand_elementwise_maps
     map_reports = expand_elementwise_maps(middle_module, _source_ids)
@@ -1225,6 +1227,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         if atomics:
             from .compare_exchange import expand
             transformations.extend(expand(lowered, _source_ids))
+            from .atomic_word_views import expand as expand_word_atomics
+            transformations.extend(expand_word_atomics(lowered, admission, _source_ids))
         witness_text = text(witness) if witness is not None else None
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(lowered)
@@ -1258,7 +1262,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind": "functional-standard-memory-boundary",
                                "semantic_gate": "executable-guarded-memory-admission" if admission is not None else "existing-source-tensor-initialization-bounds-and-ownership-analysis",
                                "launcher": "internal-counts-xyz-then-ids-xyz; public-tensor-scalar-ABI"})
-    word_views = [r for r in transformations if r.get("kind") == "logical-pointer-word-view"]
+    word_views = [r for r in transformations if r.get("kind") in ("logical-pointer-word-view", "logical-atomic-word-view")]
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []

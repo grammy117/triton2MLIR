@@ -42,12 +42,12 @@ def compatible(left, right):
         return False
 
 
-def normalize(state, source_ids):
+def normalize(state, source_ids, *, typed_atomics=False):
     from .shared_tensor import _array, opcode
     from .word_events import MEMORY_EVENTS
     def refuse(op, message):
         raise ConversionError(message, opcode=opcode(op), source_id=next(iter(source_ids(op.location)), None))
-    plan = []
+    plan, reports = [], []
     for op in state.operations:
         if opcode(op) not in MEMORY_EVENTS:
             continue
@@ -59,10 +59,17 @@ def normalize(state, source_ids):
             refuse(op, "selected pointer views need one logical storage element type across all roots")
         if scalar == root.type:
             continue
-        if opcode(op) not in ("tt.load", "tt.store"):
-            refuse(op, "atomic word views require a separately qualified typed atomic region expansion")
         if not compatible(scalar, root.type):
             refuse(op, "pointer views require equal byte-aligned element widths without address-space changes")
+        view, storage = element(scalar), element(root.type)
+        if opcode(op) not in ("tt.load", "tt.store"):
+            if (not typed_atomics or opcode(op) != "tt.atomic_rmw" or view not in (builtin.i32, builtin.i64)
+                    or storage not in (builtin.f32, builtin.f64)):
+                refuse(op, "atomic word views require a separately qualified typed atomic region expansion")
+            reports.append({"kind": "logical-atomic-word-view", "source_ids": source_ids(op.location),
+                "storage_dtype": str(storage), "value_dtype": str(view), "element_bits": storage.bitwidth,
+                "address_units": "equal-width-elements", "roots": sorted(v.index for v in roots)})
+            continue
         fill = None
         if opcode(op) == "tt.load":
             segments = _array(op, "operandSegmentSizes")
@@ -71,7 +78,8 @@ def normalize(state, source_ids):
             if segments[2]:
                 fill = len(op.operands) - 1
         plan.append((op, root, element(scalar), element(root.type), fill))
-    reports = []
+        type_ = state.types[pointer]
+        state.memory_types[op] = builtin.TensorType(root.type, type_.get_shape()) if isinstance(type_, builtin.TensorType) else root.type
     for op, root, view, storage, fill in plan:
         def cast(value, element_, before=True):
             type_ = builtin.TensorType(element_, value.type.get_shape()) if isinstance(value.type, builtin.TensorType) else element_
@@ -115,11 +123,6 @@ def normalize(state, source_ids):
             "opcode": opcode(op), "storage_dtype": str(storage), "view_dtype": str(view),
             "element_bits": storage.bitwidth, "roots": sorted(v.index for v in state.bases[op.operands[0]]),
             "expansion": "original-storage-memory-event-with-register-bitcasts", "offsets": "unchanged-source-word-elements"})
-    # Only saved pointer types change. Live pointer SSA becomes i64 offsets in
-    # the existing analysis; reconstruction uses each root's actual storage.
-    for value in state.values:
-        root = min(state.bases[value], key=lambda v: v.index)
-        if all(v.type == root.type for v in state.bases[value]):
-            type_ = state.types[value]
-            state.types[value] = builtin.TensorType(root.type, type_.get_shape()) if isinstance(type_, builtin.TensorType) else root.type
+    # The same pointer can feed ordinary storage loads and integer-view atomic
+    # updates. Keep original pointer types; override reconstruction per event.
     return reports

@@ -52,7 +52,7 @@ Compatibility metadata explicitly records the logical view and fill expansion.
 The existing mixed standard-memory payload and public tensor/scalar interface
 are unchanged; this is not a claim of pure tensor memory or accelerator execution.
 
-## Qualification and remaining atomic work
+## Qualification and atomic extension
 
 Native and actual Merlin tests compare raw words for f16/i16, f32/i32 and
 f64/i64 views. They cover scalar storage of arbitrary words, NaNs, signed zeros,
@@ -62,14 +62,14 @@ zero trips, dynamic empty shapes and preserved incoming output rows. Merlin
 reuses each compiled library across inputs/shapes. Changed-width casts remain
 source-located refusals.
 
-Atomic views require a separate standard atomic-region expansion. Triton's
-floating min/max algorithm uses signed/unsigned integer RMWs on these views;
-rewriting those operations as floating min/max is not an established equivalence.
-Retain the original integer update on the current word of the floating buffer,
-then bitcast the updated word back inside the same atomic region. Expand only
-the event, preserve its returned old word, and legalize it in the native compiler
-without changing the public buffer type. Integer RMW/CAS and floating exchange
-continue through their existing qualified profiles. See [atomic memory](atomic_memory.md).
+[Atomic word RMWs](atomic_memory.md#integer-word-updates-and-floating-minmax)
+now have that separate standard region expansion on f32/f64 storage. All nine
+i32/i64 operations and Triton's floating min/max retain the current word, exact
+integer update, masks and returned old values through native and Merlin execution.
+Ordinary and atomic uses keep event-specific types even when they share a source
+pointer. Atomic views use the explicitly selected typed v4 profile and checked
+native legalization. Word CAS, changed-width views and mixed storage element
+selectors remain further extensions; provenance alone grants none of them.
 
 Measured delivery: 59 new/existing pointer cases passed in
 `.scratch/logical-word-views-final.log`; the final standalone view suite passes

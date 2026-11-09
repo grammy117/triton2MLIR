@@ -127,15 +127,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         shapes, grid = [(16,)] * 4, (2,)
         buffer_effects = {"state": "readwrite", "old": "write"}
         buffer_dtypes = {name: "i32" for name in ("state", "comparison", "value", "old")}
-    elif kernel in ("atomic-rmw", "atomic-exchange"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
         from .examples.atomic_kernels import indexed_atomic
-        fn, constants = indexed_atomic, {"B": 8, "OP": "exch" if kernel == "atomic-exchange" else "add", "SCALAR": False, "MASK": True, "FRESH": False,
+        fn, constants = indexed_atomic, {"B": 8, "OP": {"atomic-exchange": "exch", "atomic-min": "min", "atomic-max": "max"}.get(kernel, "add"), "SCALAR": False, "MASK": True, "FRESH": False,
                                          "SEM": "relaxed", "SCOPE": "gpu"}
         shapes, grid = [("n",), ("n",), ("m",), ("n",)], (GridExtent("n", 8),)
         runtime_scalars = (RuntimeScalar("n", "i32", 4, bounds=(0, 31)), RuntimeScalar("m", "i32", 5, bounds=(0, 37)))
         example_dimensions = {"n": 13, "m": 17}
         buffer_effects = {"state": "readwrite", "old": "write"}
-        buffer_dtypes = {name: "f32" if kernel == "atomic-exchange" and name != "index" else "i32"
+        buffer_dtypes = {name: "f32" if kernel in ("atomic-exchange", "atomic-min", "atomic-max") and name != "index" else "i32"
                          for name in ("x", "index", "state", "old")}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
@@ -172,7 +172,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
-    elif kernel in ("atomic-rmw", "atomic-exchange"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
         names = ["x", "index", "state", "old"]
     elif kernel == "atomic-cas":
         names = ["state", "comparison", "value", "old"]
@@ -196,10 +196,10 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         comparison[1::3] += 1
         arrays = [state, comparison, value]
         golden, additional = np.where(state == comparison, value, state), [state.copy()]
-    elif kernel in ("atomic-rmw", "atomic-exchange"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
         n, m = (example_dimensions[name] for name in ("n", "m"))
         values, index, state = np.arange(n, dtype=np.int32) - 5, np.arange(n, dtype=np.int32), np.arange(m, dtype=np.int32) + 50
-        if kernel == "atomic-exchange":
+        if kernel in ("atomic-exchange", "atomic-min", "atomic-max"):
             values, state = values.astype(np.float32), state.astype(np.float32)
         active = np.arange(n) % 3 != 1
         index[~active] = -1000
@@ -208,6 +208,10 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         old[active] = state[index[active]]
         if kernel == "atomic-exchange":
             golden[index[active]] = values[active]
+        elif kernel == "atomic-min":
+            golden[index[active]] = np.minimum(state[index[active]], values[active])
+        elif kernel == "atomic-max":
+            golden[index[active]] = np.maximum(state[index[active]], values[active])
         else:
             golden[index[active]] += values[active]
         additional = [old]
@@ -363,7 +367,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

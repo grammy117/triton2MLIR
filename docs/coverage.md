@@ -284,3 +284,15 @@ for/while recurrences. Exported MLIR retains original storage tensors and
 register bitcasts, with `prov.logical_word_views` annotations. Differing widths,
 address-space changes and atomic word views still need further contracts and
 expansions; see [logical pointer views](pointer_views.md).
+
+### Atomic logical word views
+
+The typed profile now qualifies all nine i32/i64 RMW operations on equal-width
+f32/f64 storage and Triton's floating min/max source algorithm. Native and actual
+Merlin raw-word comparisons cover NaN payloads, signed zeros, subnormals, masks
+and dynamic empty/tail grids; scalar min/max is included. Real model2MLIR
+min/max models preserve weights and both tuple results. The portable interface
+retains standard atomic regions and word-view provenance; checked native
+legalization emits one integer atomic per primitive without whole-buffer
+conversion. This does not qualify floating add, word CAS, external participants
+or accelerator execution. See [atomic memory](atomic_memory.md).

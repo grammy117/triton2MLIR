@@ -80,6 +80,9 @@ and a real model2MLIR tuple-result demo are described in
 The separate `--effect-profile typed-atomics` adds bitwise f32/f64 exchange;
 `shared-demo --kernel atomic-exchange` produces a working floating example
 with guarded-buffer/source-words memory and the unchanged public tensor ABI.
+That profile also retains integer RMWs on floating word views and source floating
+min/max; `shared-demo --kernel atomic-min` / `atomic-max` emits examples. Native
+word-region qualification uses the explicit `T2M_MERLIN_ROOT` support path.
 [Logical pointer word views](docs/pointer_views.md) also preserve equal-width
 reinterpretation through selected buffers and runtime loops, with register
 bitcasts on the original tensor storage types.
