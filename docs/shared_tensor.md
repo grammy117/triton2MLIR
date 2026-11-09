@@ -39,7 +39,13 @@ native verification, LLVM legalization and host execution, comparing against
 independent NumPy references with declared tolerances. These are example checks,
 not exhaustive numeric equivalence or Merlin/device certification.
 
-This profile currently requires:
+[Indexed read expansion](indexed_memory.md) additionally admits runtime signed
+i32/i64 offsets into read-only logical tensors, with per-lane masks/fills and
+checked active bounds. These reads can repeat indices across logical programs;
+the structured memory constraints below continue to govern writes and ordinary
+rectangular descriptors.
+
+The structured memory profile currently requires:
 
 - One to three logical grid axes, independent contiguous positive static tensor
   shapes, and structured descriptors matching logical strides up to an axis permutation.

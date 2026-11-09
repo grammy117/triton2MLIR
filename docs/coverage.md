@@ -83,11 +83,19 @@ effectful combiners or all floating-point edge policies.
 Real reverse-sum/product and noncommutative tuple-scan models additionally pass
 the model2MLIR binding and Merlin interface/runtime path, including consumption
 of both kernel results by the enclosing model.
-The principal work still needed is:
+Loaded-index reads now additionally have an
+[explicit tensor expansion](indexed_memory.md), with runtime bounds checks in
+the active branch, arbitrary boolean lane masks on `tts.gather`, exact fills,
+repeated-index reuse and multidimensional logical allocations. The rank-one
+structured gather descriptor is also supported. These cases include actual
+Merlin compiler/host execution. This does not qualify general scatter,
+writable-buffer gathers, undefined-lane propagation or all address arithmetic.
+
+The remaining boundaries are:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
-2. General strided/block descriptors, runtime shapes/scalars, arbitrary masks and irregular access with
+2. General strided/block descriptors, runtime shapes/scalars, arbitrary store masks and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.
 3. Mixed-precision, cast, richer combiner/effect and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.

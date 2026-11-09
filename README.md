@@ -43,6 +43,9 @@ explicit; accelerator staged/device execution is still unqualified.
 Standalone shared tensor packages use `qualify-merlin` and `verify-merlin` for
 the same real compiler/host path, with separate qualification evidence and no
 Torch wrapper; see [the consumer contract](docs/merlin_consumer.md).
+The [indexed-read path](docs/indexed_memory.md) additionally preserves loaded
+indices, masked fills and reuse as parallel tensor dataflow, with native and
+Merlin host checks; try `shared-demo --kernel indexed-gather`.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

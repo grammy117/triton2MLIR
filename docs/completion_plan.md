@@ -51,9 +51,9 @@ and qualified at the consumer boundary.
 
 ## Starting evidence and constraints
 
-The current consumer check calls Merlin's `forward_signature` and
+At the start of this goal, the consumer check called Merlin's `forward_signature` and
 `c_runtime.generate`; staged compilation/target execution are unperformed.
-`merlin.frontends.compile_inputs.stage_compile_inputs` currently admits only
+`merlin.frontends.compile_inputs.stage_compile_inputs` admitted only
 `m2m.capture-receipt.v1` plus its matching FX trace. The schedule-to-interface
 materializer has a narrower payload vocabulary than general tiled tensor MLIR.
 These consumer gates require work alongside frontend coverage.
@@ -77,7 +77,14 @@ Merlin, including tuple-scan results, descriptor GEMM and sequenced readwrite
 memory versions. The explicit standalone profile preserves original source and
 records its symbol-only `forward` adaptation without manufacturing a Torch trace.
 Workstream A remains open for runtime/effectful signature admission and
-accelerator staged materialization. The next frontend
-vertical slice is loaded-index memory with exact inactive-lane behavior and
-runtime bounds, then scalar/dynamic ABI expansion. Do not replace either with
-an opaque successful wrapper or treat this native host result as all-target closure.
+accelerator staged materialization.
+
+Workstream B now has loaded signed i32/i64 indexed reads from immutable logical
+tensors, including both upstream gather representations in the qualified slice.
+Native and actual Merlin host checks cover exact inactive-lane behavior, explicit
+fills, repeated indices, multidimensional allocation coordinates and active bounds.
+See [the executable contract and remaining limits](indexed_memory.md). General
+scatter/writable gathers, undefined-lane propagation, runtime scalar/dynamic ABI
+and broader numeric/effect profiles remain open. Continue with scalar/dynamic ABI
+and independently owned/effectful indexed writes; do not substitute an opaque
+wrapper or treat native host cases as all-target closure.

@@ -236,6 +236,16 @@ def check_source_addresses(module, abi):
             low, high = (0, size - 1) if kind == "tt.get_program_id" else (size, size)
         elif kind == "tt.make_range":
             low, high = op.properties["start"].value.data, op.properties["end"].value.data - 1
+        elif kind == "tt.load":
+            # An integer read has its complete source-width interval. This
+            # proves no address-arithmetic overflow by itself; later arithmetic
+            # must still fit, and the tensor gather adapter checks live indices
+            # against the actual logical allocation before extracting a value.
+            type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+            width = getattr(getattr(type_, "width", None), "data", None)
+            if width not in (32, 64):
+                raise ConversionError("loaded source indices require signed i32/i64 values", opcode=kind)
+            low, high = -(1 << (width - 1)), (1 << (width - 1)) - 1
         elif kind == "arith.constant":
             attr = op.properties["value"]
             if isinstance(attr, IntegerAttr):

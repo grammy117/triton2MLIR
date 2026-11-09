@@ -5,6 +5,17 @@ import triton.language as tl
 
 
 @triton.jit
+def indexed_gather(x, indices, out, N: tl.constexpr, B: tl.constexpr, MASKED: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    index = tl.load(indices + lane, lane < N, other=0)
+    if MASKED:
+        value = tl.load(x + index, (lane < N) & (index >= 0), other=-7.0)
+    else:
+        value = tl.load(x + index, lane < N, other=-7.0)
+    tl.store(out + lane, value, lane < N)
+
+
+@triton.jit
 def blockptr_add(x, out, N: tl.constexpr, B: tl.constexpr):
     start = tl.program_id(0) * B
     src = tl.make_block_ptr(x, shape=(N,), strides=(1,), offsets=(start,), block_shape=(B,), order=(0,))

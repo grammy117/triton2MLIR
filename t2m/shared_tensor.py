@@ -25,6 +25,7 @@ from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .scans import expand_scans
+from .shared_gather import gather, structured_gather
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
@@ -297,6 +298,7 @@ def _functionalize(module, abi):
     parallel = host_math.prod(abi.grid) > 1
     body = Block(arg_types=[IndexType(), *[b.type for b in writable]]) if parallel else outer
     mapping, buffers, descriptors, facts = {}, {}, {}, {}
+    gather_descriptors = {}
     states = {b.name: arg for b, arg in zip(abi.inputs, outer.args, strict=True)}
     for buffer in abi.buffers:
         if buffer.effect == "write":
@@ -307,7 +309,7 @@ def _functionalize(module, abi):
     initialization = DefiniteWrites(abi)
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
-    writes, reads, source_loops, source_conditionals = {}, [], [], []
+    writes, reads, source_loops, source_conditionals, source_gathers = {}, [], [], [], []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
     for arg, buffer in zip(function.regions[0].block.args, abi.buffers):
@@ -643,6 +645,25 @@ def _functionalize(module, abi):
                 mapping[op.results[0]] = value
             elif name == "tts.make_tptr":
                 descriptors[op.results[0]] = descriptor(op)
+            elif name == "tts.make_gather_scatter_tptr":
+                gather_descriptors[op.results[0]] = op
+            elif name == "tts.load" and op.operands[0] in gather_descriptors:
+                pointer = gather_descriptors[op.operands[0]]
+                if pointer.operands[0] not in buffers:
+                    raise ConversionError("structured gather base must be a declared logical allocation", opcode=name)
+                buffer = buffers[pointer.operands[0]]
+                mapping[op.results[0]] = structured_gather(op, pointer, buffer, states[buffer.name], mapping, append)
+                source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+                                       "bounds": "runtime-assert-before-active-extract",
+                                       "mask": "rectangular-prefix-branch-no-inactive-extraction",
+                                       "representation": "upstream-structured-gather-descriptor"})
+            elif name == "tts.gather" and op.operands[0] in buffers and buffers[op.operands[0]].effect == "read":
+                buffer = buffers[op.operands[0]]
+                mapping[op.results[0]] = gather(op, buffer, states[buffer.name], mapping, append)
+                source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+                                       "bounds": "runtime-assert-before-active-extract",
+                                       "mask": "per-lane-branch-no-inactive-extraction",
+                                       "repeated_indices": "immutable-reads; no-ownership-conflict"})
             elif name in ("tts.load", "tt.load", "tts.gather"):
                 if name != "tts.gather" and op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
@@ -776,6 +797,7 @@ def _functionalize(module, abi):
     output.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
+    output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
@@ -913,6 +935,9 @@ def convert_shared(source, abi, work, *, optimizer=None):
     entry = next(iter(result.ops))
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data)
+    trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data)
+    if trace["memory"]["source_gathers"]:
+        trace["memory"]["bounds"] += "; runtime-active-gather-bounds"
     trace["memory"]["output_initialization"] = json.loads(entry.attributes["prov.output_initialization"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)
