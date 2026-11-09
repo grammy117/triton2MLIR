@@ -122,3 +122,21 @@ def selected_permute(x, y, out, n, m, choice, B: tl.constexpr, MODE: tl.constexp
             pointers = tl.gather(pointers, selected, 0)
         value = tl.load(pointers, index < n, other=-7)
         tl.store(out + index, value, index < n)
+
+
+@triton.jit
+def selected_unsplat(x, y, out, n, choice, MODE: tl.constexpr):
+    index = tl.program_id(0)
+    lane = tl.full((1,), index, tl.int32)
+    if MODE == 0:
+        pointer = x + lane
+    elif MODE == 1:
+        if choice == 0:
+            pointer = x + lane
+        else:
+            pointer = y + n - 1 - lane
+    else:
+        pointer = tl.where((lane + choice) % 2 == 0, x + lane, y + n - 1 - lane)
+    scalar_pointer = tl.reshape(pointer, ())
+    value = tl.load(scalar_pointer, index < n, other=-7)
+    tl.store(out + index, value, index < n)

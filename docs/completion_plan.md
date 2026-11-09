@@ -294,6 +294,15 @@ all three memory profiles. Packed grouping and mapped source-memory events
 still need separate contracts; histogram remains unhandled. See
 [the expansion, provenance and remaining scope](elementwise_map.md).
 
+The combined memory/model regression then passed all 590 collected tests with
+all existing toolchains enabled (four legacy block-pointer warnings). Scalar
+maps were added after collection and pass their separate 14-case qualification.
+Pointer unsplat now also retains a one-element logical selector/offset through
+the unchanged upstream extraction, with 20 pointer-unsplat/control cases passing
+native and actual Merlin execution. These counts describe measured cases, not
+universal opcode/type/effect coverage. The goal remains open for aliases,
+layouts, packed/memory maps, histogram, numeric/effect profiles and target work.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

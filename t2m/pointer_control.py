@@ -69,7 +69,7 @@ def normalize_pointer_control(module, source_ids):
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
-                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather")
+                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat")
                 and any(_pointer_type(v.type) for v in (*op.results,
                     *(a for region in op.regions for block in region.blocks for a in block.args)))]
     if not controls:
@@ -90,7 +90,7 @@ def normalize_pointer_control(module, source_ids):
     bases = {v: {v} if isinstance(v, BlockArgument) and v.block is entry else set() for v in values}
     edges = {}
     shape_ops = {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.reshape", "tt.trans",
-                 "tt.cat", "tt.join", "tt.split", "tt.gather"}
+                 "tt.cat", "tt.join", "tt.split", "tt.gather", "tt.unsplat"}
 
     def block(op, index):
         if index >= len(op.regions) or len(op.regions[index].blocks) != 1:

@@ -58,6 +58,15 @@ empty domains and actual selected out-of-bounds errors. Actual Merlin libraries
 reuse independent inputs, choices, counts and shapes without recompilation;
 original input bytes and compiled library bytes remain unchanged.
 
+Pointer `tt.unsplat` now also extracts the unique logical selector/offset from a
+one-element pointer tensor. It uses the same source-word conversion and the
+upstream numeric `UnsplatConverter` (`tensor.extract`), without observing a
+physical address. Same-base, uniform-branch and lane-selected forms pass native
+and actual Merlin execution over independent empty/scalar/ragged domains. The
+pointer-unsplat/control regression passes 20 cases; one library per form handles
+all shapes and choices. The source element type and original memory event remain
+unchanged.
+
 Cat, split and repeated intra-tile gather now also retain selectors and offsets
 through native and actual Merlin libraries, over empty/scalar/ragged inputs.
 The installed optimizer predates the surveyed Meta cat/gather converters.
