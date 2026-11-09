@@ -378,7 +378,11 @@ including zero trips, empty/tail dimensions and final pointer observations.
 A fixed-point base analysis checks every branch/backedge; original word math,
 regions and source IDs remain. Merlin retains complete while destinations
 when the condition forwards state unchanged, with ordinary alias/lifetime
-checks. Mixed-base joins, broader while ownership, aliases and broader effects
+checks. Nested branch-selected pointer state and conditional reductions now
+also qualify, with original init reads, helper inlining and changing choices/counts.
+Conditional destination planning retains branches, uses complete value copies
+where needed and leaves native alias/lifetime checks enabled.
+Mixed-base joins, broader while ownership, aliases and broader effects
 still need work. See [the contract](docs/source_words.md).
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to

@@ -58,3 +58,37 @@ def branch_pointer_words(x, encoded, out, n, choice, B: tl.constexpr):
         pointer = pointer - 4 * lane.to(tl.int64)
     value = tl.load(pointer, lane < n, other=0)
     tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
+def _selected_pointer(x, lane, n, step, choice, DEEP: tl.constexpr):
+    if (step + choice) % 2 == 0:
+        pointer = x + lane
+    else:
+        if DEEP:
+            if choice > 1:
+                pointer = x + 2 * n + lane
+            else:
+                pointer = x + n + lane
+        else:
+            pointer = x + n + lane
+    return pointer
+
+
+@triton.jit
+def nested_pointer_sum(x, out, n, steps, choice, B: tl.constexpr, DEEP: tl.constexpr, FOR_LOOP: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = x + lane
+    acc = tl.full((B,), 0, tl.float32)
+    if FOR_LOOP:
+        for step in range(steps):
+            pointer = _selected_pointer(x, lane, n, step, choice, DEEP)
+            acc += tl.load(pointer, lane < n, other=0)
+    else:
+        step = 0
+        while step < steps:
+            pointer = _selected_pointer(x, lane, n, step, choice, DEEP)
+            acc += tl.load(pointer, lane < n, other=0)
+            step += 1
+    acc += tl.load(pointer, lane < n, other=0)
+    tl.store(out + lane, acc, lane < n)

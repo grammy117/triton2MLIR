@@ -24,7 +24,11 @@ policy. Independent words/shapes and pointer-loop counts reuse Merlin libraries;
 real model2MLIR GEMM captures retain contractions and loops. The default
 structured range gate is unchanged. Same-base pointer branches and runtime
 while state now also execute through Merlin, preserving masks, zero trips,
-final pointers and narrow word arithmetic. Mixed-base joins/backedges refuse;
+final pointers and narrow word arithmetic. Nested branches, pointer-returning
+helpers and conditional reductions with nonzero initial state also qualify
+through unchanged Merlin libraries over independent choices/counts/shapes.
+Reduction/init semantics and native alias/lifetime checks remain intact.
+Mixed-base joins/backedges refuse;
 broader while ownership and aliases remain open. These checks do not imply
 universal opcode/attribute coverage.
 

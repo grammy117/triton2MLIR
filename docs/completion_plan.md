@@ -202,18 +202,24 @@ complete while destinations retain reuse when the condition forwards state
 unchanged. Mixed-base pointer tensors, broader while ownership, aliases and
 broader effects remain open. Preserve useful tiling and reuse as those profiles expand.
 
-The next measured control composition is a same-base pointer chosen by a
-branch inside a runtime while: alternate between two rows, accumulate the
-selected row, and read the final pointer after the loop. Frontend conversion
-and independent native execution pass. Merlin still refuses the branch-selected
-i64 offset state's allocation lifetime (three repeating-control violations),
-even though direct generic after-state now qualifies. Preserve that refusal
-until destination/ownership analysis handles branch results and zero-trip final
-ownership; do not disable lifetime checks or count this composition as qualified.
-The local reproducer is `.scratch/nested_pointer_control_probe.py`; its generated
-source, capture, native result and failed consumer receipt are retained under
-`.scratch/nested-pointer-control/`. These disposable diagnostics are evidence
-for the next implementation, not a maintained or passing product case.
+Nested pointer branches inside runtime `for`/`while` now also qualify through
+Merlin, retaining helper inlining, selected row addresses, recurrence and final
+pointer observations. The earlier repeating-control lifetime refusal remains
+in `.scratch/nested-pointer-control/` as a diagnostic. Its resolution uses
+generic conditional destination planning: each branch must qualify before
+changes; complete computations retarget unused destinations, while captured
+values use an explicit pure value copy into carried state. The original
+branches, predicates and loop remain; native alias/lifetime checks stay enabled.
+Deeper nested branches, independent choices/counts, zero trips, empty/tail
+dimensions and actual selected-branch out-of-bounds failures are maintained tests.
+
+Conditional reductions with nonzero initial state also qualify. Their original
+reduction/init reads remain intact; a complete pure value copy supplies the
+loop destination after closing the producer graph against unknown effects and
+unproved memory captures. One unchanged Merlin library retains all results and
+inputs across independent invocations. Computed/permuted while before-state,
+broader shape/ownership, mixed-base joins, alias groups and broader effects
+remain open. Do not infer universal coverage from this composition.
 
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer

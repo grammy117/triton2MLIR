@@ -94,9 +94,14 @@ escapes refuse; intent annotations do not bypass these checks.
 Real scalar/tiled branches and runtime pointer/accumulator while loops now
 execute natively and through Merlin. One unchanged library handles zero trips,
 different loop counts, empty/tail dimensions and final pointer observations.
-Actual invalid loop accesses abort. The consumer reuses complete after-region
-destinations only when the while condition forwards the complete state unchanged;
-computed/permuted condition state needs separate consumer ownership support.
+Actual invalid loop accesses abort. Nested branches and pointer-returning helpers
+also qualify inside `for`/`while`, preserving runtime choices, accumulators and
+final observations. Consumer conditional destination planning validates every
+path before edits: complete computations reuse unused destinations, and captured
+or closed pure computed values use explicit value copies. Reductions and live
+original init reads retain their original bodies/order. Native alias/lifetime
+checks remain mandatory. The while condition must forward complete state
+unchanged; computed/permuted condition state needs separate ownership support.
 Source word wraparound and wide cancellation remain checked across branches.
 
 ## Granularity and source intent
