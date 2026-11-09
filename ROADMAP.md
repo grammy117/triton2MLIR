@@ -166,8 +166,11 @@ TF32/mixed precision cannot be legalized by dropping a precision attribute into 
 
 **Implemented slice:** masked f32 softmax with native inlining of private reduction/combiner
 helpers, exact negative-infinity fill, standard linalg reductions/math, and native numerical
-checks. General combiners/scans, numeric edge policies and optional composite recognition remain
+checks. General pure scalar associative scans now have a parallel tensor expansion,
+including reverse traversal, tuple results and retained combiner/algorithm provenance.
+Numeric edge policies and optional composite recognition remain
 capability work; no dense attention replacement or universal reduction coverage is claimed.
+See [the scan expansion and qualifications](docs/scans.md).
 
 Translate combiner regions, multi-result reductions, arg-reduction tie rules and ordered scans.
 Add fused softmax/norm kernels with tails and source-defined NaN/empty-row behavior. Recognize

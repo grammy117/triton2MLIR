@@ -100,6 +100,15 @@ def recover_extent(value, cap, offsets, facts, grid):
             if name in ("arith.minsi", "arith.maxsi"):
                 result = combine("min" if name == "arith.minsi" else "max",
                                  *(expression(operand) for operand in op.operands))
+            elif name == "arith.select":
+                predicate = v.owner.operands[0].owner
+                if (getattr(predicate, "name", "") != "arith.cmpi" or predicate.predicate.value.data != 2
+                        or expression(op.operands[1]) != Linear(1) or expression(op.operands[2]) != Linear(0)):
+                    raise ConversionError("mask select is not a signed unit-prefix comparison", opcode=name)
+                left, right = (linear(operand, facts, grid) for operand in predicate.operands)
+                # For integral indices, (start < limit ? 1 : 0) is exactly
+                # max(0,min(1,limit-start)); upstream uses this for unit tiles.
+                result = combine("max", Linear(), combine("min", Linear(1), right + left.scale(-1)))
             elif name in ("arith.addi", "arith.subi"):
                 left, right = (expression(operand) for operand in op.operands)
                 sign = -1 if name == "arith.subi" else 1

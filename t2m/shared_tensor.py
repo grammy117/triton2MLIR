@@ -24,6 +24,7 @@ from .diagnostics import ConversionError
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
+from .scans import expand_scans
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
@@ -369,7 +370,8 @@ def _functionalize(module, abi):
         if any(shape) or _array(op, "order"):
             raise ConversionError("wraparound/block-pointer bounds need a qualified tensor view adapter", opcode=opcode(op))
         buffer, sizes = buffers[base], _array(op, "sizes")
-        if len(sizes) != len(buffer.shape) or any(stride <= 0 for stride in strides):
+        if (len(sizes) != len(buffer.shape) or len(strides) != len(sizes) or
+                any(stride < 0 or stride == 0 and size != 1 for stride, size in zip(strides, sizes, strict=True))):
             raise ConversionError("descriptor requires matching logical rank and positive structured strides", opcode=opcode(op))
         total = Linear()
         for off in offsets:
@@ -389,6 +391,7 @@ def _functionalize(module, abi):
                                     [1] * len(sizes), abi.grid, physical_offsets=True)
             coordinates = [None] * len(sizes)
             for off, stride, axis in zip(offsets, strides, axes, strict=True):
+                stride = buffer.strides[axis]  # A size-one source axis may have stride zero.
                 form = off.form.divide(stride)
                 value = off.value
                 if form.dynamic and stride != 1:
@@ -416,10 +419,11 @@ def _functionalize(module, abi):
     def access(op, desc, store=False):
         buffer, sizes, offsets, strides = desc
         legacy = opcode(op) in ("tt.load", "tt.store")
+        unit = opcode(op) in ("tts.gather", "tts.scatter")
         if legacy and len(op.operands) != (2 if store else 1):
             raise ConversionError("post-loop pointer memory requires an unmasked recovered descriptor", opcode=opcode(op))
-        mask = () if legacy else _array(op, "static_mask_dims")
-        dynamic = op.operands[2:] if store else op.operands[1:1 + _array(op, "operandSegmentSizes")[1]]
+        mask = () if legacy or unit else _array(op, "static_mask_dims")
+        dynamic = () if unit else op.operands[2:] if store else op.operands[1:1 + _array(op, "operandSegmentSizes")[1]]
         if mask:
             values = iter(dynamic)
             if len(mask) != len(sizes):
@@ -457,6 +461,28 @@ def _functionalize(module, abi):
                 bounded.append(Coordinate(off.form, value))
             offsets = tuple(bounded)
         return buffer, sizes, offsets, active, axes
+
+    def unit_descriptor(op, store=False):
+        # Upstream represents all-unit tensor pointers as gather/scatter.
+        # A single zero index has no irregular indexing or write conflicts.
+        if len(op.operands) != (3 if store else 2) or op.operands[0] not in buffers:
+            raise ConversionError("gather/scatter needs a qualified tensor index/effect adapter", opcode=opcode(op))
+        buffer = buffers[op.operands[0]]
+        indices = mapping[op.operands[1]]
+        if (not isinstance(indices.type, TensorType) or not all(n == 1 for n in indices.type.get_shape())
+                or not all(n == 1 for n in buffer.shape)):
+            raise ConversionError("only all-unit, zero-index gather/scatter is qualified", opcode=opcode(op))
+        owner = indices.owner
+        if opcode(owner) == "linalg.fill":
+            index = _integer(owner.inputs[0])
+        elif isinstance(owner, arith.ConstantOp) and isinstance(owner.value, builtin.DenseIntOrFPElementsAttr):
+            index = next(iter(owner.value.get_values()))
+        else:
+            raise ConversionError("unit gather/scatter index is not established constant zero", opcode=opcode(op))
+        type_ = op.operands[2].type if store else op.results[0].type
+        if index != 0 or type_ != buffer.type:
+            raise ConversionError("unit gather/scatter index or value shape differs from the logical tensor", opcode=opcode(op))
+        return buffer, buffer.shape, tuple(Coordinate(Linear()) for _ in buffer.shape), buffer.strides
 
     def transpose(value, axes, source):
         if axes == tuple(range(len(axes))):
@@ -617,10 +643,11 @@ def _functionalize(module, abi):
                 mapping[op.results[0]] = value
             elif name == "tts.make_tptr":
                 descriptors[op.results[0]] = descriptor(op)
-            elif name in ("tts.load", "tt.load"):
-                if op.operands[0] not in descriptors:
+            elif name in ("tts.load", "tt.load", "tts.gather"):
+                if name != "tts.gather" and op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
-                buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]])
+                desc = unit_descriptor(op) if name == "tts.gather" else descriptors[op.operands[0]]
+                buffer, sizes, offsets, active, axes = access(op, desc)
                 physical = tuple(active[i] for i in inverse_permutation(axes))
                 initialization.load(buffer, tuple(off.form for off in offsets), physical,
                                     source_id=next(iter(_source_ids(op.location)), None), opcode=name)
@@ -654,10 +681,11 @@ def _functionalize(module, abi):
                         loaded = append(tensor.CastOp.build(operands=[loaded],
                                         result_types=[TensorType(buffer.type.get_element_type(), sizes)]), op).dest
                 mapping[op.results[0]] = loaded
-            elif name in ("tts.store", "tt.store"):
-                if op.operands[0] not in descriptors:
+            elif name in ("tts.store", "tt.store", "tts.scatter"):
+                if name != "tts.scatter" and op.operands[0] not in descriptors:
                     raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
-                buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]], store=True)
+                desc = unit_descriptor(op, store=True) if name == "tts.scatter" else descriptors[op.operands[0]]
+                buffer, sizes, offsets, active, axes = access(op, desc, store=True)
                 physical = tuple(active[i] for i in inverse_permutation(axes))
                 if buffer.effect == "read":
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
@@ -667,7 +695,7 @@ def _functionalize(module, abi):
                     if buffer.name in writes and writes[buffer.name][0] != footprint:
                         raise ConversionError("parallel local stores need one established owned tile per output")
                     writes[buffer.name] = (footprint, offsets, op)
-                value = mapping[op.operands[1]]
+                value = mapping[op.operands[2 if name == "tts.scatter" else 1]]
                 if active != sizes:
                     value = append(slice_op(value, [Coordinate(Linear()) for _ in sizes], active), op).result
                 value = transpose(value, inverse_permutation(axes), op)
@@ -821,12 +849,20 @@ def convert_shared(source, abi, work, *, optimizer=None):
         # for xDSL, which cannot read Triton's forward location aliases safely.
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         middle_source = work / "expanded-source/lowered.mlir"
-    check_source_addresses(parse_shared(middle_source.read_text()), abi)
+    middle_module = parse_shared(middle_source.read_text())
+    check_source_addresses(middle_module, abi)
+    scan_reports = expand_scans(middle_module, _source_ids)
+    if scan_reports:
+        stream = StringIO()
+        Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
+        middle_source = work / "expanded-scans.ttir"
+        middle_source.write_text(stream.getvalue() + "\n")
     stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer, stage="tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
+    transformations.extend(scan_reports)
     if pointer_report:
         transformations.append({**pointer_report, "source_ids": [r["id"] for r in
                                (original_inventory["operations"] if original_inventory else records)

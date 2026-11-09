@@ -75,6 +75,11 @@ Kernel-local `tt.make_tensor_descriptor`, `tt.descriptor_load` and
 add and ragged GEMM have native checks, and a real descriptor-kernel model is
 qualified through unchanged-golden comparison and the Merlin interface. External
 descriptors and descriptor gather/scatter/reduce are not covered by these cases.
+`tt.scan` / `tt.scan.return` additionally have a parallel tensor doubling
+expansion for inlined pure scalar combiners. Native checks cover f32/i32
+sum/product/maximum, forward/reverse tails, noncommutative tuple combiners on
+two axes and the no-invented-identity case. This does not qualify arbitrary
+effectful combiners or all floating-point edge policies.
 The principal work still needed is:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output

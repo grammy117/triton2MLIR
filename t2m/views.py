@@ -15,7 +15,8 @@ def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets
         size = active[source]
         bounded = size.fits(offsets[destination if physical_offsets else source], buffer.shape[destination]) \
             if isinstance(size, TailExtent) else high + size <= buffer.shape[destination]
-        return strides[source] == buffer.strides[destination] and (empty or low >= 0 and bounded)
+        matched_stride = strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1
+        return matched_stride and (empty or low >= 0 and bounded)
 
     if all(matches(i, i) for i in range(rank)):
         return tuple(range(rank))

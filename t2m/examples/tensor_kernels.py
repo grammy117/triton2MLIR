@@ -55,6 +55,41 @@ def descriptor_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constex
 
 
 @triton.jit
+def _scan_maximum(left, right):
+    return tl.maximum(left, right)
+
+
+@triton.jit
+def scan_tiles(x, out, N: tl.constexpr, B: tl.constexpr, KIND: tl.constexpr, REVERSE: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    if KIND == 0:
+        value = tl.load(x + i, i < N, other=0)
+        result = tl.cumsum(value, axis=0, reverse=REVERSE)
+    elif KIND == 1:
+        value = tl.load(x + i, i < N, other=1)
+        result = tl.cumprod(value, axis=0, reverse=REVERSE)
+    else:
+        fill = -float("inf") if x.dtype.element_ty.is_floating() else -2147483648
+        value = tl.load(x + i, i < N, other=fill)
+        result = tl.associative_scan(value, 0, _scan_maximum, reverse=REVERSE)
+    tl.store(out + i, result, i < N)
+
+
+@triton.jit
+def _compose_affine(left_a, left_b, right_a, right_b):
+    return right_a * left_a, right_a * left_b + right_b
+
+
+@triton.jit
+def tuple_scan(a, b, out_a, out_b, R: tl.constexpr, S: tl.constexpr, AXIS: tl.constexpr, REVERSE: tl.constexpr):
+    i = tl.arange(0, R)[:, None] * S + tl.arange(0, S)[None, :]
+    av, bv = tl.load(a + i), tl.load(b + i)
+    result_a, result_b = tl.associative_scan((av, bv), AXIS, _compose_affine, reverse=REVERSE)
+    tl.store(out_a + i, result_a)
+    tl.store(out_b + i, result_b)
+
+
+@triton.jit
 def matrix_add(x, y, out, M: tl.constexpr, N: tl.constexpr):
     row = tl.arange(0, M)[:, None]
     col = tl.arange(0, N)[None, :]
