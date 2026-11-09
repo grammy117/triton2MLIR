@@ -27,7 +27,8 @@ The full list of differences is also embedded in each package's `compatibility.j
 `t2m.shared-tensor-abi.v2` adds a `write` buffer effect for fresh model results.
 These buffers become results without incoming function arguments. Conversion checks every
 observed load against preceding stores and proves complete coverage from bounded, disjoint
-tiles and equal total cardinality. Unwritten holes or initial reads are refused. `readwrite`
+tiles with equal total cardinality, or an exact clipped-prefix partition for ragged tails.
+Unwritten holes or initial reads are refused. `readwrite`
 continues to preserve incoming storage values. Existing v1 read/readwrite specs retain their
 canonical serialization; package receipts continue to describe the actual materialized ABI.
 
@@ -35,6 +36,16 @@ The [bound-model profile](model_integration.md) keeps model2MLIR's actual core
 data files, function ABI and learned weights. It uses a distinct
 `t2m.bound-model-receipt.v1`, with original capture/FX evidence retained under
 `parent/` and explicit TTIR binding/native/consumer evidence for the derived IR.
+
+`t2m.shared-tensor-provenance.v2` is used when original TTIR needs an official
+intake rewrite before the shared optimizer can parse it. It records the original
+native-verified typed operations, block/region structure and exact source bytes,
+plus a separate normalized operation inventory. The native binding does not
+expose complete original attribute dictionaries; those remain in `source.ttir`,
+and this limitation is explicit. `prov.normalized_ids` / `prov.normalized_ops`
+and emission/memory facts reference the normalized graph. They are not presented
+as original-operation correspondence. The package receipt/functional ABI remain
+unchanged; the difference is source provenance and normalization evidence.
 
 ## Shared core artifacts
 

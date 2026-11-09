@@ -4,11 +4,95 @@ from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 import hashlib
+import json
+import os
 import struct
+import subprocess
+import sys
 
 from .diagnostics import ConversionError
 
 PINNED_TRITON = "3.7.1"
+
+
+def _expand_tensor_pointers(path, inventory_path):
+    """Worker-only official, pre-layout rewrite; never invoke a target backend."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+    ir, context = _context()
+    from triton._C.libtriton import passes
+    module = ir.parse_mlir_module(str(Path(path).resolve()), context)
+    if not module.verify():
+        raise ConversionError("Triton rejected the original tensor-pointer source")
+    operations = []
+    module.walk(operations.append)
+    if not any(op.get_name() in ("tt.make_tensor_ptr", "tt.advance") for op in operations):
+        raise ConversionError("input does not use the supported tensor-pointer normalization")
+    values, blocks, records, regions = {}, {}, [], {}
+
+    def value_id(value):
+        return values.setdefault(value.id(), f"original.ttir.value.{len(values):04d}")
+
+    def region_id(region):
+        return regions.setdefault(region.id(), f"original.ttir.region.{len(regions):04d}")
+
+    for op in operations:
+        owned_regions = [region_id(op.get_region(i)) for i in range(op.get_num_regions())]
+        if op.get_name() == "builtin.module":
+            continue
+        block = op.get_block()
+        if block.id() not in blocks:
+            args = [block.get_argument(i) for i in range(block.get_num_arguments())]
+            blocks[block.id()] = {"id": f"original.ttir.block.{len(blocks):04d}",
+                                  "parent_region": region_id(block.get_parent()),
+                                  "arguments": [{"id": value_id(v), "type": str(v.get_type())} for v in args]}
+        inputs = [op.get_operand(i) for i in range(op.get_num_operands())]
+        outputs = [op.get_result(i) for i in range(op.get_num_results())]
+        records.append({"id": f"original.ttir.op.{len(records):04d}", "opcode": op.get_name(),
+                        "block": blocks[block.id()]["id"], "regions": owned_regions,
+                        "inputs": [value_id(v) for v in inputs], "outputs": [value_id(v) for v in outputs],
+                        "input_types": [str(v.get_type()) for v in inputs],
+                        "output_types": [str(v.get_type()) for v in outputs]})
+    Path(inventory_path).write_text(json.dumps({"operations": records, "blocks": list(blocks.values()),
+        "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries"}, indent=2) + "\n")
+    manager = ir.pass_manager(context)
+    passes.ttir.add_rewrite_tensor_pointer(manager)
+    manager.run(module, "triton2mlir-expand-tensor-pointers")
+    if not module.verify():
+        raise ConversionError("official tensor-pointer rewrite produced invalid IR")
+    return str(module)  # Keep source NameLocs; str_nodebug discards provenance.
+
+
+def expand_tensor_pointers(source, work):
+    """Bound the pinned official pass in a child; retain exact input/output."""
+    source, work = Path(source), Path(work)
+    data = source.read_bytes()
+    if not 0 < len(data) <= 4 * 1024 * 1024:
+        raise ConversionError("tensor-pointer input must be nonempty and at most 4MiB")
+    work.mkdir(parents=True, exist_ok=False)
+    saved, output = work / "source.ttir", work / "lowered.mlir"
+    saved.write_bytes(data)
+    command = [sys.executable, "-c",
+               "import sys; sys.path.insert(0, sys.argv[1]); "
+               "from t2m.frontend import _expand_tensor_pointers; "
+               "sys.stdout.write(_expand_tensor_pointers(sys.argv[2], sys.argv[3]))",
+               str(Path(__file__).resolve().parents[1]), str(saved.resolve()), str((work / "inventory.json").resolve())]
+    with output.open("xb") as stdout, (work / "stderr.log").open("xb") as stderr:
+        try:
+            process = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=30,
+                                     env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
+                                              TMPDIR=str(work.resolve())))
+        except subprocess.TimeoutExpired as exc:
+            raise ConversionError("official tensor-pointer rewrite exceeded 30 seconds") from exc
+    if process.returncode or not output.stat().st_size:
+        raise ConversionError("official tensor-pointer rewrite failed; inspect " + str(work / "stderr.log"))
+    report = {"schema": "t2m.intake-pass.v1", "triton_version": PINNED_TRITON,
+              "pass": "triton-rewrite-tensor-pointer", "target_backend": "not-invoked",
+              "source_sha256": hashlib.sha256(data).hexdigest(),
+              "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
+    (work / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    return report
 
 
 def _context():

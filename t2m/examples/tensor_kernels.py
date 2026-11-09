@@ -5,6 +5,32 @@ import triton.language as tl
 
 
 @triton.jit
+def blockptr_add(x, out, N: tl.constexpr, B: tl.constexpr):
+    start = tl.program_id(0) * B
+    src = tl.make_block_ptr(x, shape=(N,), strides=(1,), offsets=(start,), block_shape=(B,), order=(0,))
+    dst = tl.make_block_ptr(out, shape=(N,), strides=(1,), offsets=(start,), block_shape=(B,), order=(0,))
+    value = tl.load(src, boundary_check=(0,), padding_option="zero")
+    tl.store(dst, value + 1, boundary_check=(0,))
+
+
+@triton.jit
+def blockptr_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr,
+                    BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):
+    m, n = tl.program_id(0) * BM, tl.program_id(1) * BN
+    a = tl.make_block_ptr(x, shape=(M, K), strides=(K, 1), offsets=(m, 0), block_shape=(BM, BK), order=(1, 0))
+    b = tl.make_block_ptr(y, shape=(K, N), strides=(N, 1), offsets=(0, n), block_shape=(BK, BN), order=(1, 0))
+    c = tl.make_block_ptr(out, shape=(M, N), strides=(N, 1), offsets=(m, n), block_shape=(BM, BN), order=(1, 0))
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for _ in range(0, tl.cdiv(K, BK)):
+        av = tl.load(a, boundary_check=(0, 1), padding_option="zero")
+        bv = tl.load(b, boundary_check=(0, 1), padding_option="zero")
+        acc = tl.dot(av, bv, acc, input_precision="ieee")
+        a = tl.advance(a, (0, BK))
+        b = tl.advance(b, (BK, 0))
+    tl.store(c, acc, boundary_check=(0, 1))
+
+
+@triton.jit
 def matrix_add(x, y, out, M: tl.constexpr, N: tl.constexpr):
     row = tl.arange(0, M)[:, None]
     col = tl.arange(0, N)[None, :]

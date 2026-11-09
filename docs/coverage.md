@@ -66,6 +66,10 @@ have native checks for ragged M/N/K GEMM, transposed weights, nonzero-fill
 reductions, branch-local stores, partial output preservation and surplus inactive
 programs. Tiling and K-loop reuse remain executable structure. Fresh outputs use
 a symbolic clipped-partition proof rather than nominal tile cardinality.
+Legacy `tt.make_tensor_ptr` and `tt.advance` now pass an official pinned-Triton
+intake rewrite, followed by the same tensor adapter. Block-pointer ragged GEMM
+has native numerical checks with the source grid/K loop retained. Provenance v2
+separates original and normalized inventories instead of equating their IDs.
 The principal work still needed is:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output

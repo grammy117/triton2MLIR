@@ -21,6 +21,7 @@ from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
+from .frontend import expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
@@ -177,7 +178,7 @@ def _integer(value):
 def _source_ids(location):
     if isinstance(location, NameLoc):
         name = location.desc.data
-        return [name] if name.startswith("ttir.op.") else _source_ids(location.location)
+        return [name] if name.startswith(("ttir.op.", "normalized.ttir.op.")) else _source_ids(location.location)
     if isinstance(location, builtin.FusedLoc):
         return list(dict.fromkeys(s for loc in location.locations for s in _source_ids(loc)))
     if isinstance(location, builtin.CallSiteLoc):
@@ -185,7 +186,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi):
+def _preflight(module, abi, *, id_prefix="ttir.op."):
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
     entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
@@ -214,7 +215,7 @@ def _preflight(module, abi):
     for op in module.walk():
         if op is module:
             continue
-        source_id, name = f"ttir.op.{len(records):04d}", opcode(op)
+        source_id, name = f"{id_prefix}{len(records):04d}", opcode(op)
         records.append({"id": source_id, "opcode": name, "location": str(op.location),
                         "inputs": [values[v] for v in op.operands], "outputs": [values[v] for v in op.results],
                         "input_types": [str(v.type) for v in op.operands],
@@ -786,9 +787,24 @@ def convert_shared(source, abi, work, *, optimizer=None):
     work.mkdir(parents=True, exist_ok=False)
     optimizer = inspect_optimizer(optimizer)
     source_text = Path(source).read_bytes().decode("utf-8")
-    intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
-    parsed = parse_shared((work / "source/lowered.mlir").read_text())
-    records = _preflight(parsed, abi)
+    pointer_report, original_inventory = None, None
+    try:
+        intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
+        source_ir = work / "source/lowered.mlir"
+    except ConversionError as original_error:
+        # Some shared distributions removed legacy block-pointer operations.
+        # The pinned Triton frontend still verifies and expands them officially.
+        try:
+            pointer_report = expand_tensor_pointers(source, work / "tensor-pointers")
+        except ConversionError:
+            raise original_error
+        original_inventory = json.loads((work / "tensor-pointers/inventory.json").read_text())
+        if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
+            raise ConversionError("original source changed during tensor-pointer normalization")
+        intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
+        source_ir = work / "expanded-source/lowered.mlir"
+    parsed = parse_shared(source_ir.read_text())
+    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.")
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -798,12 +814,24 @@ def convert_shared(source, abi, work, *, optimizer=None):
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(parsed)
     annotated.write_text(stream.getvalue() + "\n")
     lower_with_shared(annotated, work / "inline", optimizer=optimizer, stage="inline")
-    check_source_addresses(parse_shared((work / "inline/lowered.mlir").read_text()), abi)
-    stage = lower_with_shared(work / "inline/lowered.mlir", work / "tensor-ir", optimizer=optimizer, stage="tensor-ir")
+    middle_source = work / "inline/lowered.mlir"
+    if not pointer_report and any(r["opcode"] in ("tt.make_tensor_ptr", "tt.advance") for r in records):
+        pointer_report = expand_tensor_pointers(middle_source, work / "tensor-pointers")
+        # Native generic/local-scope printing resolves debug-location aliases
+        # for xDSL, which cannot read Triton's forward location aliases safely.
+        lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
+        middle_source = work / "expanded-source/lowered.mlir"
+    check_source_addresses(parse_shared(middle_source.read_text()), abi)
+    stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer, stage="tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
+    if pointer_report:
+        transformations.append({**pointer_report, "source_ids": [r["id"] for r in
+                               (original_inventory["operations"] if original_inventory else records)
+                               if r["opcode"] in ("tt.make_tensor_ptr", "tt.advance")],
+                               "source_descriptor_intent": "retained-in-exact-original-source-and-typed-inventory"})
     result = _functionalize(lowered, abi)
     emitted = []
     source_names = {r["id"]: r["opcode"] for r in records}
@@ -815,6 +843,16 @@ def convert_shared(source, abi, work, *, optimizer=None):
         op.attributes["prov.region_id"] = StringAttr(f"kernel:{abi.entry}")
         op.attributes["prov.emitted_id"] = StringAttr(f"mlir.op.{len(emitted):04d}")
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
+    if original_inventory:
+        # Expanded operations are a distinct graph, never the original TTIR.
+        for op in result.walk():
+            if "prov.source_ids" in op.attributes:
+                op.attributes["prov.normalized_ids"] = op.attributes.pop("prov.source_ids")
+            if "prov.original_ops" in op.attributes:
+                op.attributes["prov.normalized_ops"] = op.attributes.pop("prov.original_ops")
+        for record in emitted:
+            record["normalized_ids"] = record.pop("source_ids")
+        result.attributes["prov.original_source_sha256"] = StringAttr(hashlib.sha256(source_text.encode()).hexdigest())
     trace = {"schema": "t2m.shared-tensor-provenance.v1", "source_operations": records,
              "emitted_operations": emitted,
              "transformations": transformations,
@@ -831,6 +869,11 @@ def convert_shared(source, abi, work, *, optimizer=None):
              "numeric_equivalence": "requires-qualification-against-source",
              "native_verification": "not-performed", "consumer_execution": "not-performed",
              "abi_difference": "readwrite buffers are incoming tensors; write-only outputs omit inputs only with complete initialization checks"}
+    if original_inventory:
+        trace.update(schema="t2m.shared-tensor-provenance.v2", normalized_operations=records,
+                     source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
+                     original_attributes=original_inventory["attributes"],
+                     correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
     entry = next(iter(result.ops))
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data)

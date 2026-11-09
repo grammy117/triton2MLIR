@@ -184,6 +184,7 @@ def check_source_addresses(module, abi):
 
     function = next(op for op in module.ops if name(op) == "tt.func")
     facts = {v: (n, n) for v, n in zip(function.regions[0].block.args[len(abi.buffers):], abi.scalar_constants, strict=True)}
+    pending = set()
 
     def bounds(value):
         if value in facts:
@@ -191,7 +192,7 @@ def check_source_addresses(module, abi):
         op = value.owner
         if not hasattr(op, "name"):
             parent = op.parent_op()
-            if parent is None or parent.name != "scf.for" or value.index != 0:
+            if parent is None or parent.name != "scf.for":
                 raise ConversionError("source memory index needs a loop/runtime range proof")
             limits = [bounds(v) for v in parent.operands[:3]]
             if any(lo != hi for lo, hi in limits):
@@ -199,7 +200,33 @@ def check_source_addresses(module, abi):
             lb, ub, step = (lo for lo, _ in limits)
             if step <= 0 or ub <= lb:
                 raise ConversionError("source memory loop needs a positive nonempty iteration domain")
-            result = lb, lb + ((ub - lb - 1) // step) * step
+            iterations = (ub - lb + step - 1) // step
+            if value.index == 0:
+                result = lb, lb + (iterations - 1) * step
+            else:
+                if value in pending:
+                    raise ConversionError("source memory recurrence has cyclic/unproved increments")
+                pending.add(value)
+                initial = bounds(parent.operands[value.index + 2])
+                yielded = parent.body.block.last_op.operands[value.index - 1]
+                delta = (0, 0)
+                if yielded is not value:
+                    update = yielded.owner
+                    if getattr(update, "name", "") == "arith.addi" and value in update.operands:
+                        delta = bounds(update.operands[1] if update.operands[0] is value else update.operands[0])
+                    elif getattr(update, "name", "") == "arith.subi" and update.operands[0] is value:
+                        lo, hi = bounds(update.operands[1])
+                        delta = -hi, -lo
+                    else:
+                        raise ConversionError("source memory recurrence needs an invariant affine increment")
+                if delta[0] != delta[1]:
+                    raise ConversionError("source memory recurrence increment is not invariant")
+                span = (iterations - 1) * delta[0]
+                result = initial[0] + min(0, span), initial[1] + max(0, span)
+                pending.remove(value)
+            width = getattr(getattr(value.type, "width", None), "data", 64)
+            if not -(1 << (width - 1)) <= result[0] <= result[1] < 1 << (width - 1):
+                raise ConversionError("source address recurrence may overflow before upstream index promotion")
             facts[value] = result
             return result
         kind = name(op)

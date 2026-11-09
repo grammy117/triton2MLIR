@@ -113,6 +113,28 @@ upstream poison initializer is discarded only when all uses initialize pointer
 arguments proved unused inside positive-trip-count loops. Observable poison
 never becomes a zero or another invented value.
 
+## Legacy block pointers and official intake normalization
+
+`tt.make_tensor_ptr` / `tt.advance` now use Triton 3.7.1's official
+[`triton-rewrite-tensor-pointer` pass](https://github.com/triton-lang/triton/blob/v3.7.1/lib/Dialect/Triton/Transforms/RewriteTensorPointer.cpp).
+It expands descriptor shape/stride/offsets, boundary-check axes and padding into
+ordinary pre-layout pointer arithmetic and masks. No GPU layout or target backend
+is selected. Existing tensor memory, tail/ownership and recurrence analyses then
+emit the same portable tiled `tensor` / `linalg` / `scf` computation.
+
+The installed shared optimizer does not recognize these legacy operations.
+A bounded, isolated pinned-Triton worker therefore verifies and inventories the
+original source before running the official pass. The original graph and exact
+source, including block shape/order and control flow, remain separate from the
+normalized graph consumed by shared. [Provenance v2](package.md) makes that
+boundary and the native attribute-binding limitation explicit. Diagnostic files
+retain the shared tool's original rejection and the normalization report.
+
+Native tests cover masked block-pointer add with inactive programs and ragged
+M/N/K GEMM with loop-carried `advance`. Grids, fixed source tiles and the K loop
+remain executable structure. Incorrect declared dimensions are refused; source
+loop-carried affine offset bounds also check integer overflow before promotion.
+
 ## Dynamic rectangular tails
 
 The adapter now recognizes the signed affine clamp emitted by upstream

@@ -64,6 +64,10 @@ recurrences and clipped affine tail masks now have native checks. Ragged M/N/K G
 its K loop and tile sizes, including transposed weights. The next boundaries are runtime
 scalars/shapes, arbitrary masks, grouped or
 nonlinear indexing, block/irregular descriptors, general while/pointer state and numeric profiles.
+Legacy `make_block_ptr` / `advance` now have an official pre-layout normalization
+path with native ragged GEMM checks. Original and normalized source inventories
+remain explicit in provenance v2. General tensor descriptors and irregular memory
+are still separate capabilities.
 
 An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
 arguments and missing source correspondence must remain explicit. Native toolchain builds require

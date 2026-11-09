@@ -17,6 +17,7 @@ REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.j
             "spec.json", "provenance.json", "compatibility.json", "meta.json", "execution.json"}
 DIFFERENCES = [
     "t2m.capture-receipt.v2 and TTIR provenance; not the model2MLIR FX receipt/trace schemas",
+    "provenance v2 separates original native TTIR inventory from normalized graph IDs when an official intake pass is required",
     "entry retains the kernel name; fresh write outputs omit input storage after initialization checks",
     "writable tensor results follow buffer declaration order; readwrite destinations retain incoming values",
     "scalar_constants specialize source integer arguments; they are not runtime tensor arguments",

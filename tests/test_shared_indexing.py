@@ -22,3 +22,30 @@ def test_source_integer_overflow_is_checked_before_pointer_reraising():
     check_source_addresses(module, TensorABI("kernel", (buffer,), scalar_constants=(2,)))
     with pytest.raises(ConversionError, match="overflow before upstream index promotion"):
         check_source_addresses(module, TensorABI("kernel", (buffer,), scalar_constants=(2**30,)))
+
+
+@pytest.mark.parametrize("increment", [8, 2**30])
+def test_source_loop_carried_offset_bounds_include_the_affine_recurrence(increment):
+    module = parse_shared(f'''"builtin.module"() ({{
+      "tt.func"() <{{sym_name = "kernel", function_type = (!tt.ptr<f32>) -> ()}}> ({{
+      ^bb0(%p: !tt.ptr<f32>):
+        %zero = arith.constant 0 : index
+        %three = arith.constant 3 : index
+        %one = arith.constant 1 : index
+        %initial = arith.constant 0 : i32
+        %step = arith.constant {increment} : i32
+        %final = scf.for %i = %zero to %three step %one iter_args(%offset = %initial) -> (i32) {{
+          %ptr = "tt.addptr"(%p, %offset) : (!tt.ptr<f32>, i32) -> !tt.ptr<f32>
+          %value = "tt.load"(%ptr) : (!tt.ptr<f32>) -> f32
+          %next = arith.addi %offset, %step : i32
+          scf.yield %next : i32
+        }}
+        "tt.return"() : () -> ()
+      }}) : () -> ()
+    }}) : () -> ()''')
+    abi = TensorABI("kernel", (TensorBuffer("x", (32,), "readwrite"),))
+    if increment == 8:
+        check_source_addresses(module, abi)
+    else:
+        with pytest.raises(ConversionError, match="recurrence may overflow"):
+            check_source_addresses(module, abi)
