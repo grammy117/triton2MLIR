@@ -66,10 +66,45 @@ python -m t2m invoke-merlin out/runtime_affine_merlin \
 python -m t2m verify-merlin-invocation out/new-invocation
 ```
 
-Dynamic shapes/strides/grid sizes and runtime-controlled address/loop domains
-remain open. Next: guarded scalar domain bounds and exact runtime prefix masks;
-then symbolic tensor dimensions and launch extents linked to actual argument
-shapes, dynamic allocations/results, and one compiled library invoked over
-independent shapes. These need executable guards, initialization/
-ownership proofs and consumer allocation/binding changes. Captured constants
-in place of runtime dimensions do not satisfy that gate.
+## Guarded memory domains (ABI v4)
+
+Bounded signed integer parameters use `t2m.shared-tensor-abi.v4`:
+`RuntimeScalar("n", "i32", 1, bounds=(0, 13))`. Bounds are inclusive, typed and
+explicit. Entry `arith.cmpi` / `cf.assert` operations enforce them before source
+memory operations. Merlin retains the interval in its invocation signature and
+also checks it before calling the compiled library. This is an executable ABI
+premise, not provenance used as a proof or capture of one runtime value.
+
+Symbolic range analysis now keeps guarded parameters separate from source loop
+IVs and program IDs. Shared `MaskAnalysis` at Meta `17f0c234` already supplies
+the correct `max(min(start+tile,n),start)-start` expression, including inactive
+tiles. The adapter recovers the exact clipped prefix with a symbolic limit and
+rebuilds it for parallel publication. It preserves the logical grid, tile size,
+explicit fill, source arithmetic and incoming readwrite values outside the mask.
+Parameter offsets cannot masquerade as a complete fresh-output partition.
+
+The `runtime-prefix` demo takes `(x, n, out)` in TTIR and exports
+`(tensor<13xf32>, tensor<13xf32>, i32) -> tensor<13xf32>`. The shape here is the
+allocation capacity. A single compiled library handles `n=0`, tails and full
+capacity, returning untouched incoming output elements outside `[0,n)`.
+Broader intervals can admit negative limits: the prefix is then empty. Proved
+empty launches have disjoint empty writes even when every offset is identical;
+their ownership annotation states that actual proof instead of inventing a tile
+partition. Fresh outputs still require complete initialization of every result.
+
+Native and actual Merlin host checks cover i32/i64 domains, surplus inactive
+programs, negative/all-inactive limits, source guards and per-invocation bounds,
+preserved inputs, and multiple domain sizes using exactly the same library.
+The source receipt, compiler view and original qualification remain immutable.
+
+```bash
+python -m t2m shared-demo --kernel runtime-prefix --out out/runtime_prefix \
+  --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python
+```
+
+Dynamic tensor shapes/strides/grid sizes, general source while/loop bounds and
+indexed writes remain open. Next: symbolic tensor dimensions and launch extents
+linked to actual argument shapes, dynamic allocations/results, and one compiled
+library invoked over independent shapes. Those need initialization/ownership
+proofs and consumer allocation/binding changes. Allocation capacities above are
+static; runtime prefix lengths do not close the dynamic-shape gate.

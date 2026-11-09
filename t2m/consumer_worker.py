@@ -87,6 +87,9 @@ def execute_model(staged, work, arguments, *, evaluation=None):
     for array, declared in zip(arrays, signature["inputs"], strict=True):
         if list(array.shape) != declared["shape"] or array.dtype != dtypes[declared["dtype"]]:
             raise ValueError("Merlin host evaluator argument differs from staged ABI")
+        if declared.get("kind") == "scalar" and "bounds" in declared:
+            if not declared["bounds"][0] <= array.item() <= declared["bounds"][1]:
+                raise ValueError("Merlin host runtime scalar is outside its guarded ABI bounds")
     outputs = [np.zeros(value["shape"], dtype=dtypes[value["dtype"]]) for value in signature["outputs"]]
     if sum(a.nbytes for a in [*arrays, *outputs]) > 128 * 1024 * 1024:
         raise ValueError("Merlin host invocation exceeds its 128MiB array budget")

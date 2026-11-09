@@ -108,6 +108,13 @@ artifact relations identify the exact original qualified library. New inputs,
 references and observed results are evaluator artifacts; the source capture and
 original compiler/qualification directory remain immutable.
 
+ABI v4 extends runtime scalar declarations with an optional inclusive signed
+integer `bounds` interval. The frontend emits entry assertions and scalar/tile
+analysis retains symbolic parameters. Merlin invocation signatures retain those
+intervals and validate values. This permits runtime memory prefixes over static
+logical allocation capacities; readwrite outputs preserve incoming values
+outside the active prefix. Tensor shapes/launch sizes are not relabeled dynamic.
+
 ## Provenance schema (`t2m.provenance.v1`)
 
 The trace contains the canonical TTIR and spec hashes, tool versions, intent and its origin,

@@ -84,18 +84,25 @@ tensors, including both upstream gather representations in the qualified slice.
 Native and actual Merlin host checks cover exact inactive-lane behavior, explicit
 fills, repeated indices, multidimensional allocation coordinates and active bounds.
 See [the executable contract and remaining limits](indexed_memory.md). General
-scatter/writable gathers, undefined-lane propagation, runtime scalar/dynamic ABI
-and broader numeric/effect profiles remain open. Continue with scalar/dynamic ABI
+scatter/writable gathers, undefined-lane propagation, true dynamic tensor ABI
+and broader numeric/effect profiles remain open. Continue with dynamic tensor ABI
 and independently owned/effectful indexed writes; do not substitute an opaque
 wrapper or treat native host cases as all-target closure.
 
 Workstream C now has typed by-value runtime scalar inputs, source-position
 bindings for interleaved pointer/scalar signatures, and actual native/Merlin
 checks for payload and source branch uses. ABI v3 states the difference from
-tensor-only signatures explicitly; values remain evaluator data. Dynamic shapes,
-strides/grids, address/loop-domain bounds and broader alias/mutation remain open.
+tensor-only signatures explicitly; values remain evaluator data.
 See [the runtime ABI and next dependencies](runtime_abi.md).
 The same qualified library can now be replayed with independent argument/reference
 archives and no compiler, preserving the original qualification and recording
-new evaluator-only receipts. This proves scalar values vary without recompilation;
-dynamic tensor shapes and runtime address domains still need their own changes.
+new evaluator-only receipts. This proves scalar values vary without recompilation.
+
+Workstream C now additionally has guarded signed integer domain parameters
+(ABI v4), exact symbolic runtime prefixes, untouched readwrite output preservation,
+and native/Merlin checks over empty, tail and full domains using the same library.
+Negative and proved-empty domains retain their actual semantics and ownership
+evidence. General source loop/while domains, strides and alias/mutation remain
+open. The remaining dynamic-shape work must introduce dimensions bound to
+actual tensor extents, corresponding runtime launch bounds and result allocation;
+it cannot relabel static capacities as dynamic tensors. See [the runtime contract](runtime_abi.md).

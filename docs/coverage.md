@@ -96,6 +96,10 @@ The remaining boundaries are:
 [Runtime scalar ABI v3](runtime_abi.md) now has f32/f64/i32 payload and i1
 source-branch execution cases through Merlin. Runtime values are not specialized;
 dynamic shape/stride/grid and address-domain profiles still require separate work.
+Guarded i32/i64 prefix domains (ABI v4) now additionally have native and Merlin
+checks, including empty/tail/full domains, preserved outputs and negative limits.
+They vary memory domains over static capacities; actual dynamic tensor shapes,
+general indexed writes and runtime loop domains remain open.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.

@@ -13,10 +13,12 @@ class Linear:
     programs: tuple[int, ...] = (0, 0, 0)
     # (identity, lower, upper, coefficient) for bounded source loop IVs.
     loops: tuple[tuple[int, int, int, int], ...] = ()
+    # (ABI name, lower, upper, coefficient) for guarded by-value parameters.
+    parameters: tuple[tuple[str, int, int, int], ...] = ()
 
     @property
     def dynamic(self):
-        return any(self.programs) or bool(self.loops)
+        return any(self.programs) or bool(self.loops) or bool(self.parameters)
 
     def __add__(self, other):
         loops = {identity: (low, high, coefficient) for identity, low, high, coefficient in self.loops}
@@ -27,25 +29,37 @@ class Linear:
                     raise ConversionError("inconsistent source loop range")
                 coefficient += old_coefficient
             loops[identity] = low, high, coefficient
+        parameters = {name: (low, high, coefficient) for name, low, high, coefficient in self.parameters}
+        for name, low, high, coefficient in other.parameters:
+            if name in parameters:
+                previous_low, previous_high, previous_coefficient = parameters[name]
+                if (low, high) != (previous_low, previous_high):
+                    raise ConversionError("inconsistent guarded runtime parameter range")
+                coefficient += previous_coefficient
+            parameters[name] = low, high, coefficient
         return Linear(self.constant + other.constant,
                       tuple(a + b for a, b in zip(self.programs, other.programs, strict=True)),
-                      tuple((i, lo, hi, c) for i, (lo, hi, c) in sorted(loops.items()) if c))
+                      tuple((i, lo, hi, c) for i, (lo, hi, c) in sorted(loops.items()) if c),
+                      tuple((name, lo, hi, c) for name, (lo, hi, c) in sorted(parameters.items()) if c))
 
     def scale(self, amount):
         return Linear(self.constant * amount, tuple(a * amount for a in self.programs),
-                      tuple((i, lo, hi, c * amount) for i, lo, hi, c in self.loops if c * amount))
+                      tuple((i, lo, hi, c * amount) for i, lo, hi, c in self.loops if c * amount),
+                      tuple((name, lo, hi, c * amount) for name, lo, hi, c in self.parameters if c * amount))
 
     def divide(self, amount):
-        if amount <= 0 or any(n % amount for n in (self.constant, *self.programs, *(c for _, _, _, c in self.loops))):
+        if amount <= 0 or any(n % amount for n in (self.constant, *self.programs, *(c for _, _, _, c in self.loops), *(c for _, _, _, c in self.parameters))):
             raise ConversionError("element offsets do not align with declared logical axes")
         return Linear(self.constant // amount, tuple(n // amount for n in self.programs),
-                      tuple((i, lo, hi, c // amount) for i, lo, hi, c in self.loops))
+                      tuple((i, lo, hi, c // amount) for i, lo, hi, c in self.loops),
+                      tuple((name, lo, hi, c // amount) for name, lo, hi, c in self.parameters))
 
     def bounds(self, grid):
         grid = (*grid, *((1,) * (3 - len(grid))))
         spans = [coefficient * (size - 1) for coefficient, size in zip(self.programs, grid, strict=True)]
-        return (self.constant + sum(min(0, n) for n in spans) + sum(min(lo * c, hi * c) for _, lo, hi, c in self.loops),
-                self.constant + sum(max(0, n) for n in spans) + sum(max(lo * c, hi * c) for _, lo, hi, c in self.loops))
+        terms = (*self.loops, *self.parameters)
+        return (self.constant + sum(min(0, n) for n in spans) + sum(min(lo * c, hi * c) for _, lo, hi, c in terms),
+                self.constant + sum(max(0, n) for n in spans) + sum(max(lo * c, hi * c) for _, lo, hi, c in terms))
 
 
 def linear(value, facts, grid):
@@ -88,6 +102,8 @@ def linear(value, facts, grid):
 
 def independent_tile(offsets, sizes, grid):
     """Each nontrivial grid axis owns a distinct tensor axis with a tile stride."""
+    if any(size == 0 for size in sizes):
+        return  # Cartesian empty writes are disjoint even at identical offsets.
     if any(off.loops for off in offsets):
         raise ConversionError("parallel store coordinates depend on an unfunctionalized memory loop")
     used = set()
@@ -185,6 +201,9 @@ def check_source_addresses(module, abi):
     function = next(op for op in module.ops if name(op) == "tt.func")
     facts = {v: (binding, binding) for v, (kind, binding) in
              zip(function.regions[0].block.args, abi.source_bindings, strict=True) if kind == "constant"}
+    facts.update((value, scalar.bounds) for value, (kind, scalar) in
+                 zip(function.regions[0].block.args, abi.source_bindings, strict=True)
+                 if kind == "runtime" and scalar.bounds is not None)
     pending = set()
 
     def bounds(value):

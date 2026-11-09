@@ -69,6 +69,10 @@ The [runtime ABI](docs/runtime_abi.md) now carries typed by-value scalar inputs,
 including interleaved TTIR arguments, into native and Merlin host execution.
 Scalar payload/control values are supported independently of the remaining
 runtime shape/stride/grid and address-domain work.
+ABI v4 now adds guarded runtime memory prefixes, including empty/tail domains,
+negative/all-inactive limits and preserved readwrite outputs. One Merlin library
+handles different domains without recompilation. Logical tensor capacities are
+still static; actual dynamic shapes/results and launch extents remain a separate gate.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.

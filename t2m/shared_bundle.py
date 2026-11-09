@@ -22,6 +22,7 @@ DIFFERENCES = [
     "writable tensor results follow buffer declaration order; readwrite destinations retain incoming values",
     "scalar_constants specialize source integer arguments; they are not runtime tensor arguments",
     "ABI v3 runtime_scalars retain source positions and plain scalar MLIR inputs; inputs.npz stores typed zero-dimensional values passed by value",
+    "ABI v4 bounded integer scalars add executable inclusive range guards and symbolic runtime prefix extents; logical allocation capacities remain static",
     "no captured learned parameters; weights.safetensors is a genuine empty container",
     "golden.npy is result zero; extra.npz contains out1, out2, ... for any other results",
     "numeric checks use a supplied reference and explicit tolerances; original Triton execution is not performed",

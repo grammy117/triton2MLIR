@@ -73,6 +73,9 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     elif kernel == "runtime-affine":
         fn, constants, shapes, grid = kernels.runtime_affine, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("alpha", "f32", 1), RuntimeScalar("bias", "f32", 3))
+    elif kernel == "runtime-prefix":
+        fn, constants, shapes, grid = kernels.runtime_prefix, {"B": 8}, [(13,), (13,)], (4,)
+        runtime_scalars = (RuntimeScalar("n", "i32", 1, bounds=(0, 13)),)
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
@@ -97,6 +100,10 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     elif kernel == "runtime-affine":
         arrays[1:] = [np.asarray(1.5, dtype=np.float32), np.asarray(-3, dtype=np.float32)]
         golden = arrays[0] * arrays[1] + arrays[2]
+    elif kernel == "runtime-prefix":
+        arrays[2] = np.asarray(7, dtype=np.int32)
+        golden = arrays[1].copy()
+        golden[:7] = arrays[0][:7] + 2
     elif kernel == "indexed-gather":
         arrays[1] = np.array([0, 14, 7, -2147483648, 3, 3, -99, 8, 0, 14, 12, -1, 6], dtype=np.int32)
         golden = np.full(13, -7, dtype=np.float32)
@@ -162,7 +169,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")

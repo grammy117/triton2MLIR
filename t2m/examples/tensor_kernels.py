@@ -23,6 +23,13 @@ def runtime_branch(x, flag, out, N: tl.constexpr, B: tl.constexpr):
 
 
 @triton.jit
+def runtime_prefix(x, n, out, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < n, other=-7.0)
+    tl.store(out + lane, value + 2, lane < n)
+
+
+@triton.jit
 def indexed_gather(x, indices, out, N: tl.constexpr, B: tl.constexpr, MASKED: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     index = tl.load(indices + lane, lane < N, other=0)

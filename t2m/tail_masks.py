@@ -16,15 +16,25 @@ from .shared_indexing import Linear, linear
 @dataclass(frozen=True)
 class TailExtent:
     cap: int
-    limit: int
+    limit: int | Linear
     offset: Linear
     value: object = field(compare=False, repr=False)
 
     def fits(self, offset, dimension):
-        return self.offset == offset and 0 <= self.limit <= dimension
+        if isinstance(self.limit, Linear):
+            # Limits recovered below contain guarded ABI symbols, never grid
+            # coordinates/loop IVs. Their bounds therefore need no grid here.
+            if any(self.limit.programs) or self.limit.loops:
+                return False
+            low, high = self.limit.bounds((1,))
+        else:
+            low = high = self.limit
+        # With the separately proved nonnegative address offset, negative
+        # limits select an empty prefix and make no memory observation.
+        return self.offset == offset and low <= high <= dimension
 
     def as_dict(self):
-        return {"maximum": self.cap, "limit": self.limit, "offset": asdict(self.offset),
+        return {"maximum": self.cap, "limit": asdict(self.limit) if isinstance(self.limit, Linear) else self.limit, "offset": asdict(self.offset),
                 "formula": "max(0,min(maximum,limit-offset))"}
 
 
@@ -141,10 +151,10 @@ def recover_extent(value, cap, offsets, facts, grid):
     for offset in offsets:
         for leaf in leaves(tree):
             limit = leaf + offset
-            if limit.dynamic:
+            if any(limit.programs) or limit.loops:
                 continue
             expected = combine("max", Linear(), combine("min", Linear(cap),
-                               Linear(limit.constant) + offset.scale(-1)))
+                               limit + offset.scale(-1)))
             if tree == expected:
-                return TailExtent(cap, limit.constant, offset, value)
+                return TailExtent(cap, limit if limit.parameters else limit.constant, offset, value)
     raise ConversionError("mask is not a proved clipped affine prefix")

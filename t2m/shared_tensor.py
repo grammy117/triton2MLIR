@@ -25,7 +25,7 @@ from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .scans import expand_scans
-from .scalar_abi import RuntimeScalar
+from .scalar_abi import RuntimeScalar, guard_scalar
 from .shared_gather import gather, structured_gather
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
@@ -120,7 +120,8 @@ class TensorABI:
         schema = "t2m.shared-tensor-abi.v2" if any(b.effect == "write" for b in self.buffers) else "t2m.shared-tensor-abi.v1"
         fields = asdict(self)
         if self.runtime_scalars:
-            schema = "t2m.shared-tensor-abi.v3"
+            schema = "t2m.shared-tensor-abi.v4" if any(s.bounds is not None for s in self.runtime_scalars) else "t2m.shared-tensor-abi.v3"
+            fields["runtime_scalars"] = tuple(s.as_dict() for s in self.runtime_scalars)
         else:
             fields.pop("runtime_scalars")
         return {"schema": schema, **fields}
@@ -145,13 +146,15 @@ class TensorABI:
     def from_dict(cls, value):
         fields = dict(value)
         schema = fields.pop("schema", "t2m.shared-tensor-abi.v1")
-        if schema not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2", "t2m.shared-tensor-abi.v3"):
+        if schema not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2", "t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4"):
             raise ValueError("unknown shared tensor ABI schema")
-        if schema != "t2m.shared-tensor-abi.v3" and fields.get("runtime_scalars"):
+        if schema not in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4") and fields.get("runtime_scalars"):
             raise ValueError("runtime scalar arguments require ABI v3")
-        if schema == "t2m.shared-tensor-abi.v3" and not fields.get("runtime_scalars"):
+        if schema in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4") and not fields.get("runtime_scalars"):
             raise ValueError("ABI v3 requires declared runtime scalar arguments")
-        fields["runtime_scalars"] = tuple(RuntimeScalar(**s) for s in fields.get("runtime_scalars", ()))
+        fields["runtime_scalars"] = tuple(RuntimeScalar(**{**s, **({"bounds": tuple(s["bounds"])} if "bounds" in s else {})}) for s in fields.get("runtime_scalars", ()))
+        if (schema == "t2m.shared-tensor-abi.v4") != any(s.bounds is not None for s in fields["runtime_scalars"]):
+            raise ValueError("guarded runtime scalar bounds require explicit ABI v4")
         fields["buffers"] = tuple(TensorBuffer(**{**b, "shape": tuple(b["shape"])}) for b in fields["buffers"])
         for name in ("grid", "scalar_constants"):
             if name in fields:
@@ -344,6 +347,9 @@ def _functionalize(module, abi):
             buffers[arg] = value
         elif kind == "runtime":
             mapping[arg] = states[value.name]
+            guard_scalar(value, mapping[arg], outer, function.location)
+            if value.bounds is not None:
+                facts[mapping[arg]] = Linear(parameters=((value.name, *value.bounds, 1),))
         else:
             if not isinstance(arg.type, builtin.IntegerType) or not -(1 << (arg.type.width.data - 1)) <= value < 1 << (arg.type.width.data - 1):
                 raise ConversionError("scalar specialization must fit its source integer type")
@@ -783,6 +789,12 @@ def _functionalize(module, abi):
                 pid = append(arith.RemUIOp(pid, index_constant(abi.grid[axis], source)), source).result
                 term = append(arith.MuliOp(pid, index_constant(coefficient, source)), source).result
                 value = append(arith.AddiOp(value, term), source).result
+            for name, _, _, coefficient in form.parameters:
+                parameter = states[name]
+                if parameter.type != IndexType():
+                    parameter = append(arith.IndexCastOp(parameter, IndexType()), source).result
+                term = append(arith.MuliOp(parameter, index_constant(coefficient, source)), source).result
+                value = append(arith.AddiOp(value, term), source).result
             return value
 
         for name, offsets, active in reads:
@@ -801,7 +813,8 @@ def _functionalize(module, abi):
                     value = append(arith.MinSIOp(value, index_constant(dimension, source)), source).result
                 offsets.append(Coordinate(form, value))
                 if isinstance(size, TailExtent):
-                    remaining = append(arith.SubiOp(index_constant(size.limit, source), raw), source).result
+                    limit = owned_index(size.limit, source) if isinstance(size.limit, Linear) else index_constant(size.limit, source)
+                    remaining = append(arith.SubiOp(limit, raw), source).result
                     extent = append(arith.MinSIOp(index_constant(size.cap, source), remaining), source).result
                     extent = append(arith.MaxSIOp(index_constant(0, source), extent), source).result
                     size = TailExtent(size.cap, size.limit, size.offset, extent)
@@ -828,12 +841,12 @@ def _functionalize(module, abi):
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
     if abi.runtime_scalars:
-        output.attributes["prov.runtime_scalars"] = StringAttr(json.dumps([asdict(s) for s in abi.runtime_scalars], sort_keys=True))
+        output.attributes["prov.runtime_scalars"] = StringAttr(json.dumps([s.as_dict() for s in abi.runtime_scalars], sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
             "offsets": [asdict(off) for off in info[0][0]], "tile_sizes": [describe(n) for n in info[0][1]],
-            "write_independence": "distinct-axis-affine-tile-strides",
+            "write_independence": "empty-access-domain" if any(maximum(n) == 0 for n in info[0][1]) else "distinct-axis-affine-tile-strides",
             "readwrite_reads": "owned-tile-only"} for name, info in writes.items()}, sort_keys=True))
     result = ModuleOp([output])
     result.attributes.update({"prov.level": StringAttr("linalg-on-tensors"),

@@ -78,7 +78,7 @@ class DefiniteWrites:
         for off, size, dimension in zip(offsets, sizes, shape, strict=True):
             axes = [i for i, coefficient in enumerate(off.programs)
                     if coefficient and i < len(self.grid) and self.grid[i] > 1]
-            if off.constant != 0 or off.loops or len(axes) > 1:
+            if off.constant != 0 or off.loops or off.parameters or len(axes) > 1:
                 return False
             programs = self.grid[axes[0]] if axes else 1
             cap = maximum(size)
