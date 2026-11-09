@@ -65,6 +65,10 @@ Loaded-index read-only gathers now preserve parallel tile dataflow, repeated
 indices, per-lane masks and nonzero fills, with active bounds checks and actual
 Merlin compiler/host qualification. The [indexed memory contract](docs/indexed_memory.md)
 keeps general writes, writable-buffer reads and undefined lanes explicitly open.
+The [runtime ABI](docs/runtime_abi.md) now carries typed by-value scalar inputs,
+including interleaved TTIR arguments, into native and Merlin host execution.
+Scalar payload/control values are supported independently of the remaining
+runtime shape/stride/grid and address-domain work.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.

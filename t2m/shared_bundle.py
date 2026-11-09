@@ -21,6 +21,7 @@ DIFFERENCES = [
     "entry retains the kernel name; fresh write outputs omit input storage after initialization checks",
     "writable tensor results follow buffer declaration order; readwrite destinations retain incoming values",
     "scalar_constants specialize source integer arguments; they are not runtime tensor arguments",
+    "ABI v3 runtime_scalars retain source positions and plain scalar MLIR inputs; inputs.npz stores typed zero-dimensional values passed by value",
     "no captured learned parameters; weights.safetensors is a genuine empty container",
     "golden.npy is result zero; extra.npz contains out1, out2, ... for any other results",
     "numeric checks use a supplied reference and explicit tolerances; original Triton execution is not performed",
@@ -109,6 +110,11 @@ def verify_shared_bundle(out):
         for i, buffer in enumerate(spec.inputs):
             if tuple(data[f"in{i}"].shape) != buffer.shape:
                 raise ValueError("packaged input shape differs from the ABI")
+            if buffer in spec.runtime_scalars:
+                dtype = {"f32": np.float32, "f64": np.float64, "i1": np.bool_, "i8": np.int8,
+                         "i16": np.int16, "i32": np.int32, "i64": np.int64}[buffer.dtype]
+                if data[f"in{i}"].dtype != dtype:
+                    raise ValueError("packaged runtime scalar dtype differs from the ABI")
     results = spec.outputs
     primary = np.load(out / "golden.npy", allow_pickle=False)
     if tuple(primary.shape) != results[0].shape:

@@ -5,6 +5,24 @@ import triton.language as tl
 
 
 @triton.jit
+def runtime_affine(x, alpha, out, bias, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < N, other=0)
+    tl.store(out + lane, value * alpha + bias, lane < N)
+
+
+@triton.jit
+def runtime_branch(x, flag, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < N, other=0)
+    if flag:
+        value = value + 2
+    else:
+        value = value - 3
+    tl.store(out + lane, value, lane < N)
+
+
+@triton.jit
 def indexed_gather(x, indices, out, N: tl.constexpr, B: tl.constexpr, MASKED: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     index = tl.load(indices + lane, lane < N, other=0)

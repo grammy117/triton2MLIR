@@ -93,6 +93,10 @@ writable-buffer gathers, undefined-lane propagation or all address arithmetic.
 
 The remaining boundaries are:
 
+[Runtime scalar ABI v3](runtime_abi.md) now has f32/f64/i32 payload and i1
+source-branch execution cases through Merlin. Runtime values are not specialized;
+dynamic shape/stride/grid and address-domain profiles still require separate work.
+
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
 2. General strided/block descriptors, runtime shapes/scalars, arbitrary store masks and irregular access with

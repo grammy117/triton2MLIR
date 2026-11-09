@@ -25,6 +25,7 @@ from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .scans import expand_scans
+from .scalar_abi import RuntimeScalar
 from .shared_gather import gather, structured_gather
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
@@ -98,25 +99,43 @@ class TensorABI:
     scalar_constants: tuple[int, ...] = ()
     grid: tuple[int, ...] = (1,)
     intent: str = ""
+    runtime_scalars: tuple[RuntimeScalar, ...] = ()
 
     def __post_init__(self):
         if not self.entry.isidentifier() or not self.buffers:
             raise ValueError("tensor ABI requires an entry and buffers")
-        names = [b.name for b in self.buffers]
+        names = [b.name for b in (*self.buffers, *self.runtime_scalars)]
         if len(set(names)) != len(names) or not self.outputs:
             raise ValueError("tensor ABI requires unique names and at least one writable result")
         if not 1 <= len(self.grid) <= 3 or any(type(n) is not int or not 0 < n < 2**31 for n in self.grid) or host_math.prod(self.grid) >= 2**63:
             raise ValueError("logical grid requires 1..3 positive i32 dimensions and an i64-size domain")
         if any(type(n) is not int for n in self.scalar_constants):
             raise ValueError("specialized scalar arguments must be integers")
+        positions = [s.source_arg for s in self.runtime_scalars]
+        count = len(self.buffers) + len(self.scalar_constants) + len(positions)
+        if len(set(positions)) != len(positions) or any(p >= count for p in positions):
+            raise ValueError("runtime scalar source positions must be unique and inside the complete source signature")
 
     def as_dict(self):
         schema = "t2m.shared-tensor-abi.v2" if any(b.effect == "write" for b in self.buffers) else "t2m.shared-tensor-abi.v1"
-        return {"schema": schema, **asdict(self)}
+        fields = asdict(self)
+        if self.runtime_scalars:
+            schema = "t2m.shared-tensor-abi.v3"
+        else:
+            fields.pop("runtime_scalars")
+        return {"schema": schema, **fields}
 
     @property
     def inputs(self):
-        return tuple(b for b in self.buffers if b.effect != "write")
+        return (*[b for b in self.buffers if b.effect != "write"], *self.runtime_scalars)
+
+    @property
+    def source_bindings(self):
+        """Pointers in declaration order, legacy constants in remaining slots."""
+        count = len(self.buffers) + len(self.scalar_constants) + len(self.runtime_scalars)
+        runtime = {s.source_arg: ("runtime", s) for s in self.runtime_scalars}
+        remaining = iter([*(('buffer', b) for b in self.buffers), *(('constant', n) for n in self.scalar_constants)])
+        return tuple(runtime[i] if i in runtime else next(remaining) for i in range(count))
 
     @property
     def outputs(self):
@@ -125,8 +144,14 @@ class TensorABI:
     @classmethod
     def from_dict(cls, value):
         fields = dict(value)
-        if fields.pop("schema", "t2m.shared-tensor-abi.v1") not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2"):
+        schema = fields.pop("schema", "t2m.shared-tensor-abi.v1")
+        if schema not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2", "t2m.shared-tensor-abi.v3"):
             raise ValueError("unknown shared tensor ABI schema")
+        if schema != "t2m.shared-tensor-abi.v3" and fields.get("runtime_scalars"):
+            raise ValueError("runtime scalar arguments require ABI v3")
+        if schema == "t2m.shared-tensor-abi.v3" and not fields.get("runtime_scalars"):
+            raise ValueError("ABI v3 requires declared runtime scalar arguments")
+        fields["runtime_scalars"] = tuple(RuntimeScalar(**s) for s in fields.get("runtime_scalars", ()))
         fields["buffers"] = tuple(TensorBuffer(**{**b, "shape": tuple(b["shape"])}) for b in fields["buffers"])
         for name in ("grid", "scalar_constants"):
             if name in fields:
@@ -201,11 +226,13 @@ def _preflight(module, abi, *, id_prefix="ttir.op."):
     if len(function.regions[0].blocks) != 1:
         raise ConversionError("multiple entry blocks need an explicit CFG adapter")
     args = function.regions[0].block.args
-    if len(args) != len(abi.buffers) + len(abi.scalar_constants):
-        raise ConversionError("source arguments differ from buffers followed by specialized scalars")
-    for arg, buffer in zip(args, abi.buffers):
-        if str(arg.type) != f"!tt.ptr<{buffer.dtype}>":
-            raise ConversionError(f"pointer type differs from tensor ABI for {buffer.name}")
+    if len(args) != len(abi.source_bindings):
+        raise ConversionError("source arguments differ from the declared pointer/runtime/specialized scalar bindings")
+    for arg, (kind, value) in zip(args, abi.source_bindings, strict=True):
+        if kind == "buffer" and str(arg.type) != f"!tt.ptr<{value.dtype}>":
+            raise ConversionError(f"pointer type differs from tensor ABI for {value.name}")
+        if kind == "runtime" and arg.type != value.type:
+            raise ConversionError(f"runtime scalar type differs from source for {value.name}")
     records, values = [], {}
     for op in module.walk():
         for region in op.regions:
@@ -312,15 +339,17 @@ def _functionalize(module, abi):
     writes, reads, source_loops, source_conditionals, source_gathers = {}, [], [], [], []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
-    for arg, buffer in zip(function.regions[0].block.args, abi.buffers):
-        buffers[arg] = buffer
-    scalar_args = function.regions[0].block.args[len(abi.buffers):]
-    for arg, value in zip(scalar_args, abi.scalar_constants, strict=True):
-        if not isinstance(arg.type, builtin.IntegerType) or not -(1 << (arg.type.width.data - 1)) <= value < 1 << (arg.type.width.data - 1):
-            raise ConversionError("scalar specialization must fit its source integer type")
-        constant = arith.ConstantOp(IntegerAttr(value, arg.type))
-        body.add_op(constant)
-        mapping[arg] = constant.result
+    for arg, (kind, value) in zip(function.regions[0].block.args, abi.source_bindings, strict=True):
+        if kind == "buffer":
+            buffers[arg] = value
+        elif kind == "runtime":
+            mapping[arg] = states[value.name]
+        else:
+            if not isinstance(arg.type, builtin.IntegerType) or not -(1 << (arg.type.width.data - 1)) <= value < 1 << (arg.type.width.data - 1):
+                raise ConversionError("scalar specialization must fit its source integer type")
+            constant = arith.ConstantOp(IntegerAttr(value, arg.type))
+            body.add_op(constant)
+            mapping[arg] = constant.result
 
     def append(op, source):
         op.location = source.location
@@ -798,6 +827,8 @@ def _functionalize(module, abi):
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
+    if abi.runtime_scalars:
+        output.attributes["prov.runtime_scalars"] = StringAttr(json.dumps([asdict(s) for s in abi.runtime_scalars], sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
@@ -938,6 +969,8 @@ def convert_shared(source, abi, work, *, optimizer=None):
     trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data)
     if trace["memory"]["source_gathers"]:
         trace["memory"]["bounds"] += "; runtime-active-gather-bounds"
+    if abi.runtime_scalars:
+        trace["abi_difference"] += "; runtime scalar inputs follow logical tensor inputs and retain plain by-value types/source positions"
     trace["memory"]["output_initialization"] = json.loads(entry.attributes["prov.output_initialization"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)

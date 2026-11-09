@@ -95,6 +95,13 @@ results, multi-result reference ordering and provenance projection are explicit;
 see [the consumer contract](merlin_consumer.md). This does not rename the source
 receipt or assert accelerator qualification in the original capture metadata.
 
+ABI v3 adds typed runtime scalar declarations with explicit source positions.
+Exported MLIR keeps plain scalar argument types after logical tensor inputs;
+the usual `inputs.npz` keys store zero-dimensional typed values for invocation.
+Merlin passes these by value through its existing scalar ABI. This differs from
+a tensor-only captured signature; it is not scalar specialization or a rank-zero
+tensor boxing transform. See [the runtime ABI](runtime_abi.md).
+
 ## Provenance schema (`t2m.provenance.v1`)
 
 The trace contains the canonical TTIR and spec hashes, tool versions, intent and its origin,

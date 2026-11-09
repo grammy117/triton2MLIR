@@ -74,7 +74,7 @@ def compile_model(staged, work):
 
 def execute_model(staged, work, arguments):
     import numpy as np
-    from merlin.llvmlower.abi import HostModel
+    from merlin.llvmlower.abi import HostModel, ScalarArg
 
     signature = json.loads((staged / "signature.json").read_text())
     dtypes = {"f32": np.float32, "f64": np.float64, "i8": np.int8, "i16": np.int16,
@@ -97,7 +97,9 @@ def execute_model(staged, work, arguments):
         if invocation:
             for output in outputs:
                 output.fill(np.nan if np.issubdtype(output.dtype, np.floating) else 85)
-        model([(a.ctypes.data, a.shape) for a in [*arrays, *outputs]])
+        arguments = [ScalarArg(array.item(), declared["dtype"]) if declared.get("kind") == "scalar"
+                     else (array.ctypes.data, array.shape) for array, declared in zip(arrays, signature["inputs"], strict=True)]
+        model([*arguments, *[(a.ctypes.data, a.shape) for a in outputs]])
         if any(array.tobytes() != original for array, original in zip(arrays, before, strict=True)):
             raise ValueError("Merlin compiled function mutated a functional tensor input")
         observed = [a.tobytes() for a in outputs]

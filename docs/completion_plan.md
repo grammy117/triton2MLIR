@@ -88,3 +88,10 @@ scatter/writable gathers, undefined-lane propagation, runtime scalar/dynamic ABI
 and broader numeric/effect profiles remain open. Continue with scalar/dynamic ABI
 and independently owned/effectful indexed writes; do not substitute an opaque
 wrapper or treat native host cases as all-target closure.
+
+Workstream C now has typed by-value runtime scalar inputs, source-position
+bindings for interleaved pointer/scalar signatures, and actual native/Merlin
+checks for payload and source branch uses. ABI v3 states the difference from
+tensor-only signatures explicitly; values remain evaluator data. Dynamic shapes,
+strides/grids, address/loop-domain bounds and broader alias/mutation remain open.
+See [the runtime ABI and next dependencies](runtime_abi.md).

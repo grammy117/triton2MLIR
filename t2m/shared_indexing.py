@@ -183,7 +183,8 @@ def check_source_addresses(module, abi):
         return op.op_name.data if op.name == "builtin.unregistered" else op.name
 
     function = next(op for op in module.ops if name(op) == "tt.func")
-    facts = {v: (n, n) for v, n in zip(function.regions[0].block.args[len(abi.buffers):], abi.scalar_constants, strict=True)}
+    facts = {v: (binding, binding) for v, (kind, binding) in
+             zip(function.regions[0].block.args, abi.source_bindings, strict=True) if kind == "constant"}
     pending = set()
 
     def bounds(value):

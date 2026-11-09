@@ -11,7 +11,9 @@ import numpy as np
 from torch_mlir import execution_engine, ir, passmanager, runtime
 
 DTYPES = {"f32": np.float32, "f64": np.float64, "i8": np.int8,
-          "i16": np.int16, "i32": np.int32, "i64": np.int64}
+          "i16": np.int16, "i32": np.int32, "i64": np.int64, "i1": np.bool_}
+SCALAR_CTYPES = {"f32": ctypes.c_float, "f64": ctypes.c_double, "i8": ctypes.c_int8,
+                 "i16": ctypes.c_int16, "i32": ctypes.c_int32, "i64": ctypes.c_int64, "i1": ctypes.c_bool}
 
 
 def main(work):
@@ -31,9 +33,14 @@ def main(work):
         if len(arrays) != len(signature.inputs):
             raise ValueError("native input count differs from function ABI")
         for array, type_ in zip(arrays, signature.inputs, strict=True):
-            tensor = ir.RankedTensorType(type_)
-            dtype = DTYPES[str(tensor.element_type)]
-            if array.shape != tuple(tensor.shape) or array.dtype != dtype:
+            if isinstance(type_, ir.RankedTensorType):
+                tensor = ir.RankedTensorType(type_)
+                shape, dtype = tuple(tensor.shape), DTYPES[str(tensor.element_type)]
+            elif str(type_) in SCALAR_CTYPES:
+                shape, dtype = (), DTYPES[str(type_)]
+            else:
+                raise ValueError("native input has an unsupported scalar/tensor ABI type")
+            if array.shape != shape or array.dtype != dtype:
                 raise ValueError("native input shape/dtype differs from the tensor ABI")
         outputs = [np.zeros(ir.RankedTensorType(t).shape, dtype=DTYPES[str(ir.RankedTensorType(t).element_type)])
                    for t in signature.results]
@@ -91,8 +98,14 @@ def main(work):
                 callback_errors.append(str(exc))
 
         engine.raw_register_runtime("memrefCopy", ctypes.cast(copy, ctypes.c_void_p))
-        descriptors = [runtime.get_ranked_memref_descriptor(a) for a in [*arrays, *outputs]]
-        engine.invoke(name, *(ctypes.pointer(ctypes.pointer(d)) for d in descriptors))
+        packed = []
+        for array, type_ in zip(arrays, signature.inputs, strict=True):
+            if isinstance(type_, ir.RankedTensorType):
+                packed.append(ctypes.pointer(ctypes.pointer(runtime.get_ranked_memref_descriptor(array))))
+            else:
+                packed.append(ctypes.pointer(SCALAR_CTYPES[str(type_)](array.item())))
+        packed.extend(ctypes.pointer(ctypes.pointer(runtime.get_ranked_memref_descriptor(a))) for a in outputs)
+        engine.invoke(name, *packed)
         if callback_errors:
             raise ValueError("native runtime copy failed: " + "; ".join(callback_errors))
     np.savez(work / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
