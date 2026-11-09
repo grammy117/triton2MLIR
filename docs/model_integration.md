@@ -142,3 +142,27 @@ those goldens and the optional Merlin interface/runtime-generation check.
 
 This tests the original two-layer fused MLP plus the surrounding third layer,
 rather than only substituting a standalone matmul result for a model output.
+
+## Selected-memory calls
+
+`scripts/capture_selected_memory_model.py` captures a real model with learned
+weights, two `t2m_demo::selected_gather` calls with different scalar
+specializations, and surrounding arithmetic. Independent eager PyTorch code
+supplies the complete model golden. The source kernels concatenate pointers
+from two input buffers and gather them with repeated intra-tile indices before
+the selected loads. Both implementations retain source-word selectors, tile
+dataflow and source provenance when bound through the existing registry.
+
+The maintained integration test checks the original weights, inputs and golden
+bytes, both call bindings, native model execution, compiler-only Merlin staging
+and actual Merlin host execution. Neither a GPU nor Triton CPU backend supplies
+the reference. This profile has fresh results and readonly inputs; the existing
+model2MLIR prohibition on argument-mutating custom operations still applies.
+
+Bound `compatibility.json` now includes `kernel_profiles`, keyed by each archived
+kernel directory. It lists the same representation differences as standalone
+packages, including guarded memory, source-word offsets, logical selectors,
+chosen cat ordering and dynamic dimensions when present. The parent model ABI
+and data files remain byte-identical. This is additive metadata in the existing
+bound-model compatibility schema; it does not manufacture an m2m FX trace for
+the derived program.

@@ -42,7 +42,13 @@ is retained separately before the final receipt is augmented. These products
 do not change the portable model ABI or claim accelerator execution. See
 [the consumer contract](merlin_consumer.md).
 
-`t2m.shared-tensor-provenance.v2` is used when original TTIR needs an official
+The bound compatibility document additionally lists `kernel_profiles` by archived
+kernel directory. Each records the same representation differences as a
+standalone kernel, including guarded memory, source-word selectors, chosen cat
+ordering and dynamic dimensions where present. These additive fields make
+kernel-specific changes explicit while the parent model ABI/data remain intact.
+
+`t2m.shared-tensor-provenance.v2` is used when original TTIR needs native-verified
 intake rewrite before the shared optimizer can parse it. It records the original
 native-verified typed operations, block/region structure and exact source bytes,
 plus a separate normalized operation inventory. The native binding does not

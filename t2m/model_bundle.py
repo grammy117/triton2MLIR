@@ -20,6 +20,7 @@ from .ir import text
 from .model_binding import bind_model
 from .native import execute_native
 from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
+from .package_compatibility import kernel_representation_differences
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
@@ -119,7 +120,7 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     selected = {r["implementation_sha256"] for r in trace["calls"]}
     implementations = {b.implementation.trace["mlir_sha256"]: b.implementation for b in bindings
                        if b.implementation.trace["mlir_sha256"] in selected}
-    kernel_artifacts = {}
+    kernel_artifacts, kernel_profiles = {}, {}
     for i, (digest, implementation) in enumerate(implementations.items()):
         directory = out / "kernels" / str(i)
         directory.mkdir(parents=True)
@@ -130,8 +131,12 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         for name, payload in implementation.auxiliary_artifacts.items():
             (directory / name).write_text(payload)
         kernel_artifacts[digest] = str(directory.relative_to(out))
+        kernel_profiles[kernel_artifacts[digest]] = {
+            "profile": implementation.trace.get("profile", TENSOR_PROFILE),
+            "differences": kernel_representation_differences(implementation.trace, dynamic=implementation.spec.dynamic)}
     _json(out / "compatibility.json", {"schema": "t2m.bound-model-compatibility.v1",
           "model_abi_and_core_data_files": "unchanged-from-parent-model2MLIR-capture",
+          "kernel_profiles": kernel_profiles,
           "differences": ["t2m.bound-model-receipt.v1; original m2m receipt retained under parent/",
                           "original FX trace remains under parent/ and binds original model bytes",
                           "kernel-bindings.json binds translated TTIR bodies and callsites",

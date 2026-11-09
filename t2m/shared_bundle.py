@@ -13,13 +13,14 @@ from .native import execute_native
 from .shared_tensor import TensorABI
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, WORD_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
+from .package_compatibility import kernel_representation_differences
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
             "spec.json", "provenance.json", "compatibility.json", "meta.json", "execution.json"}
 DIFFERENCES = [
     "t2m.capture-receipt.v2 and TTIR provenance; not the model2MLIR FX receipt/trace schemas",
-    "provenance v2 separates original native TTIR inventory from normalized graph IDs when an official intake pass is required",
+    "provenance v2 separates original native TTIR inventory from normalized graph IDs when native-verified intake normalization is required",
     "entry retains the kernel name; fresh write outputs omit input storage after initialization checks",
     "writable tensor results follow buffer declaration order; readwrite destinations retain incoming values",
     "scalar_constants specialize source integer arguments; they are not runtime tensor arguments",
@@ -74,20 +75,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     _json(out / "execution.json", execution)
     for name, payload in result.auxiliary_artifacts.items():
         (out / name).write_text(payload)
-    differences = DIFFERENCES + (["explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained"] if profile == BUFFER_PROFILE else [])
-    if profile in GUARDED_PROFILES:
-        differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, read/write ownership, completed initialization and per-store lane uniqueness are executable; source-base gathers retain memory effects before optimization; grid-derived metadata cost is explicit; no pure tensor witness is asserted")
-    if profile == WORD_PROFILE:
-        differences.append("explicit source-word address policy retains source integer arithmetic before signed i64 pointer-offset accumulation; raw offset tensors replace structured pointer views; word-stage input/output evidence is retained")
-    selected = [t for t in trace.get("transformations", []) if t.get("kind") == "selected-pointer-memory"]
-    if selected:
-        differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")
-        if any(t["missing_other_zero_refinement"] for t in selected):
-            differences.append("inactive undefined source load values use the pinned upstream gather's zero refinement; this does not assert that inactive source memory was initialized or read")
-    if any("t2m-expand-cat-preserve-order" in t.get("pipeline", []) for t in trace.get("transformations", [])):
-        differences.append("TTIR cat uses a checked pre-layout join/transpose/reshape expansion in lhs-then-rhs order, choosing a permitted ordering; original native source and normalized graphs remain distinct")
-    if result.spec.dynamic:
-        differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
+    differences = DIFFERENCES + kernel_representation_differences(trace, dynamic=result.spec.dynamic)
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,
           "baseline": "model2MLIR 035bb5a", "differences": differences,
           "same_core_filenames": True, "merlin_staged_execution": "not-certified"})
