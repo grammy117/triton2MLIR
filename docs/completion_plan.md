@@ -279,6 +279,21 @@ The runnable `out/selected-memory/` package and its separate qualification at
 `out/selected-memory-merlin/` pass compiler staging, native execution and all 45
 artifact checks. Accelerator execution remains unperformed.
 
+A real model2MLIR model now binds two selected-pointer/gather calls with distinct
+scalar specializations and learned weights. Parent data/goldens remain byte
+identical; actual Merlin compilation/execution passes. The visible derived
+bundle `out/selected-memory-model/` verifies all 101 artifacts. Both package
+writers now use the same representation-difference declarations; bound models
+list each kernel's profile explicitly in additive compatibility metadata.
+
+The next direct source probe found scalar maps and histogram unhandled, while
+numeric unsplat already lowers. Scalar maps now have a qualified `pack=1`
+expansion retaining their scalar branch/loop region and tuple results inside
+parallel Linalg. Fourteen cases pass native and actual Merlin checks across
+all three memory profiles. Packed grouping and mapped source-memory events
+still need separate contracts; histogram remains unhandled. See
+[the expansion, provenance and remaining scope](elementwise_map.md).
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;

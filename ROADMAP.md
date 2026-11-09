@@ -6,6 +6,10 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+Recent additions retain finite selected-buffer pointer state, cat/split/tile
+gather, and [mapped scalar regions](docs/elementwise_map.md) through actual Merlin
+execution. The selected-memory model demo binds two real model2MLIR kernel calls
+and learned weights; per-kernel package differences are explicit.
 
 ## The product contract
 

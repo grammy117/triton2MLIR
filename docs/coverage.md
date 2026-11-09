@@ -146,6 +146,12 @@ cover explicit rounding and inactive-bit cases, not all half operation policies.
 
 The remaining boundaries are:
 
+The [scalar map profile](elementwise_map.md) now additionally qualifies
+`tt.map_elementwise` and its return with `pack=1`, original scalar branches,
+tuple results and runtime recurrences. Fourteen cases include actual Merlin
+execution over changing/empty inputs in all three memory profiles. Packed
+cross-element groups, mapped source memory and histogram remain explicit gaps.
+
 The source-word selected-buffer path additionally qualifies cat/split and
 repeated intra-tile `tt.gather` through actual Merlin libraries. A checked native
 intake rewrite bridges cat absent from the installed optimizer; a direct
