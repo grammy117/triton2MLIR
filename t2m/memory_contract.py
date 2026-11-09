@@ -18,15 +18,18 @@ PROFILE_FILES = {TENSOR_PROFILE: set(), BUFFER_PROFILE: MEMORY_FILES, GUARDED_PR
                  WORD_PROFILE: GUARDED_FILES | WORD_FILES}
 
 
-def guard_layout(spec):
-    """31-bit program fragments paired with their complements in i64 words."""
+def guard_layout(spec, *, atomics=False):
+    """Complemented fragments with room for the selected ownership flags."""
+    from .guard_protocol import ATOMIC, ORDINARY
+    bits = (ATOMIC if atomics else ORDINARY).fragment_bits
     bounds = {s["name"]: s.get("bounds") for s in spec.get("runtime_scalars", [])}
     counts = [n if type(n) is int else (bounds[n["dimension"]][1] + n["divisor"] - 1) // n["divisor"]
               for n in spec.get("grid", [1])]
-    words = max(1, ((math.prod(counts) - 1).bit_length() + 30) // 31)
+    words = max(1, ((math.prod(counts) - 1).bit_length() + bits - 1) // bits)
     if not 1 <= words <= 3:
         raise ValueError("guard owner layout exceeds the declared i64 logical grid")
-    return {"owner_words_per_element": words, "guard_storage_bytes_per_output_element": 8 * (words + 1)}
+    return {"owner_words_per_element": words, "guard_storage_bytes_per_output_element": 8 * (words + 1),
+            **({"owner_fragment_bits": bits} if atomics else {})}
 
 
 def guarded_arguments(spec):

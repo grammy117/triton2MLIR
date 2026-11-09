@@ -3,6 +3,10 @@
 Status: implementation plan with the native RMW middle layer verified. Atomics
 are still refused by the product frontend. The plan extends the full objective;
 it does not redefine all-kernel coverage as accepting a diagnostic or opaque call.
+The new ownership encoding is implemented and native-checked independently of
+admission: all 4,663 bounded access histories agree with declarative identity/
+access-category rules, including differences at bit 30 and bit 60. The eighteen
+protocol/layout tests also retain every existing ordinary-memory boundary case.
 
 ## Source-backed boundary
 

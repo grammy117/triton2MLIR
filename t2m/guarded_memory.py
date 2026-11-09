@@ -14,13 +14,11 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .memory_contract import guarded_arguments, guard_layout
+from .guard_protocol import ORDINARY
 
 # MLIR arith::AtomicRMWKind::{assign,ori} (ArithBase.td), not device opcodes.
 ATOMIC_ASSIGN = 3
 ATOMIC_OR = 14
-FRAGMENT_MASK = (1 << 31) - 1
-TAG_MASK = (1 << 62) - 1
-WRITER_BIT = 1 << 62
 MAP_TYPE = MemRefType(builtin.i64, [builtin.DYNAMIC_INDEX])
 
 
@@ -260,7 +258,9 @@ def instrument(module, abi, source_ids):
             **layout}
 
 
-def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_words=1):
+def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_words=1, atomic=False, protocol=ORDINARY):
+    if atomic and (not write or cleanup or not protocol.atomic_bit):
+        raise ValueError("atomic memory guards require an atomic ownership protocol and no lane cleanup")
     outer = Block()
     def add(block, op, role="memory_guard"):
         op.location = source.location
@@ -319,27 +319,32 @@ def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_word
             add(body, memref.StoreOp.build(operands=[constant(body, 0, builtin.i64), visited, [position]]), "release_store_lane_marks")
         else:
             pid, owners = extra["program", None], extra["owners", access.buffer.name]
-            def atomic(value, buffer, at, kind):
+            def claim(value, buffer, at, kind):
                 return add(body, memref.AtomicRMWOp.build(operands=[value, buffer, [at]], result_types=[builtin.i64],
                     properties={"kind": IntegerAttr(kind, builtin.i64)}), "claim_memory_obligation")
             base = add(body, arith.MuliOp(position, constant(body, owner_words))) if owner_words > 1 else position
             for word in range(owner_words):
-                fragment = add(body, arith.ShRUIOp(pid, constant(body, 31 * word, builtin.i64))) if word else pid
-                fragment = add(body, arith.AndIOp(fragment, constant(body, FRAGMENT_MASK, builtin.i64)))
-                complement = add(body, arith.XOrIOp(fragment, constant(body, FRAGMENT_MASK, builtin.i64)))
-                tag = add(body, arith.OrIOp(fragment, add(body, arith.ShLIOp(complement, constant(body, 31, builtin.i64)))))
-                mark = add(body, arith.OrIOp(tag, constant(body, WRITER_BIT, builtin.i64))) if write else tag
+                fragment = add(body, arith.ShRUIOp(pid, constant(body, protocol.fragment_bits * word, builtin.i64))) if word else pid
+                fragment = add(body, arith.AndIOp(fragment, constant(body, protocol.fragment_mask, builtin.i64)))
+                complement = add(body, arith.XOrIOp(fragment, constant(body, protocol.fragment_mask, builtin.i64)))
+                tag = add(body, arith.OrIOp(fragment, add(body, arith.ShLIOp(complement, constant(body, protocol.fragment_bits, builtin.i64)))))
+                flags = (protocol.atomic_bit if atomic else protocol.ordinary_bit | (protocol.writer_bit if write else 0))
+                mark = add(body, arith.OrIOp(tag, constant(body, flags, builtin.i64))) if flags else tag
                 at = add(body, arith.AddiOp(base, constant(body, word))) if word else base
-                previous = atomic(mark, owners, at, ATOMIC_OR)
-                different = add(body, arith.AndIOp(previous, add(body, arith.XOrIOp(tag, constant(body, TAG_MASK, builtin.i64)))))
+                previous = claim(mark, owners, at, ATOMIC_OR)
+                different = add(body, arith.AndIOp(previous, add(body, arith.XOrIOp(tag, constant(body, protocol.tag_mask, builtin.i64)))))
                 compatible = add(body, arith.CmpiOp(different, constant(body, 0, builtin.i64), "eq"))
-                if not write:
-                    writer = add(body, arith.AndIOp(previous, constant(body, WRITER_BIT, builtin.i64)))
+                if atomic:
+                    ordinary = add(body, arith.AndIOp(previous, constant(body, protocol.ordinary_bit, builtin.i64)))
+                    no_ordinary = add(body, arith.CmpiOp(ordinary, constant(body, 0, builtin.i64), "eq"))
+                    compatible = add(body, arith.OrIOp(no_ordinary, compatible))
+                elif not write:
+                    writer = add(body, arith.AndIOp(previous, constant(body, protocol.writer_bit | protocol.atomic_bit, builtin.i64)))
                     no_writer = add(body, arith.CmpiOp(writer, constant(body, 0, builtin.i64), "eq"))
                     compatible = add(body, arith.OrIOp(no_writer, compatible))
                 add(body, cf.AssertOp(compatible, "Triton memory conflicts across logical programs"))
-            if write:
-                previous = atomic(constant(body, 1, builtin.i64), visited, position, ATOMIC_ASSIGN)
+            if write and not atomic:
+                previous = claim(constant(body, 1, builtin.i64), visited, position, ATOMIC_ASSIGN)
                 unique = add(body, arith.CmpiOp(previous, constant(body, 1, builtin.i64), "ne"))
                 add(body, cf.AssertOp(unique, "Triton scatter has conflicting active lanes"))
             else:
