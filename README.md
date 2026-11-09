@@ -53,6 +53,8 @@ qualified library with new scalar values and separate invocation evidence; see
 including zero trips. The explicit `--memory-profile buffer` also retains the
 upstream standard memory payload behind the same public tensor/scalar ABI;
 see [its proof scope and package differences](docs/full_memory_bridge.md).
+`shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
+reads and exact row tails inside a runtime loop.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

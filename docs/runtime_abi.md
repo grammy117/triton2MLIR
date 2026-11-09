@@ -133,7 +133,38 @@ python -m t2m shared-demo --kernel runtime-recurrence --memory-profile buffer \
   --python /path/to/native-env/bin/python
 ```
 
-Dynamic tensor shapes/strides/grid sizes, general source while/memory-loop bounds and
+## Guarded runtime read loops
+
+Signed-comparison `scf.for` regions can now load buffers with an entry-guarded runtime upper
+bound, constant lower bound and positive constant step. The source-width check
+derives a conservative interval for all reachable IVs, including the last IV
+update. Tensor memory analysis uses that interval for every access. Executable
+loops retain the original runtime SSA bound; the maximum count is proof evidence,
+never a replacement trip count. Variable-count recurrences acquire no fictitious
+constant final-address fact. Dynamic pointer carriers remain a separate gate.
+
+Row-local masks can use a different coordinate from a flattened physical
+address. Their exact clipped expression is retained. Active access bounds use
+`physical - mask_origin + mask_limit`; inactive lanes still make no observation.
+Fresh-output partition proofs continue to require exact mask/address origins,
+and parallel publication refuses unresolved loop-dependent extents. An access
+bounds proof alone cannot initialize an output.
+
+This extends the upstream region/pointer normalization rather than adding a
+local TTIR compute converter (Meta `17f0c234`, `gather_simple_loop.mlir` and
+`TritonToUnstructuredPass.cpp`). Both memory profiles have actual native/Merlin
+checks for i32/i64 counts, negative/zero trips, row tails and different counts
+through one unchanged library. Undersized allocations, unbounded counts and
+runtime source stores still refuse. Provenance records minimum/maximum counts
+separately from the original executable bound.
+
+```bash
+python -m t2m shared-demo --kernel runtime-memory-loop --memory-profile buffer \
+  --out out/runtime_memory_loop --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+```
+
+Dynamic tensor shapes/strides/grid sizes, general source while/memory-loop effects and
 indexed writes remain open. Next: symbolic tensor dimensions and launch extents
 linked to actual argument shapes, dynamic allocations/results, and one compiled
 library invoked over independent shapes. Those need initialization/ownership

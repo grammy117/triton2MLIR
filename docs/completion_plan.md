@@ -114,11 +114,15 @@ loop-carried tensor storage to native bufferization while retaining its alias
 and lifetime checks. Runtime source buffer-access loops still require separate
 domain, initialization and effect proofs.
 
-The next control slice is guarded read-only buffer-access loops: derive a
-conservative IV interval from the actual entry-checked bounds, retain the runtime
-trip count and zero-trip behavior, and grant no write/initialization facts from
-possibly unexecuted iterations. That proof should feed the independent full
-memory boundary as well as the tensor representation.
+Guarded read-only buffer-access loops now derive a conservative IV interval
+from actual entry-checked bounds while retaining the executable runtime trip
+count. Both profiles qualify i32/i64 counts, negative/zero trips and row tails
+through one library. Mask coordinates remain distinct from physical addresses;
+access bounds do not grant complete initialization. Runtime source stores remain
+refused until conditional state/initialization is proved. Next preserve incoming
+readwrite state through zero-trip write loops, and retain only initialization
+facts established on every reachable path. The full memory profile currently
+uses the same proof witness; independent memory admission remains required.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and

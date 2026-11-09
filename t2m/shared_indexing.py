@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
+from .loop_domains import bounded_loop, require_signed_loop
 
 
 @dataclass(frozen=True)
@@ -120,7 +121,7 @@ def independent_tile(offsets, sizes, grid):
         used.add(match)
 
 
-def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer):
+def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer, *, exact_iterations=True):
     """Reuse upstream's pointer-to-index recurrences, retaining source loop SSA.
 
     Only invariant affine increments are established. Other carried values stay
@@ -161,8 +162,10 @@ def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, s
             if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
                 raise ConversionError("loop-carried address recurrence may overflow")
         facts[target] = current
-        finals[position] = final
-        evidence.append({"carried_argument": position, "increment": delta, "iterations": iterations})
+        if exact_iterations or delta == 0:
+            finals[position] = final
+        evidence.append({"carried_argument": position, "increment": delta,
+                         "iterations" if exact_iterations else "maximum_iterations": iterations})
     return finals, evidence
 
 
@@ -214,15 +217,13 @@ def check_source_addresses(module, abi):
             parent = op.parent_op()
             if parent is None or parent.name != "scf.for":
                 raise ConversionError("source memory index needs a loop/runtime range proof")
+            require_signed_loop(parent)
             limits = [bounds(v) for v in parent.operands[:3]]
-            if any(lo != hi for lo, hi in limits):
-                raise ConversionError("source memory loop bounds need static specialization")
-            lb, ub, step = (lo for lo, _ in limits)
-            if step <= 0 or ub <= lb:
-                raise ConversionError("source memory loop needs a positive nonempty iteration domain")
-            iterations = (ub - lb + step - 1) // step
+            width = getattr(getattr(value.type, "width", None), "data", 64)
+            domain = bounded_loop(limits, width=width)
+            iterations = domain.maximum_iterations
             if value.index == 0:
-                result = lb, lb + (iterations - 1) * step
+                result = domain.induction_bounds
             else:
                 if value in pending:
                     raise ConversionError("source memory recurrence has cyclic/unproved increments")

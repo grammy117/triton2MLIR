@@ -98,3 +98,28 @@ def test_runtime_shift_cannot_be_mistaken_for_a_complete_fresh_output_partition(
     initialization.store(abi.buffers[0], (offset,), (TailExtent(8, 16, offset, None),))
     with pytest.raises(ConversionError, match="no proved complete overwrite"):
         initialization.finish()
+
+
+def test_row_local_mask_bounds_a_flattened_loop_address_without_partition_credit():
+    value, facts, origin = mask_case(limit=13, tile=8)
+    physical = origin + Linear(loops=((0, 0, 4, 13),))
+    extent = recover_extent(value, 8, [physical], facts, (2,))
+    assert extent.offset == origin
+    assert extent.limit == 13
+    assert extent.fits_access(physical, 65, (2,))
+    assert not extent.fits_access(physical, 64, (2,))
+    assert not extent.fits(physical, 65)  # Bounds alone do not prove coverage.
+
+
+def test_an_access_bounds_proof_does_not_certify_complete_fresh_initialization():
+    from t2m.initialization import DefiniteWrites
+    from t2m.shared_tensor import TensorABI, TensorBuffer
+    abi = TensorABI("holes", (TensorBuffer("out", (13,), "write"),), grid=(2,))
+    offset = Linear(0, (8, 0, 0))
+    shifted_origin = offset + Linear(1)
+    extent = TailExtent(8, 13, shifted_origin, None)
+    assert extent.fits_access(offset, 13, abi.grid)
+    initialization = DefiniteWrites(abi)
+    initialization.store(abi.buffers[0], (offset,), (extent,))
+    with pytest.raises(ConversionError, match="no proved complete overwrite"):
+        initialization.finish()

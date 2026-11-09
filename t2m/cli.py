@@ -79,6 +79,9 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "runtime-recurrence":
         fn, constants, shapes, grid = kernels.runtime_recurrence, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(0, 5)),)
+    elif kernel == "runtime-memory-loop":
+        fn, constants, shapes, grid = kernels.runtime_memory_loop, {"N": 13, "B": 8}, [(65,), (13,)], (2,)
+        runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
@@ -86,7 +89,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "indexed-gather":
         names = ["x", "indices", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
                     dtype="i32" if n == "indices" else "f32")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
@@ -112,6 +115,11 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         golden = arrays[0].copy()
         for k in range(3):
             golden = golden * np.float32(0.5) + np.float32(k)
+    elif kernel == "runtime-memory-loop":
+        arrays[1] = np.asarray(3, dtype=np.int32)
+        golden = np.zeros(13, dtype=np.float32)
+        for k in range(3):
+            golden += arrays[0][k * 13:(k + 1) * 13]
     elif kernel == "indexed-gather":
         arrays[1] = np.array([0, 14, 7, -2147483648, 3, 3, -99, 8, 0, 14, 12, -1, 6], dtype=np.int32)
         golden = np.full(13, -7, dtype=np.float32)
@@ -178,7 +186,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")

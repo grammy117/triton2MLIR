@@ -13,7 +13,7 @@ def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets
     def matches(source, destination):
         low, high = offsets[destination if physical_offsets else source].bounds(grid)
         size = active[source]
-        bounded = size.fits(offsets[destination if physical_offsets else source], buffer.shape[destination]) \
+        bounded = size.fits_access(offsets[destination if physical_offsets else source], buffer.shape[destination], grid) \
             if isinstance(size, TailExtent) else high + size <= buffer.shape[destination]
         matched_stride = strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1
         return matched_stride and (empty or low >= 0 and bounded)

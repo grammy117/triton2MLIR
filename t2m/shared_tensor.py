@@ -25,6 +25,7 @@ from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
+from .loop_domains import bounded_loop, require_signed_loop
 from .scans import expand_scans
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shared_gather import gather, structured_gather
@@ -610,13 +611,22 @@ def _functionalize(module, abi):
                 if any(not isinstance(arguments[i + 1].type, TensorType) for i in pointer_slots):
                     raise ConversionError("scalar pointer carriers need a rank-aware descriptor adapter", opcode=name)
                 kept = [i for i in range(len(arguments) - 1) if i not in pointer_slots]
+                require_signed_loop(op)
                 limits = [mapping[v] for v in op.operands[:3]]
-                lb, ub, step = map(_integer, limits)
-                if step <= 0 or ub <= lb:
-                    raise ConversionError("memory/compute loop needs a positive nonempty static iteration domain", opcode=name)
-                source_loops.append({"source_ids": _source_ids(op.location), "lower": lb, "upper": ub,
-                                     "step": step, "iterations": (ub - lb + step - 1) // step,
-                                     "memory_effects": "functional-loop-carried-tensor-versions"})
+                domain = bounded_loop([linear(v, facts, abi.grid).bounds(abi.grid) for v in limits],
+                                      width=getattr(getattr(arguments[0].type, "width", None), "data", 64))
+                lb, ub, step = domain.lower, domain.upper[1], domain.step
+                if not domain.exact and pointer_slots:
+                    raise ConversionError("runtime pointer carriers need final-state normalization", opcode=name)
+                loop_evidence = {"source_ids": _source_ids(op.location), "lower": lb, "step": step,
+                                 "memory_effects": "functional-loop-carried-tensor-versions"}
+                if domain.exact:
+                    loop_evidence.update(upper=ub, iterations=domain.maximum_iterations)
+                else:
+                    loop_evidence.update(upper_interval=domain.upper, minimum_iterations=domain.minimum_iterations,
+                        maximum_iterations=domain.maximum_iterations, bounds="original-runtime-SSA",
+                        memory_effects="read-only-source-accesses; no-write-credit-from-iterations")
+                source_loops.append(loop_evidence)
                 memory_inputs = [states[b.name] for b in writable]
                 pointer_ranks = [len(arguments[i + 1].type.get_shape()) for i in pointer_slots]
                 kept_arguments = [arguments[0], *[arguments[i + 1] for i in kept]]
@@ -627,12 +637,15 @@ def _functionalize(module, abi):
                 iterations = (ub - lb + step - 1) // step
                 facts[nested.args[0]] = Linear(lb, loops=((loop_counter, 0, iterations - 1, step),))
                 final_facts, recurrences = seed_recurrences(op, [mapping.get(v) for v in arguments], mapping,
-                                                           facts, abi.grid, lb, ub, step, _integer)
+                                                           facts, abi.grid, lb, ub, step, _integer, exact_iterations=domain.exact)
                 source_loops[-1]["index_recurrences"] = recurrences
                 identity = loop_counter
                 loop_counter += 1
                 previous, body = body, nested
                 translate(op.body.block)
+                if not domain.exact and any(states[b.name] is not nested.args[len(kept_arguments) + i]
+                                            for i, b in enumerate(writable)):
+                    raise ConversionError("runtime memory-loop writes need conditional initialization/effect proof", opcode=name)
                 body = previous
                 initial = [mapping[op.operands[i + 3]] for i in kept]
                 zeros = [append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result for _ in range(sum(pointer_ranks))]
@@ -790,6 +803,8 @@ def _functionalize(module, abi):
         def owned_index(form, source):
             # Rebuild owned coordinates outside source branches/loops. Their
             # SSA temporaries need not dominate the final parallel publication.
+            if form.loops:
+                raise ConversionError("parallel publication needs a final-state proof for source-loop-dependent extents")
             value = index_constant(form.constant, source)
             for axis, coefficient in enumerate(form.programs[:len(abi.grid)]):
                 if not coefficient or abi.grid[axis] == 1:
@@ -826,7 +841,8 @@ def _functionalize(module, abi):
                 offsets.append(Coordinate(form, value))
                 if isinstance(size, TailExtent):
                     limit = owned_index(size.limit, source) if isinstance(size.limit, Linear) else index_constant(size.limit, source)
-                    remaining = append(arith.SubiOp(limit, raw), source).result
+                    origin = owned_index(size.offset, source)
+                    remaining = append(arith.SubiOp(limit, origin), source).result
                     extent = append(arith.MinSIOp(index_constant(size.cap, source), remaining), source).result
                     extent = append(arith.MaxSIOp(index_constant(0, source), extent), source).result
                     size = TailExtent(size.cap, size.limit, size.offset, extent)

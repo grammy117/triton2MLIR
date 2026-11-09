@@ -37,6 +37,15 @@ class TailExtent:
         return {"maximum": self.cap, "limit": asdict(self.limit) if isinstance(self.limit, Linear) else self.limit, "offset": asdict(self.offset),
                 "formula": "max(0,min(maximum,limit-offset))"}
 
+    def fits_access(self, offset, dimension, grid):
+        # A row-local mask and a flattened physical address may have distinct
+        # origins. For active lanes, physical + extent <= physical - origin +
+        # limit. Inactive lanes make no observation; the builder clamps their
+        # zero-length standard slice offset separately. This is only a bounds
+        # proof: complete-output partition proofs still require exact origins.
+        limit = self.limit if isinstance(self.limit, Linear) else Linear(self.limit)
+        return (offset + self.offset.scale(-1) + limit).bounds(grid)[1] <= dimension
+
 
 def maximum(size):
     return size.cap if isinstance(size, TailExtent) else size
@@ -148,8 +157,17 @@ def recover_extent(value, cap, offsets, facts, grid):
             for child in expr[1]:
                 yield from leaves(child)
 
-    for offset in offsets:
-        for leaf in leaves(tree):
+    affine_leaves = tuple(leaves(tree))
+    candidates = list(offsets)
+    for leaf in affine_leaves:
+        # Recover the coordinate used by the mask even when source addressing
+        # adds an independent row/loop stride. Guarded parameters remain in the
+        # limit; all candidates must still match the exact clamp expression.
+        origin = Linear(0, leaf.programs, leaf.loops).scale(-1)
+        if origin not in candidates:
+            candidates.append(origin)
+    for offset in candidates:
+        for leaf in affine_leaves:
             limit = leaf + offset
             if any(limit.programs) or limit.loops:
                 continue
