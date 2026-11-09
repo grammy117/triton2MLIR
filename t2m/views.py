@@ -1,18 +1,21 @@
 """Recover logical tensor axis permutations from upstream structured strides."""
 
 from .diagnostics import ConversionError
+from .tail_masks import TailExtent, maximum
 
 
 def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False):
     rank = len(buffer.shape)
     if len(strides) != rank or len(offsets) != rank:
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
-    empty = not all(active)
+    empty = not all(maximum(n) for n in active)
 
     def matches(source, destination):
         low, high = offsets[destination if physical_offsets else source].bounds(grid)
-        return strides[source] == buffer.strides[destination] and (
-            empty or low >= 0 and high + active[source] <= buffer.shape[destination])
+        size = active[source]
+        bounded = size.fits(offsets[destination if physical_offsets else source], buffer.shape[destination]) \
+            if isinstance(size, TailExtent) else high + size <= buffer.shape[destination]
+        return strides[source] == buffer.strides[destination] and (empty or low >= 0 and bounded)
 
     if all(matches(i, i) for i in range(rank)):
         return tuple(range(rank))

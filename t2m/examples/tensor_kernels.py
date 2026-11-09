@@ -62,6 +62,45 @@ def tiled_add(x, y, out, N: tl.constexpr, BM: tl.constexpr, BN: tl.constexpr):
 
 
 @triton.jit
+def ragged_add(x, out, N: tl.constexpr, LIMIT: tl.constexpr, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + i, i < N, other=7.0)
+    tl.store(out + i, value * 2, i < LIMIT)
+
+
+@triton.jit
+def ragged_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr,
+                  BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr, TRANSPOSED: tl.constexpr):
+    m = tl.program_id(0) * BM + tl.arange(0, BM)
+    n = tl.program_id(1) * BN + tl.arange(0, BN)
+    k = tl.arange(0, BK)
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for start in range(0, K, BK):
+        kk = start + k
+        a = tl.load(x + m[:, None] * K + kk[None, :],
+                    (m[:, None] < M) & (kk[None, :] < K), other=0)
+        if TRANSPOSED:
+            b = tl.load(y + n[None, :] * K + kk[:, None],
+                        (kk[:, None] < K) & (n[None, :] < N), other=0)
+        else:
+            b = tl.load(y + kk[:, None] * N + n[None, :],
+                        (kk[:, None] < K) & (n[None, :] < N), other=0)
+        acc = tl.dot(a, b, acc, input_precision="ieee")
+    tl.store(out + m[:, None] * N + n[None, :], acc, (m[:, None] < M) & (n[None, :] < N))
+
+
+@triton.jit
+def ragged_fill_reduce(x, out, N: tl.constexpr, B: tl.constexpr):
+    i = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + i, i < N, other=7.0)
+    total = tl.sum(value, axis=0)
+    if total > 0:
+        tl.store(out + i, value + total, i < N)
+    else:
+        tl.store(out + i, value - total, i < N)
+
+
+@triton.jit
 def tiled_matmul(x, y, out, N: tl.constexpr, K: tl.constexpr, BM: tl.constexpr, BN: tl.constexpr):
     m = tl.program_id(0) * BM + tl.arange(0, BM)
     n = tl.program_id(1) * BN + tl.arange(0, BN)

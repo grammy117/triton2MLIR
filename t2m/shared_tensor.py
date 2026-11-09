@@ -26,6 +26,7 @@ from .initialization import DefiniteWrites
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
+from .tail_masks import TailExtent, describe, maximum, recover_extent
 from .upstream import inspect_optimizer, lower_with_shared
 from .views import axis_permutation, inverse_permutation
 
@@ -397,14 +398,42 @@ def _functionalize(module, abi):
             raise ConversionError("post-loop pointer memory requires an unmasked recovered descriptor", opcode=opcode(op))
         mask = () if legacy else _array(op, "static_mask_dims")
         dynamic = op.operands[2:] if store else op.operands[1:1 + _array(op, "operandSegmentSizes")[1]]
-        active = resolve(op, "static_mask_dims", dynamic) if mask else sizes
-        if len(active) != len(sizes) or any(n < 0 or n > size for n, size in zip(active, sizes, strict=True)):
+        if mask:
+            values = iter(dynamic)
+            if len(mask) != len(sizes):
+                raise ConversionError("structured mask rank differs from its tile", opcode=opcode(op))
+            active = []
+            for number, size in zip(mask, sizes, strict=True):
+                if number == DYNAMIC_INDEX:
+                    v = next(values, None)
+                    if v is None:
+                        raise ConversionError("structured mask is missing a dynamic operand", opcode=opcode(op))
+                    number = recover_extent(mapping.get(v, v), size, [off.form for off in offsets], facts, abi.grid)
+                active.append(number)
+            active = tuple(active)
+            if next(values, None) is not None:
+                raise ConversionError("structured mask operand segment mismatch", opcode=opcode(op))
+        else:
+            active = sizes
+        if len(active) != len(sizes) or any(maximum(n) < 0 or maximum(n) > size for n, size in zip(active, sizes, strict=True)):
             raise ConversionError("mask must describe a bounded rectangular prefix", opcode=opcode(op))
         axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, abi.grid, physical_offsets=True)
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
             offsets = tuple(Coordinate(Linear(0)) for _ in offsets)
+        else:
+            # A fully inactive tile may start past the buffer end. Its zero
+            # length is proved above; standard slices still require an in-bounds
+            # offset. Keep the logical form for ownership, clamp only its SSA.
+            bounded = []
+            for off, dimension in zip(offsets, buffer.shape, strict=True):
+                value = off.value
+                if off.form.bounds(abi.grid)[1] > dimension:
+                    limit = append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
+                    value = append(arith.MinSIOp(value, limit), op).result
+                bounded.append(Coordinate(off.form, value))
+            offsets = tuple(bounded)
         return buffer, sizes, offsets, active, axes
 
     def transpose(value, axes, source):
@@ -412,20 +441,27 @@ def _functionalize(module, abi):
             return value
         shape = value.type.get_shape()
         target = TensorType(value.type.get_element_type(), [shape[i] for i in axes])
-        empty = append(tensor.EmptyOp([], target), source).tensor
+        dynamic = []
+        for i in axes:
+            if shape[i] == DYNAMIC_INDEX:
+                index = append(arith.ConstantOp.from_int_and_width(i, IndexType()), source).result
+                dynamic.append(append(tensor.DimOp(value, index), source).result)
+        empty = append(tensor.EmptyOp(dynamic, target), source).tensor
         return append(TransposeOp(value, empty, DenseArrayBase.from_list(builtin.i64, axes)), source).results[0]
 
     def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False):
         dynamic = [off.value for off in offsets if off.form.dynamic]
         static = [DYNAMIC_INDEX if off.form.dynamic else off.form.constant for off in offsets]
+        shape = [DYNAMIC_INDEX if isinstance(n, TailExtent) else n for n in sizes]
+        dynamic_sizes = [n.value for n in sizes if isinstance(n, TailExtent)]
         properties = {"static_offsets": DenseArrayBase.from_list(builtin.i64, static),
-                      "static_sizes": DenseArrayBase.from_list(builtin.i64, sizes),
+                      "static_sizes": DenseArrayBase.from_list(builtin.i64, shape),
                       "static_strides": DenseArrayBase.from_list(builtin.i64, [1] * len(sizes))}
         if destination is None:
-            return tensor.ExtractSliceOp.build(operands=[source, dynamic, [], []], properties=properties,
-                       result_types=[TensorType(source.type.get_element_type(), sizes)])
+            return tensor.ExtractSliceOp.build(operands=[source, dynamic, dynamic_sizes, []], properties=properties,
+                       result_types=[TensorType(source.type.get_element_type(), shape)])
         cls = ParallelInsertSliceOp if parallel_insert else tensor.InsertSliceOp
-        return cls.build(operands=[source, destination, dynamic, [], []], properties=properties,
+        return cls.build(operands=[source, destination, dynamic, dynamic_sizes, []], properties=properties,
                          result_types=[] if parallel_insert else [destination.type])
 
     def translate(source_block):
@@ -579,9 +615,22 @@ def _functionalize(module, abi):
                         raise ConversionError("masked load fill is not a translated scalar", opcode=name)
                     padding = Block(arg_types=[IndexType()] * len(sizes))
                     padding.add_op(tensor.YieldOp(fill))
-                    loaded = append(tensor.PadOp(loaded, [], [], Region(padding), [0] * len(sizes),
-                                    [size - n for size, n in zip(sizes, active, strict=True)],
-                                    TensorType(buffer.type.get_element_type(), sizes)), op).result
+                    high, dynamic_high = [], []
+                    for size, n in zip(sizes, active, strict=True):
+                        if isinstance(n, TailExtent):
+                            cap = append(arith.ConstantOp.from_int_and_width(size, IndexType()), op).result
+                            dynamic_high.append(append(arith.SubiOp(cap, n.value), op).result)
+                            high.append(DYNAMIC_INDEX)
+                        else:
+                            high.append(size - n)
+                    shape = [DYNAMIC_INDEX if h == DYNAMIC_INDEX else size for size, h in zip(sizes, high, strict=True)]
+                    loaded = append(tensor.PadOp(loaded, [], dynamic_high, Region(padding), [0] * len(sizes),
+                                    high, TensorType(buffer.type.get_element_type(), shape)), op).result
+                    if dynamic_high:
+                        # The checked size + (tile-size) identity establishes
+                        # the static source tile type after dynamic padding.
+                        loaded = append(tensor.CastOp.build(operands=[loaded],
+                                        result_types=[TensorType(buffer.type.get_element_type(), sizes)]), op).dest
                 mapping[op.results[0]] = loaded
             elif name in ("tts.store", "tt.store"):
                 if op.operands[0] not in descriptors:
@@ -592,13 +641,13 @@ def _functionalize(module, abi):
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
                 if parallel:
                     footprint = (tuple(off.form for off in offsets), physical)
-                    independent_tile(*footprint, abi.grid)
+                    independent_tile(footprint[0], tuple(maximum(n) for n in physical), abi.grid)
                     if buffer.name in writes and writes[buffer.name][0] != footprint:
                         raise ConversionError("parallel local stores need one established owned tile per output")
                     writes[buffer.name] = (footprint, offsets, op)
                 value = mapping[op.operands[1]]
                 if active != sizes:
-                    value = append(tensor.ExtractSliceOp.from_static_parameters(value, [0] * len(sizes), active), op).result
+                    value = append(slice_op(value, [Coordinate(Linear()) for _ in sizes], active), op).result
                 value = transpose(value, inverse_permutation(axes), op)
                 states[buffer.name] = append(slice_op(value, offsets, physical, destination=states[buffer.name]), op).result
                 initialization.store(buffer, tuple(off.form for off in offsets), physical)
@@ -617,6 +666,25 @@ def _functionalize(module, abi):
                 append(cloned, op)
     translate(function.regions[0].block)
     if parallel:
+        def index_constant(number, source):
+            return append(arith.ConstantOp.from_int_and_width(number, IndexType()), source).result
+
+        def owned_index(form, source):
+            # Rebuild owned coordinates outside source branches/loops. Their
+            # SSA temporaries need not dominate the final parallel publication.
+            value = index_constant(form.constant, source)
+            for axis, coefficient in enumerate(form.programs[:len(abi.grid)]):
+                if not coefficient or abi.grid[axis] == 1:
+                    continue
+                divisor = host_math.prod(abi.grid[axis + 1:])
+                pid = launch_iv
+                if divisor != 1:
+                    pid = append(arith.DivUIOp(pid, index_constant(divisor, source)), source).result
+                pid = append(arith.RemUIOp(pid, index_constant(abi.grid[axis], source)), source).result
+                term = append(arith.MuliOp(pid, index_constant(coefficient, source)), source).result
+                value = append(arith.AddiOp(value, term), source).result
+            return value
+
         for name, offsets, active in reads:
             if name not in writes or writes[name][0] != (offsets, active):
                 raise ConversionError("readwrite load crosses a program's established owned tile")
@@ -624,7 +692,21 @@ def _functionalize(module, abi):
         for buffer in writable:
             if buffer.name not in writes:
                 raise ConversionError("parallel writable result has no established store tile")
-            (_, active), offsets, source = writes[buffer.name]
+            (forms, active), _offsets, source = writes[buffer.name]
+            offsets, published = [], []
+            for form, size, dimension in zip(forms, active, buffer.shape, strict=True):
+                raw = owned_index(form, source)
+                value = raw
+                if form.bounds(abi.grid)[1] > dimension:
+                    value = append(arith.MinSIOp(value, index_constant(dimension, source)), source).result
+                offsets.append(Coordinate(form, value))
+                if isinstance(size, TailExtent):
+                    remaining = append(arith.SubiOp(index_constant(size.limit, source), raw), source).result
+                    extent = append(arith.MinSIOp(index_constant(size.cap, source), remaining), source).result
+                    extent = append(arith.MaxSIOp(index_constant(0, source), extent), source).result
+                    size = TailExtent(size.cap, size.limit, size.offset, extent)
+                published.append(size)
+            active = tuple(published)
             tile = append(slice_op(states[buffer.name], offsets, active), source).result
             updates.add_op(slice_op(tile, offsets, active, destination=shared[buffer.name], parallel_insert=True))
         body.add_op(InParallelOp.build(regions=[Region(updates)]))
@@ -647,7 +729,7 @@ def _functionalize(module, abi):
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
     if parallel:
         output.attributes["prov.output_ownership"] = StringAttr(json.dumps({name: {
-            "offsets": [asdict(off) for off in info[0][0]], "tile_sizes": info[0][1],
+            "offsets": [asdict(off) for off in info[0][0]], "tile_sizes": [describe(n) for n in info[0][1]],
             "write_independence": "distinct-axis-affine-tile-strides",
             "readwrite_reads": "owned-tile-only"} for name, info in writes.items()}, sort_keys=True))
     result = ModuleOp([output])
@@ -721,7 +803,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
              "intent": {"description": abi.intent, "origin": "caller-description", "grants_semantics": False},
              "pipeline": stage["command"][1:-1],
              "correspondence": "upstream-preserved-source-name-locations; missing descendants are not independent dead-code proofs",
-             "memory": {"bounds": "checked-static-domain-rectangular-accesses", "ordering": "functional-buffer-versions",
+             "memory": {"bounds": "checked-affine-domain-clipped-rectangular-accesses", "ordering": "functional-buffer-versions",
                         "index_overflow": "checked-source-address-widths-before-index-promotion",
                         "aliasing": "independent-storage-ABI-precondition",
                         "grid": "unmapped-logical-forall-with-owned-tiles" if host_math.prod(abi.grid) > 1 else "single-logical-program"},

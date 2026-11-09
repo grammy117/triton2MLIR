@@ -61,11 +61,16 @@ increments and final pointer values. Actual model2MLIR calls are bound by schema
 and scalar specialization, including the original plain/Triton MLP pair. Complete
 models match their captured PyTorch goldens and pass Merlin's actual interface
 reader and C runtime generation. This does not establish target execution or
-universal op/type/attribute coverage. The principal work still needed is:
+universal op/type/attribute coverage. Clipped affine tail masks now additionally
+have native checks for ragged M/N/K GEMM, transposed weights, nonzero-fill
+reductions, branch-local stores, partial output preservation and surplus inactive
+programs. Tiling and K-loop reuse remain executable structure. Fresh outputs use
+a symbolic clipped-partition proof rather than nominal tile cardinality.
+The principal work still needed is:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
-2. General strided/block descriptors, dynamic bounds/masks and irregular access with
+2. General strided/block descriptors, runtime shapes/scalars, arbitrary masks and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.
 3. Mixed-precision, cast, scan/combiner and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.

@@ -57,7 +57,9 @@ original `mlp_basic` / `mlp_basic_triton` pair. Merlin's actual reader and C run
 accept both model interfaces; target/staged execution remains unqualified.
 
 Permuted loads/stores, data-dependent `scf.if` memory merges and affine pointer-to-index
-recurrences now have native checks. The next boundaries are runtime masks/shapes, grouped or
+recurrences and clipped affine tail masks now have native checks. Ragged M/N/K GEMM retains
+its K loop and tile sizes, including transposed weights. The next boundaries are runtime
+scalars/shapes, arbitrary masks, grouped or
 nonlinear indexing, block/irregular descriptors, general while/pointer state and numeric profiles.
 
 An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
@@ -134,7 +136,8 @@ accumulator restoration, affine logical-grid decoding, symbolic bounds/source-wi
 disjoint owned output tiles. Serialized IR passes native host numerical checks. Bounded nested
 loops carry functional buffer versions. Permuted/transposed weights, invariant affine pointer
 increments, post-loop pointer descriptors and `scf.if` memory merges are now covered. Ragged
-contractions, nonlinear/live pointer state, grouped traversal, general while and mixed-precision
+M/N/K contractions, dynamic prefix cropping/padding and complete clipped output partitions
+also pass native checks. Nonlinear/live pointer state, grouped traversal, general while and mixed-precision
 profiles remain open.
 
 Translate `scf.for`/`if` and their block/yield arguments, pointer recurrences, reduction loops and

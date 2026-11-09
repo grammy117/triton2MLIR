@@ -47,10 +47,12 @@ This profile currently requires:
   each nontrivial grid axis must advance a distinct tensor axis by at least
   its tile size. Readwrite loads stay within that same owned tile.
 - Affine descriptor offsets over logical programs and statically bounded loop
-  IVs, static rectangular masks and specialized integer scalar arguments.
+  IVs, rectangular masks and specialized integer scalar arguments. Clipped
+  prefixes may vary with logical program IDs and bounded source loop IVs.
   Bounded `scf.for` regions preserve their tensor accumulators and read-only tile
   loads; writable buffers become additional loop-carried tensor versions, including
-  nested read-modify-write loops. Pointer-valued loop arguments remain refused.
+  nested read-modify-write loops. Live pointer-valued loop arguments still need
+  descriptor-state normalization; supported affine pointer increments are described below.
 - `scf.if` carries source tensor results and writable buffer versions through
   both regions. A missing source else returns incoming memory values. Definite
   initialization facts are intersected across branches, so a store in one arm
@@ -93,7 +95,7 @@ an unwritten arm, refuse partially initialized fresh results, and combine source
 branch results with nested loop memory updates. Branch-returned pointers and
 branch-dependent address bounds still need separate descriptor/range rules.
 
-Dynamic/irregular memory, aliasing, pointer
+Runtime shapes/scalars, irregular memory, aliasing, general pointer
 recurrences, scans and mixed-precision policy need further work. The upstream
 stage driver remains available for these investigations; successful stage
 conversion is not counted as complete functional-tensor/package coverage.
@@ -110,3 +112,31 @@ adapter carries recovered scalar coordinates through the loop instead. An
 upstream poison initializer is discarded only when all uses initialize pointer
 arguments proved unused inside positive-trip-count loops. Observable poison
 never becomes a zero or another invented value.
+
+## Dynamic rectangular tails
+
+The adapter now recognizes the signed affine clamp emitted by upstream
+`MaskAnalysis`: `max(min(start + tile, limit), start) - start`, including its
+extra `min(tile, ...)`. This is matched structurally against an exact clipped
+prefix, tied to a recovered address axis and checked against the declared
+tensor dimension. Arbitrary predicates remain outside this rule.
+
+Loads use dynamically sized `tensor.extract_slice`, exact source padding and
+a checked cast back to the static source tile type. Stores crop those tiles
+before insertion. All-inactive extra programs use bounded zero-length slices.
+Axis permutations retain dynamic dimensions through `linalg.transpose`.
+No padding value is invented for an omitted source `other`.
+
+Fresh output coverage uses a closed-form clipped affine partition check,
+including ragged final tiles and surplus inactive programs. Equal nominal tile
+cardinality would be incorrect here. Publication coordinates/extents are
+materialized outside source branches so nested stores cannot leak scoped SSA
+values. Provenance records the maximum tile sizes, limits, logical offsets and
+coverage rule; the executable operations implement the masks and fill values.
+
+Native checks now include ragged M/N/K GEMM, transposed weights, nonzero-fill
+reductions with stores in both data-dependent branches, partial readwrite
+outputs, surplus programs, out-of-bounds refusal and incomplete fresh-output
+refusal. A >2²⁵-element conversion checks symbolic coverage without allocating
+or executing that tensor. These checks preserve source grids, K loops and tile
+computation; they do not qualify arbitrary dynamic masks or runtime dimensions.
