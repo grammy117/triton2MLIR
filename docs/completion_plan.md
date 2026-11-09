@@ -325,6 +325,14 @@ counter storage without per-element allocation or full-bin copies. Ascend's
 high-level histogram and target builtin are recorded as source boundaries,
 without introducing an opaque portable fallback. See [the contract](histogram.md).
 
+The next tensor abstraction improvement is [actual logical-grid bounds and exact
+runtime partitions](logical_grid_bounds.md). The histogram investigation exposed
+both gates: independent worst-case intervals lose the row/grid correlation,
+and fresh dynamic results additionally require a complete partition proof.
+The plan records the reusable inequality, required implementation order and
+positive/negative oracles. It is not implemented yet; guarded execution remains
+the measured path for the unchanged unmasked dynamic row form.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;
