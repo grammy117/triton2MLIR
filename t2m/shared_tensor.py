@@ -565,7 +565,7 @@ def _functionalize(module, abi):
     def unit_descriptor(op, store=False):
         # Upstream represents all-unit tensor pointers as gather/scatter.
         # A single zero index has no irregular indexing or write conflicts.
-        if len(op.operands) != (3 if store else 2) or op.operands[0] not in buffers:
+        if len(op.operands) not in ((3, 4) if store else (2,)) or op.operands[0] not in buffers:
             raise ConversionError("gather/scatter needs a qualified tensor index/effect adapter", opcode=opcode(op))
         buffer = buffers[op.operands[0]]
         indices = mapping[op.operands[1]]
@@ -641,7 +641,15 @@ def _functionalize(module, abi):
                 or index.type.get_shape() != value.type.get_shape() or value.type.element_type != buffer.type.element_type
                 or mask is not None and mask.type != TensorType(builtin.i1, value.type.get_shape())):
             raise ConversionError("scatter index/value/mask types differ from the logical tensor ABI", opcode=opcode(op))
-        forms, sizes, axes = scatter_tile(buffer, abi, index, mask, facts)
+        try:
+            if all(n == 1 for n in buffer.shape):
+                return (*access(op, unit_descriptor(op, store=True), store=True), mask)
+            forms, sizes, axes = scatter_tile(buffer, abi, index, mask, facts)
+        except ConversionError as exc:
+            if exc.source_id is not None:
+                raise
+            raise ConversionError(str(exc), source_id=next(iter(_source_ids(op.location)), None),
+                                  opcode=exc.opcode or opcode(op)) from exc
         offsets, physical = [], []
         for destination_axis, (form, dimension) in enumerate(zip(forms, buffer.shape, strict=True)):
             size = sizes[axes.index(destination_axis)]
