@@ -49,6 +49,10 @@ Merlin host checks; try `shared-demo --kernel indexed-gather`.
 Typed runtime scalar inputs also reach Merlin by value. `invoke-merlin` reuses a
 qualified library with new scalar values and separate invocation evidence; see
 [the runtime ABI](docs/runtime_abi.md).
+`shared-demo --kernel runtime-recurrence` preserves a runtime tile recurrence,
+including zero trips. The explicit `--memory-profile buffer` also retains the
+upstream standard memory payload behind the same public tensor/scalar ABI;
+see [its proof scope and package differences](docs/full_memory_bridge.md).
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

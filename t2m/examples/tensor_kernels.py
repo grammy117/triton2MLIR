@@ -23,6 +23,24 @@ def runtime_branch(x, flag, out, N: tl.constexpr, B: tl.constexpr):
 
 
 @triton.jit
+def runtime_recurrence(x, iterations, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < N, other=0)
+    for k in range(iterations):
+        value = value * 0.5 + k
+    tl.store(out + lane, value, lane < N)
+
+
+@triton.jit
+def runtime_memory_loop(x, iterations, out, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.full((B,), 0, tl.float32)
+    for k in range(iterations):
+        value += tl.load(x + lane + k * N, lane < N, other=0)
+    tl.store(out + lane, value, lane < N)
+
+
+@triton.jit
 def runtime_prefix(x, n, out, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=-7.0)

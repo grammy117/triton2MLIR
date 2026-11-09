@@ -102,7 +102,38 @@ python -m t2m shared-demo --kernel runtime-prefix --out out/runtime_prefix \
   --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python
 ```
 
-Dynamic tensor shapes/strides/grid sizes, general source while/loop bounds and
+## Runtime value recurrences
+
+Runtime `scf.for` bounds now survive for regions containing only registered
+standard scalar/tensor computation, including nested value regions. The loaded
+tile is immutable tensor state; no new source buffer observation occurs inside
+the loop. The adapter clones the original recurrence, bounds, types, assertions
+and source locations, without unrolling or adding buffer-state iteration args.
+Buffer reads/writes, pointers, opaque operations and CFG branches retain their
+existing memory/effect requirements. A loop result used later as an address still
+needs its own index/range proof.
+
+This reuses Meta `17f0c234`'s existing SCF conversions (see
+`TritonToUnstructuredPass.cpp` and `scf_for_ptr_in_iterargs.mlir`); no local
+arithmetic decomposition replaces the upstream body. Both public memory profiles
+have native and actual Merlin checks for a tiled runtime recurrence over counts
+0, 1 and 5 using exactly one library, including preserved inputs and ragged tails.
+
+Merlin's explicit `reuse_loop_tensor_destinations` compiler feature runs after
+elementwise fusion and immediately before bufferization. Upstream fusion's
+`RemoveOutsDependency` intentionally replaces unused destinations with empties;
+the later rewrite reuses a loop-carried tensor only for a completely overwritten,
+positive static, identity-output parallel generic with an unused init scalar.
+It preserves arithmetic and source SSA inputs. Native alias analysis determines
+physical reuse and the ordinary ownership/lifetime checks remain mandatory.
+
+```bash
+python -m t2m shared-demo --kernel runtime-recurrence --memory-profile buffer \
+  --out out/runtime_recurrence --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+```
+
+Dynamic tensor shapes/strides/grid sizes, general source while/memory-loop bounds and
 indexed writes remain open. Next: symbolic tensor dimensions and launch extents
 linked to actual argument shapes, dynamic allocations/results, and one compiled
 library invoked over independent shapes. Those need initialization/ownership

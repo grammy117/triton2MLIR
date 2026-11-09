@@ -21,6 +21,7 @@ from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
+from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
@@ -591,6 +592,13 @@ def _functionalize(module, abi):
                 mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
                 states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
             elif name == "scf.for":
+                if value_only_region(op):
+                    source_loops.append({"source_ids": _source_ids(op.location),
+                                         "bounds": "source-SSA; runtime-or-static",
+                                         "memory_effects": "no-buffer-accesses",
+                                         "recurrence": "original-standard-value-region"})
+                    append(op.clone(value_mapper=mapping), op)
+                    continue
                 arguments = op.body.block.args
                 pointer_slots = [i for i, v in enumerate(arguments[1:]) if _pointer_type(v.type)]
                 if any(arguments[i + 1].uses for i in pointer_slots):

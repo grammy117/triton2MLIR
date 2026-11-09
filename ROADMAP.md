@@ -73,6 +73,10 @@ ABI v4 now adds guarded runtime memory prefixes, including empty/tail domains,
 negative/all-inactive limits and preserved readwrite outputs. One Merlin library
 handles different domains without recompilation. Logical tensor capacities are
 still static; actual dynamic shapes/results and launch extents remain a separate gate.
+Runtime value-only loops now preserve source SSA bounds and tile recurrences
+through the same Merlin library for zero/nonzero counts in both memory profiles.
+The checked consumer retains fusion and native lifetime/alias analysis; source
+memory loops still need independent domain and effect admission.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.

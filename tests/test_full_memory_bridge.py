@@ -63,10 +63,10 @@ function.properties['arg_attrs']=ArrayAttr(DictionaryAttr({'bufferization.writab
 from merlin.llvmlower.passes_xdsl import add_c_interface
 from merlin.llvmlower.pipeline import lower_to_llvm_ir
 from merlin.llvmlower.codegen import build_host_shared
-from t2m.consumer_worker import tensor_pipeline
+from t2m.consumer_worker import COMPILER_FEATURES, tensor_pipeline
 add_c_interface(module)
 prepared=text(module,generic=True);(root/'prepared.mlir').write_text(prepared)
-llvm=lower_to_llvm_ir(prepared,workdir=root/'lowering',pipeline=tensor_pipeline(),timeout=30,features=frozenset(),retain_llvm_dialect=True)
+llvm=lower_to_llvm_ir(prepared,workdir=root/'lowering',pipeline=tensor_pipeline(),timeout=30,features=COMPILER_FEATURES,retain_llvm_dialect=True)
 (root/'model.ll').write_text(llvm);build_host_shared(root/'model.ll',root/'model.so')
 '''
 

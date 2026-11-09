@@ -59,7 +59,7 @@ model tests cover ordinary, ragged, block-pointer and descriptor GEMM bindings
 without replacing model weights, inputs or goldens. These are the qualified
 examples within the existing semantic proof scope, not universal conversion.
 
-## Requirements beyond the initial profile
+## Profile invariants and remaining gates
 
 1. Add an explicit mixed tensor/memref memory profile alongside the existing
    tensor profile. Retain the same logical tensor/scalar public boundary and

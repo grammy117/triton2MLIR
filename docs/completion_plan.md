@@ -107,6 +107,19 @@ open. The remaining dynamic-shape work must introduce dimensions bound to
 actual tensor extents, corresponding runtime launch bounds and result allocation;
 it cannot relabel static capacities as dynamic tensors. See [the runtime contract](runtime_abi.md).
 
+Workstream D additionally preserves runtime value-only source `scf.for`
+recurrences. Both memory profiles qualify zero/nonzero counts through the same
+Merlin library. A checked post-fusion destination-reuse feature exposes original
+loop-carried tensor storage to native bufferization while retaining its alias
+and lifetime checks. Runtime source buffer-access loops still require separate
+domain, initialization and effect proofs.
+
+The next control slice is guarded read-only buffer-access loops: derive a
+conservative IV interval from the actual entry-checked bounds, retain the runtime
+trip count and zero-trip behavior, and grant no write/initialization facts from
+possibly unexecuted iterations. That proof should feed the independent full
+memory boundary as well as the tensor representation.
+
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
 input preservation. The old categorical consumer incompatibility is therefore

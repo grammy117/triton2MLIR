@@ -99,7 +99,10 @@ dynamic shape/stride/grid and address-domain profiles still require separate wor
 Guarded i32/i64 prefix domains (ABI v4) now additionally have native and Merlin
 checks, including empty/tail/full domains, preserved outputs and negative limits.
 They vary memory domains over static capacities; actual dynamic tensor shapes,
-general indexed writes and runtime loop domains remain open.
+general indexed writes and runtime memory-loop domains remain open.
+Runtime value-only `scf.for` recurrences additionally retain their original
+standard body and SSA bounds through native/Merlin execution, including zero
+trips and repeat invocations through one library in both memory profiles.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
