@@ -58,6 +58,9 @@ ABI v5 adds [named runtime dimensions and logical launch expressions](dynamic_sh
 Per-lane masked writes additionally retain `prov.source_scatters` and
 `memory.source_scatters` observations with exact source IDs and the proof kind;
 their functional tensor/scalar ABI and receipt schemas are unchanged.
+The existing `f16` tensor element type now has native and Merlin host execution
+support using actual NumPy float16 storage. No hidden widening or by-value half
+scalar convention is introduced; see [the half profile](half_precision.md).
 The actual tensor/result allocation extents are dynamic; they are distinct from
 ABI v4's static capacities and changing prefixes. Native execution receives an
 explicit shape-allocation contract derived from `spec.json`. Static packages

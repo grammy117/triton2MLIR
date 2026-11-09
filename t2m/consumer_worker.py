@@ -85,7 +85,7 @@ def execute_model(staged, work, arguments, *, evaluation=None):
 
     signature = json.loads((staged / "signature.json").read_text())
     evaluation = Path(evaluation) if evaluation is not None else work
-    dtypes = {"f32": np.float32, "f64": np.float64, "i8": np.int8, "i16": np.int16,
+    dtypes = {"f16": np.float16, "f32": np.float32, "f64": np.float64, "i8": np.int8, "i16": np.int16,
               "i32": np.int32, "i64": np.int64, "i1": np.bool_}
     with np.load(arguments, allow_pickle=False) as values:
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:

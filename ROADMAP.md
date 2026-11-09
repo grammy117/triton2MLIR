@@ -72,6 +72,10 @@ indirect scatter remains open. See [masked writes](docs/masked_writes.md).
 Two-axis runtime masked stores also qualify transposed storage and traversal
 without losing mask/address correspondence. `shared-demo --kernel masked-store`
 and `--kernel masked-matrix` provide visible package routes.
+Half tensor storage now also executes through both Merlin profiles, retaining
+f32 intermediates/narrowing, nonzero f32 contraction accumulators and masked
+runtime matrix state. [The measured half profile](docs/half_precision.md) keeps
+other low-precision formats and rounding policies explicit.
 The [runtime ABI](docs/runtime_abi.md) now carries typed by-value scalar inputs,
 including interleaved TTIR arguments, into native and Merlin host execution.
 Scalar payload/control values are supported independently of the remaining

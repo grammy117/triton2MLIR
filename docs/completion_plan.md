@@ -126,6 +126,11 @@ Read-only indexed gathers now also retain runtime allocation dimensions and
 independent index/result counts through the same compiler/library path, with
 active tensor bounds checks, exact inactive fills and empty storage cases.
 General scatter, writable-buffer reads and aliasing still need separate proofs.
+Workstream E now has actual f16 tensor storage through native and Merlin host
+ABIs in both profiles, retaining typed f32 promotions/narrowing and nonzero
+f32 contraction accumulators. Rounding/subnormal/overflow and inactive-state
+cases have independent references. BF16/fp8 encoding, broader numeric policies
+and by-value half scalars remain open; see [half precision](half_precision.md).
 
 Workstream D additionally preserves runtime value-only source `scf.for`
 recurrences. Both memory profiles qualify zero/nonzero counts through the same

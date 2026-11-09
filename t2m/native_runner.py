@@ -12,7 +12,7 @@ import numpy as np
 from torch_mlir import execution_engine, ir, passmanager, runtime
 from runtime_shapes import resolve_shapes
 
-DTYPES = {"f32": np.float32, "f64": np.float64, "i8": np.int8,
+DTYPES = {"f16": np.float16, "f32": np.float32, "f64": np.float64, "i8": np.int8,
           "i16": np.int16, "i32": np.int32, "i64": np.int64, "i1": np.bool_}
 SCALAR_CTYPES = {"f32": ctypes.c_float, "f64": ctypes.c_double, "i8": ctypes.c_int8,
                  "i16": ctypes.c_int16, "i32": ctypes.c_int32, "i64": ctypes.c_int64, "i1": ctypes.c_bool}

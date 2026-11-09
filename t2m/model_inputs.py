@@ -9,7 +9,7 @@ import sys
 import numpy as np
 from safetensors import safe_open
 
-DTYPES = {"f32": np.float32, "f64": np.float64, "i64": np.int64,
+DTYPES = {"f16": np.float16, "f32": np.float32, "f64": np.float64, "i64": np.int64,
           "i32": np.int32, "i16": np.int16, "i8": np.int8, "i1": np.bool_}
 
 
