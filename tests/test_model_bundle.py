@@ -88,6 +88,25 @@ def test_actual_triton_op_model_binds_parameters_and_merlin_interface(tmp_path, 
         verify_bundle(out)
 
 
+def test_mixed_memory_kernel_binds_real_model_and_preserves_parent_data(tmp_path, model_inputs):
+    capture, original = model_inputs
+    source = tmp_path / "source.ttir"
+    source.write_text(original.implementation.source_ttir)
+    implementation = convert_shared(source, original.implementation.spec, tmp_path / "implementation", optimizer=OPT, memory_profile="buffer")
+    binding = KernelBinding(original.qualname, implementation, operands=original.operands,
+                            results=original.results, scalar_arguments=original.scalar_arguments)
+    out = tmp_path / "bound"
+    write_model_bundle(capture, [binding], out, work=tmp_path / "work", python=NATIVE,
+        merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"),
+        merlin_host=bool(MERLIN and CLANG), merlin_clang=CLANG, rtol=1e-5, atol=6e-6)
+    receipt = verify_bundle(out)
+    assert "kernels/0/memory-witness.mlir" in receipt["artifacts"]
+    for name in ("weights.safetensors", "inputs.npz", "golden.npy", "extra.npz"):
+        assert (out / name).read_bytes() == (capture / name).read_bytes()
+    if MERLIN:
+        assert (out / "consumer/compiler/source/kernels/0/memory-stage.mlir").is_file()
+
+
 def test_parent_integrity_failure_prevents_any_model_publication(tmp_path, model_inputs):
     capture, binding = model_inputs
     corrupted = tmp_path / "corrupted"

@@ -6,7 +6,7 @@ The profile supports affine logical grids, bounded source loops and structured
 tensor descriptors. Unsupported memory/control-flow forms fail closed.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import hashlib
 import json
 import math as host_math
@@ -63,6 +63,10 @@ def parse_shared(source):
     ctx.allow_unregistered = True  # Only intake; output is checked separately.
     ctx.load_dialect(math.Math)
     ctx.load_dialect(cf.Cf)
+    from .standard_memref import memref_dialect
+    from .standard_bufferization import bufferization_dialect
+    ctx.load_dialect(memref_dialect())
+    ctx.load_dialect(bufferization_dialect())
     return SharedParser(ctx, source).parse_module()
 
 
@@ -864,19 +868,22 @@ class SharedTensorResult:
     spec: TensorABI
     trace: dict
     source_ttir: str
+    auxiliary_artifacts: dict[str, str] = field(default_factory=dict)
 
     @property
     def mlir_text(self):
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
     The returned standard module is experimental until numerically qualified;
     native verification and consumer execution are separately measured statuses.
     """
+    if memory_profile not in ("tensor", "buffer"):
+        raise ValueError("memory profile must be explicitly tensor or buffer")
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
     optimizer = inspect_optimizer(optimizer)
@@ -934,10 +941,31 @@ def convert_shared(source, abi, work, *, optimizer=None):
                                (original_inventory["operations"] if original_inventory else records)
                                if r["opcode"] in DESCRIPTOR_OPS],
                                "source_descriptor_intent": "retained-in-exact-original-source-and-typed-inventory"})
-    result = _functionalize(lowered, abi)
+    result = witness = _functionalize(lowered, abi)
+    auxiliary = {}
+    memory_stage = None
+    if memory_profile == "buffer":
+        from .buffer_memory import functionalize_memory, parse_memory
+        witness_text = text(witness)
+        stream = StringIO()
+        Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(lowered)
+        memory_input = stream.getvalue() + "\n"
+        (work / "memory-input.mlir").write_text(memory_input)
+        memory_stage = lower_with_shared(work / "memory-input.mlir", work / "memory-ir", optimizer=optimizer, stage="memory-ir")
+        memory_source = (work / "memory-ir/lowered.mlir").read_text()
+        result = functionalize_memory(parse_memory(memory_source), abi)
+        auxiliary = {"memory-witness.mlir": witness_text, "memory-input.mlir": memory_input,
+                     "memory-stage.mlir": memory_source,
+                     "memory-stage.json": json.dumps(memory_stage, indent=2, sort_keys=True) + "\n"}
+        transformations.append({"kind": "functional-standard-memory-boundary",
+                               "semantic_gate": "existing-source-tensor-initialization-bounds-and-ownership-analysis",
+                               "launcher": "internal-counts-xyz-then-ids-xyz; public-tensor-scalar-ABI"})
     emitted = []
     source_names = {r["id"]: r["opcode"] for r in records}
     for op in result.walk():
+        if memory_profile == "buffer":
+            op.attributes.setdefault("prov.family", StringAttr("triton"))
+            op.attributes.setdefault("prov.op", StringAttr(op.name.split(".")[-1]))
         ids = _source_ids(op.location)
         if ids:
             op.attributes["prov.source_ids"] = ArrayAttr(StringAttr(s) for s in ids)
@@ -976,7 +1004,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
                      source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
                      original_attributes=original_inventory["attributes"],
                      correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
-    entry = next(iter(result.ops))
+    entry = next(iter(witness.ops))
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data)
     trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data)
@@ -987,4 +1015,13 @@ def convert_shared(source, abi, work, *, optimizer=None):
     trace["memory"]["output_initialization"] = json.loads(entry.attributes["prov.output_initialization"].data)
     if "prov.output_ownership" in entry.attributes:
         trace["memory"]["output_ownership"] = json.loads(entry.attributes["prov.output_ownership"].data)
-    return SharedTensorResult(result, abi, trace, source_text)
+    if memory_stage is not None:
+        trace["profile"] = "shared-functional-buffer"
+        trace["memory"].update(representation="standard-memory-inside-functional-tensor-ABI",
+            witness_sha256=hashlib.sha256(auxiliary["memory-witness.mlir"].encode()).hexdigest(),
+            continuation_input_sha256=hashlib.sha256(auxiliary["memory-input.mlir"].encode()).hexdigest(),
+            continuation_output_sha256=hashlib.sha256(auxiliary["memory-stage.mlir"].encode()).hexdigest(),
+            continuation_pipeline=memory_stage["command"][1:-1],
+            semantic_gate="source tensor memory analysis; no additional opcode coverage implied")
+        trace["abi_difference"] += "; mixed standard tensor/memref payload; writable state privately allocated and readwrite inputs copied"
+    return SharedTensorResult(result, abi, trace, source_text, auxiliary)

@@ -113,4 +113,8 @@ input preservation. The old categorical consumer incompatibility is therefore
 not a reason to avoid the full shared pipeline. Follow [the full memory bridge
 requirements](full_memory_bridge.md) to generalize its typed functional boundary,
 memory/numeric contract, source correspondence and true dynamic dimensions.
-The probe is not a supported generic conversion profile or universal coverage.
+The explicit `--memory-profile buffer` now implements the initial typed wrapper,
+complete package/model binding and Merlin compiler/library qualification within
+the existing tensor memory proof scope. Its additional artifacts bind the actual
+continuation bytes. Independent memory admission, true dynamic dimensions and
+broader effects remain open; this is not universal source coverage.

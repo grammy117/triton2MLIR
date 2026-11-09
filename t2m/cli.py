@@ -33,7 +33,7 @@ def demo(out, *, size=1024, block=256, operation="add"):
             "numerical_check": "passed", "merlin_staged_execution": "not-certified"}
 
 
-def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
+def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor"):
     from .examples import tensor_kernels as kernels
     from .frontend import capture_ttir
     from .shared_tensor import TensorABI, TensorBuffer, convert_shared
@@ -91,7 +91,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     source.write_text(capture_ttir(fn, {**{b.name: "*fp32" if b.dtype == "f32" else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants))
-    result = convert_shared(source, abi, work / "translation", optimizer=optimizer)
+    result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=b.shape).astype("float32") for b in abi.inputs]
     additional = []
@@ -128,7 +128,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     write_shared_bundle(result, out, arrays, [golden, *additional], work=work / "native", python=python,
                         rtol=1e-5, atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul") else 2e-6)
     return {"bundle": str(out), "kernel": fn.__name__, "native_numerical_check": "passed",
-            "profile": "shared-functional-tensor", "merlin_staged_execution": "not-certified"}
+            "profile": result.trace.get("profile", "shared-functional-tensor"), "merlin_staged_execution": "not-certified"}
 
 
 def main(argv=None):
@@ -162,6 +162,7 @@ def main(argv=None):
     tensor.add_argument("--abi", type=Path, required=True)
     tensor.add_argument("--out", type=Path, required=True)
     tensor.add_argument("--optimizer", type=Path)
+    tensor.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
@@ -171,6 +172,7 @@ def main(argv=None):
     sd.add_argument("--out", type=Path, required=True)
     sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
+    sd.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
     coverage.add_argument("corpus", type=Path)
@@ -184,6 +186,7 @@ def main(argv=None):
     bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
     bind.add_argument("--out", type=Path, required=True)
     bind.add_argument("--optimizer", type=Path)
+    bind.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)
@@ -218,7 +221,7 @@ def main(argv=None):
         if args.command == "demo":
             summary = demo(args.out, size=args.size, block=args.block, operation=args.operation)
         elif args.command == "shared-demo":
-            summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python)
+            summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python, memory_profile=args.memory_profile)
         elif args.command == "shared-coverage":
             from .coverage import qualify_corpus
             report = qualify_corpus(args.corpus, args.out, optimizer=args.optimizer, stage=args.stage,
@@ -243,7 +246,8 @@ def main(argv=None):
                 if isinstance(abi, str):
                     abi = json.loads((args.bindings.parent / abi).read_text())
                 implementation = convert_shared(args.bindings.parent / item["ttir"], TensorABI.from_dict(abi),
-                                                work / f"kernel-{i}", optimizer=args.optimizer)
+                                                work / f"kernel-{i}", optimizer=args.optimizer,
+                                                memory_profile=item.get("memory_profile", args.memory_profile))
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
                                                results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
@@ -296,7 +300,7 @@ def main(argv=None):
                 raise FileExistsError(args.out)
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
-            result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer)
+            result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer, memory_profile=args.memory_profile)
             if args.inputs:
                 with np.load(args.inputs, allow_pickle=False) as saved:
                     if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:
@@ -313,7 +317,9 @@ def main(argv=None):
                 (args.out / "model.mlir").write_text(result.mlir_text)
                 (args.out / "provenance.json").write_text(json.dumps(result.trace, indent=2, sort_keys=True) + "\n")
                 (args.out / "spec.json").write_text(json.dumps(abi.as_dict(), indent=2, sort_keys=True) + "\n")
-            summary = {"out": str(args.out), "profile": "shared-functional-tensor", "checked_bundle": bool(args.inputs),
+                for name, payload in result.auxiliary_artifacts.items():
+                    (args.out / name).write_text(payload)
+            summary = {"out": str(args.out), "profile": result.trace.get("profile", "shared-functional-tensor"), "checked_bundle": bool(args.inputs),
                        "merlin_staged_execution": "not-certified"}
         else:
             spec = KernelSpec.from_dict(json.loads(args.spec.read_text()))

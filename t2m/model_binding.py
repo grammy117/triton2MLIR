@@ -17,6 +17,7 @@ from xdsl.dialects.builtin import (ArrayAttr, DictionaryAttr, FloatAttr, Integer
 from .diagnostics import ConversionError
 from .ir import text
 from .shared_tensor import SharedTensorResult, parse_shared
+from .memory_contract import validate_memory_evidence
 
 
 def scalar_attribute(value):
@@ -50,6 +51,7 @@ class KernelBinding:
         if len(self.qualname.split("::")) != 2 or not all(self.qualname.split("::")):
             raise ValueError("kernel identity must be namespace::name")
         result = self.implementation
+        validate_memory_evidence(result.trace, result.auxiliary_artifacts)
         if hashlib.sha256(result.mlir_text.encode()).hexdigest() != result.trace["mlir_sha256"]:
             raise ConversionError("kernel implementation changed after conversion")
         if json.loads(json.dumps(result.spec.as_dict())) != json.loads(json.dumps(result.trace["spec"])):

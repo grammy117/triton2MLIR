@@ -1,6 +1,6 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
-**Updated 2026-11-08.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-09.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.
@@ -76,6 +76,13 @@ still static; actual dynamic shapes/results and launch extents remain a separate
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.
+
+The explicit `--memory-profile buffer` now preserves the full upstream standard
+memory payload behind the same tensor/scalar interface. Standalone and actual
+model bundles qualify through Merlin's compiler/library path with byte-bound
+memory evidence. The initial profile still requires the existing tensor source
+memory proof; this representation milestone does not expand opcode coverage.
+See [the supported boundary and remaining work](docs/full_memory_bridge.md).
 
 Permuted loads/stores, data-dependent `scf.if` memory merges and affine pointer-to-index
 recurrences and clipped affine tail masks now have native checks. Ragged M/N/K GEMM retains

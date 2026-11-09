@@ -41,6 +41,10 @@ STAGES = {
                              "--canonicalize", "--triton-to-unstructured",
                              "--triton-arith-to-linalg", "--remove-dead-values", "--canonicalize"),
                             "linalg tensor computation with project-specific memory operations and per-program ABI"),
+    "memory-ir": Stage(("--triton-arith-to-linalg", "--structured-to-memref", "--unstructured-to-memref",
+                         "--triton-ptr-to-memref", "--triton-to-ptr", "--reconcile-unrealized-casts",
+                         "--reconcile-ptr-casts", "--remove-dead-values", "--cse", "--canonicalize"),
+                        "standard memory continuation after tensor computation/numeric adaptation; counts then program IDs appended"),
     "full": Stage(("--triton-to-linalg-experimental",),
                   "upstream memory/ptr/memref middle layer; not the functional tensor ABI"),
 }

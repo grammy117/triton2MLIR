@@ -19,6 +19,7 @@ from .consumer import check_merlin_host, check_merlin_interface
 from .ir import text
 from .model_binding import bind_model
 from .native import execute_native
+from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
@@ -126,6 +127,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         (directory / "model.mlir").write_text(implementation.mlir_text)
         _json(directory / "spec.json", implementation.spec.as_dict())
         _json(directory / "provenance.json", implementation.trace)
+        for name, payload in implementation.auxiliary_artifacts.items():
+            (directory / name).write_text(payload)
         kernel_artifacts[digest] = str(directory.relative_to(out))
     _json(out / "compatibility.json", {"schema": "t2m.bound-model-compatibility.v1",
           "model_abi_and_core_data_files": "unchanged-from-parent-model2MLIR-capture",
@@ -225,4 +228,9 @@ def verify_model_bundle(out):
             raise ValueError("kernel implementation is outside the bound artifact inventory")
         if _record(out / directory / "model.mlir")["sha256"] != digest:
             raise ValueError("kernel implementation relation failed")
+        provenance = json.loads((out / directory / "provenance.json").read_text())
+        profile = provenance.get("profile", TENSOR_PROFILE)
+        if profile not in PROFILE_FILES or any(directory + "/" + name not in receipt["artifacts"] for name in PROFILE_FILES[profile]):
+            raise ValueError("kernel memory profile evidence is outside the bound inventory")
+        validate_memory_evidence(provenance, {name: (out / directory / name).read_bytes() for name in PROFILE_FILES[profile]})
     return receipt

@@ -52,6 +52,23 @@ and emission/memory facts reference the normalized graph. They are not presented
 as original-operation correspondence. The package receipt/functional ABI remain
 unchanged; the difference is source provenance and normalization evidence.
 
+## Shared buffer profile (`t2m.capture-receipt.v2`)
+
+`--memory-profile buffer` selects `shared-functional-buffer`, alongside the
+default `shared-functional-tensor`. The public tensor/scalar ABI, references and
+model binding stay the same. The payload additionally contains standard
+`memref` and `bufferization` operations around retained linalg/tensor computation.
+Writable state is private; incoming readwrite values are copied before updates.
+Fresh outputs still require complete initialization and grid ownership proofs.
+
+The receipt additionally binds `memory-witness.mlir`, `memory-input.mlir`,
+`memory-stage.mlir` and `memory-stage.json`. Provenance binds the witness and
+continuation hashes; the report binds the continuation input/output bytes.
+Bound models retain these files under each kernel's directory. Merlin copies
+them into compiler staging without evaluator inputs or references. This initial
+profile requires the tensor source-memory proof and does not imply broader
+opcode admission. See [the memory boundary](full_memory_bridge.md).
+
 ## Shared core artifacts
 
 | Artifact | MVP convention |

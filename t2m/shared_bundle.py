@@ -11,6 +11,7 @@ import numpy as np
 from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
+from .memory_contract import BUFFER_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
@@ -41,6 +42,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
         raise ValueError("IR changed after conversion; regenerate its provenance")
     if hashlib.sha256(source.encode()).hexdigest() != result.trace["source_sha256"]:
         raise ValueError("source changed after conversion")
+    profile = validate_memory_evidence(result.trace, result.auxiliary_artifacts)
     arrays, references = tuple(np.asarray(a) for a in inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
@@ -69,14 +71,17 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     _json(out / "spec.json", result.spec.as_dict())
     _json(out / "provenance.json", trace)
     _json(out / "execution.json", execution)
-    _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": "shared-functional-tensor",
-          "baseline": "model2MLIR 035bb5a", "differences": DIFFERENCES,
+    for name, payload in result.auxiliary_artifacts.items():
+        (out / name).write_text(payload)
+    differences = DIFFERENCES + (["explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained"] if profile == BUFFER_PROFILE else [])
+    _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,
+          "baseline": "model2MLIR 035bb5a", "differences": differences,
           "same_core_filenames": True, "merlin_staged_execution": "not-certified"})
     _json(out / "meta.json", {"frontend": "triton-shared-with-t2m-tensor-ABI", "entry": result.spec.entry,
-          "output_type": "linalg-on-tensors", "execution": "native-host-LLVM-JIT",
+          "output_type": "functional-tensor-with-standard-memory" if profile == BUFFER_PROFILE else "linalg-on-tensors", "execution": "native-host-LLVM-JIT",
           "merlin_staged_execution": "not-certified"})
-    receipt = {"schema": "t2m.capture-receipt.v2", "profile": "shared-functional-tensor",
-               "artifacts": {name: _record(out / name) for name in sorted(REQUIRED)},
+    receipt = {"schema": "t2m.capture-receipt.v2", "profile": profile,
+               "artifacts": {name: _record(out / name) for name in sorted(REQUIRED | PROFILE_FILES[profile])},
                "materialized_abi": {"complete": True, "inputs": len(arrays), "outputs": len(actual)},
                "source_closure_verified": False}
     _json(out / "capture_receipt.json", receipt)
@@ -87,7 +92,8 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
 def verify_shared_bundle(out):
     out = Path(out)
     receipt = json.loads((out / "capture_receipt.json").read_text())
-    if receipt.get("schema") != "t2m.capture-receipt.v2" or set(receipt.get("artifacts", {})) != REQUIRED:
+    profile = receipt.get("profile", TENSOR_PROFILE)
+    if receipt.get("schema") != "t2m.capture-receipt.v2" or profile not in PROFILE_FILES or set(receipt.get("artifacts", {})) != REQUIRED | PROFILE_FILES[profile]:
         raise ValueError("not a complete shared tensor capture receipt")
     for name, record in receipt["artifacts"].items():
         path = out / name
@@ -95,6 +101,8 @@ def verify_shared_bundle(out):
             raise ValueError("bundle integrity mismatch: " + name)
     spec = TensorABI.from_dict(json.loads((out / "spec.json").read_text()))
     trace = json.loads((out / "provenance.json").read_text())
+    if validate_memory_evidence(trace, {name: (out / name).read_bytes() for name in PROFILE_FILES[profile]}) != profile:
+        raise ValueError("receipt and provenance memory profiles differ")
     if trace["spec"] != json.loads(json.dumps(spec.as_dict())):
         raise ValueError("provenance differs from the packaged ABI")
     if trace["mlir_sha256"] != _record(out / "model.mlir")["sha256"] or trace["source_sha256"] != _record(out / "source.ttir")["sha256"]:
