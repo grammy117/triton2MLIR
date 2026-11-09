@@ -1,5 +1,10 @@
 # Measured coverage and remaining boundaries
 
+The pinned [v3.7.1 source inventory](ttir_operations.md) contains all 50 `tt`
+operation definitions, extracted with TableGen and partitioned by semantic
+family. It establishes an opcode denominator, not universal operation, type,
+attribute or composition support. Standard dialects remain additional gates.
+
 [Actual logical-grid bounds](logical_grid_bounds.md) now prove unmasked dense
 unit rows and exact runtime output partitions, including mixed clipped columns.
 The initial focused suite passed 87 cases with two strict expected failures.
