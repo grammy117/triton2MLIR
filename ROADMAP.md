@@ -10,6 +10,9 @@ Recent additions retain finite selected-buffer pointer state, cat/split/tile
 gather, and [mapped scalar regions](docs/elementwise_map.md) through actual Merlin
 execution. The selected-memory model demo binds two real model2MLIR kernel calls
 and learned weights; per-kernel package differences are explicit.
+Tile-local [histogram](docs/histogram.md) also retains composite intent with a
+linear indexed-state expansion and exact source masks. The visible
+`shared-demo --kernel histogram` route supports all three memory profiles.
 
 ## The product contract
 

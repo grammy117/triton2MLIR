@@ -95,3 +95,19 @@ def test_flat_pointer_to_rank_two_dynamic_output_retains_tensor_proof_limit(tmp_
     from t2m.diagnostics import ConversionError
     with pytest.raises(ConversionError, match="dynamic dense descriptor rank differs"):
         capture(tmp_path, profile, "i64", True, False)
+
+
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_histogram_demo_packages_integer_counts_and_original_source(tmp_path, profile):
+    import json
+    from t2m.bundle import verify_bundle
+    from t2m.cli import main
+    output = tmp_path / "demo"
+    flags = ["--address-policy", "source-words"] if profile == "guarded-buffer" else []
+    assert main(["shared-demo", "--kernel", "histogram", "--out", str(output), "--optimizer", OPT,
+                 "--python", NATIVE, "--memory-profile", profile, *flags]) == 0
+    verify_bundle(output)
+    golden = np.load(output / "golden.npy", allow_pickle=False)
+    assert golden.shape == (2, 8) and golden.dtype == np.int32
+    trace = json.loads((output / "provenance.json").read_text())
+    assert any(t["kind"] == "ttir-histogram" for t in trace["transformations"])

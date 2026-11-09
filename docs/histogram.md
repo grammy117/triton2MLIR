@@ -46,6 +46,15 @@ Triton CPU, GPU or Ascend backend is imported or executed by this path.
 
 ## Measured scope and remaining limits
 
+The visible example emits the tensor form and validates its independent NumPy
+reference. Buffer and guarded profiles are selected with the existing flags:
+
+```bash
+python -m t2m shared-demo --kernel histogram --out out/histogram-tensor \
+  --optimizer .scratch/toolchain/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+```
+
 All 34 histogram cases pass native and actual Merlin checks. Tensor, buffer and
 guarded source-word profiles qualify matching row views with runtime row masks.
 The guarded profile additionally retains flat output pointers into the same

@@ -48,6 +48,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     runtime_scalars = ()
     example_dimensions = {}
     buffer_effects = {}
+    buffer_dtypes = {}
     if kernel == "tiled-add":
         fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
     elif kernel == "tiled-matmul":
@@ -113,6 +114,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         shapes, grid = [("m", 16), ("n", 16), ("n", 16), ("m", 16)], (GridExtent("m", 16),)
         runtime_scalars = (RuntimeScalar("m", "i32", 4, bounds=(0, 35)), RuntimeScalar("n", "i32", 5, bounds=(0, 37)))
         example_dimensions = {"m": 17, "n": 19}
+    elif kernel == "histogram":
+        from .examples.histogram_kernels import histogram_tiles
+        fn, constants = histogram_tiles, {"B": 16, "NB": 8, "MASKED": True, "ROW_VIEW": True}
+        shapes, grid = [("n",), ("tiles", 8)], (GridExtent("tiles", 1),)
+        runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3)))
+        example_dimensions = {"n": 23, "tiles": 2}
+        buffer_effects, buffer_dtypes = {"out": "write"}, {"x": "i32", "out": "i32"}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
@@ -152,7 +160,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["x", "indices", "out"]
     output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, buffer_effects.get(n, output_effect if n.startswith("out") else "read"),
-                    dtype="i32" if n == "indices" else "f32")
+                    dtype=buffer_dtypes.get(n, "i32" if n == "indices" else "f32"))
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(fn, {**{b.name: "*fp32" if b.dtype == "f32" else "*" + b.dtype for b in abi.buffers},
@@ -208,6 +216,16 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         probability = np.exp(scores - scores.max(axis=1, keepdims=True))
         probability /= probability.sum(axis=1, keepdims=True)
         golden = (probability @ arrays[2].astype(np.float64)).astype(np.float32)
+    elif kernel == "histogram":
+        n, tiles = example_dimensions["n"], example_dimensions["tiles"]
+        arrays[0] = rng.integers(-2, 10, size=n, dtype=np.int32)
+        arrays[1:] = [np.asarray(value, dtype=np.int32) for value in (n, tiles)]
+        golden = np.zeros((tiles, 8), dtype=np.int32)
+        for program in range(tiles):
+            lane = program * 16 + np.arange(16)
+            selected = (lane < n) & (lane % 3 != 1)
+            values = arrays[0][lane[selected]]
+            golden[program] = np.bincount(values[(values >= 0) & (values < 8)], minlength=8).astype(np.int32)
     elif kernel == "runtime-memory-store":
         arrays[2] = np.asarray(3, dtype=np.int32)
         golden = arrays[1].copy()
@@ -303,7 +321,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

@@ -69,6 +69,9 @@ packages lane-selected reads/writes with three ordered results and source proven
 `shared-demo --kernel online-attention` retains query-tile reuse, two tile
 contractions and running softmax state through Merlin's tensor interface. See
 [the measured attention profile](docs/attention.md).
+`shared-demo --kernel histogram` retains tile-local integer counts, exact masks
+and histogram intent through standard tensor/SCF operations; see
+[the expansion and measured profiles](docs/histogram.md).
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence
