@@ -58,6 +58,16 @@ empty domains and actual selected out-of-bounds errors. Actual Merlin libraries
 reuse independent inputs, choices, counts and shapes without recompilation;
 original input bytes and compiled library bytes remain unchanged.
 
+Additional native and Merlin cases compare raw FP16/FP32/FP64 value bits,
+including signed zeros, infinities and quiet NaN payloads, and i32 values.
+Nonuniform tensor fills remain observable on inactive lanes. Two address cases
+separately check original i32 multiply/add wrap and cancellation of successive
+sign-extended pointer increments. Each compiled library runs empty, scalar and
+ragged inputs with independent runtime choices and encoded offsets. These
+checks qualify memory transport; they do not grant floating arithmetic or
+pointer-observation permissions. The 13 value/word cases pass with all native
+and Merlin environments enabled.
+
 Reuse boundary: Meta triton-shared `17f0c234ce474bee334af36e351c62eca7852836`,
 `lib/AnalysisStructured/PtrAnalysis.cpp` reconciles branch pointer states and
 selects bases. Its `if_returning_mixed_structured_ptrs.mlir` fixture demonstrates

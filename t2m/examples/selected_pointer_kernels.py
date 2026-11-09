@@ -70,3 +70,33 @@ def selected_shape(x, y, out, n, m, B: tl.constexpr):
     index = block + tl.arange(0, 2 * B)
     value = tl.load(pointers, index < n, other=-7)
     tl.store(out + index, value, index < n)
+
+
+@triton.jit
+def selected_fills(x, y, fills, out, n, m, choice, B: tl.constexpr, OMIT_OTHER: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = tl.where((lane + choice) % 2 == 0, x + lane, y + m - 1 - lane)
+    active = (lane < n) & (lane % 3 != 1)
+    if OMIT_OTHER:
+        value = tl.load(pointer, active)
+        tl.store(out + lane, value, active)
+    else:
+        fill = tl.load(fills + lane, lane < n, other=0)
+        value = tl.load(pointer, active, other=fill)
+        tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
+def selected_words(x, y, encoded, out, n, m, choice, B: tl.constexpr, CANCEL: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    key = tl.load(encoded + lane, lane < n, other=0)
+    if CANCEL:
+        pointer = tl.where((lane + choice) % 2 == 0, x + lane, y + m - 1 - lane)
+        pointer += key
+        pointer += key
+        pointer -= 2 * key.to(tl.int64)
+    else:
+        index = key * 4 + 1
+        pointer = tl.where((lane + choice) % 2 == 0, x + index, y + m - 1 - index)
+    value = tl.load(pointer, lane < n, other=0)
+    tl.store(out + lane, value, lane < n)
