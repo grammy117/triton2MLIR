@@ -163,6 +163,10 @@ replaces the tensor witness with a byte-bound admission report and declares its
 16-byte per-output-element guard cost. This closes that witness dependency for
 the qualified private-output profile. Writable observations, aliasing, general
 pointer state and source effects remain open; see [guarded memory](guarded_memory.md).
+Static guarded kernels also bind into actual model2MLIR captures, with ordinary
+and ragged tiled GEMM, block pointers and descriptors compiled/executed through
+Merlin. Per-call scratch accounting binds typed kernel results to model resource
+declarations instead of estimating metadata from the final model result size.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and

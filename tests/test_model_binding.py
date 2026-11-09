@@ -82,3 +82,30 @@ def test_bindings_cannot_drop_schema_operands_or_results(implementation):
         bind_model(model(), [KernelBinding("test::kernel", implementation, operands={"x": "x"})])
     with pytest.raises(ConversionError, match="every source result"):
         bind_model(model(), [KernelBinding("test::kernel", implementation, results=("unknown",))])
+
+
+def test_guarded_scratch_counts_each_inlined_call_not_just_model_outputs(tmp_path, implementation):
+    path = tmp_path / "source.ttir"
+    path.write_text(implementation.source_ttir)
+    guarded = convert_shared(path, implementation.spec, tmp_path / "guarded", optimizer=OPT, memory_profile="guarded-buffer")
+    bound = bind_model(model(two_calls=True), [KernelBinding("test::kernel", guarded, scalar_arguments={"alpha": 1})])
+    entry = next(iter(bound.module.ops))
+    assert entry.attributes["prov.memory_guard_scratch_bytes"].value.data == 2 * 32 * 16
+    assert bound.trace["guard_storage_bytes"] == 2 * 32 * 16
+    if NATIVE:
+        x, y = np.ones((4, 8), np.float32), np.full((4, 8), 3, np.float32)
+        outputs, _ = execute_native(bound.mlir_text, [x, y], tmp_path / "native", python=NATIVE)
+        for output in outputs:
+            np.testing.assert_array_equal(output, x + y)
+
+
+@pytest.mark.skipif(not NATIVE, reason="existing native environment required")
+def test_guarded_model_scratch_budget_refuses_before_allocation(tmp_path):
+    source = '''module {
+      func.func @forward(%x: tensor<1xf32>) -> tensor<1xf32>
+        attributes {prov.memory_guard_scratch_bytes = 67108864 : i64} {
+          return %x : tensor<1xf32>
+        }
+    }'''
+    with pytest.raises(ValueError, match="native results exceed the 64MiB budget"):
+        execute_native(source, [np.ones(1, dtype=np.float32)], tmp_path / "native", python=NATIVE)

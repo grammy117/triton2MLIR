@@ -351,9 +351,11 @@ witness. Executable active bounds, program ownership, per-store lane uniqueness
 and fresh-output coverage checks preserve the original payload and unmapped
 logical grid. Native tests and one reused actual Merlin library cover changing
 runtime shapes, ordered repeated writes and masked/empty cases. Metadata costs
-16 bytes per writable element. Writable reads, pointer-carried state, general
-descriptor forms and derived-model scratch accounting remain open for this
-profile; see [the contract and evidence](docs/guarded_memory.md).
+16 bytes per writable element. Static model2MLIR bindings also qualify ordinary
+and ragged tiled GEMM, block pointers and tensor descriptors through Merlin,
+retaining original parent data and accounting guard scratch per inlined call.
+Writable reads, pointer-carried state, general descriptor forms and dynamic
+bound-model scratch remain open; see [the contract and evidence](docs/guarded_memory.md).
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,

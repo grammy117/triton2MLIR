@@ -269,7 +269,7 @@ def main(argv=None):
     bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
     bind.add_argument("--out", type=Path, required=True)
     bind.add_argument("--optimizer", type=Path)
-    bind.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
+    bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)

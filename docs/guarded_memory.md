@@ -1,6 +1,6 @@
 # Guarded standard memory through Merlin
 
-`shared-tensor` and `shared-demo` accept `--memory-profile guarded-buffer`.
+`shared-tensor`, `shared-demo` and `bind-model` accept `--memory-profile guarded-buffer`.
 This explicitly selects `shared-guarded-buffer`: the public functional ranked
 tensor/scalar ABI is unchanged, while the body retains upstream standard
 `linalg`/`tensor`/`scf`/`memref`/`bufferization` operations. The original logical
@@ -72,14 +72,22 @@ copies their evidence without evaluator arrays/goldens, and retains the scratch
 contract in its compile signature. Staging establishes custody and consistency;
 it does not prove source equivalence or guard correctness. Native execution,
 independent reference comparison and actual Merlin host-library execution are
-separate checks. Derived-model resource accounting is a separate extension;
-the initial CLI exposes this profile for standalone kernels.
+separate checks. Static model binding also preserves this profile and its
+kernel evidence. It sums the declared guard storage at each inlined call,
+records that cost on the model function and in binding correspondence, and
+Merlin independently checks it against the typed kernel results and call
+inventory. The host budget includes this scratch even when model results are
+smaller than intermediate kernel outputs. Dynamic kernel scratch inside a
+bound model requires a further resource contract.
 
 Tests cover loaded i32/i64 permutations, repeated source stores, partial
 readwrite results, inactive extreme indices, empty allocations, fresh coverage,
 within-store/cross-program conflicts, active out-of-bounds accesses, rank-two
 structured accesses and repeated independent shapes through one Merlin library.
 They also check evidence corruption and refusal of unqualified effects.
+Actual model2MLIR captures qualify ordinary tiled/ragged GEMM, block pointers
+and tensor descriptors through Merlin, retaining original weights, inputs and
+goldens. A two-call binding test checks per-call scratch accounting.
 
 ## Reused implementation
 

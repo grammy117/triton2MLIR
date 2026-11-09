@@ -17,7 +17,7 @@ from xdsl.dialects.builtin import (ArrayAttr, DictionaryAttr, FloatAttr, Integer
 from .diagnostics import ConversionError
 from .ir import text
 from .shared_tensor import SharedTensorResult, parse_shared
-from .memory_contract import validate_memory_evidence
+from .memory_contract import GUARDED_PROFILE, validate_memory_evidence
 
 
 def scalar_attribute(value):
@@ -97,7 +97,7 @@ def bind_model(model_mlir, bindings):
     module.verify()
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}
     calls = [op for op in module.walk() if isinstance(op, func.CallOp)]
-    used, records = set(), []
+    used, records, guard_storage = set(), [], 0
     for call in calls:
         symbol = call.callee.root_reference.data
         declaration = functions.get(symbol)
@@ -131,6 +131,14 @@ def bind_model(model_mlir, bindings):
             raise ConversionError(f"{identity.data}: expected one matching typed/scalar specialization, found {len(candidates)}",
                                   opcode="func.call")
         binding, function, operands, output_names = candidates[0]
+        if binding.implementation.trace.get("profile") == GUARDED_PROFILE:
+            outputs = binding.implementation.spec.outputs
+            if any(type(n) is not int for b in outputs for n in b.shape):
+                raise ConversionError("guarded model binding needs static kernel scratch dimensions", opcode="func.call")
+            contract = function.attributes.get("prov.memory_guard_bytes_per_result_element")
+            if not isinstance(contract, IntegerAttr) or contract.value.data != 16:
+                raise ConversionError("guarded kernel lacks its scratch storage contract", opcode="func.call")
+            guard_storage += 16 * sum(math.prod(b.shape) for b in outputs)
         callsite = f"kernel_call.{len(records):04d}"
         mapper = dict(zip(function.body.block.args, operands, strict=True))
         emitted = []
@@ -166,6 +174,11 @@ def bind_model(model_mlir, bindings):
                 raise ConversionError(f"unresolved kernel declaration @{symbol}")
             module.body.block.erase_op(function)
     module.attributes["prov.kernel_binding"] = StringAttr("t2m.model-kernel-binding.v1")
+    if guard_storage:
+        entries = [f for f in functions.values() if "prov.kernel" not in f.attributes and f.body.blocks]
+        if len(entries) != 1:
+            raise ConversionError("guarded model scratch accounting requires one defined model entry")
+        entries[0].attributes["prov.memory_guard_scratch_bytes"] = IntegerAttr(guard_storage, i64)
     module.verify()
     selected = {r["implementation_sha256"] for r in records}
     kernels = {b.implementation.trace["mlir_sha256"]: b.implementation.trace for b in bindings
@@ -175,4 +188,6 @@ def bind_model(model_mlir, bindings):
               "mlir_sha256": hashlib.sha256(text(module).encode()).hexdigest(),
               "model_abi": "unchanged", "structural_verification": "passed",
               "native_execution": "not-performed", "merlin_execution": "not-performed"}
+    if guard_storage:
+        report["guard_storage_bytes"] = guard_storage
     return BoundModel(module, report)

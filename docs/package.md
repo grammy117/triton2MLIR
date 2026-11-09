@@ -94,8 +94,10 @@ memory continuation artifacts remain. The report and function attribute declare
 16 guard bytes per writable element, included in standalone evaluator budgets.
 Checks retain source masks, loops and payload while rejecting active bounds
 violations, conflicting writers and fresh-output holes. This initial profile
-supports standalone staging/execution; derived-model resource accounting is
-separate work. See [the exact memory scope](guarded_memory.md).
+supports standalone staging/execution and static derived-model binding. Bound
+models retain each kernel's evidence and declare guard scratch summed over
+inlined calls, independently checked by Merlin against typed kernel results.
+See [the exact memory scope](guarded_memory.md).
 
 | Artifact | MVP convention |
 |---|---|

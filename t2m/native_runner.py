@@ -64,19 +64,24 @@ def main(work):
             raise ValueError("dynamic results require explicit runtime shape bindings")
         dtypes = [DTYPES[str(ir.RankedTensorType(t).element_type)] for t in signature.results]
         guard_size = 0
+        guard_storage = 0
+        if "prov.memory_guard_scratch_bytes" in function.attributes:
+            guard_storage = ir.IntegerAttr(function.attributes["prov.memory_guard_scratch_bytes"]).value
+            if guard_storage <= 0:
+                raise ValueError("invalid native model guard storage contract")
         if "prov.memory_guard_bytes_per_result_element" in function.attributes:
             guard_size = ir.IntegerAttr(function.attributes["prov.memory_guard_bytes_per_result_element"]).value
             if guard_size != 16:
                 raise ValueError("unknown native memory guard storage contract")
             if sum(math.prod(shape) * (np.dtype(dtype).itemsize + guard_size) for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
                 raise ValueError("native result/guard storage exceeds the 64MiB budget")
-        if sum(math.prod(shape) * np.dtype(dtype).itemsize for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
+        if guard_storage + sum(math.prod(shape) * np.dtype(dtype).itemsize for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
             raise ValueError("native results exceed the 64MiB budget")
         outputs = [np.zeros(shape, dtype=dtype) for shape, dtype in zip(shapes, dtypes, strict=True)]
         name = ir.StringAttr(function.attributes["sym_name"]).value
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         pipelines = (
-            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size else "") + ")",
+            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
             "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
