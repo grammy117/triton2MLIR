@@ -16,16 +16,19 @@ MERLIN = all(os.environ.get(n) for n in ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYTHON",
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/native environments required")
 
 
-def convert(root, *, fresh=False, repeat=1, read_output=False, store_input=False, index_dtype="i32"):
-    from t2m.examples.tensor_kernels import indirect_store
+def convert(root, *, fresh=False, repeat=1, read_output=False, store_input=False, index_dtype="i32", scalar=False):
+    from t2m.examples.tensor_kernels import indirect_store, scalar_indirect_store
     from t2m.frontend import capture_ttir
     path = root / "source.ttir"
-    path.write_text(capture_ttir(indirect_store,
+    kernel = scalar_indirect_store if scalar else indirect_store
+    constants = {"REPEAT": repeat, "READ_OUTPUT": read_output, "STORE_INPUT": store_input}
+    if not scalar:
+        constants["B"] = 8
+    path.write_text(capture_ttir(kernel,
         {"x": "*fp32", "indices": "*" + index_dtype, "out": "*fp32", "n": "i32", "m": "i32",
-         "B": "constexpr", "REPEAT": "constexpr", "READ_OUTPUT": "constexpr", "STORE_INPUT": "constexpr"},
-        {"B": 8, "REPEAT": repeat, "READ_OUTPUT": read_output, "STORE_INPUT": store_input}))
-    abi = TensorABI("indirect_store", (TensorBuffer("x", ("n",)), TensorBuffer("indices", ("n",), dtype=index_dtype),
-        TensorBuffer("out", ("m",), "write" if fresh else "readwrite")), grid=(GridExtent("n", 8),),
+         **{name: "constexpr" for name in constants}}, constants))
+    abi = TensorABI(kernel.__name__, (TensorBuffer("x", ("n",)), TensorBuffer("indices", ("n",), dtype=index_dtype),
+        TensorBuffer("out", ("m",), "write" if fresh else "readwrite")), grid=(GridExtent("n", 1 if scalar else 8),),
         runtime_scalars=(RuntimeScalar("n", "i32", 3, bounds=(0, 31)), RuntimeScalar("m", "i32", 4, bounds=(0, 31))))
     return convert_shared(path, abi, root / "translation", optimizer=OPT, memory_profile="guarded-buffer"), abi
 
@@ -43,9 +46,10 @@ def arguments(indices, m, *, fresh=False, repeat=1, dtype=np.int32):
 
 @pytest.mark.parametrize("fresh", [False, True])
 @pytest.mark.parametrize("index_dtype", ["i32", "i64"])
-def test_indirect_permutations_repeated_writes_and_masked_indices(tmp_path, fresh, index_dtype):
+@pytest.mark.parametrize("scalar", [False, True])
+def test_indirect_permutations_repeated_writes_and_masked_indices(tmp_path, fresh, index_dtype, scalar):
     from t2m.native import execute_native
-    result, abi = convert(tmp_path, fresh=fresh, repeat=3, index_dtype=index_dtype)
+    result, abi = convert(tmp_path, fresh=fresh, repeat=3, index_dtype=index_dtype, scalar=scalar)
     indices = [7, 0, 6, 2, 5, 1, 4, 3, -(1 << 30)]
     arrays, expected = arguments(indices, 8, fresh=fresh, repeat=3, dtype={"i32": np.int32, "i64": np.int64}[index_dtype])
     (actual,), _ = execute_native(result.mlir_text, arrays, tmp_path / "native", python=NATIVE, shape_abi=abi.runtime_shapes())
@@ -55,13 +59,16 @@ def test_indirect_permutations_repeated_writes_and_masked_indices(tmp_path, fres
     assert "memref.atomic_rmw" in result.mlir_text and "memref.store" in result.mlir_text
     assert "scf.forall" in result.mlir_text and "gpu." not in result.mlir_text
     assert any(op.name == "scf.for" for op in result.module.walk())
+    admission = json.loads(result.auxiliary_artifacts["memory-admission.json"])
+    assert bool(admission["scalar_normalizations"]) == scalar
 
 
 @pytest.mark.parametrize("indices,m,fresh", [([2, 2], 4, False), ([0, 1, 2, 3, 4, 5, 6, 7, 0], 9, False),
     ([4], 4, False), ([0], 0, False), ([0, 2], 4, True)])
-def test_conflicting_oob_and_unwritten_outputs_fail_executable_guards(tmp_path, indices, m, fresh):
+@pytest.mark.parametrize("scalar", [False, True])
+def test_conflicting_oob_and_unwritten_outputs_fail_executable_guards(tmp_path, indices, m, fresh, scalar):
     from t2m.native import execute_native
-    result, abi = convert(tmp_path, fresh=fresh)
+    result, abi = convert(tmp_path, fresh=fresh, scalar=scalar)
     arrays = [np.arange(len(indices), dtype=np.float32), np.asarray(indices, dtype=np.int32),
               *([] if fresh else [np.zeros(m, dtype=np.float32)]), np.asarray(len(indices), dtype=np.int32), np.asarray(m, dtype=np.int32)]
     with pytest.raises(ValueError, match=r"native host execution failed \(exit -6\)"):
@@ -69,9 +76,10 @@ def test_conflicting_oob_and_unwritten_outputs_fail_executable_guards(tmp_path, 
 
 
 @pytest.mark.parametrize("fresh", [False, True])
-def test_empty_output_and_inactive_extreme_indices_are_valid(tmp_path, fresh):
+@pytest.mark.parametrize("scalar", [False, True])
+def test_empty_output_and_inactive_extreme_indices_are_valid(tmp_path, fresh, scalar):
     from t2m.native import execute_native
-    result, abi = convert(tmp_path, fresh=fresh)
+    result, abi = convert(tmp_path, fresh=fresh, scalar=scalar)
     arrays, expected = arguments([-2147483648, -1], 0, fresh=fresh)
     (actual,), _ = execute_native(result.mlir_text, arrays, tmp_path / "native", python=NATIVE, shape_abi=abi.runtime_shapes())
     np.testing.assert_array_equal(actual, expected)
@@ -95,13 +103,14 @@ def test_rank_two_structured_access_guards_match_upstream_pointer_offsets(tmp_pa
 
 
 @pytest.mark.skipif(not MERLIN, reason="existing Merlin native toolchain required")
-def test_indirect_store_package_reuses_one_actual_merlin_library(tmp_path):
+@pytest.mark.parametrize("scalar", [False, True])
+def test_indirect_store_package_reuses_one_actual_merlin_library(tmp_path, scalar):
     from t2m.bundle import _record, verify_bundle
     from t2m.invocation import invoke_kernel, verify_invocation
     from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
     from t2m.memory_contract import GUARDED_FILES
     from t2m.shared_bundle import write_shared_bundle
-    result, _ = convert(tmp_path, repeat=3)
+    result, _ = convert(tmp_path, repeat=3, scalar=scalar)
     arrays, expected = arguments([7, 0, 6, -1, 5, 1, 4, 3, -99], 11, repeat=3)
     capture, compiled = tmp_path / "capture", tmp_path / "merlin"
     write_shared_bundle(result, capture, arrays, [expected], work=tmp_path / "native", python=NATIVE)

@@ -9,6 +9,9 @@ holes. This broadens irregular store support beyond affine tile proofs, with
 an explicit 16-byte-per-output-element guard cost. Writable-buffer reads, aliases
 and general pointer state remain open for this profile; this is not universal
 TTIR coverage.
+Scalar indirect accesses also use a checked one-element-tensor normalization,
+retaining source masks/fills and i32/i64 word types. Both scalar and tiled
+events reuse the same upstream payload and runtime admission protocol.
 
 Use `shared-coverage` to rerun a fixed, bounded native pipeline against actual
 upstream fixtures. It inventories operations structurally, retains every input,

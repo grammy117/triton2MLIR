@@ -22,6 +22,14 @@ Original payload operations, masks, values, source loops and numeric policies
 remain in the program. The checks validate the invocation; they do not resolve
 conflicts by serializing the kernel or replacing it with a reference algorithm.
 
+Scalar gather/scatter events are deterministically lifted to one-element
+tensors because the upstream tensor converters skip scalar offsets. Exact
+source index/value types, predicates and fills are retained; a gather result
+is extracted back to its original scalar type. The same upstream conversion
+and executable memory checks then apply, with the original logical program
+count unchanged. The admission report records each scalar normalization and
+its source IDs.
+
 ## Memory contract
 
 All source buffers have independent dense logical storage. Read-only buffers
@@ -84,6 +92,8 @@ Tests cover loaded i32/i64 permutations, repeated source stores, partial
 readwrite results, inactive extreme indices, empty allocations, fresh coverage,
 within-store/cross-program conflicts, active out-of-bounds accesses, rank-two
 structured accesses and repeated independent shapes through one Merlin library.
+Both scalar and tiled memory events exercise native execution and a reused
+Merlin library, including empty/tail allocations and negative masked indices.
 They also check evidence corruption and refusal of unqualified effects.
 Actual model2MLIR captures qualify ordinary tiled/ragged GEMM, block pointers
 and tensor descriptors through Merlin, retaining original weights, inputs and
@@ -105,3 +115,12 @@ The executable optimizer has its separate recorded pin, as described in
 This extends irregular store admission, not all TTIR effects or all descriptor,
 numeric and control-flow combinations. Source atomics, volatile observations,
 backend assembly and unqualified writable reads remain explicit open work.
+
+The next writable-observation extension must preserve actual read effects
+across source stores. Upstream unstructured gathers currently introduce
+`bufferization.to_tensor restrict` views over their base memory. A mutable
+buffer must not be treated as an immutable tensor snapshot or acquire competing
+restrict promises. Qualify an effect-preserving memory-read adapter before
+optimizations can merge those views/gathers, together with read ownership and
+per-element initialization checks. Writer ownership alone does not prove a
+read sees a defined value.

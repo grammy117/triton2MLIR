@@ -39,10 +39,65 @@ class Access:
     prefixes: tuple = ()
 
 
+def normalize_scalars(module, source_ids):
+    """Lift scalar memory events into the upstream rank-one tensor converter.
+
+    Upstream GatherConverter/ScatterConverter explicitly skip scalar offsets.
+    A one-element tensor preserves the event, predicate and word/value types;
+    no arithmetic, memory observation or grid iteration is added or removed.
+    """
+    from .shared_tensor import _array, opcode
+    reports = []
+    for op in list(module.walk()):
+        name = opcode(op)
+        if name not in ("tts.gather", "tts.scatter") or isinstance(op.operands[1].type, TensorType):
+            continue
+        def refuse(message):
+            raise ConversionError(message, source_id=next(iter(source_ids(op.location)), None), opcode=name)
+        if op.operands[1].type not in (builtin.i32, builtin.i64):
+            refuse("scalar memory offsets require signed i32/i64 source words")
+        write = name == "tts.scatter"
+        positions = [1, 2] if write else [1]
+        if write:
+            if len(op.operands) not in (3, 4) or isinstance(op.operands[2].type, TensorType):
+                refuse("scalar scatter requires one scalar value and optional scalar mask")
+            if len(op.operands) == 4:
+                positions.append(3)
+        else:
+            segments = _array(op, "operandSegmentSizes")
+            if (len(segments) != 4 or segments[:2] != (1, 1) or any(n not in (0, 1) for n in segments[2:])
+                    or sum(segments) != len(op.operands) or len(op.results) != 1 or isinstance(op.results[0].type, TensorType)):
+                refuse("scalar gather requires one scalar result and explicit optional operands")
+            if segments[2]:
+                positions.append(2)
+        if len(positions) > (2 if write else 1) and op.operands[positions[-1]].type != builtin.i1:
+            refuse("scalar memory predicate must be i1")
+        operands, before = list(op.operands), []
+        for position in positions:
+            wrapped = tensor.FromElementsOp(operands[position])
+            before.append(wrapped)
+            operands[position] = wrapped.result
+        converted = type(op).create(operands=operands, result_types=[] if write else [TensorType(op.results[0].type, [1])],
+            properties=op.properties, attributes=op.attributes, location=op.location)
+        before.append(converted)
+        if not write:
+            zero = arith.ConstantOp.from_int_and_width(0, IndexType())
+            extracted = tensor.ExtractOp(converted.results[0], [zero.result], op.results[0].type)
+            before.extend([zero, extracted])
+            op.results[0].replace_all_uses_with(extracted.result)
+        for generated in before:
+            generated.location = op.location
+        op.parent.insert_ops_before(before, op)
+        reports.append({"opcode": name, "source_ids": source_ids(op.location), "normalization": "scalar-event-to-unit-tensor"})
+        op.parent.erase_op(op)
+    return reports
+
+
 def instrument(module, abi, source_ids):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
+    scalar_normalizations = normalize_scalars(module, source_ids)
     original = list(function.walk())
     buffers = {arg: value for arg, (kind, value) in zip(entry.args, abi.source_bindings, strict=True) if kind == "buffer"}
     descriptors = {}
@@ -192,6 +247,7 @@ def instrument(module, abi, source_ids):
                          "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked"})
     return {"schema": "t2m.memory-admission.v1", "strategy": "runtime-guarded-private-output-state",
             "spec": abi.as_dict(), "internal_arguments": arguments, "accesses": accesses,
+            "scalar_normalizations": scalar_normalizations,
             "control_flow": [{"opcode": opcode(op), "source_ids": source_ids(op.location)} for op in original
                              if opcode(op) in ("scf.for", "scf.while", "scf.if")],
             "writable_reads": "refused", "fresh_initialization": "post-grid-complete-write-coverage",

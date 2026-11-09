@@ -356,6 +356,8 @@ and ragged tiled GEMM, block pointers and tensor descriptors through Merlin,
 retaining original parent data and accounting guard scratch per inlined call.
 Writable reads, pointer-carried state, general descriptor forms and dynamic
 bound-model scratch remain open; see [the contract and evidence](docs/guarded_memory.md).
+Scalar gathers/scatters now lift to one-element tensors and reuse the same
+upstream converters/checks, retaining their source types, masks and fills.
 
 Expand the existing shared tensor path from its tested static-grid/bounded-loop profile to
 nonlinear/live pointer state, block and irregular descriptors, guarded runtime shapes/masks,

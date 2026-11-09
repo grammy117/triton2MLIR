@@ -167,6 +167,10 @@ Static guarded kernels also bind into actual model2MLIR captures, with ordinary
 and ragged tiled GEMM, block pointers and descriptors compiled/executed through
 Merlin. Per-call scratch accounting binds typed kernel results to model resource
 declarations instead of estimating metadata from the final model result size.
+Scalar indirect loads/stores additionally normalize to unit tensors before
+the same upstream memory conversion, retaining exact source masks/fills and
+index/value word types. Scalar and tiled cases both qualify through native
+execution and a reused Merlin library over independent runtime dimensions.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and

@@ -1,7 +1,7 @@
 """Functional tensor ABI around the complete shared standard-memory body.
 
-The source tensor memory analysis is required before this builder is called.
-It establishes initialization/ownership; this module preserves the resulting
+Source memory admission precedes this builder: either a tensor proof witness or
+the explicit executable guarded-memory profile. This module preserves the
 upstream computation, supplies typed buffers and binds its logical launch ABI.
 """
 

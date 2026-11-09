@@ -531,3 +531,19 @@ def indirect_store(x, indices, out, n, m, B: tl.constexpr, REPEAT: tl.constexpr,
             tl.store(x + index, value + update + 1, active)
         else:
             tl.store(out + index, value + update + 1, active)
+
+
+@triton.jit
+def scalar_indirect_store(x, indices, out, n, m, REPEAT: tl.constexpr,
+                          READ_OUTPUT: tl.constexpr, STORE_INPUT: tl.constexpr):
+    lane = tl.program_id(0)
+    index = tl.load(indices + lane, lane < n, other=-1)
+    value = tl.load(x + lane, lane < n, other=0)
+    active = (lane < n) & (index >= 0)
+    if READ_OUTPUT:
+        value += tl.load(out + index, active, other=0)
+    for update in range(REPEAT):
+        if STORE_INPUT:
+            tl.store(x + index, value + update + 1, active)
+        else:
+            tl.store(out + index, value + update + 1, active)
