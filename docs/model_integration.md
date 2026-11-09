@@ -96,6 +96,13 @@ and Merlin environment arguments as above. This captures real `make_block_ptr`
 and `advance`, retains separate original/normalized provenance, and qualifies
 the complete model against its unchanged PyTorch golden and Merlin interface.
 
+The current tensor-descriptor form uses `--tensor-descriptors`,
+`shared-demo --kernel descriptor-matmul --out out/shared_descriptor_matmul`,
+and `examples/model_descriptor_binding.json`. It captures a 35×36 by 36×20
+GEMM with `make_tensor_descriptor` / descriptor loads/stores. Complete-model native
+comparison and Merlin interface/runtime generation use the same package and
+qualification path, with the original descriptor source retained in provenance.
+
 ## Original MLP pair
 
 `scripts/capture_mlp_pair.py` captures model2MLIR's existing `mlp_basic` and

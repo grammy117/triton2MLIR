@@ -21,7 +21,7 @@ from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
-from .frontend import expand_tensor_pointers
+from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
@@ -815,7 +815,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
     annotated.write_text(stream.getvalue() + "\n")
     lower_with_shared(annotated, work / "inline", optimizer=optimizer, stage="inline")
     middle_source = work / "inline/lowered.mlir"
-    if not pointer_report and any(r["opcode"] in ("tt.make_tensor_ptr", "tt.advance") for r in records):
+    if not pointer_report and any(r["opcode"] in DESCRIPTOR_OPS for r in records):
         pointer_report = expand_tensor_pointers(middle_source, work / "tensor-pointers")
         # Native generic/local-scope printing resolves debug-location aliases
         # for xDSL, which cannot read Triton's forward location aliases safely.
@@ -830,7 +830,7 @@ def convert_shared(source, abi, work, *, optimizer=None):
     if pointer_report:
         transformations.append({**pointer_report, "source_ids": [r["id"] for r in
                                (original_inventory["operations"] if original_inventory else records)
-                               if r["opcode"] in ("tt.make_tensor_ptr", "tt.advance")],
+                               if r["opcode"] in DESCRIPTOR_OPS],
                                "source_descriptor_intent": "retained-in-exact-original-source-and-typed-inventory"})
     result = _functionalize(lowered, abi)
     emitted = []

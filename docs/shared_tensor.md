@@ -135,6 +135,22 @@ M/N/K GEMM with loop-carried `advance`. Grids, fixed source tiles and the K loop
 remain executable structure. Incorrect declared dimensions are refused; source
 loop-carried affine offset bounds also check integer overflow before promotion.
 
+The same adapter now also runs the official
+[`triton-rewrite-tensor-descriptor-to-pointer` pass](https://github.com/triton-lang/triton/blob/v3.7.1/lib/Dialect/Triton/Transforms/RewriteTensorDescriptorToPointer.cpp)
+for kernel-local `tt.make_tensor_descriptor`, `tt.descriptor_load` and
+`tt.descriptor_store`. Descriptor shapes, tile offsets and zero padding become
+executable pointer/mask operations. Canonicalization folds the pass's unused
+NaN-padding alternative before the checked tensor adapter runs. Observable NaN
+payloads remain outside the qualified numeric profile. The pipeline/report lists
+the exact official passes; no TMA instructions, physical descriptor layout or
+hardware launcher enters the tensor ABI.
+
+Native checks cover descriptor add and ragged 35×36 by 36×20 GEMM; the latter
+retains its three K iterations and fixed 16×16 tiles. Declared-buffer mismatches
+remain refusals. Externally supplied descriptor arguments, descriptor gather/
+scatter/reduce and other numeric/alias policies still require separate adapters;
+running the rewrite is not counted as their complete tensor coverage.
+
 ## Dynamic rectangular tails
 
 The adapter now recognizes the signed affine clamp emitted by upstream

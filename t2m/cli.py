@@ -49,12 +49,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         fn, constants, shapes, grid = kernels.tiled_matmul, {"N": 32, "K": 16, "BM": 16, "BN": 16}, [(32, 16), (16, 32), (32, 32)], (2, 2)
     elif kernel == "loop-matmul":
         fn, constants, shapes, grid = kernels.loop_matmul, {"N": 32, "K": 32, "BM": 16, "BN": 16, "BK": 16}, [(32, 32)] * 3, (2, 2)
-    elif kernel in ("ragged-matmul", "blockptr-matmul"):
-        fn, grid = (kernels.ragged_matmul if kernel == "ragged-matmul" else kernels.blockptr_matmul), (3, 2)
-        constants = {"M": 35, "N": 21, "K": 37, "BM": 16, "BN": 16, "BK": 16}
+    elif kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul"):
+        fn = {"ragged-matmul": kernels.ragged_matmul, "blockptr-matmul": kernels.blockptr_matmul,
+              "descriptor-matmul": kernels.descriptor_matmul}[kernel]
+        m, n, k = (35, 20, 36) if kernel == "descriptor-matmul" else (35, 21, 37)
+        grid = (3, 2)
+        constants = {"M": m, "N": n, "K": k, "BM": 16, "BN": 16, "BK": 16}
         if kernel == "ragged-matmul":
             constants["TRANSPOSED"] = False
-        shapes = [(35, 37), (37, 21), (35, 21)]
+        shapes = [(m, k), (k, n), (m, n)]
     elif kernel == "matrix-add":
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
@@ -62,7 +65,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n == "out" else "read")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example")
     source = work / "kernel.ttir"
@@ -73,13 +76,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     arrays = [rng.normal(size=b.shape).astype("float32") for b in abi.inputs]
     if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
-    elif kernel in ("matmul", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul"):
+    elif kernel in ("matmul", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul"):
         golden = arrays[0] @ arrays[1]
     else:
         e = np.exp(arrays[0] - arrays[0].max())
         golden = e / e.sum()
     write_shared_bundle(result, out, arrays, [golden], work=work / "native", python=python,
-                        rtol=1e-5, atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul") else 2e-6)
+                        rtol=1e-5, atol=6e-6 if kernel in ("loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul") else 2e-6)
     return {"bundle": str(out), "kernel": fn.__name__, "native_numerical_check": "passed",
             "profile": "shared-functional-tensor", "merlin_staged_execution": "not-certified"}
 
@@ -122,7 +125,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured add, masked softmax or matmul after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")

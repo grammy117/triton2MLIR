@@ -70,6 +70,11 @@ Legacy `tt.make_tensor_ptr` and `tt.advance` now pass an official pinned-Triton
 intake rewrite, followed by the same tensor adapter. Block-pointer ragged GEMM
 has native numerical checks with the source grid/K loop retained. Provenance v2
 separates original and normalized inventories instead of equating their IDs.
+Kernel-local `tt.make_tensor_descriptor`, `tt.descriptor_load` and
+`tt.descriptor_store` now use the official descriptor-to-pointer pass. Descriptor
+add and ragged GEMM have native checks, and a real descriptor-kernel model is
+qualified through unchanged-golden comparison and the Merlin interface. External
+descriptors and descriptor gather/scatter/reduce are not covered by these cases.
 The principal work still needed is:
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output

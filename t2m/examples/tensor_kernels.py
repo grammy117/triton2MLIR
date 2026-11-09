@@ -31,6 +31,30 @@ def blockptr_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr
 
 
 @triton.jit
+def descriptor_add(x, out, N: tl.constexpr, B: tl.constexpr):
+    src = tl.make_tensor_descriptor(x, shape=[N], strides=[1], block_shape=[B])
+    dst = tl.make_tensor_descriptor(out, shape=[N], strides=[1], block_shape=[B])
+    start = tl.program_id(0) * B
+    value = src.load([start])
+    dst.store([start], value + 1)
+
+
+@triton.jit
+def descriptor_matmul(x, y, out, M: tl.constexpr, N: tl.constexpr, K: tl.constexpr,
+                      BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):
+    a = tl.make_tensor_descriptor(x, shape=[M, K], strides=[K, 1], block_shape=[BM, BK])
+    b = tl.make_tensor_descriptor(y, shape=[K, N], strides=[N, 1], block_shape=[BK, BN])
+    c = tl.make_tensor_descriptor(out, shape=[M, N], strides=[N, 1], block_shape=[BM, BN])
+    m, n = tl.program_id(0) * BM, tl.program_id(1) * BN
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for k in range(0, K, BK):
+        av = a.load([m, k])
+        bv = b.load([k, n])
+        acc = tl.dot(av, bv, acc, input_precision="ieee")
+    c.store([m, n], acc)
+
+
+@triton.jit
 def matrix_add(x, y, out, M: tl.constexpr, N: tl.constexpr):
     row = tl.arange(0, M)[:, None]
     col = tl.arange(0, N)[None, :]

@@ -18,7 +18,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 import m2m
 
 
-def capture(out, *, ragged=False, block_pointers=False):
+def capture(out, *, ragged=False, block_pointers=False, tensor_descriptors=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -31,14 +31,18 @@ def capture(out, *, ragged=False, block_pointers=False):
     loop_matmul = kernels.loop_matmul
     ragged_matmul = kernels.ragged_matmul
     blockptr_matmul = kernels.blockptr_matmul
-    ragged = ragged or block_pointers
+    descriptor_matmul = kernels.descriptor_matmul
+    ragged = ragged or block_pointers or tensor_descriptors
 
     @triton_op("t2m_demo::gemm", mutates_args={})
     def gemm(x: torch.Tensor, y: torch.Tensor, alpha: int = 1) -> torch.Tensor:
         m, k = x.shape
         n = y.shape[1]
         out = torch.empty((m, n), dtype=x.dtype, device=x.device)
-        if block_pointers:
+        if tensor_descriptors:
+            wrap_triton(descriptor_matmul)[((m + 15) // 16, (n + 15) // 16)](
+                x, y, out, M=m, N=n, K=k, BM=16, BN=16, BK=16)
+        elif block_pointers:
             wrap_triton(blockptr_matmul)[((m + 15) // 16, (n + 15) // 16)](
                 x, y, out, M=m, N=n, K=k, BM=16, BN=16, BK=16)
         elif ragged:
@@ -53,7 +57,7 @@ def capture(out, *, ragged=False, block_pointers=False):
     def reference(x, y, alpha=1):
         return (x @ y) * alpha
 
-    rows, inner, columns = (35, 37, 21) if ragged else (32, 32, 32)
+    rows, inner, columns = (35, 36, 20) if tensor_descriptors else (35, 37, 21) if ragged else (32, 32, 32)
 
     class Model(torch.nn.Module):
         def __init__(self):
@@ -90,5 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--ragged", action="store_true", help="capture a 35x37 by 37x21 tiled GEMM")
     parser.add_argument("--block-pointers", action="store_true", help="capture ragged GEMM with block pointers and advance")
+    parser.add_argument("--tensor-descriptors", action="store_true", help="capture ragged GEMM with tensor descriptor loads/stores")
     args = parser.parse_args()
-    print(capture(args.out, ragged=args.ragged, block_pointers=args.block_pointers))
+    print(capture(args.out, ragged=args.ragged, block_pointers=args.block_pointers,
+                  tensor_descriptors=args.tensor_descriptors))

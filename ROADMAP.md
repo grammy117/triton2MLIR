@@ -66,8 +66,10 @@ scalars/shapes, arbitrary masks, grouped or
 nonlinear indexing, block/irregular descriptors, general while/pointer state and numeric profiles.
 Legacy `make_block_ptr` / `advance` now have an official pre-layout normalization
 path with native ragged GEMM checks. Original and normalized source inventories
-remain explicit in provenance v2. General tensor descriptors and irregular memory
-are still separate capabilities.
+remain explicit in provenance v2. Kernel-local tensor descriptor creation/load/store
+also use an official normalization pass and have native ragged GEMM/model-interface
+checks. External descriptor arguments, descriptor gather/scatter/reduce and general
+irregular memory are still separate capabilities.
 
 An upstream stage is not a complete frontend result: tensor/memref boundaries, per-program launcher
 arguments and missing source correspondence must remain explicit. Native toolchain builds require

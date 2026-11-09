@@ -13,6 +13,10 @@ import sys
 from .diagnostics import ConversionError
 
 PINNED_TRITON = "3.7.1"
+BLOCK_POINTER_OPS = frozenset(("tt.make_tensor_ptr", "tt.advance"))
+TENSOR_DESCRIPTOR_OPS = frozenset(("tt.make_tensor_descriptor", "tt.descriptor_load", "tt.descriptor_store",
+                                   "tt.descriptor_gather", "tt.descriptor_scatter", "tt.descriptor_reduce"))
+DESCRIPTOR_OPS = BLOCK_POINTER_OPS | TENSOR_DESCRIPTOR_OPS
 
 
 def _expand_tensor_pointers(path, inventory_path):
@@ -27,8 +31,14 @@ def _expand_tensor_pointers(path, inventory_path):
         raise ConversionError("Triton rejected the original tensor-pointer source")
     operations = []
     module.walk(operations.append)
-    if not any(op.get_name() in ("tt.make_tensor_ptr", "tt.advance") for op in operations):
+    names = {op.get_name() for op in operations}
+    if not names & DESCRIPTOR_OPS:
         raise ConversionError("input does not use the supported tensor-pointer normalization")
+    pipeline = []
+    if names & TENSOR_DESCRIPTOR_OPS:
+        pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
+    if names & BLOCK_POINTER_OPS:
+        pipeline.append("triton-rewrite-tensor-pointer")
     values, blocks, records, regions = {}, {}, [], {}
 
     def value_id(value):
@@ -55,9 +65,16 @@ def _expand_tensor_pointers(path, inventory_path):
                         "input_types": [str(v.get_type()) for v in inputs],
                         "output_types": [str(v.get_type()) for v in outputs]})
     Path(inventory_path).write_text(json.dumps({"operations": records, "blocks": list(blocks.values()),
-        "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries"}, indent=2) + "\n")
+        "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries",
+        "normalization_passes": pipeline}, indent=2) + "\n")
     manager = ir.pass_manager(context)
-    passes.ttir.add_rewrite_tensor_pointer(manager)
+    if names & TENSOR_DESCRIPTOR_OPS:
+        passes.ttir.add_rewrite_tensor_descriptor_to_pointer(manager)
+        # The official pass emits both padding alternatives and selects the
+        # actual descriptor option. Fold unused NaN alternatives before intake.
+        passes.common.add_canonicalizer(manager)
+    if names & BLOCK_POINTER_OPS:
+        passes.ttir.add_rewrite_tensor_pointer(manager)
     manager.run(module, "triton2mlir-expand-tensor-pointers")
     if not module.verify():
         raise ConversionError("official tensor-pointer rewrite produced invalid IR")
@@ -87,8 +104,9 @@ def expand_tensor_pointers(source, work):
             raise ConversionError("official tensor-pointer rewrite exceeded 30 seconds") from exc
     if process.returncode or not output.stat().st_size:
         raise ConversionError("official tensor-pointer rewrite failed; inspect " + str(work / "stderr.log"))
+    pipeline = json.loads((work / "inventory.json").read_text())["normalization_passes"]
     report = {"schema": "t2m.intake-pass.v1", "triton_version": PINNED_TRITON,
-              "pass": "triton-rewrite-tensor-pointer", "target_backend": "not-invoked",
+              "pass": pipeline[0], "pipeline": pipeline, "target_backend": "not-invoked",
               "source_sha256": hashlib.sha256(data).hexdigest(),
               "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
     (work / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
