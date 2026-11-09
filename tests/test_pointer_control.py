@@ -182,3 +182,14 @@ def test_merlin_library_retains_pointer_control_over_independent_invocations(tmp
         verify_invocation(out)
         assert report["evaluation"]["functional_inputs_preserved"]
     assert verify_kernel_qualification(compiled) == receipt and _record(compiled / "host/model.so") == library
+
+
+def test_pointer_while_demo_packages_the_actual_control_flow(tmp_path):
+    from t2m.bundle import verify_bundle
+    from t2m.cli import main
+    output = tmp_path / "demo"
+    assert main(["shared-demo", "--kernel", "pointer-while", "--out", str(output), "--optimizer", OPT,
+                 "--python", NATIVE, "--memory-profile", "guarded-buffer", "--address-policy", "source-words"]) == 0
+    receipt = verify_bundle(output)
+    assert "word-input.mlir" in receipt["artifacts"]
+    assert "scf.while" in (output / "model.mlir").read_text()

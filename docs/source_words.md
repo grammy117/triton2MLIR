@@ -19,6 +19,10 @@ python -m t2m shared-demo --kernel indirect-store \
   --out out/source-word-indirect
 ```
 
+`shared-demo --kernel pointer-while` with the same flags emits a runtime-shaped
+pointer/accumulator loop package, including its final pointer load. Pass that
+bundle to `qualify-merlin` for the separate real compiler/library qualification.
+
 ## Address semantics and reused passes
 
 The structured policy checks source ranges before pointer analysis promotes

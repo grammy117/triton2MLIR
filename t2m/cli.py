@@ -89,6 +89,14 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "runtime-memory-loop":
         fn, constants, shapes, grid = kernels.runtime_memory_loop, {"N": 13, "B": 8}, [(65,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
+    elif kernel == "pointer-while":
+        from .examples.pointer_control_kernels import while_pointer_sum
+        fn, constants, shapes = while_pointer_sum, {"B": 8}, [("rows", "n"), ("n",)]
+        grid = (GridExtent("n", 8),)
+        runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 13)),
+                           RuntimeScalar("rows", "i32", 3, bounds=(1, 5)),
+                           RuntimeScalar("steps", "i32", 4, bounds=(0, 4)))
+        example_dimensions = {"n": 9, "rows": 3}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
@@ -124,7 +132,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
                     dtype="i32" if n == "indices" else "f32")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
@@ -161,6 +169,10 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         golden = np.zeros(13, dtype=np.float32)
         for k in range(3):
             golden += arrays[0][k * 13:(k + 1) * 13]
+    elif kernel == "pointer-while":
+        arrays[1:] = [np.asarray(value, dtype=np.int32) for value in
+                      (example_dimensions["n"], example_dimensions["rows"], example_dimensions["rows"] - 1)]
+        golden = arrays[0].sum(axis=0)
     elif kernel == "runtime-memory-store":
         arrays[2] = np.asarray(3, dtype=np.int32)
         golden = arrays[1].copy()
@@ -255,7 +267,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
