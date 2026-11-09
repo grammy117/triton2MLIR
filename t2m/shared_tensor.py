@@ -1149,9 +1149,18 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(lowered)
         memory_input = stream.getvalue() + "\n"
         (work / "memory-input.mlir").write_text(memory_input)
-        memory_stage = lower_with_shared(work / "memory-input.mlir", work / "memory-ir", optimizer=optimizer, stage="memory-ir")
+        memory_stage = lower_with_shared(work / "memory-input.mlir", work / "memory-ir", optimizer=optimizer,
+            stage="memory-effects" if admission is not None else "memory-ir")
         memory_source = (work / "memory-ir/lowered.mlir").read_text()
-        result = functionalize_memory(parse_memory(memory_source), abi, guards=admission)
+        memory_module = parse_memory(memory_source)
+        if admission is not None:
+            from .guarded_reads import materialize
+            admission["read_adaptations"] = materialize(memory_module, abi, _source_ids)
+            if admission["read_adaptations"]:
+                transformations.append({"kind": "source-gather-observations-to-memory-loads",
+                    "adaptations": admission["read_adaptations"],
+                    "boundary": "before-memory-CSE; original-source-read-effects-retained"})
+        result = functionalize_memory(memory_module, abi, guards=admission)
         auxiliary = {"memory-input.mlir": memory_input,
                      "memory-stage.mlir": memory_source,
                      "memory-stage.json": json.dumps(memory_stage, indent=2, sort_keys=True) + "\n"}
@@ -1232,7 +1241,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             semantic_gate="source tensor memory analysis; no additional opcode coverage implied")
         if admission is not None:
             trace["memory"].update(admission_sha256=hashlib.sha256(auxiliary["memory-admission.json"].encode()).hexdigest(),
-                bounds="executable-active-flat-index-checks", ordering="source-program-order; private-output-state",
+                bounds="executable-active-flat-index-checks", ordering="source-program-order; private-output-state; reads-observe-completed-writes",
                 grid="unmapped-logical-forall-with-runtime-write-ownership-and-lane-uniqueness",
                 semantic_gate="independent-runtime-memory-admission; source numeric policy remains separate")
         else:

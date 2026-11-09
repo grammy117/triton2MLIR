@@ -136,9 +136,10 @@ def bind_model(model_mlir, bindings):
             if any(type(n) is not int for b in outputs for n in b.shape):
                 raise ConversionError("guarded model binding needs static kernel scratch dimensions", opcode="func.call")
             contract = function.attributes.get("prov.memory_guard_bytes_per_result_element")
-            if not isinstance(contract, IntegerAttr) or contract.value.data != 16:
+            cost = json.loads(binding.implementation.auxiliary_artifacts["memory-admission.json"])["guard_storage_bytes_per_output_element"]
+            if not isinstance(contract, IntegerAttr) or contract.value.data != cost:
                 raise ConversionError("guarded kernel lacks its scratch storage contract", opcode="func.call")
-            guard_storage += 16 * sum(math.prod(b.shape) for b in outputs)
+            guard_storage += cost * sum(math.prod(b.shape) for b in outputs)
         callsite = f"kernel_call.{len(records):04d}"
         mapper = dict(zip(function.body.block.args, operands, strict=True))
         emitted = []

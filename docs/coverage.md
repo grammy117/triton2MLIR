@@ -6,9 +6,12 @@ real host-library interface. It retains masks, source loops, partial incoming
 state and an unmapped logical grid. Runtime admission rejects active bounds
 violations, duplicate active lanes, cross-program conflicts and fresh-output
 holes. This broadens irregular store support beyond affine tile proofs, with
-an explicit 16-byte-per-output-element guard cost. Writable-buffer reads, aliases
-and general pointer state remain open for this profile; this is not universal
-TTIR coverage.
+an explicit grid-derived guard cost (normally 16 bytes per output element).
+V2 additionally qualifies writable indirect observations in runtime recurrences,
+shared readers, initialization and both cross-program read/write orders. Source
+gathers become actual memory loads before optimization can merge views; source
+loops and payload stores remain. Aliases and general pointer state remain open;
+this is not universal TTIR coverage.
 Scalar indirect accesses also use a checked one-element-tensor normalization,
 retaining source masks/fills and i32/i64 word types. Both scalar and tiled
 events reuse the same upstream payload and runtime admission protocol.

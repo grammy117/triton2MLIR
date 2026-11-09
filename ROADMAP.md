@@ -351,10 +351,16 @@ witness. Executable active bounds, program ownership, per-store lane uniqueness
 and fresh-output coverage checks preserve the original payload and unmapped
 logical grid. Native tests and one reused actual Merlin library cover changing
 runtime shapes, ordered repeated writes and masked/empty cases. Metadata costs
-16 bytes per writable element. Static model2MLIR bindings also qualify ordinary
+16 bytes per writable element for usual grids (24/32 for wider program IDs).
+V2 also preserves writable observations before/after source stores using an
+effect-preserving gather adapter before CSE. Sticky owner tags allow shared
+readers and reject foreign readers/writers in either order; completion cells
+check initialization. Runtime scalar/tiled recurrences qualify through one
+Merlin library over empty/tail shapes and zero/nonzero trips.
+Static model2MLIR bindings also qualify ordinary
 and ragged tiled GEMM, block pointers and tensor descriptors through Merlin,
 retaining original parent data and accounting guard scratch per inlined call.
-Writable reads, pointer-carried state, general descriptor forms and dynamic
+Aliasing, pointer-carried state, general descriptor forms and dynamic
 bound-model scratch remain open; see [the contract and evidence](docs/guarded_memory.md).
 Scalar gathers/scatters now lift to one-element tensors and reuse the same
 upstream converters/checks, retaining their source types, masks and fills.

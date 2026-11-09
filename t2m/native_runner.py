@@ -71,7 +71,7 @@ def main(work):
                 raise ValueError("invalid native model guard storage contract")
         if "prov.memory_guard_bytes_per_result_element" in function.attributes:
             guard_size = ir.IntegerAttr(function.attributes["prov.memory_guard_bytes_per_result_element"]).value
-            if guard_size != 16:
+            if guard_size not in (16, 24, 32):
                 raise ValueError("unknown native memory guard storage contract")
             if sum(math.prod(shape) * (np.dtype(dtype).itemsize + guard_size) for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
                 raise ValueError("native result/guard storage exceeds the 64MiB budget")

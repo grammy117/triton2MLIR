@@ -109,7 +109,7 @@ def execute_model(staged, work, arguments, *, evaluation=None):
     guard_storage = signature.get("guard_storage_bytes", 0)
     if type(guard_storage) is not int or guard_storage < 0:
         raise ValueError("invalid Merlin model guard storage contract")
-    if guard_size not in (0, 16):
+    if guard_size not in (0, 16, 24, 32):
         raise ValueError("unknown Merlin memory guard storage contract")
     if guard_storage + sum(a.nbytes for a in arrays) + sum(math.prod(shape) * (np.dtype(dtypes[value["dtype"]]).itemsize + guard_size)
                                          for shape, value in zip(shapes, signature["outputs"], strict=True)) > 128 * 1024 * 1024:

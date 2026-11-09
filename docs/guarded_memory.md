@@ -34,9 +34,9 @@ its source IDs.
 
 All source buffers have independent dense logical storage. Read-only buffers
 are borrowed; writable buffers use private state. Readwrite state starts as a
-copy of its incoming tensor. This profile currently refuses reads from writable
-buffers, pointer escapes, wrapping descriptors and pointer-carried state.
-Those require an observation/alias or pointer normalization contract.
+copy of its incoming tensor. Reads from writable buffers must observe incoming
+state or completed source writes. Pointer escapes, wrapping descriptors,
+pointer-carried state and aliases still require separate contracts.
 
 For each memory event, generated loops consume the exact source index and mask
 SSA values. Only active lanes check `0 <= flat_index < actual_allocation_size`.
@@ -44,14 +44,24 @@ Inactive indices are not used to address guard storage. Structured prefixes are
 checked against their tile; structured addresses sum the element offsets and
 local-IV/stride products used by upstream pointer analysis.
 
-Each writable element has a private i64 program-owner cell and i64 visited
-cell. Standard `memref.atomic_rmw assign` claims the owner and rejects another
-logical program. Visited cells reject duplicate active lanes in one store;
-they are cleared after that store so repeated ordered writes by the same
-program remain valid. This metadata atomic is compiler-generated verification
-state, not permission to lower source atomics. The payload store retains its
-parallel iteration semantics. A failed check aborts the invocation before a
-functional result is returned.
+Each writable element has program-owner tag words and an i64 completion cell.
+An owner word pairs 31 bits of the linear logical program ID with their bitwise
+complement. Standard `memref.atomic_rmw ori` accumulates these tags and a writer
+bit. Distinct programs have distinct equal-population tags: their union cannot
+fit inside either program's tag. A writer rejects any earlier foreign tag; a
+reader rejects a foreign tag when a writer bit is present. Shared reads without
+a writer remain valid. All fragments participate, so larger logical grids have
+the same conflict behavior. A read and write in either order across programs
+fail; no ordering is invented between logical programs.
+
+Completion cells begin at zero for copied readwrite state and minus one for
+fresh outputs. A store exchanges its active cells with one, rejecting duplicate
+active lanes in that event, and clears them to zero only after the original
+payload store. A writable read requires zero. This permits ordered repeated
+reads/writes by one program while rejecting reads before initialization.
+These atomics update compiler-owned verification metadata; they grant no source
+atomic permission. The payload retains its parallel iteration semantics. A
+failed check aborts before a functional result is returned.
 
 Fresh write-only results are checked for complete write coverage after the
 logical grid. Unwritten holes fail instead of receiving invented values.
@@ -59,8 +69,12 @@ Readwrite results preserve untouched input values. Empty results have vacuous
 coverage. Source address-width validation and contraction/cast policy checks
 still run before upstream pointer promotion and memory conversion.
 
-The profile needs **16 extra bytes per writable element**, plus guard work
-proportional to executed memory lanes. Allocation products are checked before
+The profile needs **16 extra bytes per writable element** for grids with at
+most 2^31 programs. Grids with at most 2^62 programs need 24 bytes; the remaining
+i64 grid domain needs 32. One owner word covers each 31-bit ID fragment, plus
+one completion cell. The bound is derived from declared maximum launch sizes;
+actual tensor sizes determine allocations. Guard work is proportional to
+executed memory lanes and fragment count. Allocation products are checked before
 allocation. Native and standalone Merlin evaluators include the declared guard
 storage in their bounded allocation budgets. Standard ownership-based buffer
 deallocation releases private allocations. These costs are explicit; the
@@ -74,6 +88,19 @@ includes `memory-input.mlir`, `memory-stage.mlir` and `memory-stage.json`.
 The admission report records the ABI/internal argument layout, every guarded
 access, source IDs, effect restrictions, storage cost and continuation hashes.
 `provenance.json` and the receipt bind the actual evidence bytes.
+New reports use `t2m.memory-admission.v2`, recording the owner-word count and
+sticky-tag observation protocol. V1 packages remain readable with their
+original write-only admission contract and 16-byte declaration.
+
+V2 uses the explicit upstream `memory-effects` stage, stopping before CSE and
+canonicalization. Upstream unstructured gathers create `to_tensor restrict`
+views over source memory. The adapter replaces their `tensor.extract` uses
+with typed `memref.load` operations and removes those views before optimization.
+This preserves mutable observations and avoids competing restrict promises on
+source bases. Read-only source declarations remain in the ABI/evidence. Native
+linalg operations expose recursive memory effects; downstream CSE/LICM therefore
+see the actual reads. Structured loads already copy into distinct allocations
+and retain that snapshot. No payload store is rewritten or serialized.
 
 Merlin independently checks these declared relations in compiler-only staging,
 copies their evidence without evaluator arrays/goldens, and retains the scratch
@@ -94,6 +121,11 @@ within-store/cross-program conflicts, active out-of-bounds accesses, rank-two
 structured accesses and repeated independent shapes through one Merlin library.
 Both scalar and tiled memory events exercise native execution and a reused
 Merlin library, including empty/tail allocations and negative masked indices.
+Runtime indirect recurrences retain reads before and after stores, including
+fresh initialization. Native tests cover shared readers and both cross-program
+read/write orders. Generated guards are also executed directly at 31/62-bit ID
+boundaries without launching huge grids; this checks the fragment protocol,
+not whole-kernel execution at those launch sizes.
 They also check evidence corruption and refusal of unqualified effects.
 Actual model2MLIR captures qualify ordinary tiled/ragged GEMM, block pointers
 and tensor descriptors through Merlin, retaining original weights, inputs and
@@ -114,13 +146,4 @@ The executable optimizer has its separate recorded pin, as described in
 
 This extends irregular store admission, not all TTIR effects or all descriptor,
 numeric and control-flow combinations. Source atomics, volatile observations,
-backend assembly and unqualified writable reads remain explicit open work.
-
-The next writable-observation extension must preserve actual read effects
-across source stores. Upstream unstructured gathers currently introduce
-`bufferization.to_tensor restrict` views over their base memory. A mutable
-buffer must not be treated as an immutable tensor snapshot or acquire competing
-restrict promises. Qualify an effect-preserving memory-read adapter before
-optimizations can merge those views/gathers, together with read ownership and
-per-element initialization checks. Writer ownership alone does not prove a
-read sees a defined value.
+backend assembly, alias groups and cross-program synchronization remain open.

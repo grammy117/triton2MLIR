@@ -150,7 +150,7 @@ def functionalize_memory(module, abi, *, guards=None):
     entry.add_op(func.ReturnOp(*outputs))
     function = func.FuncOp(abi.entry, ([value.type for value in abi.inputs], [value.type for value in abi.outputs]), Region(entry))
     if guards is not None:
-        function.attributes["prov.memory_guard_bytes_per_result_element"] = IntegerAttr(16, builtin.i64)
+        function.attributes["prov.memory_guard_bytes_per_result_element"] = IntegerAttr(guards["guard_storage_bytes_per_output_element"], builtin.i64)
     function.attributes["prov.logical_grid_bounds" if abi.dynamic else "prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid_bounds)
     result = ModuleOp([function])
     result.attributes.update({"prov.level": StringAttr("functional-tensor-with-standard-memory"),

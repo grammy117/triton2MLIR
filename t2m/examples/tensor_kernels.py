@@ -547,3 +547,34 @@ def scalar_indirect_store(x, indices, out, n, m, REPEAT: tl.constexpr,
             tl.store(x + index, value + update + 1, active)
         else:
             tl.store(out + index, value + update + 1, active)
+
+
+@triton.jit
+def indirect_recurrence(x, indices, out, n, m, steps, B: tl.constexpr,
+                         SCALAR: tl.constexpr, INITIALIZE: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    index = tl.load(indices + lane, lane < n, other=-1)
+    value = tl.load(x + lane, lane < n, other=0)
+    active = (lane < n) & (index >= 0)
+    if INITIALIZE:
+        tl.store(out + index, value, active)
+    for update in range(steps):
+        previous = tl.load(out + index, active, other=0)
+        tl.store(out + index, previous + value + 1, active)
+        observed = tl.load(out + index, active, other=0)
+        tl.store(out + index, observed + 2, active)
+
+
+@triton.jit
+def shared_writable_reads(state, indices, out, N: tl.constexpr, B: tl.constexpr,
+                          WRITE_SHARED: tl.constexpr, WRITER: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    index = tl.load(indices + lane, lane < N, other=0)
+    value = tl.load(state + index, lane < N, other=0)
+    tl.store(out + lane, value + 1, lane < N)
+    if WRITE_SHARED:
+        if tl.program_id(0) == WRITER:
+            tl.store(state, 7)

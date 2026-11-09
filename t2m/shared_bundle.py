@@ -76,7 +76,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
         (out / name).write_text(payload)
     differences = DIFFERENCES + (["explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained"] if profile == BUFFER_PROFILE else [])
     if profile == GUARDED_PROFILE:
-        differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, cross-program ownership, per-store lane uniqueness and fresh-output write coverage are executable; no pure tensor witness is asserted")
+        differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, read/write ownership, completed initialization and per-store lane uniqueness are executable; source-base gathers retain memory effects before optimization; grid-derived metadata cost is explicit; no pure tensor witness is asserted")
     if result.spec.dynamic:
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,

@@ -85,8 +85,7 @@ def test_empty_output_and_inactive_extreme_indices_are_valid(tmp_path, fresh, sc
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.parametrize("options,reason", [({"read_output": True}, "writable-buffer reads"),
-    ({"store_input": True}, "read-only buffer")])
+@pytest.mark.parametrize("options,reason", [({"store_input": True}, "read-only buffer")])
 def test_effects_outside_guarded_private_output_contract_refuse(tmp_path, options, reason):
     with pytest.raises(ConversionError, match=reason) as caught:
         convert(tmp_path, **options)

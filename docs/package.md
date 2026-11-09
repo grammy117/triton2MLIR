@@ -91,13 +91,18 @@ The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor
 witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three
 memory continuation artifacts remain. The report and function attribute declare
-16 guard bytes per writable element, included in standalone evaluator budgets.
+the grid-derived guard cost (16, 24 or 32 bytes per writable element), included
+in standalone evaluator budgets.
 Checks retain source masks, loops and payload while rejecting active bounds
 violations, conflicting writers and fresh-output holes. This initial profile
 supports standalone staging/execution and static derived-model binding. Bound
 models retain each kernel's evidence and declare guard scratch summed over
 inlined calls, independently checked by Merlin against typed kernel results.
 See [the exact memory scope](guarded_memory.md).
+V2 admission retains writable observations and complete-write initialization,
+with sticky reader/writer tags and actual source-base memory reads before
+optimization. Its `memory-effects` continuation boundary is explicit. Existing
+v1 evidence retains its original write-only contract and `memory-ir` stage.
 
 | Artifact | MVP convention |
 |---|---|

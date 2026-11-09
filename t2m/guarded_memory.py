@@ -13,10 +13,14 @@ from xdsl.dialects.builtin import ArrayAttr, DictionaryAttr, FunctionType, Index
 from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
-from .memory_contract import guarded_arguments
+from .memory_contract import guarded_arguments, guard_layout
 
-# MLIR arith::AtomicRMWKind::assign (ArithBase.td), not a device opcode.
+# MLIR arith::AtomicRMWKind::{assign,ori} (ArithBase.td), not device opcodes.
 ATOMIC_ASSIGN = 3
+ATOMIC_OR = 14
+FRAGMENT_MASK = (1 << 31) - 1
+TAG_MASK = (1 << 62) - 1
+WRITER_BIT = 1 << 62
 MAP_TYPE = MemRefType(builtin.i64, [builtin.DYNAMIC_INDEX])
 
 
@@ -101,6 +105,7 @@ def instrument(module, abi, source_ids):
     original = list(function.walk())
     buffers = {arg: value for arg, (kind, value) in zip(entry.args, abi.source_bindings, strict=True) if kind == "buffer"}
     descriptors = {}
+    layout = guard_layout(abi.as_dict())
     supported = {"tt.func", "tt.return", "tt.get_program_id", "tt.get_num_programs", "tts.make_tptr",
                  "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter"}
     controls = {"scf.for", "scf.if", "scf.while", "scf.condition", "scf.yield"}
@@ -235,27 +240,27 @@ def instrument(module, abi, source_ids):
             refuse(op, "memory guards require a positive static tile shape")
         if write and access.buffer.effect == "read":
             refuse(op, "source stores into a declared read-only buffer")
-        if not write and access.buffer.effect != "read":
-            refuse(op, "guarded writable-buffer reads require an observation/initialization contract")
-        before = guard_loops(op, access, extra, write=write)
+        before = guard_loops(op, access, extra, write=write, owner_words=layout["owner_words_per_element"])
         op.parent.insert_ops_before(before, op)
         if write:
-            op.parent.insert_ops_after(guard_loops(op, access, extra, write=True, cleanup=True), op)
+            op.parent.insert_ops_after(guard_loops(op, access, extra, write=True, cleanup=True,
+                owner_words=layout["owner_words_per_element"]), op)
         accesses.append({"source_ids": source_ids(op.location), "opcode": name, "buffer": access.buffer.name,
                          "effect": "write" if write else "read", "tile": list(access.sizes),
-                         "guard": "bounds-owner-lane-uniqueness" if write else "active-bounds",
+                         "guard": "bounds-owner-lane-uniqueness" if write else "active-bounds" if access.buffer.effect == "read" else "bounds-read-ownership-initialization",
                          "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked"})
-    return {"schema": "t2m.memory-admission.v1", "strategy": "runtime-guarded-private-output-state",
+    return {"schema": "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
             "spec": abi.as_dict(), "internal_arguments": arguments, "accesses": accesses,
             "scalar_normalizations": scalar_normalizations,
             "control_flow": [{"opcode": opcode(op), "source_ids": source_ids(op.location)} for op in original
                              if opcode(op) in ("scf.for", "scf.while", "scf.if")],
-            "writable_reads": "refused", "fresh_initialization": "post-grid-complete-write-coverage",
+            "writable_reads": "shared-readers-or-single-writer-program", "fresh_initialization": "post-grid-complete-write-coverage",
+            "ownership_protocol": "sticky-complemented-program-fragments",
             "parallelism": "original-logical-grid-and-payload-retained",
-            "guard_storage_bytes_per_output_element": 16}
+            **layout}
 
 
-def guard_loops(source, access, extra, *, write=False, cleanup=False):
+def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_words=1):
     outer = Block()
     def add(block, op, role="memory_guard"):
         op.location = source.location
@@ -307,23 +312,40 @@ def guard_loops(source, access, extra, *, write=False, cleanup=False):
         low = add(body, arith.CmpiOp(offset, constant(body, 0, builtin.i64), "sge"))
         high = add(body, arith.CmpiOp(offset, extra["extent", access.buffer.name], "slt"))
         add(body, cf.AssertOp(add(body, arith.AndIOp(low, high)), "Triton active memory index outside logical allocation"))
-    if write:
+    if access.buffer.effect != "read":
         position = add(body, arith.IndexCastOp(offset, IndexType()))
         visited = extra["visited", access.buffer.name]
         if cleanup:
             add(body, memref.StoreOp.build(operands=[constant(body, 0, builtin.i64), visited, [position]]), "release_store_lane_marks")
         else:
             pid, owners = extra["program", None], extra["owners", access.buffer.name]
-            def exchange(value, buffer):
-                return add(body, memref.AtomicRMWOp.build(operands=[value, buffer, [position]], result_types=[builtin.i64],
-                    properties={"kind": IntegerAttr(ATOMIC_ASSIGN, builtin.i64)}), "claim_memory_obligation")
-            owner = exchange(pid, owners)
-            empty = add(body, arith.CmpiOp(owner, constant(body, -1, builtin.i64), "eq"))
-            local = add(body, arith.CmpiOp(owner, pid, "eq"))
-            add(body, cf.AssertOp(add(body, arith.OrIOp(empty, local)), "Triton write conflicts across logical programs"))
-            previous = exchange(constant(body, 1, builtin.i64), visited)
-            unique = add(body, arith.CmpiOp(previous, constant(body, 0, builtin.i64), "eq"))
-            add(body, cf.AssertOp(unique, "Triton scatter has conflicting active lanes"))
+            def atomic(value, buffer, at, kind):
+                return add(body, memref.AtomicRMWOp.build(operands=[value, buffer, [at]], result_types=[builtin.i64],
+                    properties={"kind": IntegerAttr(kind, builtin.i64)}), "claim_memory_obligation")
+            base = add(body, arith.MuliOp(position, constant(body, owner_words))) if owner_words > 1 else position
+            for word in range(owner_words):
+                fragment = add(body, arith.ShRUIOp(pid, constant(body, 31 * word, builtin.i64))) if word else pid
+                fragment = add(body, arith.AndIOp(fragment, constant(body, FRAGMENT_MASK, builtin.i64)))
+                complement = add(body, arith.XOrIOp(fragment, constant(body, FRAGMENT_MASK, builtin.i64)))
+                tag = add(body, arith.OrIOp(fragment, add(body, arith.ShLIOp(complement, constant(body, 31, builtin.i64)))))
+                mark = add(body, arith.OrIOp(tag, constant(body, WRITER_BIT, builtin.i64))) if write else tag
+                at = add(body, arith.AddiOp(base, constant(body, word))) if word else base
+                previous = atomic(mark, owners, at, ATOMIC_OR)
+                different = add(body, arith.AndIOp(previous, add(body, arith.XOrIOp(tag, constant(body, TAG_MASK, builtin.i64)))))
+                compatible = add(body, arith.CmpiOp(different, constant(body, 0, builtin.i64), "eq"))
+                if not write:
+                    writer = add(body, arith.AndIOp(previous, constant(body, WRITER_BIT, builtin.i64)))
+                    no_writer = add(body, arith.CmpiOp(writer, constant(body, 0, builtin.i64), "eq"))
+                    compatible = add(body, arith.OrIOp(no_writer, compatible))
+                add(body, cf.AssertOp(compatible, "Triton memory conflicts across logical programs"))
+            if write:
+                previous = atomic(constant(body, 1, builtin.i64), visited, position, ATOMIC_ASSIGN)
+                unique = add(body, arith.CmpiOp(previous, constant(body, 1, builtin.i64), "ne"))
+                add(body, cf.AssertOp(unique, "Triton scatter has conflicting active lanes"))
+            else:
+                state = add(body, memref.LoadOp.build(operands=[visited, [position]], result_types=[builtin.i64]))
+                initialized = add(body, arith.CmpiOp(state, constant(body, 0, builtin.i64), "eq"))
+                add(body, cf.AssertOp(initialized, "Triton writable-buffer read before completed initialization"))
     body.add_op(scf.YieldOp())
     if body is not parent:
         parent.add_op(scf.YieldOp())

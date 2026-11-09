@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 
 TENSOR_PROFILE = "shared-functional-tensor"
 BUFFER_PROFILE = "shared-functional-buffer"
@@ -9,6 +10,17 @@ GUARDED_PROFILE = "shared-guarded-buffer"
 MEMORY_FILES = {"memory-witness.mlir", "memory-input.mlir", "memory-stage.mlir", "memory-stage.json"}
 GUARDED_FILES = MEMORY_FILES - {"memory-witness.mlir"} | {"memory-admission.json"}
 PROFILE_FILES = {TENSOR_PROFILE: set(), BUFFER_PROFILE: MEMORY_FILES, GUARDED_PROFILE: GUARDED_FILES}
+
+
+def guard_layout(spec):
+    """31-bit program fragments paired with their complements in i64 words."""
+    bounds = {s["name"]: s.get("bounds") for s in spec.get("runtime_scalars", [])}
+    counts = [n if type(n) is int else (bounds[n["dimension"]][1] + n["divisor"] - 1) // n["divisor"]
+              for n in spec.get("grid", [1])]
+    words = max(1, ((math.prod(counts) - 1).bit_length() + 30) // 31)
+    if not 1 <= words <= 3:
+        raise ValueError("guard owner layout exceeds the declared i64 logical grid")
+    return {"owner_words_per_element": words, "guard_storage_bytes_per_output_element": 8 * (words + 1)}
 
 
 def guarded_arguments(spec):
@@ -34,23 +46,26 @@ def validate_memory_evidence(trace, artifacts):
         if memory.get(key) != record(artifacts[name])["sha256"]:
             raise ValueError("memory evidence differs from source provenance: " + name)
     stage = json.loads(artifacts["memory-stage.json"])
-    if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != "memory-ir"
+    admission = json.loads(artifacts["memory-admission.json"]) if profile == GUARDED_PROFILE else None
+    version2 = admission is not None and admission.get("schema") == "t2m.memory-admission.v2"
+    if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != ("memory-effects" if version2 else "memory-ir")
             or stage.get("stage_completed") is not True
             or stage.get("artifacts", {}).get("source.ttir") != record(artifacts["memory-input.mlir"])
             or stage.get("artifacts", {}).get("lowered.mlir") != record(artifacts["memory-stage.mlir"])):
         raise ValueError("memory continuation report does not bind its actual input/output")
     if profile == GUARDED_PROFILE:
-        admission = json.loads(artifacts["memory-admission.json"])
         spec = json.loads(json.dumps(trace.get("spec")))
         if not isinstance(spec, dict) or not isinstance(spec.get("buffers"), list):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
-        if (admission.get("schema") != "t2m.memory-admission.v1"
+        layout = guard_layout(spec) if version2 else {"guard_storage_bytes_per_output_element": 16}
+        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2")
                 or admission.get("strategy") != "runtime-guarded-private-output-state"
                 or admission.get("spec") != spec or admission.get("internal_arguments") != guarded_arguments(spec)
                 or admission.get("guarded_input_sha256") != record(artifacts["memory-input.mlir"])["sha256"]
                 or admission.get("continuation_output_sha256") != record(artifacts["memory-stage.mlir"])["sha256"]
-                or admission.get("guard_storage_bytes_per_output_element") != 16
-                or admission.get("writable_reads") != "refused"
+                or any(admission.get(key) != value for key, value in layout.items())
+                or version2 and admission.get("ownership_protocol") != "sticky-complemented-program-fragments"
+                or admission.get("writable_reads") != ("shared-readers-or-single-writer-program" if version2 else "refused")
                 or admission.get("fresh_initialization") != "post-grid-complete-write-coverage"):
             raise ValueError("guarded memory admission does not bind its source/ABI/continuation")
         buffers = {b["name"]: b for b in spec["buffers"]}
@@ -62,7 +77,8 @@ def validate_memory_evidence(trace, artifacts):
             write = access.get("opcode") in ("tts.store", "tts.scatter")
             if (buffer is None or access.get("opcode") not in ("tts.load", "tts.store", "tts.gather", "tts.scatter")
                     or access.get("effect") != ("write" if write else "read")
-                    or (buffer["effect"] == "read") == write
+                    or write and buffer["effect"] == "read"
+                    or not write and buffer["effect"] != "read" and not version2
                     or not access.get("source_ids") or any(s not in inventory for s in access["source_ids"])
                     or not access.get("tile") or any(type(n) is not int or n <= 0 for n in access["tile"])):
                 raise ValueError("guarded memory access inventory differs from its source/effect contract")

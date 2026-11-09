@@ -160,8 +160,8 @@ per-store lane uniqueness and fresh-output coverage. i32/i64 indices, repeated
 source stores, partial updates and zero/extreme inactive cases execute natively;
 one actual Merlin library also runs independent runtime shapes. The package
 replaces the tensor witness with a byte-bound admission report and declares its
-16-byte per-output-element guard cost. This closes that witness dependency for
-the qualified private-output profile. Writable observations, aliasing, general
+grid-derived per-output-element guard cost. This closes that witness dependency for
+the qualified private-output profile. Aliasing, general
 pointer state and source effects remain open; see [guarded memory](guarded_memory.md).
 Static guarded kernels also bind into actual model2MLIR captures, with ordinary
 and ragged tiled GEMM, block pointers and descriptors compiled/executed through
@@ -171,6 +171,15 @@ Scalar indirect loads/stores additionally normalize to unit tensors before
 the same upstream memory conversion, retaining exact source masks/fills and
 index/value word types. Scalar and tiled cases both qualify through native
 execution and a reused Merlin library over independent runtime dimensions.
+V2 admission additionally preserves writable indirect observations before and
+after source stores in runtime recurrences. Source-base gather views are
+adapted to actual memory loads before CSE; structured loads retain their copies.
+Sticky reader/writer tags allow shared readers, reject cross-program conflicts
+in either order, and cover every i64 program-ID fragment. Completion cells
+enforce read initialization and fresh-output coverage. Typical grids retain
+16 bytes of metadata per element; wider domains require 24/32. Native checks
+at fragment boundaries avoid huge launch experiments, and scalar/tiled
+recurrences reuse one actual Merlin library over changing runtime inputs.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
