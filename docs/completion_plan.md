@@ -215,6 +215,15 @@ source, capture, native result and failed consumer receipt are retained under
 `.scratch/nested-pointer-control/`. These disposable diagnostics are evidence
 for the next implementation, not a maintained or passing product case.
 
+Validation on 2026-11-09: the complete producer suite passed 492 tests with all
+existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
+deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;
+its documentation/structure gates passed. `out/pointer-while/` contains the
+visible source-word package, and `out/pointer-while-merlin/` passed separate
+compiler staging, native library execution and all 45 artifact checks.
+Accelerator execution remains unperformed. These are measured cases and custody
+checks, not universal TTIR or target coverage.
+
 A closed full-pipeline integration probe now compiles triton-shared's later
 mixed linalg/tensor/memory body through Merlin and checks variable prefixes and
 input preservation. The old categorical consumer incompatibility is therefore
