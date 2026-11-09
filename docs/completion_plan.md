@@ -116,6 +116,10 @@ Runtime M/N/K GEMM additionally retains its source K loop and tiled contractions
 through actual Merlin libraries in both profiles, with direct/transposed RHS,
 changing strides, zero extents and ragged tails. No kernel-specific production
 rewrite or whole-tensor replacement is needed.
+Read-only indexed gathers now also retain runtime allocation dimensions and
+independent index/result counts through the same compiler/library path, with
+active tensor bounds checks, exact inactive fills and empty storage cases.
+General scatter, writable-buffer reads and aliasing still need separate proofs.
 
 Workstream D additionally preserves runtime value-only source `scf.for`
 recurrences. Both memory profiles qualify zero/nonzero counts through the same

@@ -16,6 +16,14 @@ def dynamic_matrix_add(x, y, m, n, out, BM: tl.constexpr, BN: tl.constexpr):
 
 
 @triton.jit
+def dynamic_indexed_gather(x, indices, m, n, count, out, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    index = tl.load(indices + lane, mask=lane < count, other=-1)
+    value = tl.load(x + index, mask=(lane < count) & (index >= 0), other=-7)
+    tl.store(out + lane, value, mask=lane < count)
+
+
+@triton.jit
 def dynamic_matmul(x, y, m, n, k, out, BM: tl.constexpr, BN: tl.constexpr,
                    BK: tl.constexpr, TRANSPOSED: tl.constexpr):
     rows = tl.program_id(0) * BM + tl.arange(0, BM)

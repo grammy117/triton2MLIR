@@ -95,11 +95,12 @@ The remaining boundaries are:
 
 [Runtime scalar ABI v3](runtime_abi.md) now has f32/f64/i32 payload and i1
 source-branch execution cases through Merlin. Runtime values are not specialized;
-general multidimensional shape/stride/grid and address-domain profiles still require separate work.
+non-dense stride, general grid and address-domain profiles still require separate work.
 Guarded i32/i64 prefix domains (ABI v4) now additionally have native and Merlin
 checks, including empty/tail/full domains, preserved outputs and negative limits.
-They vary memory domains over static capacities; multidimensional runtime tensor shapes,
-general indexed writes and runtime memory-loop domains remain open.
+These vary memory domains over static capacities; ABI v5 below separately admits
+actual runtime tensor shapes. General indexed writes and broader loop/while
+domains remain open.
 Runtime value-only `scf.for` recurrences additionally retain their original
 standard body and SSA bounds through native/Merlin execution, including zero
 trips and repeat invocations through one library in both memory profiles.
@@ -119,7 +120,7 @@ zero; the payload observes the actual program count. A scalar-only generator
 also allocates a result without any tensor input size to infer from. Caller
 shape bindings and executable MLIR guards reject inconsistent dimensions, and
 output allocation budgets are checked before construction. This does not close
-non-dense multidimensional strides, indexed dynamic allocations or shape algebra.
+non-dense multidimensional strides, general indexed effects or shape algebra.
 Two-axis tiled matrix addition now qualifies changing runtime row strides and
 empty/tail shapes through both memory profiles and the actual Merlin library
 interface. Exact symbolic offset/stride cancellation preserves the tile axes;
@@ -128,10 +129,14 @@ Runtime M/N/K GEMM also qualifies both profiles with direct/transposed RHS,
 retained tile contractions and K loop. One library per profile/storage layout
 executes empty dimensions, K=0, exact tiles and ragged tails. This extends dense
 address/shape coverage; it does not admit arbitrary pointer recurrences or effects.
+Read-only indexed gathers now also qualify named runtime matrix allocations and
+independent index/result counts in both profiles, with repeated i32/i64 indices
+and empty inactive domains. Tensor-profile active checks use the actual extent;
+declared maximum allocations and suffix strides only bound the arithmetic proof.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.
-2. General strided/block descriptors, runtime shapes/scalars, arbitrary store masks and irregular access with
+2. General strided/block descriptors, runtime layout/shape algebra, arbitrary store masks and irregular access with
    defined gather/scatter conflict behavior and supported alias/effect contracts.
 3. Mixed-precision, cast, richer combiner/effect and contraction numeric policies. A source
    attribute that upstream drops cannot be repaired by provenance alone.

@@ -79,7 +79,12 @@ python -m t2m qualify-merlin out/dynamic_matmul \
   --rtol 1e-5 --atol 6e-6
 ```
 
-Non-dense multidimensional runtime strides, dynamic indexed gathers, arbitrary shape
+Runtime read-only indexed gathers also qualify multidimensional allocations,
+independent index/result counts, zero-element inactive reads and repeated-index
+reuse in both profiles through one Merlin library per profile/index type.
+See [the active bounds and effect contract](indexed_memory.md).
+
+Non-dense multidimensional runtime strides, general indexed writes, arbitrary shape
 expressions, model-call signature adaptation and aliasing still need their own
 proofs. Compiler staging establishes declared type/binding consistency; actual
 guard semantics, memory coverage, numeric and execution evidence remain separate.

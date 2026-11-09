@@ -62,6 +62,8 @@ and incoming output values for zero trips.
 launches. `shared-demo --kernel dynamic-matmul` preserves tiled GEMM and its K
 loop with runtime M/N/K; both memory profiles execute through Merlin across
 changing and empty shapes. See [runtime dimensions](docs/dynamic_shapes.md).
+`shared-demo --kernel dynamic-gather` additionally keeps runtime allocation and
+index/result extents with masked indexed reads and exact inactive fills.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

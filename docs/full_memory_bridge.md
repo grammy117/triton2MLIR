@@ -58,6 +58,11 @@ multidimensional addition, ragged GEMM, descriptors and tuple scans. Actual
 model tests cover ordinary, ragged, block-pointer and descriptor GEMM bindings
 without replacing model weights, inputs or goldens. These are the qualified
 examples within the existing semantic proof scope, not universal conversion.
+Named runtime dense matrix dimensions, tiled runtime M/N/K GEMM and read-only
+indexed gathers additionally reuse one actual Merlin library over independent
+shapes, including zero extents. Public named dimensions stay ranked; the raw
+pointer view collapses dynamic dense storage internally. Non-dense layouts and
+general indexed effects remain separate admission work.
 
 ## Profile invariants and remaining gates
 

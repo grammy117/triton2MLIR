@@ -85,6 +85,10 @@ Runtime M/N/K GEMM now retains tile contractions and its original K loop through
 both profiles and actual Merlin libraries, including transposed RHS storage,
 empty M/N, K=0 and ragged tails. `shared-demo --kernel dynamic-matmul` emits a
 symbolic package with independent numerical validation.
+Runtime read-only indexed gathers now also qualify multidimensional allocation
+shapes and independent index/result counts through both profiles, including
+i32/i64 indices and empty inactive domains. The tensor expansion checks active
+indices against actual storage; general indexed writes remain open.
 Runtime value-only loops now preserve source SSA bounds and tile recurrences
 through the same Merlin library for zero/nonzero counts in both memory profiles.
 The checked consumer retains fusion and native lifetime/alias analysis; source

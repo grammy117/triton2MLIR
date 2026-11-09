@@ -97,14 +97,20 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = tuple(RuntimeScalar(name, "i32", arg, bounds=(0, high))
             for name, arg, high in (("m", 2, 35), ("n", 3, 21), ("k", 4, 37)))
         example_dimensions = {"m": 35, "n": 21, "k": 37}
+    elif kernel == "dynamic-gather":
+        fn, constants, shapes = kernels.dynamic_indexed_gather, {"B": 8}, [("m", "n"), ("count",), ("count",)]
+        grid = (GridExtent("count", 8),)
+        runtime_scalars = tuple(RuntimeScalar(name, "i32", arg, bounds=(0, high))
+            for name, arg, high in (("m", 2, 7), ("n", 3, 11), ("count", 4, 19)))
+        example_dimensions = {"m": 3, "n": 5, "count": 13}
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
     if kernel == "tuple-scan":
         names = ["a", "b", "out_a", "out_b"]
-    elif kernel == "indexed-gather":
+    elif kernel in ("indexed-gather", "dynamic-gather"):
         names = ["x", "indices", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "dynamic-count", "dynamic-matmul") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
                     dtype="i32" if n == "indices" else "f32")
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
@@ -146,8 +152,10 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "dynamic-matmul":
         arrays[2:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n", "k")]
         golden = arrays[0] @ arrays[1]
-    elif kernel == "indexed-gather":
+    elif kernel in ("indexed-gather", "dynamic-gather"):
         arrays[1] = np.array([0, 14, 7, -2147483648, 3, 3, -99, 8, 0, 14, 12, -1, 6], dtype=np.int32)
+        if kernel == "dynamic-gather":
+            arrays[2:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n", "count")]
         golden = np.full(13, -7, dtype=np.float32)
         active = arrays[1] >= 0
         golden[active] = arrays[0].ravel()[arrays[1][active]]
@@ -212,7 +220,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")

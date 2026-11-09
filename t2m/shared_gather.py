@@ -24,8 +24,6 @@ Masked loads without `other` remain refused until definedness is propagated.
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import math
-
 from xdsl.dialects import arith, builtin, cf, scf, tensor
 from xdsl.dialects.builtin import AffineMapAttr, DenseArrayBase, DYNAMIC_INDEX, IndexType, IntegerType, StringAttr, TensorType
 from xdsl.dialects.linalg.attrs import IteratorTypeAttr
@@ -36,7 +34,7 @@ from xdsl.ir.affine import AffineMap
 from .diagnostics import ConversionError
 
 
-def gather(source, buffer, base, mapping, append):
+def gather(source, buffer, base, mapping, append, *, dimensions=None, maximum_shape=None):
     """Only read-only allocations: repeated/cross-program reads need no owner."""
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
@@ -52,10 +50,11 @@ def gather(source, buffer, base, mapping, append):
     index = mapping[source.operands[1]]
     mask = mapping[source.operands[2]] if segments[2] else None
     other = mapping[source.operands[-1]] if segments[3] else None
-    return _gather(source, buffer, base, index, mask, other, append)
+    return _gather(source, buffer, base, index, mask, other, append,
+                   dimensions=dimensions, maximum_shape=maximum_shape)
 
 
-def structured_gather(source, pointer, buffer, base, mapping, append):
+def structured_gather(source, pointer, buffer, base, mapping, append, *, dimensions=None, maximum_shape=None):
     """Keep the upstream rank-one gather descriptor and exact prefix predicate."""
     def array(op, key):
         value = op.properties.get(key)
@@ -78,10 +77,11 @@ def structured_gather(source, pointer, buffer, base, mapping, append):
     other = mapping[source.operands[-1]] if segments[2] else None
     if prefix == sizes[0]:
         prefix = None
-    return _gather(source, buffer, base, mapping[pointer.operands[1]], None, other, append, prefix=prefix)
+    return _gather(source, buffer, base, mapping[pointer.operands[1]], None, other, append, prefix=prefix,
+                   dimensions=dimensions, maximum_shape=maximum_shape)
 
 
-def _gather(source, buffer, base, index, mask, other, append, *, prefix=None):
+def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, dimensions=None, maximum_shape=None):
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
 
@@ -95,17 +95,34 @@ def _gather(source, buffer, base, index, mask, other, append, *, prefix=None):
     if (any(n <= 0 for n in shape) or index.type.get_shape() != shape or not isinstance(element, IntegerType)
             or element.width.data not in (32, 64) or base.type.get_element_type() != scalar):
         refuse("gather requires matching static shapes and signed i32/i64 indices")
-    if any(isinstance(n, str) for n in buffer.shape):
-        refuse("dynamic gather allocations require a runtime extent/coordinate adapter")
-    extent = math.prod(buffer.shape)
-    if not 0 < extent < 2**31:
-        refuse("gather logical allocation needs a representable positive 32-bit index domain")
+    dynamic = any(isinstance(n, str) for n in buffer.shape)
+    if dynamic and (dimensions is None or maximum_shape is None):
+        refuse("dynamic gather allocations require guarded runtime extent bindings")
+    maximum = 1
+    for size in reversed(maximum_shape if dynamic else buffer.shape):
+        maximum *= size
+        if not 0 <= maximum < 2**31:
+            refuse("gather logical allocation/strides need a representable nonnegative 32-bit index domain")
     if mask is not None and (mask.type != TensorType(builtin.i1, shape) or other is None):
         refuse("masked gather needs a matching boolean tensor and explicit defined fill")
     if other is not None and other.type != scalar:
         refuse("gather fill must be the declared scalar element type")
     if prefix is not None and (len(shape) != 1 or other is None):
         refuse("prefix-masked gather needs a rank-one tensor and explicit defined fill")
+    # Only the range proof uses the maximum. Coordinates and active checks use
+    # actual guarded dimensions. A zero extent permits no active extraction.
+    strides, extent = [], 1
+    def multiply(a, b):
+        if isinstance(a, int) and isinstance(b, int):
+            return a * b
+        if isinstance(a, int):
+            a = append(arith.ConstantOp.from_int_and_width(a, IndexType()), source).result
+        if isinstance(b, int):
+            b = append(arith.ConstantOp.from_int_and_width(b, IndexType()), source).result
+        return append(arith.MuliOp(a, b), source).result
+    for dimension in reversed(buffer.shape):
+        strides.insert(0, extent)
+        extent = multiply(extent, dimensions[dimension] if isinstance(dimension, str) else dimension)
     inputs = [index, *([mask] if mask is not None else [])]
     block = Block(arg_types=[element, *([builtin.i1] if mask is not None else []), scalar])
 
@@ -117,15 +134,20 @@ def _gather(source, buffer, base, index, mask, other, append, *, prefix=None):
         if offset.type != builtin.i64:
             offset = add(arith.ExtSIOp(offset, builtin.i64))
         zero = add(arith.ConstantOp.from_int_and_width(0, builtin.i64))
-        upper = add(arith.ConstantOp.from_int_and_width(extent, builtin.i64))
+        upper = add(arith.ConstantOp.from_int_and_width(extent, builtin.i64)) if isinstance(extent, int) else add(arith.IndexCastOp(extent, builtin.i64))
         low_ok, high_ok = add(arith.CmpiOp(offset, zero, "sge")), add(arith.CmpiOp(offset, upper, "slt"))
         add(cf.AssertOp(add(arith.AndIOp(low_ok, high_ok)), "Triton gather active index outside logical allocation"))
         remaining = add(arith.IndexCastOp(offset, IndexType()))
         coordinates = []
-        for axis in range(len(buffer.shape)):
-            stride = math.prod(buffer.shape[axis + 1:])
+        for axis, stride in enumerate(strides):
             if axis + 1 < len(buffer.shape):
-                divisor = add(arith.ConstantOp.from_int_and_width(stride, IndexType()))
+                if isinstance(stride, int):
+                    divisor = add(arith.ConstantOp.from_int_and_width(stride, IndexType()))
+                else:
+                    # The active bounds assertion excludes zero-sized storage.
+                    # Keep division itself defined even under speculation.
+                    one = add(arith.ConstantOp.from_int_and_width(1, IndexType()))
+                    divisor = add(arith.MaxUIOp(stride, one))
                 coordinates.append(add(arith.DivUIOp(remaining, divisor)))
                 remaining = add(arith.RemUIOp(remaining, divisor))
             else:

@@ -31,7 +31,12 @@ memory family/kind, representation and active bounds/mask facts; arithmetic and
 effect semantics stay in the executable operations.
 
 The current profile requires a read-only contiguous allocation with fewer than
-2^31 elements and a static positive tile shape. Runtime indices are tensor data,
+2^31 elements and a static positive tile shape. ABI v5 also supports named
+runtime allocation dimensions and a separately named index/result count. The
+actual guarded dimensions determine the active bounds check and row-major
+coordinates; declared maxima only bound the arithmetic domain. Every suffix
+stride product must fit that domain, including when a leading dimension is
+always zero. Runtime indices are tensor data,
 not compile-time specializations. Their full source-width signed interval feeds
 the existing address arithmetic check; an unproved overflowing source expression
 still refuses before upstream index promotion. Active out-of-allocation indices
@@ -47,6 +52,18 @@ overflow, irregular writable-buffer reads, collision-prone scatter and masked
 loads with undefined `other` remain refused. These need explicit definedness,
 initialization/ownership/effect and numeric work; they are not counted as covered.
 
+Both memory profiles now qualify runtime-sized matrix allocations through
+Merlin, reusing one library per profile/index type across independent shapes.
+The corpus includes empty storage with all lanes inactive, repeated indices,
+ragged counts and i32/i64 extreme-negative inactive indices. The tensor profile
+additionally checks that an active index below the maximum capacity but outside
+the actual allocation fails before extraction, including zero-sized storage.
+Dynamic coordinate div/rem uses a divisor of at least one, so a zero extent
+cannot introduce speculative division by zero. That does not permit any active
+read from empty storage. The buffer profile retains upstream memory operations
+and the checked tensor witness; undefined source accesses are not qualified.
+General indexed writes and writable-buffer observations remain separate gates.
+
 ```bash
 python -m t2m shared-demo --kernel indexed-gather --out out/indexed_gather \
   --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python
@@ -55,3 +72,7 @@ python -m t2m qualify-merlin out/indexed_gather --out out/indexed_gather_merlin 
   --python /path/to/native-env/bin/python --merlin-clang /path/to/clang
 python -m t2m verify-merlin out/indexed_gather_merlin
 ```
+
+`shared-demo --kernel dynamic-gather` emits the ABI v5 variant. The package keeps
+allocation shape `("m", "n")` and index/result shape `("count",)` symbolic;
+example sizes do not enter the compiler-only view.
