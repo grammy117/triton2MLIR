@@ -46,6 +46,9 @@ Torch wrapper; see [the consumer contract](docs/merlin_consumer.md).
 The [indexed-read path](docs/indexed_memory.md) additionally preserves loaded
 indices, masked fills and reuse as parallel tensor dataflow, with native and
 Merlin host checks; try `shared-demo --kernel indexed-gather`.
+Typed runtime scalar inputs also reach Merlin by value. `invoke-merlin` reuses a
+qualified library with new scalar values and separate invocation evidence; see
+[the runtime ABI](docs/runtime_abi.md).
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

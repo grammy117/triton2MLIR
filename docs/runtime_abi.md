@@ -47,10 +47,29 @@ Supported scalar declarations also include i8/i16/i64; their broader operation/
 composition matrix still needs qualification. This is not universal numeric or
 target certification.
 
+`invoke-merlin` now reuses a verified native library with new typed argument and
+reference archives. It runs only the evaluator worker, needs no compiler, and
+keeps the original qualification immutable. A separate
+`t2m.merlin-kernel-invocation.v1` receipt binds the exact library/program,
+argument bytes, observed outputs, independent reference and original compiler
+snapshots. `verify-merlin-invocation` checks those bytes and internal relations.
+Tests change scalar values with compiler paths deliberately unavailable, replay
+multiple results, and refuse wrong rank/dtype/keys, references and changed libraries.
+
+```bash
+python -m t2m shared-demo --kernel runtime-affine --out out/runtime_affine \
+  --optimizer /path/to/triton-shared-opt --python /path/to/native-env/bin/python
+# qualify-merlin builds this once; see docs/merlin_consumer.md.
+python -m t2m invoke-merlin out/runtime_affine_merlin \
+  --inputs new-inputs.npz --reference new-reference.npz --out out/new-invocation \
+  --merlin-root /path/to/merlin --merlin-python /path/to/merlin-env/bin/python
+python -m t2m verify-merlin-invocation out/new-invocation
+```
+
 Dynamic shapes/strides/grid sizes and runtime-controlled address/loop domains
 remain open. Next: guarded scalar domain bounds and exact runtime prefix masks;
 then symbolic tensor dimensions and launch extents linked to actual argument
 shapes, dynamic allocations/results, and one compiled library invoked over
-independent shapes/scalars. These need executable guards, initialization/
+independent shapes. These need executable guards, initialization/
 ownership proofs and consumer allocation/binding changes. Captured constants
 in place of runtime dimensions do not satisfy that gate.

@@ -38,11 +38,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     from .frontend import capture_ttir
     from .shared_tensor import TensorABI, TensorBuffer, convert_shared
     from .shared_bundle import write_shared_bundle
+    from .scalar_abi import RuntimeScalar
     if out.exists():
         raise FileExistsError(out)
     work = out.with_name(out.name + ".work")
     work.mkdir(parents=True, exist_ok=False)
     grid = (1,)
+    runtime_scalars = ()
     if kernel == "tiled-add":
         fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
     elif kernel == "tiled-matmul":
@@ -68,6 +70,9 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         fn, constants, shapes = kernels.tuple_scan, {"R": 2, "S": 8, "AXIS": 1, "REVERSE": True}, [(2, 8)] * 4
     elif kernel == "indexed-gather":
         fn, constants, shapes, grid = kernels.indexed_gather, {"N": 13, "B": 8, "MASKED": True}, [(3, 5), (13,), (13,)], (2,)
+    elif kernel == "runtime-affine":
+        fn, constants, shapes, grid = kernels.runtime_affine, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
+        runtime_scalars = (RuntimeScalar("alpha", "f32", 1), RuntimeScalar("bias", "f32", 3))
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
@@ -75,12 +80,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "indexed-gather":
         names = ["x", "indices", "out"]
-    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather") else "readwrite"
+    output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine") else "readwrite"
     abi = TensorABI(fn.__name__, tuple(TensorBuffer(n, s, output_effect if n.startswith("out") else "read",
                     dtype="i32" if n == "indices" else "f32")
-                    for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example")
+                    for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(fn, {**{b.name: "*fp32" if b.dtype == "f32" else "*" + b.dtype for b in abi.buffers},
+                                      **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants))
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer)
     rng = np.random.default_rng(7)
@@ -88,6 +94,9 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None):
     additional = []
     if kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
+    elif kernel == "runtime-affine":
+        arrays[1:] = [np.asarray(1.5, dtype=np.float32), np.asarray(-3, dtype=np.float32)]
+        golden = arrays[0] * arrays[1] + arrays[2]
     elif kernel == "indexed-gather":
         arrays[1] = np.array([0, 14, 7, -2147483648, 3, 3, -99, 8, 0, 14, 12, -1, 6], dtype=np.int32)
         golden = np.full(13, -7, dtype=np.float32)
@@ -153,7 +162,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
@@ -186,6 +195,17 @@ def main(argv=None):
     qualify.add_argument("--atol", type=float, default=0)
     qualified = commands.add_parser("verify-merlin", help="verify standalone compiler/execution qualification artifacts")
     qualified.add_argument("qualification", type=Path)
+    invoke = commands.add_parser("invoke-merlin", help="run a qualified native library with new arguments and references")
+    invoke.add_argument("qualification", type=Path)
+    invoke.add_argument("--inputs", type=Path, required=True)
+    invoke.add_argument("--reference", type=Path, required=True, help="independent NPZ with out0, out1, ...")
+    invoke.add_argument("--out", type=Path, required=True)
+    invoke.add_argument("--merlin-root", type=Path, required=True)
+    invoke.add_argument("--merlin-python", type=Path)
+    invoke.add_argument("--rtol", type=float, default=0)
+    invoke.add_argument("--atol", type=float, default=0)
+    invocation = commands.add_parser("verify-merlin-invocation", help="verify reused-library invocation evidence")
+    invocation.add_argument("invocation", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
@@ -233,6 +253,16 @@ def main(argv=None):
                            compiler_python=args.python, clang=args.merlin_clang, rtol=args.rtol, atol=args.atol)
             summary = {"qualification": str(args.out), "compiler_input_staging": "passed",
                        "merlin_native_host_execution": "passed", "accelerator_execution": "not-performed"}
+        elif args.command == "invoke-merlin":
+            from .invocation import invoke_kernel
+            invoke_kernel(args.qualification, args.inputs, args.reference, args.out, merlin_root=args.merlin_root,
+                          python=args.merlin_python, rtol=args.rtol, atol=args.atol)
+            summary = {"invocation": str(args.out), "reference_comparison": "passed",
+                       "native_compilation": "reused-qualified-library", "accelerator_execution": "not-performed"}
+        elif args.command == "verify-merlin-invocation":
+            from .invocation import verify_invocation
+            report = verify_invocation(args.invocation)
+            summary = {"invocation": str(args.invocation), "artifacts_verified": len(report["artifacts"])}
         elif args.command == "verify-merlin":
             from .kernel_consumer import verify_kernel_qualification
             receipt = verify_kernel_qualification(args.qualification)

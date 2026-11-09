@@ -72,14 +72,17 @@ def compile_model(staged, work):
     (work / "compilation.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
 
-def execute_model(staged, work, arguments):
+def execute_model(staged, work, arguments, *, evaluation=None):
     import numpy as np
     from merlin.llvmlower.abi import HostModel, ScalarArg
 
     signature = json.loads((staged / "signature.json").read_text())
+    evaluation = Path(evaluation) if evaluation is not None else work
     dtypes = {"f32": np.float32, "f64": np.float64, "i8": np.int8, "i16": np.int16,
               "i32": np.int32, "i64": np.int64, "i1": np.bool_}
     with np.load(arguments, allow_pickle=False) as values:
+        if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
+            raise ValueError("Merlin host evaluator needs exactly the declared argument keys")
         arrays = [values[f"in{i}"].copy() for i in range(len(signature["inputs"]))]
     for array, declared in zip(arrays, signature["inputs"], strict=True):
         if list(array.shape) != declared["shape"] or array.dtype != dtypes[declared["dtype"]]:
@@ -97,18 +100,20 @@ def execute_model(staged, work, arguments):
         if invocation:
             for output in outputs:
                 output.fill(np.nan if np.issubdtype(output.dtype, np.floating) else 85)
-        arguments = [ScalarArg(array.item(), declared["dtype"]) if declared.get("kind") == "scalar"
-                     else (array.ctypes.data, array.shape) for array, declared in zip(arrays, signature["inputs"], strict=True)]
-        model([*arguments, *[(a.ctypes.data, a.shape) for a in outputs]])
+        invocation_args = [ScalarArg(array.item(), declared["dtype"]) if declared.get("kind") == "scalar"
+                           else (array.ctypes.data, array.shape) for array, declared in zip(arrays, signature["inputs"], strict=True)]
+        model([*invocation_args, *[(a.ctypes.data, a.shape) for a in outputs]])
         if any(array.tobytes() != original for array, original in zip(arrays, before, strict=True)):
             raise ValueError("Merlin compiled function mutated a functional tensor input")
         observed = [a.tobytes() for a in outputs]
         if first is not None and first != observed:
             raise ValueError("Merlin repeated invocation has stateful or incomplete output publication")
         first = observed
-    np.savez(work / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
-    (work / "evaluation.json").write_text(json.dumps({"schema": "t2m.merlin-host-evaluation.v1",
-        "invocations": 2, "functional_inputs_preserved": True, "outputs": record(work / "outputs.npz")}, indent=2) + "\n")
+    np.savez(evaluation / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
+    (evaluation / "evaluation.json").write_text(json.dumps({"schema": "t2m.merlin-host-evaluation.v1",
+        "invocations": 2, "functional_inputs_preserved": True, "outputs": record(evaluation / "outputs.npz"),
+        "arguments": record(arguments), "source_program": record(staged / "program.mlir"),
+        "shared_library": record(work / "model.so")}, indent=2) + "\n")
 
 
 if __name__ == "__main__":
@@ -121,5 +126,7 @@ if __name__ == "__main__":
         compile_model(staged, work)
     elif mode == "execute" and len(remaining) == 1:
         execute_model(staged, work, remaining[0])
+    elif mode == "invoke" and len(remaining) == 2:
+        execute_model(staged, work, remaining[0], evaluation=remaining[1])
     else:
         raise ValueError("expected a compiler-only compile or separate evaluator invocation")

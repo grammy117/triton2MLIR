@@ -68,22 +68,39 @@ def check_merlin_host(work, arguments, *, merlin_root, python=None, compiler_pyt
         environment["MERLIN_COMPILER_PYTHON"] = str(compiler_python)
     if clang is not None:
         environment["MERLIN_CLANG"] = str(clang)
-    worker = str(Path(__file__).with_name("consumer_worker.py"))
     for mode, extra in (("compile", []), ("execute", [str(Path(arguments).resolve())])):
-        command = [str(python or sys.executable), worker, mode, str(root),
-                   str((work / "compiler").resolve()), str(host.resolve()), *extra]
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                   text=True, env=environment, start_new_session=True)
-        try:
-            stdout, stderr = process.communicate(timeout=60)
-        except subprocess.TimeoutExpired as exc:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.communicate()
-            raise ValueError("Merlin host " + mode + " exceeded 60 seconds") from exc
-        if process.returncode:
-            raise ValueError("Merlin host " + mode + " failed: " + stderr[-4000:])
+        _host_worker(mode, root, work / "compiler", host, extra, environment, python)
     report = json.loads((host / "compilation.json").read_text())
     report["evaluation"] = json.loads((host / "evaluation.json").read_text())
     with np.load(host / "outputs.npz", allow_pickle=False) as data:
         outputs = tuple(data[f"out{i}"].copy() for i in range(len(data.files)))
+    return outputs, report
+
+
+def _host_worker(mode, root, staged, host, extra, environment, python):
+    worker = str(Path(__file__).with_name("consumer_worker.py"))
+    command = [str(python or sys.executable), worker, mode, str(root),
+               str(Path(staged).resolve()), str(Path(host).resolve()), *extra]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, env=environment, start_new_session=True)
+    try:
+        _, stderr = process.communicate(timeout=60)
+    except subprocess.TimeoutExpired as exc:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.communicate()
+        raise ValueError("Merlin host " + mode + " exceeded 60 seconds") from exc
+    if process.returncode:
+        raise ValueError("Merlin host " + mode + " failed: " + stderr[-4000:])
+
+
+def invoke_merlin_host(work, arguments, out, *, merlin_root, python=None):
+    """Invoke an existing compiled library; there is no compiler call here."""
+    work, out, root = Path(work), Path(out).resolve(), Path(merlin_root).resolve()
+    out.mkdir(parents=True, exist_ok=False)
+    environment = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(out))
+    _host_worker("invoke", root, work / "compiler", work / "host",
+                 [str(Path(arguments).resolve()), str(out)], environment, python)
+    report = json.loads((out / "evaluation.json").read_text())
+    with np.load(out / "outputs.npz", allow_pickle=False) as values:
+        outputs = tuple(values[f"out{i}"].copy() for i in range(len(values.files)))
     return outputs, report

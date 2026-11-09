@@ -95,3 +95,7 @@ checks for payload and source branch uses. ABI v3 states the difference from
 tensor-only signatures explicitly; values remain evaluator data. Dynamic shapes,
 strides/grids, address/loop-domain bounds and broader alias/mutation remain open.
 See [the runtime ABI and next dependencies](runtime_abi.md).
+The same qualified library can now be replayed with independent argument/reference
+archives and no compiler, preserving the original qualification and recording
+new evaluator-only receipts. This proves scalar values vary without recompilation;
+dynamic tensor shapes and runtime address domains still need their own changes.

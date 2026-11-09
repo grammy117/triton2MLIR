@@ -58,6 +58,14 @@ def test_real_standalone_kernel_runs_through_merlin_with_source_lineage(captured
                 np.testing.assert_allclose(actual[key], extra[key], rtol=1e-5, atol=6e-6)
     assert main(["verify-merlin", str(out)]) == 0
     assert json.loads(capsys.readouterr().out)["artifacts_verified"] == len(receipt["artifacts"])
+    from t2m.invocation import invoke_kernel, verify_invocation
+    with np.load(captured / "extra.npz", allow_pickle=False) as extra:
+        reference = {"out0": np.load(captured / "golden.npy", allow_pickle=False), **{k: extra[k].copy() for k in extra.files}}
+    np.savez(tmp_path / "reference.npz", **reference)
+    replay = tmp_path / "replay"
+    invoke_kernel(out, captured / "inputs.npz", tmp_path / "reference.npz", replay,
+                  merlin_root=MERLIN, python=PYTHON, rtol=1e-5, atol=6e-6)
+    verify_invocation(replay)
     # Rehashing a changed report still cannot redirect its compiled-source relation.
     execution["source_program"]["sha256"] = "0" * 64
     (out / "host/execution.json").write_text(json.dumps(execution))

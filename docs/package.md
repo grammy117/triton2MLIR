@@ -102,6 +102,12 @@ Merlin passes these by value through its existing scalar ABI. This differs from
 a tensor-only captured signature; it is not scalar specialization or a rank-zero
 tensor boxing transform. See [the runtime ABI](runtime_abi.md).
 
+Reusing an already qualified library produces a separate
+`t2m.merlin-kernel-invocation.v1` evidence directory. Its compiler snapshots and
+artifact relations identify the exact original qualified library. New inputs,
+references and observed results are evaluator artifacts; the source capture and
+original compiler/qualification directory remain immutable.
+
 ## Provenance schema (`t2m.provenance.v1`)
 
 The trace contains the canonical TTIR and spec hashes, tool versions, intent and its origin,

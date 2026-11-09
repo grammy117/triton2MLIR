@@ -82,5 +82,13 @@ receipt. `verify-merlin` validates byte hashes and internal compiler/source/
 library/reference relationships without reading external paths from the receipt.
 Tests qualify tuple scan, descriptor GEMM and sequenced readwrite memory versions.
 
+`invoke-merlin` separately reuses the verified native library for new arguments
+and independent NPZ references. It performs no compiler invocation and leaves
+the original qualification unchanged. `t2m.merlin-kernel-invocation.v1` binds
+the library/program, source compiler snapshots, invocation arguments and results;
+`verify-merlin-invocation` checks this evidence. Results and diagnostics go in a
+new directory. A failed comparison cannot publish an invocation success receipt.
+See [the runtime ABI](runtime_abi.md) for scalar value and replay examples.
+
 These checks qualify actual native-host materialization and execution. Accelerator
 materialization and dynamic/scalar/effectful ABI profiles retain their own open gates.
