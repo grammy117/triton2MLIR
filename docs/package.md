@@ -55,6 +55,9 @@ unchanged; the difference is source provenance and normalization evidence.
 ## Shared buffer profile (`t2m.capture-receipt.v2`)
 
 ABI v5 adds [named runtime dimensions and logical launch expressions](dynamic_shapes.md).
+Per-lane masked writes additionally retain `prov.source_scatters` and
+`memory.source_scatters` observations with exact source IDs and the proof kind;
+their functional tensor/scalar ABI and receipt schemas are unchanged.
 The actual tensor/result allocation extents are dynamic; they are distinct from
 ABI v4's static capacities and changing prefixes. Native execution receives an
 explicit shape-allocation contract derived from `spec.json`. Static packages

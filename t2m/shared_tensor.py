@@ -33,6 +33,7 @@ from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, p
 from .shape_lowering import affine_index
 from .symbolic_layout import DenseAxes, recover_axes
 from .shared_gather import gather, structured_gather
+from .scatter_facts import scatter_tile
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
 from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
@@ -384,7 +385,7 @@ def _functionalize(module, abi):
     initialization = DefiniteWrites(abi)
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
-    writes, reads, source_loops, source_conditionals, source_gathers = {}, [], [], [], []
+    writes, reads, source_loops, source_conditionals, source_gathers, source_scatters = {}, [], [], [], [], []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
     loop_values = {}
@@ -554,6 +555,8 @@ def _functionalize(module, abi):
                 bound = abi.dimension(dimension)
                 if (off.form + (bound.scale(-1) if isinstance(bound, Linear) else Linear(-bound))).bounds(grid)[1] > 0:
                     limit = dimensions[dimension] if isinstance(dimension, str) else append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
+                    if value is None:
+                        value = append(arith.ConstantOp.from_int_and_width(off.form.constant, IndexType()), op).result
                     value = append(arith.MinSIOp(value, limit), op).result
                 bounded.append(Coordinate(off.form, value))
             offsets = tuple(bounded)
@@ -595,8 +598,8 @@ def _functionalize(module, abi):
         return append(TransposeOp(value, empty, DenseArrayBase.from_list(builtin.i64, axes)), source).results[0]
 
     def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False):
-        dynamic = [off.value for off in offsets if off.form.dynamic]
-        static = [DYNAMIC_INDEX if off.form.dynamic else off.form.constant for off in offsets]
+        dynamic = [off.value for off in offsets if off.value is not None]
+        static = [DYNAMIC_INDEX if off.value is not None else off.form.constant for off in offsets]
         shape = [DYNAMIC_INDEX if isinstance(n, TailExtent) else n for n in sizes]
         dynamic_sizes = [n.value for n in sizes if isinstance(n, TailExtent)]
         properties = {"static_offsets": DenseArrayBase.from_list(builtin.i64, static),
@@ -608,6 +611,59 @@ def _functionalize(module, abi):
         cls = ParallelInsertSliceOp if parallel_insert else tensor.InsertSliceOp
         return cls.build(operands=[source, destination, dynamic, dynamic_sizes, []], properties=properties,
                          result_types=[] if parallel_insert else [destination.type])
+
+    def pad_tile(loaded, sizes, active, source, fill):
+        padding = Block(arg_types=[IndexType()] * len(sizes))
+        padding.add_op(tensor.YieldOp(fill))
+        high, dynamic_high = [], []
+        for size, n in zip(sizes, active, strict=True):
+            if isinstance(n, TailExtent):
+                cap = append(arith.ConstantOp.from_int_and_width(size, IndexType()), source).result
+                dynamic_high.append(append(arith.SubiOp(cap, n.value), source).result)
+                high.append(DYNAMIC_INDEX)
+            else:
+                high.append(size - n)
+        shape = [DYNAMIC_INDEX if h == DYNAMIC_INDEX else size for size, h in zip(sizes, high, strict=True)]
+        loaded = append(tensor.PadOp(loaded, [], dynamic_high, Region(padding), [0] * len(sizes),
+                        high, TensorType(loaded.type.element_type, shape)), source).result
+        if dynamic_high:
+            loaded = append(tensor.CastOp.build(operands=[loaded],
+                result_types=[TensorType(loaded.type.element_type, sizes)]), source).dest
+        return loaded
+
+    def scatter_access(op):
+        if len(op.operands) not in (3, 4) or op.operands[0] not in buffers:
+            raise ConversionError("scatter needs a declared logical tensor and explicit index/value/mask schema", opcode=opcode(op))
+        buffer = buffers[op.operands[0]]
+        index, value = mapping[op.operands[1]], mapping[op.operands[2]]
+        mask = mapping[op.operands[3]] if len(op.operands) == 4 else None
+        if (not isinstance(value.type, TensorType) or not isinstance(index.type, TensorType)
+                or index.type.get_shape() != value.type.get_shape() or value.type.element_type != buffer.type.element_type
+                or mask is not None and mask.type != TensorType(builtin.i1, value.type.get_shape())):
+            raise ConversionError("scatter index/value/mask types differ from the logical tensor ABI", opcode=opcode(op))
+        forms, sizes, axes = scatter_tile(buffer, abi, index, mask, facts)
+        offsets, physical = [], []
+        for destination_axis, (form, dimension) in enumerate(zip(forms, buffer.shape, strict=True)):
+            size = sizes[axes.index(destination_axis)]
+            raw = affine_index(form, launch_iv, grid, launch, states, loop_values, lambda x: append(x, op))
+            bound = abi.dimension(dimension)
+            bound_form = bound if isinstance(bound, Linear) else Linear(bound)
+            offset = raw
+            if (form + bound_form.scale(-1)).bounds(grid)[1] > 0:
+                limit = dimensions[dimension] if isinstance(dimension, str) else append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
+                offset = append(arith.MinSIOp(raw, limit), op).result
+            extent = size
+            if (form + Linear(size) + bound_form.scale(-1)).bounds(grid)[1] > 0:
+                limit = dimensions[dimension] if isinstance(dimension, str) else append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
+                remaining = append(arith.SubiOp(limit, raw), op).result
+                cap = append(arith.ConstantOp.from_int_and_width(size, IndexType()), op).result
+                zero = append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result
+                clipped = append(arith.MaxSIOp(append(arith.MinSIOp(cap, remaining), op).result, zero), op).result
+                extent = TailExtent(size, bound, form, clipped)
+            offsets.append(Coordinate(form, offset))
+            physical.append(extent)
+        active = tuple(physical[axis] for axis in axes)
+        return buffer, sizes, tuple(offsets), active, axes, mask
 
     def translate(source_block):
         nonlocal body, loop_counter
@@ -823,30 +879,16 @@ def _functionalize(module, abi):
                     fill = mapping.get(op.operands[-1])
                     if fill is None:
                         raise ConversionError("masked load fill is not a translated scalar", opcode=name)
-                    padding = Block(arg_types=[IndexType()] * len(sizes))
-                    padding.add_op(tensor.YieldOp(fill))
-                    high, dynamic_high = [], []
-                    for size, n in zip(sizes, active, strict=True):
-                        if isinstance(n, TailExtent):
-                            cap = append(arith.ConstantOp.from_int_and_width(size, IndexType()), op).result
-                            dynamic_high.append(append(arith.SubiOp(cap, n.value), op).result)
-                            high.append(DYNAMIC_INDEX)
-                        else:
-                            high.append(size - n)
-                    shape = [DYNAMIC_INDEX if h == DYNAMIC_INDEX else size for size, h in zip(sizes, high, strict=True)]
-                    loaded = append(tensor.PadOp(loaded, [], dynamic_high, Region(padding), [0] * len(sizes),
-                                    high, TensorType(buffer.type.get_element_type(), shape)), op).result
-                    if dynamic_high:
-                        # The checked size + (tile-size) identity establishes
-                        # the static source tile type after dynamic padding.
-                        loaded = append(tensor.CastOp.build(operands=[loaded],
-                                        result_types=[TensorType(buffer.type.get_element_type(), sizes)]), op).dest
+                    loaded = pad_tile(loaded, sizes, active, op, fill)
                 mapping[op.results[0]] = loaded
             elif name in ("tts.store", "tt.store", "tts.scatter"):
                 if name != "tts.scatter" and op.operands[0] not in descriptors:
                     raise ConversionError("store pointer is not a qualified structured descriptor", opcode=name)
-                desc = unit_descriptor(op, store=True) if name == "tts.scatter" else descriptors[op.operands[0]]
-                buffer, sizes, offsets, active, axes = access(op, desc, store=True)
+                lane_mask = None
+                if name == "tts.scatter":
+                    buffer, sizes, offsets, active, axes, lane_mask = scatter_access(op)
+                else:
+                    buffer, sizes, offsets, active, axes = access(op, descriptors[op.operands[0]], store=True)
                 physical = tuple(active[i] for i in inverse_permutation(axes))
                 if buffer.effect == "read":
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
@@ -857,11 +899,39 @@ def _functionalize(module, abi):
                         raise ConversionError("parallel local stores need one established owned tile per output")
                     writes[buffer.name] = (footprint, offsets, op)
                 value = mapping[op.operands[2 if name == "tts.scatter" else 1]]
+                if lane_mask is not None:
+                    initialization.load(buffer, tuple(off.form for off in offsets), physical,
+                        source_id=next(iter(_source_ids(op.location)), None), opcode=name)
+                    if parallel and buffer.effect == "readwrite":
+                        reads.append((buffer.name, tuple(off.form for off in offsets), physical))
+                    old = transpose(append(slice_op(states[buffer.name], offsets, physical), op).result, axes, op)
+                    if active != sizes:
+                        element = buffer.type.element_type
+                        literal = builtin.FloatAttr(0.0, element) if isinstance(element, builtin.AnyFloat) else IntegerAttr(0, element)
+                        fill = append(arith.ConstantOp(literal), op).result
+                        old = pad_tile(old, sizes, active, op, fill)
+                    from xdsl.dialects.linalg.attrs import IteratorTypeAttr
+                    from xdsl.dialects.linalg.ops import YieldOp
+                    block = Block(arg_types=[value.type.element_type, builtin.i1, value.type.element_type])
+                    selected = arith.SelectOp(block.args[1], block.args[0], block.args[2])
+                    block.add_ops([selected, YieldOp(selected.result)])
+                    maps = [builtin.AffineMapAttr(AffineMap.identity(len(sizes)))] * 3
+                    merged = append(GenericOp([value, lane_mask], [old], Region(block), maps,
+                        [IteratorTypeAttr.parallel()] * len(sizes), [value.type]), op)
+                    merged.attributes.update({"prov.family": StringAttr("memory"), "prov.op": StringAttr("masked_store"),
+                        "prov.mask_semantics": StringAttr("preserve-inactive-initialized-values")})
+                    value = merged.results[0]
+                if name == "tts.scatter":
+                    source_scatters.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+                        "address": "proved-affine-dense-tile", "mask": "exact-per-lane-select" if lane_mask is not None else "unmasked",
+                        "proof": "projected-linalg-index-and-necessary-mask-bounds.v1",
+                        "inactive_values": "preserved-initialized-state", "write_independence": "separately-proved-owned-tile"})
                 if active != sizes:
                     value = append(slice_op(value, [Coordinate(Linear()) for _ in sizes], active), op).result
                 value = transpose(value, inverse_permutation(axes), op)
                 states[buffer.name] = append(slice_op(value, offsets, physical, destination=states[buffer.name]), op).result
-                initialization.store(buffer, tuple(off.form for off in offsets), physical)
+                if lane_mask is None:
+                    initialization.store(buffer, tuple(off.form for off in offsets), physical)
             elif name == "tt.return":
                 if not parallel:
                     append(func.ReturnOp(*(states[b.name] for b in writable)), op)
@@ -957,6 +1027,7 @@ def _functionalize(module, abi):
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
+    output.attributes["prov.source_scatters"] = StringAttr(json.dumps(source_scatters, sort_keys=True))
     if abi.runtime_scalars:
         output.attributes["prov.runtime_scalars"] = StringAttr(json.dumps([s.as_dict() for s in abi.runtime_scalars], sort_keys=True))
     output.attributes["prov.output_initialization"] = StringAttr(json.dumps(evidence, sort_keys=True))
@@ -1121,6 +1192,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     trace["memory"]["source_loops"] = json.loads(entry.attributes["prov.source_loops"].data)
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data)
     trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data)
+    trace["memory"]["source_scatters"] = json.loads(entry.attributes["prov.source_scatters"].data)
     if trace["memory"]["source_gathers"]:
         trace["memory"]["bounds"] += "; runtime-active-gather-bounds"
     if abi.runtime_scalars:

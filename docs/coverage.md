@@ -90,6 +90,12 @@ repeated-index reuse and multidimensional logical allocations. The rank-one
 structured gather descriptor is also supported. These cases include actual
 Merlin compiler/host execution. This does not qualify general scatter,
 writable-buffer gathers, undefined-lane propagation or all address arithmetic.
+Nonrectangular store masks now also qualify when their addresses form proved
+independent dense tiles. Periodic/data-dependent predicates retain their source
+loops and inactive initialized values through both Merlin profiles, including
+runtime tails and empty domains. This handles regular-address `tts.scatter`;
+it does not establish general indirect write conflict semantics. See
+[the masked-write proof and representation](masked_writes.md).
 
 The remaining boundaries are:
 

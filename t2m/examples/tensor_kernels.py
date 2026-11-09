@@ -5,6 +5,31 @@ import triton.language as tl
 
 
 @triton.jit
+def masked_tile_store(x, out, n, B: tl.constexpr, STEP: tl.constexpr,
+                      MODE: tl.constexpr, FRESH: tl.constexpr):
+    lane = tl.program_id(0) * STEP + tl.arange(0, B)
+    value = tl.load(x + lane, lane < n, other=0)
+    if FRESH:
+        tl.store(out + lane, value, lane < n)
+    for update in range(0, 2):
+        if MODE == 0:
+            selected = (lane < n) & (lane % 3 != 1)
+        elif MODE == 1:
+            selected = (lane < n) & (value > 0)
+        elif MODE == 2:
+            selected = ((lane < n) & (lane % 3 != 1)) | ((lane < n) & (value > 0))
+        else:
+            selected = (lane < n) | (lane % 3 != 1)
+        tl.store(out + lane, value + update + 1, selected)
+
+
+@triton.jit
+def masked_offset_store(out, n, B: tl.constexpr):
+    lane = 4 + tl.arange(0, B)
+    tl.store(out + lane, 7.0, (lane < n) & (lane % 3 != 1))
+
+
+@triton.jit
 def dynamic_matrix_add(x, y, m, n, out, BM: tl.constexpr, BN: tl.constexpr):
     rows = tl.program_id(0) * BM + tl.arange(0, BM)
     cols = tl.program_id(1) * BN + tl.arange(0, BN)

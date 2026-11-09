@@ -88,8 +88,10 @@ class Polynomial:
                 term = Linear(0, tuple(coefficient if i == atoms[0][1] else 0 for i in range(3)))
             elif atoms[0][0] == "l":
                 term = Linear(loops=((*atoms[0][1:], coefficient),))
-            else:
+            elif atoms[0][0] == "v":
                 term = Linear(parameters=((*atoms[0][1:], coefficient),))
+            else:
+                raise ConversionError("logical coordinate retains an uneliminated local index")
             result = result + term
         return result
 
@@ -142,8 +144,8 @@ def recover_axes(abi, buffer, sizes, strides, offsets, facts):
     expected = dense_strides(abi, buffer)
     candidates = []
     for size, stride, offset in zip(sizes, strides, offsets, strict=True):
-        observed = expression(stride, facts, abi.grid_bounds) if not isinstance(stride, int) else Polynomial.constant(stride)
-        value = expression(offset, facts, abi.grid_bounds) if not isinstance(offset, int) else Polynomial.constant(offset)
+        observed = stride if isinstance(stride, Polynomial) else expression(stride, facts, abi.grid_bounds) if not isinstance(stride, int) else Polynomial.constant(stride)
+        value = offset if isinstance(offset, Polynomial) else expression(offset, facts, abi.grid_bounds) if not isinstance(offset, int) else Polynomial.constant(offset)
         choices = []
         for axis, layout in enumerate(expected):
             if observed != layout and not (observed == Polynomial.constant(0) and size == 1):

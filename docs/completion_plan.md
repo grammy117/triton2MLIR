@@ -88,6 +88,12 @@ scatter/writable gathers, undefined-lane propagation, multidimensional runtime t
 and broader numeric/effect profiles remain open. Continue with dynamic tensor ABI
 and independently owned/effectful indexed writes; do not substitute an opaque
 wrapper or treat native host cases as all-target closure.
+Workstream B now also admits nonrectangular masks on proved independent affine
+store tiles. Necessary mask inequalities establish tails; inactive values require
+incoming or source-proved initialized state. Both profiles qualify periodic and
+data-dependent predicates, source loops and changing runtime shapes through
+Merlin. The full buffer body retains its original predicated stores. General
+indirect scatter and writable indexed reads remain separate work.
 
 Workstream C now has typed by-value runtime scalar inputs, source-position
 bindings for interleaved pointer/scalar signatures, and actual native/Merlin

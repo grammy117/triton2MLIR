@@ -65,6 +65,10 @@ Loaded-index read-only gathers now preserve parallel tile dataflow, repeated
 indices, per-lane masks and nonzero fills, with active bounds checks and actual
 Merlin compiler/host qualification. The [indexed memory contract](docs/indexed_memory.md)
 keeps general writes, writable-buffer reads and undefined lanes explicitly open.
+Nonrectangular masks on independently owned affine store tiles now also have
+native/Merlin execution in both profiles, with exact inactive-state preservation
+and runtime tails. The buffer form retains upstream predicated stores; general
+indirect scatter remains open. See [masked writes](docs/masked_writes.md).
 The [runtime ABI](docs/runtime_abi.md) now carries typed by-value scalar inputs,
 including interleaved TTIR arguments, into native and Merlin host execution.
 Scalar payload/control values are supported independently of the remaining

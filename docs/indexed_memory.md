@@ -66,6 +66,9 @@ coordinate division is introduced. Empty storage permits no active read.
 The buffer profile retains upstream memory operations
 and the checked tensor witness; undefined source accesses are not qualified.
 General indexed writes and writable-buffer observations remain separate gates.
+The [masked-write adapter](masked_writes.md) now separately admits regular
+affine addresses with nonrectangular lane predicates, represented upstream as
+`tts.scatter`. General indirect indices still need their own conflict semantics.
 
 ```bash
 python -m t2m shared-demo --kernel indexed-gather --out out/indexed_gather \
