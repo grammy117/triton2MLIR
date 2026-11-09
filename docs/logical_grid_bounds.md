@@ -4,6 +4,17 @@ Status: planned, not implemented. The guarded profile already executes the
 observed kernels; this work admits their unchanged source into the tensor
 profile without extra memory guards or redundant source masks.
 
+An isolated prototype now establishes the next implementation's feasibility.
+`.scratch/grid_correlation_probe.py` checks 3,484 affine scenarios against
+independently enumerated actual launch domains, including multiple axes,
+coefficient signs, divisors and empty cases. `.scratch/grid_histogram_probe.py`
+combines the candidate access rule with an exact unit-row partition in a child
+process. The unchanged unmasked histogram row source then passes native and
+actual Merlin compilation plus five independent invocations, including empty
+and surplus domains. These probes do not modify production modules or ship an
+admission rule. Integrate the general proof and the negative cases below before
+changing the status of this proposal.
+
 ## Observed gap and two independent gates
 
 A histogram can store one complete row per logical program into

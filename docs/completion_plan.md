@@ -333,6 +333,22 @@ The plan records the reusable inequality, required implementation order and
 positive/negative oracles. It is not implemented yet; guarded execution remains
 the measured path for the unchanged unmasked dynamic row form.
 
+Latest complete regression on 2026-11-09: **660 passed**, four legacy block-pointer
+warnings, with all existing native/model2MLIR/Merlin environments enabled.
+The tensor histogram demo at `out/histogram-tensor/` passes separate compiler
+staging/native execution under `out/histogram-tensor-merlin/`, with all 38
+qualification artifacts verified. The f32 and f16 selected-memory model demos
+each verify all 101 bound artifacts. Merlin remains at compiler-intake anchor
+`5f989aaf19f1a2326e10012be6d1436456893f4b`; its 83 destination/deallocation tests
+and documentation/structure gates passed for the loop-read extension.
+
+The next grid-proof proposal has an isolated, non-production prototype: 3,484
+small-domain affine scenarios pass an independent enumeration oracle, and the
+unchanged unmasked row kernel passes actual Merlin execution over five domains
+when both proposed proof gates are supplied. Production integration and its
+negative regression cases remain required. Universal opcode/type/effect and
+accelerator coverage are still open; the active goal is not complete.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;
