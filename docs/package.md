@@ -87,6 +87,14 @@ complete mathematical proof.
 conversion/execution/consumer statuses distinct. None of the additions is necessary to interpret
 the arithmetic itself; required ABI preconditions still have to hold at any real call boundary.
 
+Shared `t2m.capture-receipt.v2` packages can be qualified directly through Merlin
+with `qualify-merlin`, preserving the source package. The separate
+`t2m.merlin-kernel-qualification.v1` directory contains compiler-only staging and
+native-host execution products. Entry-symbol adaptation, functional readwrite
+results, multi-result reference ordering and provenance projection are explicit;
+see [the consumer contract](merlin_consumer.md). This does not rename the source
+receipt or assert accelerator qualification in the original capture metadata.
+
 ## Provenance schema (`t2m.provenance.v1`)
 
 The trace contains the canonical TTIR and spec hashes, tool versions, intent and its origin,

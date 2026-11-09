@@ -165,6 +165,17 @@ def main(argv=None):
     bind.add_argument("--merlin-clang", type=Path, help="explicit compatible native LLVM code generator")
     bind.add_argument("--rtol", type=float, default=0)
     bind.add_argument("--atol", type=float, default=0)
+    qualify = commands.add_parser("qualify-merlin", help="stage and execute a standalone tensor bundle through Merlin")
+    qualify.add_argument("capture", type=Path)
+    qualify.add_argument("--out", type=Path, required=True)
+    qualify.add_argument("--merlin-root", type=Path, required=True)
+    qualify.add_argument("--merlin-python", type=Path)
+    qualify.add_argument("--python", type=Path, help="existing native compiler environment with torch-mlir")
+    qualify.add_argument("--merlin-clang", type=Path)
+    qualify.add_argument("--rtol", type=float, default=0)
+    qualify.add_argument("--atol", type=float, default=0)
+    qualified = commands.add_parser("verify-merlin", help="verify standalone compiler/execution qualification artifacts")
+    qualified.add_argument("qualification", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
@@ -206,6 +217,16 @@ def main(argv=None):
                        "merlin_interface": "passed" if args.merlin_root else "not-tested",
                        "merlin_host_execution": "passed" if args.merlin_host else "not-performed",
                        "merlin_target_execution": "not-performed"}
+        elif args.command == "qualify-merlin":
+            from .kernel_consumer import qualify_kernel
+            qualify_kernel(args.capture, args.out, merlin_root=args.merlin_root, python=args.merlin_python,
+                           compiler_python=args.python, clang=args.merlin_clang, rtol=args.rtol, atol=args.atol)
+            summary = {"qualification": str(args.out), "compiler_input_staging": "passed",
+                       "merlin_native_host_execution": "passed", "accelerator_execution": "not-performed"}
+        elif args.command == "verify-merlin":
+            from .kernel_consumer import verify_kernel_qualification
+            receipt = verify_kernel_qualification(args.qualification)
+            summary = {"qualification": str(args.qualification), "artifacts_verified": len(receipt["artifacts"])}
         elif args.command == "verify-bundle":
             receipt = verify_bundle(args.bundle)
             summary = {"bundle": str(args.bundle), "artifacts_verified": len(receipt["artifacts"])}

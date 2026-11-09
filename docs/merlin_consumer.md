@@ -54,6 +54,33 @@ objects are explicitly named consumer products, not a replacement for portable
 relations as well as artifact hashes. Missing reports cannot retain a host-PASS
 metadata claim. Old interface-only receipts remain readable.
 
-This qualifies actual native-host materialization and execution. Accelerator
-materialization, dynamic/scalar/effectful ABI profiles and direct standalone
-kernel staging still need their own gates; these checks do not close them.
+Standalone shared tensor packages now use a separate immutable qualification:
+
+```bash
+python -m t2m qualify-merlin out/shared_tuple_scan \
+  --out out/merlin_standalone_tuple_scan --merlin-root /path/to/merlin \
+  --merlin-python /path/to/merlin-env/bin/python \
+  --python /path/to/native-env/bin/python --merlin-clang /path/to/clang \
+  --rtol 1e-5 --atol 2e-6
+python -m t2m verify-merlin out/merlin_standalone_tuple_scan
+```
+
+The source remains `t2m.capture-receipt.v2`; the new directory carries
+`t2m.merlin-kernel-qualification.v1`, not a fake Torch receipt. Merlin stages its
+`standalone-tensor-kernel` compiler profile with a complete static functional
+signature. The one symbol is adapted to `forward` for the existing native ABI;
+`source-correspondence.json` records both names. Original MLIR/TTIR/spec bytes,
+original/normalized operation inventories, provenance and buffer order survive.
+The provenance projection excludes numeric evaluator reports. Readwrite buffers
+remain incoming functional values plus returned updates, with borrowed inputs
+preserved across invocations. Parameters are empty in this profile.
+
+Result zero is compared against the original `golden.npy`; remaining results use
+`extra.npz` in declared order. Actual library calls check every result and input
+preservation. A mismatched reference retains build diagnostics without a success
+receipt. `verify-merlin` validates byte hashes and internal compiler/source/
+library/reference relationships without reading external paths from the receipt.
+Tests qualify tuple scan, descriptor GEMM and sequenced readwrite memory versions.
+
+These checks qualify actual native-host materialization and execution. Accelerator
+materialization and dynamic/scalar/effectful ABI profiles retain their own open gates.

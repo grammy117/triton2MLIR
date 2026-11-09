@@ -58,6 +58,9 @@ kept separate from changed-IR provenance. Native tests cover a real `triton_op` 
 original `mlp_basic` / `mlp_basic_triton` pair. Merlin's actual reader and C runtime generator
 accept both model interfaces. Compiler-only staging and actual native Merlin
 library execution now have separate qualification; accelerator staged execution remains open.
+Standalone shared tensor packages also have direct compiler staging and native
+Merlin library execution through `qualify-merlin`, with a separate receipt and
+explicit entry-symbol adaptation; no surrounding Torch model is required.
 The same checked model/package path now also covers ragged M/N/K GEMM;
 `shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
 provide the reproducible CLI route.

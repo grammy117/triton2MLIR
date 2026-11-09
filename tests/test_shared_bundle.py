@@ -60,6 +60,21 @@ def test_wrong_golden_never_publishes_a_bundle(tmp_path, sequenced):
     assert not (tmp_path / "bad").exists()
 
 
+@pytest.mark.skipif(not all(os.environ.get(name) for name in
+    ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYTHON", "T2M_MERLIN_CLANG")), reason="existing Merlin host toolchain required")
+def test_readwrite_memory_versions_and_multiple_results_use_real_merlin(tmp_path, sequenced):
+    from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
+    arrays, golden = inputs()
+    bundle, out = tmp_path / "bundle", tmp_path / "merlin"
+    write_shared_bundle(sequenced, bundle, arrays, golden, work=tmp_path / "native", python=NATIVE)
+    qualify_kernel(bundle, out, merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"],
+                   compiler_python=NATIVE, clang=os.environ["T2M_MERLIN_CLANG"])
+    verify_kernel_qualification(out)
+    with np.load(out / "host/outputs.npz", allow_pickle=False) as actual:
+        for i, expected in enumerate(golden):
+            np.testing.assert_array_equal(actual[f"out{i}"], expected)
+
+
 def test_mutated_ir_and_invalid_tolerance_are_rejected_before_execution(tmp_path, sequenced):
     arrays, golden = inputs()
     with pytest.raises(ValueError, match="finite nonnegative"):

@@ -40,6 +40,9 @@ checks invoke Merlin's interface/runtime generator and compiler-only staging. Th
 optional [native Merlin compiler path](docs/merlin_consumer.md) builds and executes
 its actual shared library, including the original MLP pair. Derived receipts remain
 explicit; accelerator staged/device execution is still unqualified.
+Standalone shared tensor packages use `qualify-merlin` and `verify-merlin` for
+the same real compiler/host path, with separate qualification evidence and no
+Torch wrapper; see [the consumer contract](docs/merlin_consumer.md).
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

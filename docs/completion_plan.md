@@ -72,8 +72,12 @@ into optional qualification. Repeated-call checks exposed writable function
 arguments; the staged functional profile now marks them read-only explicitly.
 See [the compiler/execution contract](merlin_consumer.md).
 
-Workstream A remains open for direct standalone TTIR packages, runtime/effectful
-signature admission and accelerator staged materialization. The next frontend
+Standalone shared tensor packages now also stage directly and execute through
+Merlin, including tuple-scan results, descriptor GEMM and sequenced readwrite
+memory versions. The explicit standalone profile preserves original source and
+records its symbol-only `forward` adaptation without manufacturing a Torch trace.
+Workstream A remains open for runtime/effectful signature admission and
+accelerator staged materialization. The next frontend
 vertical slice is loaded-index memory with exact inactive-lane behavior and
 runtime bounds, then scalar/dynamic ABI expansion. Do not replace either with
 an opaque successful wrapper or treat this native host result as all-target closure.
