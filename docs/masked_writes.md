@@ -55,6 +55,28 @@ readwrite values include bit checks for signed zero and a NaN payload. The
 reference retains the source FP32 addition order. Conflicting tiles, unproved
 tails and uninitialized fresh state refuse before memory continuation.
 
+Multidimensional address and mask proofs also follow upstream projected
+broadcasts, exact static `tensor.expand_shape` reassociations and typed
+`linalg.transpose` permutations. Real two-axis kernels qualify all combinations
+of direct/transposed destination storage and direct/transposed source traversal
+in both profiles. One library per variant handles `(0,0)`, `(0,7)`, `(5,0)`,
+`(1,1)`, `(5,9)` and `(9,13)`. Missing per-axis bounds refuse even when some
+flattened addresses could fall in another logical row. Refusals identify the
+original store ID; all-unit views retain their exact zero-index check.
+
+```bash
+python -m t2m shared-demo --kernel masked-matrix --memory-profile buffer \
+  --out out/masked_matrix --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+python -m t2m qualify-merlin out/masked_matrix --out out/masked_matrix_merlin \
+  --merlin-root /path/to/merlin --merlin-python /path/to/frontend-env/bin/python \
+  --python /path/to/native-env/bin/python --merlin-clang /path/to/clang
+```
+
+`shared-demo --kernel masked-store` exercises periodic/data-dependent predicates
+inside a source loop. The default tensor profile emits the functional select
+expansion; the explicit buffer profile retains predicated memory operations.
+
 General indirect scatter, mask-dependent ownership, aliasing and writable-buffer
 indexed observations remain open. The full memory profile still depends on its
 checked tensor witness; independent memory admission remains a separate gate.

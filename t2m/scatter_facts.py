@@ -9,6 +9,7 @@ does not evaluate lanes/programs or treat example indices as facts.
 """
 
 from dataclasses import dataclass, field
+from math import prod
 
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 from xdsl.ir.affine import AffineBinaryOpExpr, AffineBinaryOpKind, AffineConstantExpr, AffineDimExpr
@@ -63,6 +64,34 @@ class TileFacts:
             name = getattr(op, "name", "")
             if name == "linalg.fill":
                 node = Node(op.inputs[0], bindings=node.bindings, indices=node.indices)
+                continue
+            if name == "tensor.expand_shape":
+                source = op.operands[0]
+                before, after = source.type.get_shape(), value.type.get_shape()
+                groups = tuple(tuple(n.value.data for n in group) for group in op.reassociation)
+                if (len(groups) != len(before) or len(node.coordinates) != len(after)
+                        or tuple(i for group in groups for i in group) != tuple(range(len(after)))
+                        or any(n <= 0 for n in (*before, *after))
+                        or any(not group or prod(after[i] for i in group) != n for group, n in zip(groups, before, strict=True))):
+                    raise ConversionError("scatter expand_shape needs an exact static reassociation")
+                coordinates = []
+                for group in groups:
+                    coordinate = P.constant(0)
+                    for position, axis in enumerate(group):
+                        coordinate = coordinate + node.coordinates[axis].scale(prod(after[i] for i in group[position + 1:]))
+                    coordinates.append(coordinate)
+                node = Node(source, tuple(coordinates), node.bindings, node.indices)
+                continue
+            if name == "linalg.transpose":
+                source = op.operands[0]
+                permutation = tuple(op.permutation.get_values())
+                if (sorted(permutation) != list(range(len(node.coordinates)))
+                        or tuple(source.type.get_shape()[i] for i in permutation) != value.type.get_shape()):
+                    raise ConversionError("scatter transpose needs a typed axis permutation")
+                coordinates = [None] * len(permutation)
+                for axis, position in enumerate(permutation):
+                    coordinates[position] = node.coordinates[axis]
+                node = Node(source, tuple(coordinates), node.bindings, node.indices)
                 continue
             if name != "linalg.generic":
                 return node

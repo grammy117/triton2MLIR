@@ -103,6 +103,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = tuple(RuntimeScalar(name, "i32", arg, bounds=(0, high))
             for name, arg, high in (("m", 2, 7), ("n", 3, 11), ("count", 4, 19)))
         example_dimensions = {"m": 3, "n": 5, "count": 13}
+    elif kernel == "masked-store":
+        fn, constants, shapes = kernels.masked_tile_store, {"B": 8, "STEP": 8, "MODE": 2, "FRESH": False}, [("n",)] * 2
+        grid, runtime_scalars = (GridExtent("n", 8),), (RuntimeScalar("n", "i32", 2, bounds=(0, 13)),)
+        example_dimensions = {"n": 13}
+    elif kernel == "masked-matrix":
+        fn, constants = kernels.masked_matrix_store, {"BM": 4, "BN": 8, "TRANSPOSED": True, "TRAVERSE_TRANSPOSED": True, "BAD_MASK": False}
+        shapes, grid = [("m", "n"), ("n", "m")], (GridExtent("m", 4), GridExtent("n", 8))
+        runtime_scalars = (RuntimeScalar("m", "i32", 2, bounds=(0, 9)), RuntimeScalar("n", "i32", 3, bounds=(0, 13)))
+        example_dimensions = {"m": 9, "n": 13}
     else:
         fn, constants, shapes = kernels.row_softmax, {"N": 7, "BLOCK": 8}, [(7,)] * 2
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
@@ -152,6 +161,19 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "dynamic-matmul":
         arrays[2:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n", "k")]
         golden = arrays[0] @ arrays[1]
+    elif kernel == "masked-store":
+        arrays[2] = np.asarray(example_dimensions["n"], dtype=np.int32)
+        selected = (np.arange(example_dimensions["n"]) % 3 != 1) | (arrays[0] > 0)
+        golden = arrays[1].copy()
+        for update in range(2):
+            golden[selected] = (arrays[0][selected] + np.float32(update)) + np.float32(1)
+    elif kernel == "masked-matrix":
+        arrays[2:] = [np.asarray(example_dimensions[name], dtype=np.int32) for name in ("m", "n")]
+        r, c = np.indices(arrays[0].shape)
+        selected = ((r + c) % 3 != 1) & (arrays[0] > 0)
+        golden = arrays[1].T.copy()
+        golden[selected] = arrays[0][selected] + np.float32(2)
+        golden = golden.T.copy()
     elif kernel in ("indexed-gather", "dynamic-gather"):
         arrays[1] = np.array([0, 14, 7, -2147483648, 3, 3, -99, 8, 0, 14, 12, -1, 6], dtype=np.int32)
         if kernel == "dynamic-gather":
@@ -220,7 +242,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer"), default="tensor")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")

@@ -30,6 +30,27 @@ def masked_offset_store(out, n, B: tl.constexpr):
 
 
 @triton.jit
+def masked_matrix_store(x, out, m, n, BM: tl.constexpr, BN: tl.constexpr,
+                        TRANSPOSED: tl.constexpr, TRAVERSE_TRANSPOSED: tl.constexpr,
+                        BAD_MASK: tl.constexpr):
+    rows = tl.program_id(0) * BM + tl.arange(0, BM)
+    cols = tl.program_id(1) * BN + tl.arange(0, BN)
+    offset = rows[:, None] * n + cols[None, :]
+    valid = (rows[:, None] < m) & (cols[None, :] < n)
+    value = tl.load(x + offset, valid, other=0)
+    if BAD_MASK:
+        mask = (rows[:, None] < m) & ((rows[:, None] + cols[None, :]) % 3 != 1)
+    else:
+        mask = valid & ((rows[:, None] + cols[None, :]) % 3 != 1) & (value > 0)
+    if TRANSPOSED:
+        offset = cols[None, :] * m + rows[:, None]
+    payload = value + 2
+    if TRAVERSE_TRANSPOSED:
+        offset, payload, mask = offset.T, payload.T, mask.T
+    tl.store(out + offset, payload, mask)
+
+
+@triton.jit
 def dynamic_matrix_add(x, y, m, n, out, BM: tl.constexpr, BN: tl.constexpr):
     rows = tl.program_id(0) * BM + tl.arange(0, BM)
     cols = tl.program_id(1) * BN + tl.arange(0, BN)

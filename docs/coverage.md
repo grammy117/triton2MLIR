@@ -96,6 +96,8 @@ loops and inactive initialized values through both Merlin profiles, including
 runtime tails and empty domains. This handles regular-address `tts.scatter`;
 it does not establish general indirect write conflict semantics. See
 [the masked-write proof and representation](masked_writes.md).
+Runtime matrix masks additionally qualify projected broadcasts and transposed
+storage/traversal, in both profiles over changing and empty two-axis shapes.
 
 The remaining boundaries are:
 

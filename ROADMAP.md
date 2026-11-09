@@ -69,6 +69,9 @@ Nonrectangular masks on independently owned affine store tiles now also have
 native/Merlin execution in both profiles, with exact inactive-state preservation
 and runtime tails. The buffer form retains upstream predicated stores; general
 indirect scatter remains open. See [masked writes](docs/masked_writes.md).
+Two-axis runtime masked stores also qualify transposed storage and traversal
+without losing mask/address correspondence. `shared-demo --kernel masked-store`
+and `--kernel masked-matrix` provide visible package routes.
 The [runtime ABI](docs/runtime_abi.md) now carries typed by-value scalar inputs,
 including interleaved TTIR arguments, into native and Merlin host execution.
 Scalar payload/control values are supported independently of the remaining
