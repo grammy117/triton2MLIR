@@ -6,7 +6,7 @@ the compiler frontend, NumPy or any Triton dependency.
 
 
 def resolve_shapes(contract, arrays):
-    if contract.get("schema") != "t2m.runtime-shapes.v1" or len(contract.get("inputs", [])) != len(arrays):
+    if contract.get("schema") not in ("t2m.runtime-shapes.v1", "merlin.runtime-shapes.v1") or len(contract.get("inputs", [])) != len(arrays):
         raise ValueError("runtime shape contract has an incomplete input signature")
     scalars = {}
     for declared, array in zip(contract["inputs"], arrays, strict=True):

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 from pathlib import Path
 import platform
 import resource
@@ -80,6 +81,7 @@ def compile_model(staged, work):
 def execute_model(staged, work, arguments, *, evaluation=None):
     import numpy as np
     from merlin.llvmlower.abi import HostModel, ScalarArg
+    from runtime_shapes import resolve_shapes
 
     signature = json.loads((staged / "signature.json").read_text())
     evaluation = Path(evaluation) if evaluation is not None else work
@@ -89,15 +91,24 @@ def execute_model(staged, work, arguments, *, evaluation=None):
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
             raise ValueError("Merlin host evaluator needs exactly the declared argument keys")
         arrays = [values[f"in{i}"].copy() for i in range(len(signature["inputs"]))]
+    if signature["schema"] == "merlin.compile-signature.v2":
+        shapes = resolve_shapes({"schema": "merlin.runtime-shapes.v1", "inputs": signature["inputs"], "outputs": signature["outputs"]}, arrays)
+    elif signature["schema"] == "merlin.compile-signature.v1":
+        shapes = [value["shape"] for value in signature["outputs"]]
+    else:
+        raise ValueError("unsupported Merlin invocation signature")
     for array, declared in zip(arrays, signature["inputs"], strict=True):
-        if list(array.shape) != declared["shape"] or array.dtype != dtypes[declared["dtype"]]:
+        if (signature["schema"] == "merlin.compile-signature.v1" and list(array.shape) != declared["shape"]
+                or len(array.shape) != len(declared["shape"]) or any(type(n) is int and n != actual for n, actual in zip(declared["shape"], array.shape))
+                or array.dtype != dtypes[declared["dtype"]]):
             raise ValueError("Merlin host evaluator argument differs from staged ABI")
         if declared.get("kind") == "scalar" and "bounds" in declared:
             if not declared["bounds"][0] <= array.item() <= declared["bounds"][1]:
                 raise ValueError("Merlin host runtime scalar is outside its guarded ABI bounds")
-    outputs = [np.zeros(value["shape"], dtype=dtypes[value["dtype"]]) for value in signature["outputs"]]
-    if sum(a.nbytes for a in [*arrays, *outputs]) > 128 * 1024 * 1024:
+    if sum(a.nbytes for a in arrays) + sum(math.prod(shape) * np.dtype(dtypes[value["dtype"]]).itemsize
+                                         for shape, value in zip(shapes, signature["outputs"], strict=True)) > 128 * 1024 * 1024:
         raise ValueError("Merlin host invocation exceeds its 128MiB array budget")
+    outputs = [np.zeros(shape, dtype=dtypes[value["dtype"]]) for shape, value in zip(shapes, signature["outputs"], strict=True)]
     compiled = json.loads((work / "compilation.json").read_text())
     if record(work / "model.so") != compiled["shared_library"]:
         raise ValueError("Merlin shared library changed before invocation")

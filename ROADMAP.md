@@ -73,6 +73,11 @@ ABI v4 now adds guarded runtime memory prefixes, including empty/tail domains,
 negative/all-inactive limits and preserved readwrite outputs. One Merlin library
 handles different domains without recompilation. Logical tensor capacities are
 still static; actual dynamic shapes/results and launch extents remain a separate gate.
+ABI v5 now provides actual named rank-one runtime dimensions, executable shape
+checks, dynamic result allocation and runtime ceil-divided logical grids. Both
+memory profiles qualify independent shapes, including zero, through one unchanged
+Merlin library. [The runtime dimension contract](docs/dynamic_shapes.md) keeps
+multidimensional strides, indexed access and broader shape expressions open.
 Runtime value-only loops now preserve source SSA bounds and tile recurrences
 through the same Merlin library for zero/nonzero counts in both memory profiles.
 The checked consumer retains fusion and native lifetime/alias analysis; source

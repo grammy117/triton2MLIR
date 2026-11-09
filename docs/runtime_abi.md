@@ -195,9 +195,9 @@ python -m t2m shared-demo --kernel runtime-memory-store --memory-profile buffer 
   --python /path/to/native-env/bin/python
 ```
 
-Dynamic tensor shapes/strides/grid sizes, general source while/pointer state and
-indexed writes remain open. Next: symbolic tensor dimensions and launch extents
-linked to actual argument shapes, dynamic allocations/results, and one compiled
-library invoked over independent shapes. Those need initialization/ownership
-proofs and consumer allocation/binding changes. Allocation capacities above are
-static; runtime prefix lengths do not close the dynamic-shape gate.
+ABI v5 now separately implements [named rank-one tensor dimensions, dynamic
+allocations/results and logical launch bounds](dynamic_shapes.md), with one
+Merlin library invoked over independent shapes including zero. General
+multidimensional strides/shapes, source while/pointer state and indexed writes
+remain open. The ABI v4 capacities above remain static; varying a prefix alone
+does not establish the dimension profile.

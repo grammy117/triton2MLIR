@@ -67,8 +67,10 @@ python -m t2m verify-merlin out/merlin_standalone_tuple_scan
 
 The source remains `t2m.capture-receipt.v2`; the new directory carries
 `t2m.merlin-kernel-qualification.v1`, not a fake Torch receipt. Merlin stages its
-`standalone-tensor-kernel` compiler profile with a complete static functional
-signature. The one symbol is adapted to `forward` for the existing native ABI;
+`standalone-tensor-kernel` compiler profile with a complete functional signature.
+Static signatures remain `merlin.compile-signature.v1`; ABI v5 runtime dimensions
+use v2 with named scalar bindings for input checks and result allocation. The
+one symbol is adapted to `forward` for the existing native ABI;
 `source-correspondence.json` records both names. Original MLIR/TTIR/spec bytes,
 original/normalized operation inventories, provenance and buffer order survive.
 The provenance projection excludes numeric evaluator reports. Readwrite buffers
@@ -90,5 +92,13 @@ the library/program, source compiler snapshots, invocation arguments and results
 new directory. A failed comparison cannot publish an invocation success receipt.
 See [the runtime ABI](runtime_abi.md) for scalar value and replay examples.
 
+ABI v5 tests additionally reuse one compiled library across actual rank-one
+input/result dimensions and launch counts, including zero, in both memory
+profiles. No invocation shape is supplied to compiler staging. The scalar-only
+generator checks allocation from explicit result bindings; a request over the
+array budget refuses before allocation. Mismatched input dimensions refuse in
+the caller and through actual compiled MLIR guards when called directly.
+
 These checks qualify actual native-host materialization and execution. Accelerator
-materialization and dynamic/scalar/effectful ABI profiles retain their own open gates.
+materialization, multidimensional runtime and broader numeric/effect profiles
+retain their own open gates.

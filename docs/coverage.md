@@ -95,10 +95,10 @@ The remaining boundaries are:
 
 [Runtime scalar ABI v3](runtime_abi.md) now has f32/f64/i32 payload and i1
 source-branch execution cases through Merlin. Runtime values are not specialized;
-dynamic shape/stride/grid and address-domain profiles still require separate work.
+general multidimensional shape/stride/grid and address-domain profiles still require separate work.
 Guarded i32/i64 prefix domains (ABI v4) now additionally have native and Merlin
 checks, including empty/tail/full domains, preserved outputs and negative limits.
-They vary memory domains over static capacities; actual dynamic tensor shapes,
+They vary memory domains over static capacities; multidimensional runtime tensor shapes,
 general indexed writes and runtime memory-loop domains remain open.
 Runtime value-only `scf.for` recurrences additionally retain their original
 standard body and SSA bounds through native/Merlin execution, including zero
@@ -111,6 +111,15 @@ on zero trips or a false source branch. Fresh initialization is proved from
 pre-loop writes or a guarded positive trip count with complete branch coverage.
 General pointer/while state, indexed conflicts and alias/effect profiles remain
 separate capabilities.
+
+[Runtime dimension ABI v5](dynamic_shapes.md) now separately qualifies actual
+rank-one input/result dimensions and runtime logical ceil-divided grids. Both
+memory profiles reuse one Merlin library across independent shapes including
+zero; the payload observes the actual program count. A scalar-only generator
+also allocates a result without any tensor input size to infer from. Caller
+shape bindings and executable MLIR guards reject inconsistent dimensions, and
+output allocation budgets are checked before construction. This does not close
+general multidimensional strides, indexed dynamic allocations or shape algebra.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.

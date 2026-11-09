@@ -75,6 +75,8 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     for name, payload in result.auxiliary_artifacts.items():
         (out / name).write_text(payload)
     differences = DIFFERENCES + (["explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained"] if profile == BUFFER_PROFILE else [])
+    if result.spec.dynamic:
+        differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,
           "baseline": "model2MLIR 035bb5a", "differences": differences,
           "same_core_filenames": True, "merlin_staged_execution": "not-certified"})

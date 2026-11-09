@@ -12,7 +12,8 @@ Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will re
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
-static tensor shapes, clipped affine tail masks and disjoint output tiles over logical grids;
+static shapes and [named rank-one runtime dimensions](docs/dynamic_shapes.md),
+clipped affine tail masks and disjoint output tiles over logical grids;
 this is not full arbitrary-kernel coverage.
 
 ```bash
@@ -57,6 +58,8 @@ see [its proof scope and package differences](docs/full_memory_bridge.md).
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence
 and incoming output values for zero trips.
+`shared-demo --kernel dynamic-count` varies actual tensor/result sizes and logical
+launch bounds through one Merlin library, including empty tensors.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

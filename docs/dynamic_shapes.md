@@ -25,7 +25,21 @@ uses the explicit `t2m.runtime-shapes.v1` allocation contract derived from the A
 checks tensor/scalar consistency and budgets output bytes before allocating.
 It does not guess an output size from example data.
 
+Merlin stages this contract without evaluator data using
+`merlin.compile-signature.v2`. Symbolic input/result dimensions and named scalar
+bindings drive invocation checks and result allocation. Both profiles qualify
+through the actual compiler/library path, then reuse exactly one library over
+independent shapes including zero. The payload observes the actual program
+count, so a captured or worst-case launch count would fail those checks.
+
+```bash
+python -m t2m shared-demo --kernel dynamic-count --memory-profile buffer \
+  --out out/dynamic_count --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+```
+
 This first dimension profile admits dense rank-one dynamic buffers. General
-multidimensional runtime strides, arbitrary shape expressions and aliasing need
-separate proofs. Merlin compiler-only staging and reusable-library shape binding
-are the next consumer integration gate; native JIT success alone does not close it.
+multidimensional runtime strides, dynamic indexed gathers, arbitrary shape
+expressions, model-call signature adaptation and aliasing still need their own
+proofs. Compiler staging establishes declared type/binding consistency; actual
+guard semantics, memory coverage, numeric and execution evidence remain separate.

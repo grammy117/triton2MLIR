@@ -76,6 +76,12 @@ def runtime_conditional_store(x, iterations, flag, out, N: tl.constexpr, B: tl.c
 
 
 @triton.jit
+def dynamic_generate(n, out, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    tl.store(out + lane, tl.full((B,), 7, tl.float32), lane < n)
+
+
+@triton.jit
 def dynamic_count(x, n, out, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=0)
