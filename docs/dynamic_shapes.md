@@ -38,8 +38,28 @@ python -m t2m shared-demo --kernel dynamic-count --memory-profile buffer \
   --python /path/to/native-env/bin/python
 ```
 
-This first dimension profile admits dense rank-one dynamic buffers. General
-multidimensional runtime strides, dynamic indexed gathers, arbitrary shape
+Dense multidimensional buffers now use exact symbolic stride analysis over
+triton-shared's per-axis offsets and strides. For example, a row contribution
+`pid_m * BM * n` with stride `n` recovers logical row `pid_m * BM`. This is an
+algebraic cancellation, with no emitted division by a runtime extent that may
+be zero. Source integer-width checks still precede pointer re-raising. Axes
+must match the declared dense layout exactly; unaligned or nonlinear residual
+coordinates, ambiguous axes and unmatched layouts refuse. Axis recovery has
+an eight-axis and bounded-search analysis budget.
+
+This adapts Meta revision `17f0c234ce474bee334af36e351c62eca7852836`,
+`lib/Analysis/PtrAnalysis.cpp` (`mulState`, `accumulateTargetOffset`), rather
+than replacing upstream computation conversion. Its runtime-stride GEMM fixture
+is `test/Conversion/StructuredToMemref/kernel-03-matrix-multiplication.mlir`.
+
+Real two-axis tiled matrix addition qualifies both memory profiles through
+Merlin. One library per profile handles `(0,0)`, `(0,7)`, `(5,0)`, `(1,1)`,
+`(5,9)` and `(9,13)` without recompilation. The tensor form retains tiled
+slices, pointwise computation and parallel publication; the buffer form retains
+upstream memory operations with dynamic dense flattening. A disagreeing
+declared row stride refuses before the buffer continuation is emitted.
+
+Non-dense multidimensional runtime strides, dynamic indexed gathers, arbitrary shape
 expressions, model-call signature adaptation and aliasing still need their own
 proofs. Compiler staging establishes declared type/binding consistency; actual
 guard semantics, memory coverage, numeric and execution evidence remain separate.

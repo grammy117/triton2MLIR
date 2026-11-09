@@ -90,7 +90,7 @@ def functionalize_memory(module, abi):
         if len(declared.shape) > 1:
             reassociation = ArrayAttr([ArrayAttr(IntegerAttr(i, builtin.i64) for i in range(len(declared.shape)))])
             value = append(entry, memref.CollapseShapeOp.build(operands=[value],
-                result_types=[MemRefType(type_.element_type, [math.prod(declared.shape)])],
+                result_types=[MemRefType(type_.element_type, [builtin.DYNAMIC_INDEX if any(isinstance(n, str) for n in declared.shape) else math.prod(declared.shape)])],
                 properties={"reassociation": reassociation}), role="linear-raw-pointer-view").result
         values.append(append(entry, memref.CastOp.get(value, expected), role="bind-upstream-raw-buffer").dest)
     body = Block(arg_types=[IndexType()])

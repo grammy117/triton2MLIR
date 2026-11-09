@@ -59,6 +59,10 @@ The actual tensor/result allocation extents are dynamic; they are distinct from
 ABI v4's static capacities and changing prefixes. Native execution receives an
 explicit shape-allocation contract derived from `spec.json`. Static packages
 keep their existing ABI and artifact conventions.
+Dense multidimensional runtime strides are recovered by exact symbolic
+offset/stride cancellation. Public shapes retain every named axis; raw memory
+flattening is internal to the buffer profile. No new schema or hidden stride
+argument is introduced. Non-dense layouts still require another contract.
 
 `--memory-profile buffer` selects `shared-functional-buffer`, alongside the
 default `shared-functional-tensor`. The public tensor/scalar ABI, references and

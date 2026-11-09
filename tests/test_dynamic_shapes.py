@@ -30,7 +30,7 @@ def test_dynamic_shape_schema_carries_symbols_and_grid_without_invocation_values
         TensorABI.from_dict(old)
 
 
-@pytest.mark.parametrize("change", ["unbounded", "negative", "unknown", "rank"])
+@pytest.mark.parametrize("change", ["unbounded", "negative", "unknown"])
 def test_unproved_dynamic_dimension_contracts_refuse(change):
     declaration = spec().as_dict()
     if change == "unbounded":
@@ -39,8 +39,6 @@ def test_unproved_dynamic_dimension_contracts_refuse(change):
         declaration["runtime_scalars"][0]["bounds"] = [-1, 13]
     elif change == "unknown":
         declaration["buffers"][0]["shape"] = ["other"]
-    else:
-        declaration["buffers"][0]["shape"] = ["n", 8]
     with pytest.raises(ValueError):
         TensorABI.from_dict(declaration)
 

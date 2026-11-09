@@ -30,6 +30,8 @@ from .loop_domains import bounded_loop, require_signed_loop
 from .scans import expand_scans
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
+from .shape_lowering import affine_index
+from .symbolic_layout import DenseAxes, recover_axes
 from .shared_gather import gather, structured_gather
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
@@ -94,6 +96,8 @@ class TensorBuffer:
 
     @property
     def strides(self):
+        if any(isinstance(n, str) for n in self.shape):
+            raise ConversionError("runtime dense layouts require symbolic stride analysis")
         strides, product = [], 1
         for extent in reversed(self.shape):
             strides.insert(0, product)
@@ -383,6 +387,7 @@ def _functionalize(module, abi):
     writes, reads, source_loops, source_conditionals, source_gathers = {}, [], [], [], []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
+    loop_values = {}
     for arg, (kind, value) in zip(function.regions[0].block.args, abi.source_bindings, strict=True):
         if kind == "buffer":
             buffers[arg] = value
@@ -410,7 +415,7 @@ def _functionalize(module, abi):
         form: Linear
         value: object = None
 
-    def resolve(op, field, operands, coordinates=False):
+    def resolve(op, field, operands, coordinates=False, raw=False):
         dynamic = iter(operands)
         result = []
         for number in _array(op, field):
@@ -419,6 +424,9 @@ def _functionalize(module, abi):
                 if value is None:
                     raise ConversionError("structured descriptor is missing a dynamic operand", opcode=opcode(op))
                 value = mapping.get(value, value)
+                if raw:
+                    result.append(value)
+                    continue
                 if coordinates:
                     result.append(Coordinate(linear(value, facts, grid), value))
                     continue
@@ -441,12 +449,19 @@ def _functionalize(module, abi):
         for length in segments[1:]:
             slices.append(op.operands[start:start + length])
             start += length
-        strides = resolve(op, "static_strides", slices[0])
-        offsets = resolve(op, "static_offsets", slices[1], coordinates=True)
         shape = resolve(op, "static_shape", slices[2])
         if any(shape) or _array(op, "order"):
             raise ConversionError("wraparound/block-pointer bounds need a qualified tensor view adapter", opcode=opcode(op))
         buffer, sizes = buffers[base], _array(op, "sizes")
+        if any(isinstance(n, str) for n in buffer.shape):
+            strides = resolve(op, "static_strides", slices[0], raw=True)
+            offsets = resolve(op, "static_offsets", slices[1], raw=True)
+            forms, axes = recover_axes(abi, buffer, sizes, strides, offsets, facts)
+            coordinates = tuple(Coordinate(form, affine_index(form, launch_iv, grid, launch, states,
+                loop_values, lambda value: append(value, op)) if form.dynamic else None) for form in forms)
+            return buffer, sizes, coordinates, DenseAxes(axes)
+        strides = resolve(op, "static_strides", slices[0])
+        offsets = resolve(op, "static_offsets", slices[1], coordinates=True)
         if (len(sizes) != len(buffer.shape) or len(strides) != len(sizes) or
                 any(stride < 0 or stride == 0 and size != 1 for stride, size in zip(strides, sizes, strict=True))):
             raise ConversionError("descriptor requires matching logical rank and positive structured strides", opcode=opcode(op))
@@ -521,8 +536,10 @@ def _functionalize(module, abi):
             active = sizes
         if len(active) != len(sizes) or any(maximum(n) < 0 or maximum(n) > size for n, size in zip(active, sizes, strict=True)):
             raise ConversionError("mask must describe a bounded rectangular prefix", opcode=opcode(op))
-        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, grid, physical_offsets=True,
-                                dimensions=tuple(abi.dimension(n) for n in buffer.shape))
+        axes = axis_permutation(buffer, [None] * len(sizes) if isinstance(strides, DenseAxes) else strides,
+                                [off.form for off in offsets], active, grid, physical_offsets=True,
+                                dimensions=tuple(abi.dimension(n) for n in buffer.shape),
+                                proven_axes=strides.axes if isinstance(strides, DenseAxes) else None)
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
@@ -680,7 +697,9 @@ def _functionalize(module, abi):
                 loop_counter += 1
                 previous, body = body, nested
                 before_loop = initialization.snapshot()
+                loop_values[identity] = (nested.args[0], lb, step)
                 translate(op.body.block)
+                del loop_values[identity]
                 if not domain.exact:
                     changed = any(states[b.name] is not nested.args[len(kept_arguments) + i]
                                   for i, b in enumerate(writable))
@@ -711,7 +730,7 @@ def _functionalize(module, abi):
                     final = []
                     for off, value in zip(offsets, loop.results[cursor:cursor + rank], strict=True):
                         constant = off.form.constant + sum(high * c for loop_id, _low, high, c in off.form.loops if loop_id == identity)
-                        form = Linear(constant, off.form.programs, tuple(term for term in off.form.loops if term[0] != identity))
+                        form = Linear(constant, off.form.programs, tuple(term for term in off.form.loops if term[0] != identity), off.form.parameters)
                         facts[value] = form
                         final.append(Coordinate(form, value))
                     descriptors[op.results[i]] = buffer, sizes, tuple(final), strides

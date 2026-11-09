@@ -103,12 +103,14 @@ Workstream C now additionally has guarded signed integer domain parameters
 and native/Merlin checks over empty, tail and full domains using the same library.
 Negative and proved-empty domains retain their actual semantics and ownership
 evidence. General source loop/while domains, strides and alias/mutation remain
-open. ABI v5 now binds named rank-one dimensions to typed runtime scalars and
+open. ABI v5 now binds named dense dimensions to typed runtime scalars and
 actual input extents, emits dynamic allocations/results and runtime logical
 launch bounds, and reuses one actual Merlin library over independent shapes
 including zero. These are actual extents rather than relabeled capacities.
 Compiler-only signature v2 retains the scalar bindings without evaluator shapes.
-General multidimensional strides, shape expressions and alias contracts remain
+Two-axis tiled addition also preserves runtime dense strides using exact
+symbolic cancellation, with changing and zero-element matrices through both
+Merlin memory profiles. Non-dense strides, shape expressions and alias contracts remain
 open. See [the dimension contract](dynamic_shapes.md).
 
 Workstream D additionally preserves runtime value-only source `scf.for`
@@ -129,7 +131,7 @@ initialization facts; guarded positive loops retain proved post-body facts.
 Both profiles qualify read/modify/write recurrences and preinitialized/positive
 fresh outputs through Merlin. Unknown branch initialization still refuses.
 The full memory profile currently uses the same proof witness; independent
-memory admission, broader headers/while/pointer state and multidimensional runtime dimensions
+memory admission, broader headers/while/pointer state and non-dense runtime layouts
 remain required.
 
 A closed full-pipeline integration probe now compiles triton-shared's later
@@ -141,5 +143,5 @@ memory/numeric contract, source correspondence and true dynamic dimensions.
 The explicit `--memory-profile buffer` now implements the initial typed wrapper,
 complete package/model binding and Merlin compiler/library qualification within
 the existing tensor memory proof scope. Its additional artifacts bind the actual
-continuation bytes. Independent memory admission, multidimensional runtime dimensions and
+continuation bytes. Independent memory admission, non-dense runtime layouts and
 broader effects remain open; this is not universal source coverage.

@@ -5,6 +5,17 @@ import triton.language as tl
 
 
 @triton.jit
+def dynamic_matrix_add(x, y, m, n, out, BM: tl.constexpr, BN: tl.constexpr):
+    rows = tl.program_id(0) * BM + tl.arange(0, BM)
+    cols = tl.program_id(1) * BN + tl.arange(0, BN)
+    offset = rows[:, None] * n + cols[None, :]
+    mask = (rows[:, None] < m) & (cols[None, :] < n)
+    a = tl.load(x + offset, mask=mask, other=0)
+    b = tl.load(y + offset, mask=mask, other=0)
+    tl.store(out + offset, a + b, mask=mask)
+
+
+@triton.jit
 def runtime_affine(x, alpha, out, bias, N: tl.constexpr, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < N, other=0)

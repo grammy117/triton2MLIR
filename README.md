@@ -12,7 +12,7 @@ Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will re
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
-static shapes and [named rank-one runtime dimensions](docs/dynamic_shapes.md),
+static shapes and [named dense runtime dimensions](docs/dynamic_shapes.md),
 clipped affine tail masks and disjoint output tiles over logical grids;
 this is not full arbitrary-kernel coverage.
 

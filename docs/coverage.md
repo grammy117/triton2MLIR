@@ -113,13 +113,17 @@ General pointer/while state, indexed conflicts and alias/effect profiles remain
 separate capabilities.
 
 [Runtime dimension ABI v5](dynamic_shapes.md) now separately qualifies actual
-rank-one input/result dimensions and runtime logical ceil-divided grids. Both
+dense input/result dimensions and runtime logical ceil-divided grids. Both
 memory profiles reuse one Merlin library across independent shapes including
 zero; the payload observes the actual program count. A scalar-only generator
 also allocates a result without any tensor input size to infer from. Caller
 shape bindings and executable MLIR guards reject inconsistent dimensions, and
 output allocation budgets are checked before construction. This does not close
-general multidimensional strides, indexed dynamic allocations or shape algebra.
+non-dense multidimensional strides, indexed dynamic allocations or shape algebra.
+Two-axis tiled matrix addition now qualifies changing runtime row strides and
+empty/tail shapes through both memory profiles and the actual Merlin library
+interface. Exact symbolic offset/stride cancellation preserves the tile axes;
+a mismatched dense-layout declaration refuses before memory continuation.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.

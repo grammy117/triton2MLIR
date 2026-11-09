@@ -24,8 +24,6 @@ def validate_dimensions(abi):
         scalar = scalars.get(name)
         if scalar is None or scalar.bounds is None or scalar.bounds[0] < 0:
             raise ValueError("runtime dimensions require a nonnegative bounded integer scalar: " + name)
-    if any(any(isinstance(d, str) for d in b.shape) and len(b.shape) != 1 for b in abi.buffers):
-        raise ValueError("dynamic multidimensional stride/ownership admission remains a separate profile gate")
     return names
 
 

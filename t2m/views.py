@@ -5,7 +5,7 @@ from .tail_masks import TailExtent, maximum
 from .shared_indexing import Linear
 
 
-def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None):
+def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None, proven_axes=None):
     rank = len(buffer.shape)
     if len(strides) != rank or len(offsets) != rank:
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
@@ -19,9 +19,14 @@ def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets
         bounded = size.fits_access(offset, dimension, grid) if isinstance(size, TailExtent) else (
             (offset + Linear(size) + dimension.scale(-1)).bounds(grid)[1] <= 0 if isinstance(dimension, Linear)
             else high + size <= dimension)
-        matched_stride = strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1
+        matched_stride = proven_axes is not None and proven_axes[source] == destination or (
+            proven_axes is None and (strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1))
         return matched_stride and (empty or low >= 0 and bounded)
 
+    if proven_axes is not None:
+        if sorted(proven_axes) != list(range(rank)) or not all(matches(i, j) for i, j in enumerate(proven_axes)):
+            raise ConversionError("active structured access exceeds the declared tensor bounds")
+        return proven_axes
     if all(matches(i, i) for i in range(rank)):
         return tuple(range(rank))
     if rank > 8:

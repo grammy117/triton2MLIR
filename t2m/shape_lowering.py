@@ -60,3 +60,42 @@ def program_id(axis, iv, counts, append):
     if len(counts) != 1:
         value = append(arith.RemUIOp(value, counts[axis])).result
     return value
+
+
+def affine_index(form, iv, grid, counts, states, loops, append):
+    """Materialize checked logical coordinates without dividing by shape sizes."""
+    import math
+    def constant(n):
+        return append(arith.ConstantOp.from_int_and_width(n, IndexType())).result
+    def index(value):
+        return value if value.type == IndexType() else append(arith.IndexCastOp(value, IndexType())).result
+    value = constant(form.constant)
+    for axis, coefficient in enumerate(form.programs[:len(grid)]):
+        if not coefficient or grid[axis] == 1:
+            continue
+        if counts is not None:
+            pid = program_id(axis, iv, counts, append)
+        else:
+            pid = iv
+            divisor = math.prod(grid[axis + 1:])
+            if divisor != 1:
+                pid = append(arith.DivUIOp(pid, constant(divisor))).result
+            pid = append(arith.RemUIOp(pid, constant(grid[axis]))).result
+        term = append(arith.MuliOp(pid, constant(coefficient))).result
+        value = append(arith.AddiOp(value, term)).result
+    for name, _, _, coefficient in form.parameters:
+        term = append(arith.MuliOp(index(states[name]), constant(coefficient))).result
+        value = append(arith.AddiOp(value, term)).result
+    for identity, _, _, coefficient in form.loops:
+        if identity not in loops:
+            from .diagnostics import ConversionError
+            raise ConversionError("logical coordinate escapes its proved loop scope")
+        current, lower, step = loops[identity]
+        ordinal = index(current)
+        if lower:
+            ordinal = append(arith.SubiOp(ordinal, constant(lower))).result
+        if step != 1:
+            ordinal = append(arith.DivSIOp(ordinal, constant(step))).result
+        term = append(arith.MuliOp(ordinal, constant(coefficient))).result
+        value = append(arith.AddiOp(value, term)).result
+    return value
