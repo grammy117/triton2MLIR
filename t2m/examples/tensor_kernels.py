@@ -16,6 +16,27 @@ def dynamic_matrix_add(x, y, m, n, out, BM: tl.constexpr, BN: tl.constexpr):
 
 
 @triton.jit
+def dynamic_matmul(x, y, m, n, k, out, BM: tl.constexpr, BN: tl.constexpr,
+                   BK: tl.constexpr, TRANSPOSED: tl.constexpr):
+    rows = tl.program_id(0) * BM + tl.arange(0, BM)
+    cols = tl.program_id(1) * BN + tl.arange(0, BN)
+    acc = tl.full((BM, BN), 0, tl.float32)
+    for start in range(0, k, BK):
+        ks = start + tl.arange(0, BK)
+        a = tl.load(x + rows[:, None] * k + ks[None, :],
+                    mask=(rows[:, None] < m) & (ks[None, :] < k), other=0)
+        if TRANSPOSED:
+            b = tl.load(y + cols[None, :] * k + ks[:, None],
+                        mask=(ks[:, None] < k) & (cols[None, :] < n), other=0)
+        else:
+            b = tl.load(y + ks[:, None] * n + cols[None, :],
+                        mask=(ks[:, None] < k) & (cols[None, :] < n), other=0)
+        acc = tl.dot(a, b, acc, input_precision="ieee")
+    tl.store(out + rows[:, None] * n + cols[None, :], acc,
+             mask=(rows[:, None] < m) & (cols[None, :] < n))
+
+
+@triton.jit
 def runtime_affine(x, alpha, out, bias, N: tl.constexpr, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < N, other=0)

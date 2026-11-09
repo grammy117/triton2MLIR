@@ -59,6 +59,26 @@ slices, pointwise computation and parallel publication; the buffer form retains
 upstream memory operations with dynamic dense flattening. A disagreeing
 declared row stride refuses before the buffer continuation is emitted.
 
+Runtime M/N/K GEMM also qualifies both profiles, including transposed RHS
+storage. The emitted computation retains `linalg.matmul` on 16×16 tiles
+inside the original runtime K `scf.for`; M/N govern the unmapped logical grid.
+One library per profile/storage layout handles empty M/N, K=0 with nonempty
+zero-filled results, exact tiles and ragged `(35,21,37)` dimensions. Numerical
+checks use independent NumPy matmul at explicit `rtol=1e-5`, `atol=6e-6`;
+they do not establish universal floating-point equivalence. Tile loop structure
+is checked independently of the numerical reference.
+
+```bash
+python -m t2m shared-demo --kernel dynamic-matmul --memory-profile buffer \
+  --out out/dynamic_matmul --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python
+python -m t2m qualify-merlin out/dynamic_matmul \
+  --out out/dynamic_matmul_merlin --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-env/bin/python \
+  --python /path/to/native-env/bin/python --merlin-clang /path/to/clang \
+  --rtol 1e-5 --atol 6e-6
+```
+
 Non-dense multidimensional runtime strides, dynamic indexed gathers, arbitrary shape
 expressions, model-call signature adaptation and aliasing still need their own
 proofs. Compiler staging establishes declared type/binding consistency; actual

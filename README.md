@@ -59,7 +59,9 @@ reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence
 and incoming output values for zero trips.
 `shared-demo --kernel dynamic-count` varies actual tensor/result sizes and logical
-launch bounds through one Merlin library, including empty tensors.
+launches. `shared-demo --kernel dynamic-matmul` preserves tiled GEMM and its K
+loop with runtime M/N/K; both memory profiles execute through Merlin across
+changing and empty shapes. See [runtime dimensions](docs/dynamic_shapes.md).
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

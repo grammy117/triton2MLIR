@@ -124,6 +124,10 @@ Two-axis tiled matrix addition now qualifies changing runtime row strides and
 empty/tail shapes through both memory profiles and the actual Merlin library
 interface. Exact symbolic offset/stride cancellation preserves the tile axes;
 a mismatched dense-layout declaration refuses before memory continuation.
+Runtime M/N/K GEMM also qualifies both profiles with direct/transposed RHS,
+retained tile contractions and K loop. One library per profile/storage layout
+executes empty dimensions, K=0, exact tiles and ragged tails. This extends dense
+address/shape coverage; it does not admit arbitrary pointer recurrences or effects.
 
 1. Grouped/nonlinear logical grids and general pointer recurrences with established output
    ownership; preserve useful loops and reuse rather than serializing launches.

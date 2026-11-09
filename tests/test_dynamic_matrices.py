@@ -95,3 +95,75 @@ def test_one_merlin_library_handles_runtime_matrix_strides(tmp_path, profile):
         assert report["evaluation"]["functional_inputs_preserved"]
     assert verify_kernel_qualification(compiled) == receipt
     assert _record(compiled / "host/model.so") == library
+
+
+@pytest.mark.skipif(not (OPT and NATIVE and MERLIN), reason="existing shared/native/Merlin environments required")
+@pytest.mark.parametrize("profile", ["tensor", "buffer"])
+@pytest.mark.parametrize("transposed", [False, True])
+def test_one_merlin_gemm_library_retains_runtime_k_loop_and_tiling(tmp_path, profile, transposed):
+    import numpy as np
+    from t2m.bundle import _record, verify_bundle
+    from t2m.examples.tensor_kernels import dynamic_matmul
+    from t2m.frontend import capture_ttir
+    from t2m.invocation import invoke_kernel, verify_invocation
+    from t2m.kernel_consumer import qualify_kernel, verify_kernel_qualification
+    from t2m.shared_bundle import write_shared_bundle
+    from t2m.shared_tensor import convert_shared
+    source = tmp_path / "source.ttir"
+    source.write_text(capture_ttir(dynamic_matmul,
+        {"x": "*fp32", "y": "*fp32", "m": "i32", "n": "i32", "k": "i32", "out": "*fp32",
+         "BM": "constexpr", "BN": "constexpr", "BK": "constexpr", "TRANSPOSED": "constexpr"},
+        {"BM": 16, "BN": 16, "BK": 16, "TRANSPOSED": transposed}))
+    abi = TensorABI("dynamic_matmul", (TensorBuffer("x", ("m", "k")),
+        TensorBuffer("y", ("n", "k") if transposed else ("k", "n")),
+        TensorBuffer("out", ("m", "n"), "write")), grid=(GridExtent("m", 16), GridExtent("n", 16)),
+        runtime_scalars=tuple(RuntimeScalar(name, "i32", arg, bounds=(0, high))
+            for name, arg, high in (("m", 2, 35), ("n", 3, 21), ("k", 4, 37))))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile=profile)
+    matmul = next(op for op in result.module.walk() if op.name == "linalg.matmul")
+    assert matmul.parent_op().name == "scf.for"
+    assert str(matmul.operands[0].type) == "tensor<16x16xf32>"
+    if profile == "tensor":
+        loop = result.trace["memory"]["source_loops"][0]
+        assert loop["upper_interval"] == [0, 37] and loop["step"] == 16
+        assert loop["bounds"] == "original-runtime-SSA"
+    rng = np.random.default_rng(103)
+    def arguments(m, n, k):
+        x = rng.normal(size=(m, k)).astype(np.float32)
+        y = rng.normal(size=(n, k) if transposed else (k, n)).astype(np.float32)
+        return [x, y, *[np.asarray(v, dtype=np.int32) for v in (m, n, k)]], x @ (y.T if transposed else y)
+    inputs, golden = arguments(7, 9, 17)
+    capture, compiled = tmp_path / "capture", tmp_path / "merlin"
+    write_shared_bundle(result, capture, inputs, [golden], work=tmp_path / "native", python=NATIVE, rtol=1e-5, atol=6e-6)
+    verify_bundle(capture)
+    root, python, clang = (os.environ[n] for n in ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYTHON", "T2M_MERLIN_CLANG"))
+    qualify_kernel(capture, compiled, merlin_root=root, python=python, compiler_python=NATIVE, clang=clang, rtol=1e-5, atol=6e-6)
+    receipt, library = verify_kernel_qualification(compiled), _record(compiled / "host/model.so")
+    for m, n, k in ((0, 0, 0), (0, 7, 3), (5, 0, 3), (5, 9, 0), (1, 1, 1), (16, 16, 16), (35, 21, 37)):
+        arrays, golden = arguments(m, n, k)
+        inputs, reference = tmp_path / "inputs.npz", tmp_path / "reference.npz"
+        np.savez(inputs, **{f"in{i}": value for i, value in enumerate(arrays)})
+        np.savez(reference, out0=golden)
+        out = tmp_path / f"invoke-{m}-{n}-{k}"
+        report = invoke_kernel(compiled, inputs, reference, out, merlin_root=root, python=python, rtol=1e-5, atol=6e-6)
+        verify_invocation(out)
+        assert report["native_compilation"] == "reused-qualified-library"
+        assert report["evaluation"]["functional_inputs_preserved"]
+        with np.load(out / "evaluation/outputs.npz", allow_pickle=False) as values:
+            assert values["out0"].shape == (m, n)
+    assert verify_kernel_qualification(compiled) == receipt
+    assert _record(compiled / "host/model.so") == library
+
+
+@pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/native environments required")
+def test_runtime_matmul_cli_keeps_symbolic_dimensions_and_source_k_loop(tmp_path):
+    from t2m.bundle import verify_bundle
+    from t2m.cli import main
+    out = tmp_path / "demo"
+    assert main(["shared-demo", "--kernel", "dynamic-matmul", "--memory-profile", "buffer", "--out", str(out),
+                 "--optimizer", OPT, "--python", NATIVE]) == 0
+    verify_bundle(out)
+    spec = json.loads((out / "spec.json").read_text())
+    assert spec["buffers"][0]["shape"] == ["m", "k"]
+    assert spec["buffers"][2]["shape"] == ["m", "n"]
+    assert "tensor<?x?xf32>" in (out / "model.mlir").read_text()

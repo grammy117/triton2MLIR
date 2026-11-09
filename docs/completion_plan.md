@@ -112,6 +112,10 @@ Two-axis tiled addition also preserves runtime dense strides using exact
 symbolic cancellation, with changing and zero-element matrices through both
 Merlin memory profiles. Non-dense strides, shape expressions and alias contracts remain
 open. See [the dimension contract](dynamic_shapes.md).
+Runtime M/N/K GEMM additionally retains its source K loop and tiled contractions
+through actual Merlin libraries in both profiles, with direct/transposed RHS,
+changing strides, zero extents and ragged tails. No kernel-specific production
+rewrite or whole-tensor replacement is needed.
 
 Workstream D additionally preserves runtime value-only source `scf.for`
 recurrences. Both memory profiles qualify zero/nonzero counts through the same

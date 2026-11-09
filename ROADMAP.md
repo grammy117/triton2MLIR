@@ -81,6 +81,10 @@ non-dense strides, indexed access and broader shape expressions open. Exact
 symbolic dense-stride cancellation now preserves two-axis tiled matrix addition
 through Merlin over changing matrix shapes and empty/tail domains, in both
 memory profiles, without runtime division by a shape dimension.
+Runtime M/N/K GEMM now retains tile contractions and its original K loop through
+both profiles and actual Merlin libraries, including transposed RHS storage,
+empty M/N, K=0 and ragged tails. `shared-demo --kernel dynamic-matmul` emits a
+symbolic package with independent numerical validation.
 Runtime value-only loops now preserve source SSA bounds and tile recurrences
 through the same Merlin library for zero/nonzero counts in both memory profiles.
 The checked consumer retains fusion and native lifetime/alias analysis; source
