@@ -261,6 +261,15 @@ metadata explicitly record the upstream zero refinement of absent masked fills.
 General alias groups, non-dense views, pointer observations, broader loop
 ownership, numeric/effect profiles and target materialization remain open.
 
+The installed binary's cat/gather version gap now has a source-verified bridge.
+Cat chooses lhs-then-rhs through native join/transpose/reshape, keeping original
+and normalized inventories distinct. Tile gather adapts Meta's parallel
+generic/extract expansion and checks indices before extraction. Native and
+actual Merlin cases now include selected-pointer cat/split/repeated gather and
+two-axis value gathers across all three memory profiles, with bit-exact FP32
+transport, i32 values and actual invalid-index aborts. This closes the measured
+composition gap without a target build or physical lane mapping.
+
 Validation on 2026-11-09: the complete producer suite passed 492 tests with all
 existing native/model2MLIR/Merlin environments enabled (four legacy block-pointer
 deprecation warnings). Merlin's destination/deallocation suites passed 57 tests;
