@@ -18,7 +18,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 import m2m
 
 
-def capture(out):
+def capture(out, *, ragged=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -29,34 +29,42 @@ def capture(out):
     kernels = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(kernels)
     loop_matmul = kernels.loop_matmul
+    ragged_matmul = kernels.ragged_matmul
 
     @triton_op("t2m_demo::gemm", mutates_args={})
     def gemm(x: torch.Tensor, y: torch.Tensor, alpha: int = 1) -> torch.Tensor:
         m, k = x.shape
         n = y.shape[1]
         out = torch.empty((m, n), dtype=x.dtype, device=x.device)
-        wrap_triton(loop_matmul)[(m // 16, n // 16)](
-            x, y, out, N=n, K=k, BM=16, BN=16, BK=16)
+        if ragged:
+            wrap_triton(ragged_matmul)[((m + 15) // 16, (n + 15) // 16)](
+                x, y, out, M=m, N=n, K=k, BM=16, BN=16, BK=16, TRANSPOSED=False)
+        else:
+            wrap_triton(loop_matmul)[(m // 16, n // 16)](
+                x, y, out, N=n, K=k, BM=16, BN=16, BK=16)
         return out * alpha
 
     @gemm.register_kernel("cpu")
     def reference(x, y, alpha=1):
         return (x @ y) * alpha
 
+    rows, inner, columns = (35, 37, 21) if ragged else (32, 32, 32)
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.weight = torch.nn.Parameter(torch.randn(32, 32) / 4)
+            self.weight = torch.nn.Parameter(torch.randn(inner, columns) / 4)
 
         def forward(self, x):
-            return gemm(x, self.weight, alpha=1) + x * 0.25
+            value = gemm(x, self.weight, alpha=1)
+            return value + 0.25 if ragged else value + x * 0.25
 
     previous = KERNEL_REGISTRY.get("t2m_demo::gemm")
     KERNEL_REGISTRY["t2m_demo::gemm"] = KernelSpec("t2m_demo::gemm")
     try:
         torch.set_num_threads(1)
         torch.manual_seed(24)
-        model, inputs = Model().eval(), (torch.randn(32, 32),)
+        model, inputs = Model().eval(), (torch.randn(rows, inner),)
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(model, inputs, backend="fx_importer",
                              weights_path=str(out / "weights.safetensors"), capture_trace=True)
@@ -75,4 +83,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--ragged", action="store_true", help="capture a 35x37 by 37x21 tiled GEMM")
+    args = parser.parse_args()
+    print(capture(args.out, ragged=args.ragged))

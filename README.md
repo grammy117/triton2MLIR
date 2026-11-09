@@ -11,7 +11,7 @@ Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will re
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax and IEEE matmul, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
-static structured memory and affine disjoint output tiles over logical grids;
+static tensor shapes, clipped affine tail masks and disjoint output tiles over logical grids;
 this is not full arbitrary-kernel coverage.
 
 ```bash
@@ -21,6 +21,7 @@ python -m t2m shared-demo --kernel softmax --out out/shared_softmax --python /pa
 python -m t2m shared-demo --kernel matmul --out out/shared_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel tiled-matmul --out out/shared_tiled_matmul --python /path/to/native-env/bin/python
 python -m t2m shared-demo --kernel loop-matmul --out out/shared_loop_matmul --python /path/to/native-env/bin/python
+python -m t2m shared-demo --kernel ragged-matmul --out out/shared_ragged_matmul --python /path/to/native-env/bin/python
 python -m t2m verify-bundle out/shared_softmax
 ```
 

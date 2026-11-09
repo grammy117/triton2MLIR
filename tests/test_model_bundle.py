@@ -19,21 +19,26 @@ MERLIN = os.environ.get("T2M_MERLIN_ROOT")
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module")
-def model_inputs(tmp_path_factory):
+@pytest.fixture(scope="module", params=[False, True], ids=["exact-tiles", "ragged-tiles"])
+def model_inputs(tmp_path_factory, request):
     root = tmp_path_factory.mktemp("actual-model2mlir")
     script = Path(__file__).resolve().parents[1] / "scripts/capture_model_binding_demo.py"
-    process = subprocess.run([M2M, str(script), "--out", str(root / "capture")],
+    ragged = request.param
+    process = subprocess.run([M2M, str(script), "--out", str(root / "capture"), *(["--ragged"] if ragged else [])],
                              capture_output=True, text=True, timeout=60,
                              env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(root)))
     assert process.returncode == 0, process.stderr
-    from t2m.examples.tensor_kernels import loop_matmul
-    constants = {"N": 32, "K": 32, "BM": 16, "BN": 16, "BK": 16}
+    from t2m.examples.tensor_kernels import loop_matmul, ragged_matmul
+    kernel = ragged_matmul if ragged else loop_matmul
+    m, n, k = (35, 21, 37) if ragged else (32, 32, 32)
+    constants = {"N": n, "K": k, "BM": 16, "BN": 16, "BK": 16}
+    if ragged:
+        constants.update(M=m, TRANSPOSED=False)
     source = root / "kernel.ttir"
-    source.write_text(capture_ttir(loop_matmul, {**{n: "*fp32" for n in ("x", "y", "out")},
+    source.write_text(capture_ttir(kernel, {**{n: "*fp32" for n in ("x", "y", "out")},
                                               **{n: "constexpr" for n in constants}}, constants))
-    abi = TensorABI("loop_matmul", (TensorBuffer("x", (32, 32)), TensorBuffer("y", (32, 32)),
-                                   TensorBuffer("out", (32, 32), "write")), grid=(2, 2))
+    abi = TensorABI(kernel.__name__, (TensorBuffer("x", (m, k)), TensorBuffer("y", (k, n)),
+                                    TensorBuffer("out", (m, n), "write")), grid=((m + 15) // 16, (n + 15) // 16))
     result = convert_shared(source, abi, root / "implementation", optimizer=OPT)
     return root / "capture", KernelBinding("t2m_demo::gemm", result, scalar_arguments={"alpha": 1})
 

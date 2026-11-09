@@ -66,6 +66,28 @@ is never relabeled as correspondence for changed IR. Merlin paths requiring a
 Torch-only capture receipt still need explicit derived-receipt admission; generic
 model interface/runtime generation accepts the actual tensor ABI.
 
+## Ragged tiled model demo
+
+The same model capture and binding path now covers a 35×37 by 37×21 GEMM.
+Its six logical programs retain 16×16 tiles and three K iterations. Dynamic
+slice extents and exact zero padding implement the ragged M/N/K boundaries;
+the source kernel is not replaced with a whole-tensor matmul.
+
+```bash
+/path/to/m2m-env/bin/python scripts/capture_model_binding_demo.py --ragged --out out/ragged_model_capture
+python -m t2m shared-demo --kernel ragged-matmul --out out/shared_ragged_matmul --python /path/to/native-env/bin/python
+python -m t2m bind-model out/ragged_model_capture --bindings examples/model_ragged_binding.json \
+  --out out/merlin_ragged_model --python /path/to/native-env/bin/python \
+  --merlin-root /path/to/merlin --merlin-python /path/to/merlin-env/bin/python \
+  --rtol 1e-5 --atol 6e-6
+python -m t2m verify-bundle out/merlin_ragged_model
+```
+
+Tests compare the complete model, including learned weights and the scalar
+epilogue, against the unchanged captured PyTorch golden, then invoke Merlin's
+actual interface reader/runtime generator. The derived receipt and target
+execution boundaries are the same as for the exact-tile model above.
+
 ## Original MLP pair
 
 `scripts/capture_mlp_pair.py` captures model2MLIR's existing `mlp_basic` and

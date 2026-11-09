@@ -55,6 +55,9 @@ weights, manifests, runtime inputs, constants and PyTorch goldens, with parent c
 kept separate from changed-IR provenance. Native tests cover a real `triton_op` model and the
 original `mlp_basic` / `mlp_basic_triton` pair. Merlin's actual reader and C runtime generator
 accept both model interfaces; target/staged execution remains unqualified.
+The same checked model/package path now also covers ragged M/N/K GEMM;
+`shared-demo --kernel ragged-matmul` and `examples/model_ragged_binding.json`
+provide the reproducible CLI route.
 
 Permuted loads/stores, data-dependent `scf.if` memory merges and affine pointer-to-index
 recurrences and clipped affine tail masks now have native checks. Ragged M/N/K GEMM retains
