@@ -95,6 +95,8 @@ def _gather(source, buffer, base, index, mask, other, append, *, prefix=None):
     if (any(n <= 0 for n in shape) or index.type.get_shape() != shape or not isinstance(element, IntegerType)
             or element.width.data not in (32, 64) or base.type.get_element_type() != scalar):
         refuse("gather requires matching static shapes and signed i32/i64 indices")
+    if any(isinstance(n, str) for n in buffer.shape):
+        refuse("dynamic gather allocations require a runtime extent/coordinate adapter")
     extent = math.prod(buffer.shape)
     if not 0 < extent < 2**31:
         refuse("gather logical allocation needs a representable positive 32-bit index domain")

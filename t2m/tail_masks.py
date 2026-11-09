@@ -21,6 +21,9 @@ class TailExtent:
     value: object = field(compare=False, repr=False)
 
     def fits(self, offset, dimension):
+        if isinstance(dimension, Linear):
+            limit = self.limit if isinstance(self.limit, Linear) else Linear(self.limit)
+            return self.offset == offset and limit == dimension
         if isinstance(self.limit, Linear):
             # Limits recovered below contain guarded ABI symbols, never grid
             # coordinates/loop IVs. Their bounds therefore need no grid here.
@@ -44,7 +47,8 @@ class TailExtent:
         # zero-length standard slice offset separately. This is only a bounds
         # proof: complete-output partition proofs still require exact origins.
         limit = self.limit if isinstance(self.limit, Linear) else Linear(self.limit)
-        return (offset + self.offset.scale(-1) + limit).bounds(grid)[1] <= dimension
+        dimension = dimension if isinstance(dimension, Linear) else Linear(dimension)
+        return (offset + self.offset.scale(-1) + limit + dimension.scale(-1)).bounds(grid)[1] <= 0
 
 
 def maximum(size):

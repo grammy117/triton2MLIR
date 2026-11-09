@@ -21,6 +21,7 @@ from xdsl.ir.affine import AffineMap
 from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
+from .dynamic_abi import GridExtent, shape_contract, validate_dimensions
 from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
@@ -28,6 +29,7 @@ from .initialization import DefiniteWrites
 from .loop_domains import bounded_loop, require_signed_loop
 from .scans import expand_scans
 from .scalar_abi import RuntimeScalar, guard_scalar
+from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
 from .shared_gather import gather, structured_gather
 from .shared_indexing import (Linear, check_source_addresses, independent_tile, linear,
                               logical_coordinates, seed_recurrences)
@@ -75,19 +77,20 @@ def parse_shared(source):
 @dataclass(frozen=True)
 class TensorBuffer:
     name: str
-    shape: tuple[int, ...]
+    shape: tuple[int | str, ...]
     effect: str = "read"
     dtype: str = "f32"
 
     def __post_init__(self):
-        if not self.name.isidentifier() or not self.shape or any(type(n) is not int or n <= 0 for n in self.shape):
-            raise ValueError("tensor buffers require a name and positive static dimensions")
+        if not self.name.isidentifier() or not self.shape or any(
+                not (type(n) is int and n > 0 or isinstance(n, str) and n.isidentifier()) for n in self.shape):
+            raise ValueError("tensor buffers require a name and positive static or named runtime dimensions")
         if self.dtype not in DTYPES or self.effect not in ("read", "write", "readwrite"):
             raise ValueError("tensor buffers require a supported dtype and read/write/readwrite effect")
 
     @property
     def type(self):
-        return TensorType(DTYPES[self.dtype], self.shape)
+        return TensorType(DTYPES[self.dtype], [DYNAMIC_INDEX if isinstance(n, str) else n for n in self.shape])
 
     @property
     def strides(self):
@@ -103,7 +106,7 @@ class TensorABI:
     entry: str
     buffers: tuple[TensorBuffer, ...]
     scalar_constants: tuple[int, ...] = ()
-    grid: tuple[int, ...] = (1,)
+    grid: tuple[int | GridExtent, ...] = (1,)
     intent: str = ""
     runtime_scalars: tuple[RuntimeScalar, ...] = ()
 
@@ -113,7 +116,8 @@ class TensorABI:
         names = [b.name for b in (*self.buffers, *self.runtime_scalars)]
         if len(set(names)) != len(names) or not self.outputs:
             raise ValueError("tensor ABI requires unique names and at least one writable result")
-        if not 1 <= len(self.grid) <= 3 or any(type(n) is not int or not 0 < n < 2**31 for n in self.grid) or host_math.prod(self.grid) >= 2**63:
+        validate_dimensions(self)
+        if not 1 <= len(self.grid) <= 3 or any(type(n) is not int or not 0 < n < 2**31 for n in self.grid_bounds) or host_math.prod(self.grid_bounds) >= 2**63:
             raise ValueError("logical grid requires 1..3 positive i32 dimensions and an i64-size domain")
         if any(type(n) is not int for n in self.scalar_constants):
             raise ValueError("specialized scalar arguments must be integers")
@@ -121,6 +125,25 @@ class TensorABI:
         count = len(self.buffers) + len(self.scalar_constants) + len(positions)
         if len(set(positions)) != len(positions) or any(p >= count for p in positions):
             raise ValueError("runtime scalar source positions must be unique and inside the complete source signature")
+
+    @property
+    def dynamic(self):
+        return any(isinstance(g, GridExtent) for g in self.grid) or any(isinstance(n, str) for b in self.buffers for n in b.shape)
+
+    @property
+    def grid_bounds(self):
+        scalars = {s.name: s for s in self.runtime_scalars}
+        return tuple((scalars[g.dimension].bounds[1] + g.divisor - 1) // g.divisor
+                     if isinstance(g, GridExtent) else g for g in self.grid)
+
+    def dimension(self, value):
+        if not isinstance(value, str):
+            return value
+        scalar = next(s for s in self.runtime_scalars if s.name == value)
+        return Linear(parameters=((value, *scalar.bounds, 1),))
+
+    def runtime_shapes(self):
+        return shape_contract(self)
 
     def as_dict(self):
         schema = "t2m.shared-tensor-abi.v2" if any(b.effect == "write" for b in self.buffers) else "t2m.shared-tensor-abi.v1"
@@ -130,6 +153,9 @@ class TensorABI:
             fields["runtime_scalars"] = tuple(s.as_dict() for s in self.runtime_scalars)
         else:
             fields.pop("runtime_scalars")
+        if self.dynamic:
+            schema = "t2m.shared-tensor-abi.v5"
+            fields["grid"] = tuple(g.as_dict() if isinstance(g, GridExtent) else g for g in self.grid)
         return {"schema": schema, **fields}
 
     @property
@@ -152,20 +178,24 @@ class TensorABI:
     def from_dict(cls, value):
         fields = dict(value)
         schema = fields.pop("schema", "t2m.shared-tensor-abi.v1")
-        if schema not in ("t2m.shared-tensor-abi.v1", "t2m.shared-tensor-abi.v2", "t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4"):
+        if schema not in tuple("t2m.shared-tensor-abi.v" + str(i) for i in range(1, 6)):
             raise ValueError("unknown shared tensor ABI schema")
-        if schema not in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4") and fields.get("runtime_scalars"):
+        if schema not in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4", "t2m.shared-tensor-abi.v5") and fields.get("runtime_scalars"):
             raise ValueError("runtime scalar arguments require ABI v3")
-        if schema in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4") and not fields.get("runtime_scalars"):
+        if schema in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4", "t2m.shared-tensor-abi.v5") and not fields.get("runtime_scalars"):
             raise ValueError("ABI v3 requires declared runtime scalar arguments")
         fields["runtime_scalars"] = tuple(RuntimeScalar(**{**s, **({"bounds": tuple(s["bounds"])} if "bounds" in s else {})}) for s in fields.get("runtime_scalars", ()))
-        if (schema == "t2m.shared-tensor-abi.v4") != any(s.bounds is not None for s in fields["runtime_scalars"]):
+        if schema != "t2m.shared-tensor-abi.v5" and (schema == "t2m.shared-tensor-abi.v4") != any(s.bounds is not None for s in fields["runtime_scalars"]):
             raise ValueError("guarded runtime scalar bounds require explicit ABI v4")
         fields["buffers"] = tuple(TensorBuffer(**{**b, "shape": tuple(b["shape"])}) for b in fields["buffers"])
         for name in ("grid", "scalar_constants"):
             if name in fields:
                 fields[name] = tuple(fields[name])
-        return cls(**fields)
+        fields["grid"] = tuple(GridExtent(**g) if isinstance(g, dict) else g for g in fields.get("grid", (1,)))
+        result = cls(**fields)
+        if result.dynamic != (schema == "t2m.shared-tensor-abi.v5"):
+            raise ValueError("runtime tensor dimensions and grids require explicit ABI v5")
+        return result
 
 
 def _array(op, name):
@@ -331,14 +361,19 @@ def _functionalize(module, abi):
     function = next(op for op in module.ops if opcode(op) == "tt.func")
     outer = Block(arg_types=[b.type for b in abi.inputs])
     writable = list(abi.outputs)
-    parallel = host_math.prod(abi.grid) > 1
+    grid = abi.grid_bounds
+    parallel = host_math.prod(grid) > 1 or any(isinstance(g, GridExtent) for g in abi.grid)
     body = Block(arg_types=[IndexType(), *[b.type for b in writable]]) if parallel else outer
     mapping, buffers, descriptors, facts = {}, {}, {}, {}
     gather_descriptors = {}
     states = {b.name: arg for b, arg in zip(abi.inputs, outer.args, strict=True)}
+    for scalar in abi.runtime_scalars:
+        guard_scalar(scalar, states[scalar.name], outer, function.location)
+    dimensions = bind_dimensions(abi, states, outer, function.location)
+    launch = launch_sizes(abi, dimensions, outer, function.location) if abi.dynamic else None
     for buffer in abi.buffers:
         if buffer.effect == "write":
-            empty = tensor.EmptyOp([], buffer.type)
+            empty = tensor.EmptyOp([dimensions[n] for n in buffer.shape if isinstance(n, str)], buffer.type)
             outer.add_op(empty)
             states[buffer.name] = empty.tensor
     initial = [states[b.name] for b in writable]
@@ -353,7 +388,6 @@ def _functionalize(module, abi):
             buffers[arg] = value
         elif kind == "runtime":
             mapping[arg] = states[value.name]
-            guard_scalar(value, mapping[arg], outer, function.location)
             if value.bounds is not None:
                 facts[mapping[arg]] = Linear(parameters=((value.name, *value.bounds, 1),))
         else:
@@ -386,7 +420,7 @@ def _functionalize(module, abi):
                     raise ConversionError("structured descriptor is missing a dynamic operand", opcode=opcode(op))
                 value = mapping.get(value, value)
                 if coordinates:
-                    result.append(Coordinate(linear(value, facts, abi.grid), value))
+                    result.append(Coordinate(linear(value, facts, grid), value))
                     continue
                 number = _integer(value)
             if coordinates:
@@ -420,18 +454,19 @@ def _functionalize(module, abi):
         for off in offsets:
             total = total + off.form
         try:
-            forms = logical_coordinates(total, buffer.strides, abi.grid)
+            forms = logical_coordinates(total, buffer.strides, grid)
         except ConversionError:
             # Upstream sums per-axis *element* offsets (PtrState::
             # accumulateTargetOffset). A surplus masked column can cross the
             # row stride, so splitting that sum by quotient/remainder loses
             # the original axes. Recover aligned contributions individually.
             # Actual mask-dependent bounds are still checked at each access.
-            low, high = total.bounds(abi.grid)
+            low, high = total.bounds(grid)
             if not -(1 << 63) <= low <= high < 1 << 63:
                 raise ConversionError("logical address arithmetic may overflow")
             axes = axis_permutation(buffer, strides, [Linear()] * len(sizes),
-                                    [1] * len(sizes), abi.grid, physical_offsets=True)
+                                    [1] * len(sizes), grid, physical_offsets=True,
+                                    dimensions=tuple(abi.dimension(n) for n in buffer.shape))
             coordinates = [None] * len(sizes)
             for off, stride, axis in zip(offsets, strides, axes, strict=True):
                 stride = buffer.strides[axis]  # A size-one source axis may have stride zero.
@@ -477,7 +512,7 @@ def _functionalize(module, abi):
                     v = next(values, None)
                     if v is None:
                         raise ConversionError("structured mask is missing a dynamic operand", opcode=opcode(op))
-                    number = recover_extent(mapping.get(v, v), size, [off.form for off in offsets], facts, abi.grid)
+                    number = recover_extent(mapping.get(v, v), size, [off.form for off in offsets], facts, grid)
                 active.append(number)
             active = tuple(active)
             if next(values, None) is not None:
@@ -486,7 +521,8 @@ def _functionalize(module, abi):
             active = sizes
         if len(active) != len(sizes) or any(maximum(n) < 0 or maximum(n) > size for n, size in zip(active, sizes, strict=True)):
             raise ConversionError("mask must describe a bounded rectangular prefix", opcode=opcode(op))
-        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, abi.grid, physical_offsets=True)
+        axes = axis_permutation(buffer, strides, [off.form for off in offsets], active, grid, physical_offsets=True,
+                                dimensions=tuple(abi.dimension(n) for n in buffer.shape))
         # Empty accesses make no memory observation; keep their standard slice
         # coordinates within the logical tensor as well.
         if any(n == 0 for n in active):
@@ -498,8 +534,9 @@ def _functionalize(module, abi):
             bounded = []
             for off, dimension in zip(offsets, buffer.shape, strict=True):
                 value = off.value
-                if off.form.bounds(abi.grid)[1] > dimension:
-                    limit = append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
+                bound = abi.dimension(dimension)
+                if (off.form + (bound.scale(-1) if isinstance(bound, Linear) else Linear(-bound))).bounds(grid)[1] > 0:
+                    limit = dimensions[dimension] if isinstance(dimension, str) else append(arith.ConstantOp.from_int_and_width(dimension, IndexType()), op).result
                     value = append(arith.MinSIOp(value, limit), op).result
                 bounded.append(Coordinate(off.form, value))
             offsets = tuple(bounded)
@@ -613,7 +650,7 @@ def _functionalize(module, abi):
                 kept = [i for i in range(len(arguments) - 1) if i not in pointer_slots]
                 require_signed_loop(op)
                 limits = [mapping[v] for v in op.operands[:3]]
-                domain = bounded_loop([linear(v, facts, abi.grid).bounds(abi.grid) for v in limits],
+                domain = bounded_loop([linear(v, facts, grid).bounds(grid) for v in limits],
                                       width=getattr(getattr(arguments[0].type, "width", None), "data", 64))
                 lb, ub, step = domain.lower, domain.upper[1], domain.step
                 if not domain.exact and pointer_slots:
@@ -637,7 +674,7 @@ def _functionalize(module, abi):
                 iterations = (ub - lb + step - 1) // step
                 facts[nested.args[0]] = Linear(lb, loops=((loop_counter, 0, iterations - 1, step),))
                 final_facts, recurrences = seed_recurrences(op, [mapping.get(v) for v in arguments], mapping,
-                                                           facts, abi.grid, lb, ub, step, _integer, exact_iterations=domain.exact)
+                                                           facts, grid, lb, ub, step, _integer, exact_iterations=domain.exact)
                 source_loops[-1]["index_recurrences"] = recurrences
                 identity = loop_counter
                 loop_counter += 1
@@ -697,12 +734,26 @@ def _functionalize(module, abi):
                 mapping[op.results[0]] = append(tensor.EmptyOp([], op.results[0].type), op).tensor
             elif name in ("tt.get_program_id", "tt.get_num_programs"):
                 axis = op.properties["axis"].value.data
-                size = abi.grid[axis] if axis < len(abi.grid) else 1
-                if name == "tt.get_num_programs" or size == 1:
+                size = grid[axis] if axis < len(grid) else 1
+                if launch is not None and name == "tt.get_num_programs" and axis < len(launch):
+                    value = append(arith.IndexCastOp(launch[axis], op.results[0].type), op).result
+                    if isinstance(abi.grid[axis], GridExtent):
+                        key = "$grid:" + str(axis)
+                        states[key] = value
+                        scalar = next(s for s in abi.runtime_scalars if s.name == abi.grid[axis].dimension)
+                        low = (scalar.bounds[0] + abi.grid[axis].divisor - 1) // abi.grid[axis].divisor
+                        facts[value] = Linear(parameters=((key, low, size, 1),))
+                    else:
+                        facts[value] = Linear(size)
+                elif name == "tt.get_num_programs" or size == 1:
                     value = append(arith.ConstantOp(IntegerAttr(size if name == "tt.get_num_programs" else 0, op.results[0].type)), op).result
+                elif launch is not None:
+                    value = program_id(axis, launch_iv, launch, lambda x: append(x, op))
+                    value = append(arith.IndexCastOp(value, op.results[0].type), op).result
+                    facts[value] = Linear(0, tuple(int(i == axis) for i in range(3)))
                 else:
                     value = launch_iv
-                    divisor = host_math.prod(abi.grid[axis + 1:])
+                    divisor = host_math.prod(grid[axis + 1:])
                     if divisor != 1:
                         c = append(arith.ConstantOp.from_int_and_width(divisor, IndexType()), op).result
                         value = append(arith.DivUIOp(value, c), op).result
@@ -780,7 +831,7 @@ def _functionalize(module, abi):
                     raise ConversionError("source stores into a declared read-only buffer", opcode=name)
                 if parallel:
                     footprint = (tuple(off.form for off in offsets), physical)
-                    independent_tile(footprint[0], tuple(maximum(n) for n in physical), abi.grid)
+                    independent_tile(footprint[0], tuple(maximum(n) for n in physical), grid)
                     if buffer.name in writes and writes[buffer.name][0] != footprint:
                         raise ConversionError("parallel local stores need one established owned tile per output")
                     writes[buffer.name] = (footprint, offsets, op)
@@ -814,14 +865,19 @@ def _functionalize(module, abi):
             if form.loops:
                 raise ConversionError("parallel publication needs a final-state proof for source-loop-dependent extents")
             value = index_constant(form.constant, source)
-            for axis, coefficient in enumerate(form.programs[:len(abi.grid)]):
-                if not coefficient or abi.grid[axis] == 1:
+            for axis, coefficient in enumerate(form.programs[:len(grid)]):
+                if not coefficient or grid[axis] == 1:
                     continue
-                divisor = host_math.prod(abi.grid[axis + 1:])
+                if launch is not None:
+                    pid = program_id(axis, launch_iv, launch, lambda x: append(x, source))
+                    term = append(arith.MuliOp(pid, index_constant(coefficient, source)), source).result
+                    value = append(arith.AddiOp(value, term), source).result
+                    continue
+                divisor = host_math.prod(grid[axis + 1:])
                 pid = launch_iv
                 if divisor != 1:
                     pid = append(arith.DivUIOp(pid, index_constant(divisor, source)), source).result
-                pid = append(arith.RemUIOp(pid, index_constant(abi.grid[axis], source)), source).result
+                pid = append(arith.RemUIOp(pid, index_constant(grid[axis], source)), source).result
                 term = append(arith.MuliOp(pid, index_constant(coefficient, source)), source).result
                 value = append(arith.AddiOp(value, term), source).result
             for name, _, _, coefficient in form.parameters:
@@ -844,8 +900,10 @@ def _functionalize(module, abi):
             for form, size, dimension in zip(forms, active, buffer.shape, strict=True):
                 raw = owned_index(form, source)
                 value = raw
-                if form.bounds(abi.grid)[1] > dimension:
-                    value = append(arith.MinSIOp(value, index_constant(dimension, source)), source).result
+                bound = abi.dimension(dimension)
+                if (form + (bound.scale(-1) if isinstance(bound, Linear) else Linear(-bound))).bounds(grid)[1] > 0:
+                    limit = dimensions[dimension] if isinstance(dimension, str) else index_constant(dimension, source)
+                    value = append(arith.MinSIOp(value, limit), source).result
                 offsets.append(Coordinate(form, value))
                 if isinstance(size, TailExtent):
                     limit = owned_index(size.limit, source) if isinstance(size.limit, Linear) else index_constant(size.limit, source)
@@ -859,12 +917,14 @@ def _functionalize(module, abi):
             tile = append(slice_op(states[buffer.name], offsets, active), source).result
             updates.add_op(slice_op(tile, offsets, active, destination=shared[buffer.name], parallel_insert=True))
         body.add_op(InParallelOp.build(regions=[Region(updates)]))
-        forall = ForallOp.build(operands=[[], [], [], initial], result_types=[[v.type for v in initial]],
+        dynamic_launch = any(isinstance(g, GridExtent) for g in abi.grid)
+        upper = shape_product(launch, lambda x: shape_emit(outer, x, function.location, "logical-grid-product")) if dynamic_launch else None
+        forall = ForallOp.build(operands=[[], [upper] if dynamic_launch else [], [], initial], result_types=[[v.type for v in initial]],
                   properties={"staticLowerBound": DenseArrayBase.from_list(builtin.i64, [0]),
-                              "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [host_math.prod(abi.grid)]),
+                              "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [DYNAMIC_INDEX if dynamic_launch else host_math.prod(grid)]),
                               "staticStep": DenseArrayBase.from_list(builtin.i64, [1])}, regions=[Region(body)])
         forall.attributes.update({"prov.family": StringAttr("grid"), "prov.op": StringAttr("logical_launch"),
-                                  "prov.logical_grid": DenseArrayBase.from_list(builtin.i64, abi.grid)})
+                                  "prov.logical_grid_bounds" if abi.dynamic else "prov.logical_grid": DenseArrayBase.from_list(builtin.i64, grid)})
         outer.add_ops([forall, func.ReturnOp(*forall.results)])
     evidence = initialization.finish(source_id=next(iter(_source_ids(function.location)), None))
     output = func.FuncOp(abi.entry, ([b.type for b in abi.inputs], [b.type for b in writable]), Region(outer))
@@ -872,7 +932,7 @@ def _functionalize(module, abi):
                               "prov.intent": StringAttr(abi.intent),
                               "prov.intent_origin": StringAttr("caller-description"),
                               "prov.numeric_profile": StringAttr("upstream-standard-expansion")})
-    output.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
+    output.attributes["prov.logical_grid_bounds" if abi.dynamic else "prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, grid)
     output.attributes["prov.source_loops"] = StringAttr(json.dumps(source_loops, sort_keys=True))
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
@@ -1027,7 +1087,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
              "memory": {"bounds": "checked-affine-domain-clipped-rectangular-accesses", "ordering": "functional-buffer-versions",
                         "index_overflow": "checked-source-address-widths-before-index-promotion",
                         "aliasing": "independent-storage-ABI-precondition",
-                        "grid": "unmapped-logical-forall-with-owned-tiles" if host_math.prod(abi.grid) > 1 else "single-logical-program"},
+                        "grid": "unmapped-logical-forall-with-owned-tiles" if host_math.prod(abi.grid_bounds) > 1 or any(isinstance(g, GridExtent) for g in abi.grid) else "single-logical-program"},
              "numeric_equivalence": "requires-qualification-against-source",
              "native_verification": "not-performed", "consumer_execution": "not-performed",
              "abi_difference": "readwrite buffers are incoming tensors; write-only outputs omit inputs only with complete initialization checks"}

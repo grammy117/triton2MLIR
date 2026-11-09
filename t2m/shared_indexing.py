@@ -6,6 +6,7 @@ from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorT
 
 from .diagnostics import ConversionError
 from .loop_domains import bounded_loop, require_signed_loop
+from .dynamic_abi import GridExtent
 
 
 @dataclass(frozen=True)
@@ -253,8 +254,12 @@ def check_source_addresses(module, abi):
         kind = name(op)
         if kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data
-            size = abi.grid[axis] if axis < len(abi.grid) else 1
+            size = abi.grid_bounds[axis] if axis < len(abi.grid) else 1
             low, high = (0, size - 1) if kind == "tt.get_program_id" else (size, size)
+            if kind == "tt.get_num_programs" and axis < len(abi.grid) and isinstance(abi.grid[axis], GridExtent):
+                extent = abi.grid[axis]
+                scalar = next(s for s in abi.runtime_scalars if s.name == extent.dimension)
+                low = (scalar.bounds[0] + extent.divisor - 1) // extent.divisor
         elif kind == "tt.make_range":
             low, high = op.properties["start"].value.data, op.properties["end"].value.data - 1
         elif kind == "tt.load":

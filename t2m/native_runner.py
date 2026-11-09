@@ -3,12 +3,14 @@
 import ctypes
 from importlib.metadata import version
 import json
+import math
 from pathlib import Path
 import resource
 import sys
 
 import numpy as np
 from torch_mlir import execution_engine, ir, passmanager, runtime
+from runtime_shapes import resolve_shapes
 
 DTYPES = {"f32": np.float32, "f64": np.float64, "i8": np.int8,
           "i16": np.int16, "i32": np.int32, "i64": np.int64, "i1": np.bool_}
@@ -32,7 +34,9 @@ def main(work):
         signature = ir.FunctionType(ir.TypeAttr(function.attributes["function_type"]).value)
         if len(arrays) != len(signature.inputs):
             raise ValueError("native input count differs from function ABI")
-        for array, type_ in zip(arrays, signature.inputs, strict=True):
+        contract = json.loads((work / "shape-abi.json").read_text()) if (work / "shape-abi.json").exists() else None
+        resolved = resolve_shapes(contract, arrays) if contract is not None else None
+        for i, (array, type_) in enumerate(zip(arrays, signature.inputs, strict=True)):
             if isinstance(type_, ir.RankedTensorType):
                 tensor = ir.RankedTensorType(type_)
                 shape, dtype = tuple(tensor.shape), DTYPES[str(tensor.element_type)]
@@ -40,12 +44,28 @@ def main(work):
                 shape, dtype = (), DTYPES[str(type_)]
             else:
                 raise ValueError("native input has an unsupported scalar/tensor ABI type")
-            if array.shape != shape or array.dtype != dtype:
+            if contract is not None:
+                declared = contract["inputs"][i]
+                symbolic = declared["shape"]
+                if len(symbolic) != len(shape) or any((n < 0) != isinstance(d, str) or n >= 0 and n != d for n, d in zip(shape, symbolic)):
+                    raise ValueError("native shape contract differs from its typed input signature")
+            if (len(array.shape) != len(shape) or any(n >= 0 and n != actual for n, actual in zip(shape, array.shape))
+                    or array.dtype != dtype or contract is None and any(n < 0 for n in shape)):
                 raise ValueError("native input shape/dtype differs from the tensor ABI")
-        outputs = [np.zeros(ir.RankedTensorType(t).shape, dtype=DTYPES[str(ir.RankedTensorType(t).element_type)])
-                   for t in signature.results]
-        if sum(x.nbytes for x in outputs) > 64 * 1024 * 1024:
+        shapes = tuple(tuple(ir.RankedTensorType(t).shape) for t in signature.results)
+        if contract is not None:
+            if len(contract["outputs"]) != len(shapes) or len(resolved) != len(shapes):
+                raise ValueError("native shape contract differs from its output count")
+            for shape, declared in zip(shapes, contract["outputs"], strict=True):
+                if len(shape) != len(declared["shape"]) or any((n < 0) != isinstance(d, str) or n >= 0 and n != d for n, d in zip(shape, declared["shape"])):
+                    raise ValueError("native shape contract differs from its typed output signature")
+            shapes = resolved
+        if any(n < 0 for shape in shapes for n in shape):
+            raise ValueError("dynamic results require explicit runtime shape bindings")
+        dtypes = [DTYPES[str(ir.RankedTensorType(t).element_type)] for t in signature.results]
+        if sum(math.prod(shape) * np.dtype(dtype).itemsize for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
             raise ValueError("native results exceed the 64MiB budget")
+        outputs = [np.zeros(shape, dtype=dtype) for shape, dtype in zip(shapes, dtypes, strict=True)]
         name = ir.StringAttr(function.attributes["sym_name"]).value
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         pipelines = (

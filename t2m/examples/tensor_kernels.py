@@ -76,6 +76,13 @@ def runtime_conditional_store(x, iterations, flag, out, N: tl.constexpr, B: tl.c
 
 
 @triton.jit
+def dynamic_count(x, n, out, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < n, other=0)
+    tl.store(out + lane, value + tl.num_programs(0), lane < n)
+
+
+@triton.jit
 def runtime_prefix(x, n, out, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=-7.0)

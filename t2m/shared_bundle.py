@@ -12,6 +12,7 @@ from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
 from .memory_contract import BUFFER_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
+from .runtime_shapes import resolve_shapes
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
@@ -46,7 +47,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     arrays, references = tuple(np.asarray(a) for a in inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
-    actual, execution = execute_native(mlir, arrays, work, python=python)
+    actual, execution = execute_native(mlir, arrays, work, python=python, shape_abi=result.spec.runtime_shapes())
     for computed, golden in zip(actual, references, strict=True):
         if computed.shape != golden.shape or computed.dtype != golden.dtype:
             raise ValueError("reference shapes/dtypes must exactly match results")
@@ -116,8 +117,9 @@ def verify_shared_bundle(out):
     with np.load(out / "inputs.npz", allow_pickle=False) as data:
         if set(data.files) != {f"in{i}" for i in expected.values()}:
             raise ValueError("incomplete packaged inputs")
+        result_shapes = resolve_shapes(spec.runtime_shapes(), [data[f"in{i}"] for i in range(len(spec.inputs))]) if spec.dynamic else tuple(b.shape for b in spec.outputs)
         for i, buffer in enumerate(spec.inputs):
-            if tuple(data[f"in{i}"].shape) != buffer.shape:
+            if not spec.dynamic and tuple(data[f"in{i}"].shape) != buffer.shape:
                 raise ValueError("packaged input shape differs from the ABI")
             if buffer in spec.runtime_scalars:
                 dtype = {"f32": np.float32, "f64": np.float64, "i1": np.bool_, "i8": np.int8,
@@ -126,13 +128,13 @@ def verify_shared_bundle(out):
                     raise ValueError("packaged runtime scalar dtype differs from the ABI")
     results = spec.outputs
     primary = np.load(out / "golden.npy", allow_pickle=False)
-    if tuple(primary.shape) != results[0].shape:
+    if tuple(primary.shape) != result_shapes[0]:
         raise ValueError("primary golden shape differs from the ABI")
     with np.load(out / "extra.npz", allow_pickle=False) as extra:
         if set(extra.files) != {f"out{i}" for i in range(1, len(results))}:
             raise ValueError("incomplete additional references")
         for i, buffer in enumerate(results[1:], 1):
-            if tuple(extra[f"out{i}"].shape) != buffer.shape:
+            if tuple(extra[f"out{i}"].shape) != result_shapes[i]:
                 raise ValueError("additional reference shape differs from the ABI")
     if receipt["materialized_abi"] != {"complete": True, "inputs": len(spec.inputs), "outputs": len(results)}:
         raise ValueError("receipt ABI differs from the resolved spec")

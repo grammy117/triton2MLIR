@@ -14,7 +14,7 @@ import sys
 import numpy as np
 
 
-def execute_native(mlir_text, inputs, work, *, python=None):
+def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None):
     work = Path(work)
     arrays = [np.asarray(x) for x in inputs]
     if sum(x.nbytes for x in arrays) > 64 * 1024 * 1024:
@@ -23,6 +23,8 @@ def execute_native(mlir_text, inputs, work, *, python=None):
         raise ValueError("native execution requires independently allocated inputs")
     work.mkdir(parents=True, exist_ok=False)
     (work / "model.mlir").write_text(mlir_text)
+    if shape_abi is not None:
+        (work / "shape-abi.json").write_text(json.dumps(shape_abi, sort_keys=True) + "\n")
     np.savez(work / "inputs.npz", **{f"in{i}": x for i, x in enumerate(arrays)})
     runner = Path(__file__).with_name("native_runner.py")
     try:

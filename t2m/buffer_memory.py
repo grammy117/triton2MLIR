@@ -14,6 +14,8 @@ from xdsl.ir import Block, Dialect, Region
 from .diagnostics import ConversionError
 from .ir import context
 from .scalar_abi import guard_scalar
+from .dynamic_abi import GridExtent
+from .shape_lowering import bind_dimensions, launch_sizes, product, program_id
 from .shared_tensor import SharedParser, opcode
 from .standard_bufferization import MaterializeInDestinationOp, ToTensorOp
 from .standard_memref import memref_dialect
@@ -48,6 +50,9 @@ def functionalize_memory(module, abi):
         raise ConversionError("memory continuation differs from the declared source/launcher ABI")
     entry = Block(arg_types=[value.type for value in abi.inputs])
     inputs = {value.name: arg for value, arg in zip(abi.inputs, entry.args, strict=True)}
+    for scalar in abi.runtime_scalars:
+        guard_scalar(scalar, inputs[scalar.name], entry, original.location)
+    dimensions = bind_dimensions(abi, inputs, entry, original.location)
 
     def append(block, op, *, role="functional-memory-boundary"):
         op.attributes.update({"prov.family": StringAttr("abi"), "prov.op": StringAttr(role)})
@@ -65,20 +70,20 @@ def functionalize_memory(module, abi):
             if source.type != declared.type:
                 raise ConversionError("runtime scalar type changed during memory continuation")
             value = inputs[declared.name]
-            guard_scalar(declared, value, entry, original.location)
             values.append(value)
             continue
         expected = UnrankedMemRefType.from_type(declared.type.element_type)
         if source.type != expected:
             raise ConversionError("raw memory argument type differs from the logical buffer ABI")
-        type_ = MemRefType(declared.type.element_type, declared.shape)
+        type_ = MemRefType(declared.type.element_type, declared.type.get_shape())
         incoming = None
         if declared.effect != "write":
             incoming = append(entry, bufferization.ToBufferOp.build(operands=[inputs[declared.name]],
                 result_types=[type_], properties={"read_only": UnitAttr()})).memref
         value = incoming
         if declared.effect != "read":
-            value = append(entry, memref.AllocOp.build(operands=[[], []], result_types=[type_]), role="owned-output-state").memref
+            dynamic = [dimensions[n] for n in declared.shape if isinstance(n, str)]
+            value = append(entry, memref.AllocOp.build(operands=[dynamic, []], result_types=[type_]), role="owned-output-state").memref
             if incoming is not None:
                 append(entry, memref.CopyOp(incoming, value), role="preserve-incoming-output-state")
             states[declared.name] = value
@@ -89,10 +94,22 @@ def functionalize_memory(module, abi):
                 properties={"reassociation": reassociation}), role="linear-raw-pointer-view").result
         values.append(append(entry, memref.CastOp.get(value, expected), role="bind-upstream-raw-buffer").dest)
     body = Block(arg_types=[IndexType()])
-    counts = (*abi.grid, *((1,) * (3 - len(abi.grid))))
+    launch = launch_sizes(abi, dimensions, entry, original.location) if abi.dynamic else None
+    counts = (*abi.grid_bounds, *((1,) * (3 - len(abi.grid))))
+    if launch is not None:
+        one = append(entry, arith.ConstantOp.from_int_and_width(1, IndexType())).result
+        for value in (*launch, *((one,) * (3 - len(launch)))):
+            values.append(append(body, arith.IndexCastOp(value, builtin.i32), role="logical-program-count").result)
+        for axis in range(3):
+            value = program_id(axis, body.args[0], launch, lambda op: append(body, op))
+            values.append(append(body, arith.IndexCastOp(value, builtin.i32), role="logical-program-id").result)
     for count in counts:
+        if launch is not None:
+            break
         values.append(append(body, arith.ConstantOp.from_int_and_width(count, builtin.i32), role="logical-program-count").result)
     for axis, count in enumerate(counts):
+        if launch is not None:
+            break
         pid = body.args[0]
         divisor = math.prod(counts[axis + 1:])
         if divisor != 1:
@@ -108,16 +125,18 @@ def functionalize_memory(module, abi):
         if not isinstance(op, func.ReturnOp):
             body.add_op(op.clone(value_mapper=mapper))
     body.add_op(InParallelOp.build(regions=[Region(Block())]))
-    append(entry, ForallOp.build(operands=[[], [], [], []], result_types=[[]], regions=[Region(body)], properties={
+    dynamic_launch = any(isinstance(g, GridExtent) for g in abi.grid)
+    upper = product(launch, lambda op: append(entry, op)) if dynamic_launch else None
+    append(entry, ForallOp.build(operands=[[], [upper] if dynamic_launch else [], [], []], result_types=[[]], regions=[Region(body)], properties={
         "staticLowerBound": DenseArrayBase.from_list(builtin.i64, [0]),
-        "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [math.prod(abi.grid)]),
+        "staticUpperBound": DenseArrayBase.from_list(builtin.i64, [builtin.DYNAMIC_INDEX if dynamic_launch else math.prod(abi.grid_bounds)]),
         "staticStep": DenseArrayBase.from_list(builtin.i64, [1])}), role="unmapped-logical-launch")
     outputs = [append(entry, ToTensorOp.build(operands=[states[value.name]], result_types=[value.type],
                 properties={"restrict": UnitAttr(), "writable": UnitAttr()}), role="functional-output-state").tensor
                for value in abi.outputs]
     entry.add_op(func.ReturnOp(*outputs))
     function = func.FuncOp(abi.entry, ([value.type for value in abi.inputs], [value.type for value in abi.outputs]), Region(entry))
-    function.attributes["prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid)
+    function.attributes["prov.logical_grid_bounds" if abi.dynamic else "prov.logical_grid"] = DenseArrayBase.from_list(builtin.i64, abi.grid_bounds)
     result = ModuleOp([function])
     result.attributes.update({"prov.level": StringAttr("functional-tensor-with-standard-memory"),
                               "prov.frontend": StringAttr("triton2mlir.shared")})

@@ -2,19 +2,23 @@
 
 from .diagnostics import ConversionError
 from .tail_masks import TailExtent, maximum
+from .shared_indexing import Linear
 
 
-def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False):
+def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None):
     rank = len(buffer.shape)
     if len(strides) != rank or len(offsets) != rank:
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
     empty = not all(maximum(n) for n in active)
+    dimensions = buffer.shape if dimensions is None else dimensions
 
     def matches(source, destination):
         low, high = offsets[destination if physical_offsets else source].bounds(grid)
         size = active[source]
-        bounded = size.fits_access(offsets[destination if physical_offsets else source], buffer.shape[destination], grid) \
-            if isinstance(size, TailExtent) else high + size <= buffer.shape[destination]
+        offset, dimension = offsets[destination if physical_offsets else source], dimensions[destination]
+        bounded = size.fits_access(offset, dimension, grid) if isinstance(size, TailExtent) else (
+            (offset + Linear(size) + dimension.scale(-1)).bounds(grid)[1] <= 0 if isinstance(dimension, Linear)
+            else high + size <= dimension)
         matched_stride = strides[source] == buffer.strides[destination] or strides[source] == 0 and maximum(size) <= 1
         return matched_stride and (empty or low >= 0 and bounded)
 

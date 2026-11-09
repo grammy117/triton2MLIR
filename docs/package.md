@@ -54,6 +54,12 @@ unchanged; the difference is source provenance and normalization evidence.
 
 ## Shared buffer profile (`t2m.capture-receipt.v2`)
 
+ABI v5 adds [named runtime dimensions and logical launch expressions](dynamic_shapes.md).
+The actual tensor/result allocation extents are dynamic; they are distinct from
+ABI v4's static capacities and changing prefixes. Native execution receives an
+explicit shape-allocation contract derived from `spec.json`. Static packages
+keep their existing ABI and artifact conventions.
+
 `--memory-profile buffer` selects `shared-functional-buffer`, alongside the
 default `shared-functional-tensor`. The public tensor/scalar ABI, references and
 model binding stay the same. The payload additionally contains standard

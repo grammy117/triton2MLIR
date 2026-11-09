@@ -1,10 +1,10 @@
-"""Missing xDSL bindings for upstream standard ops, restricted to our static 1-D use.
+"""Missing xDSL bindings for upstream standard parallel tensor operations.
 
 These spell existing SCF/tensor operations, not a new t2m dialect. The full generic
 assembly is exported so all provenance survives custom-printer differences.
 """
 
-from xdsl.dialects.builtin import DenseArrayBase, IndexType, TensorType, i64
+from xdsl.dialects.builtin import DYNAMIC_INDEX, DenseArrayBase, IndexType, TensorType, i64
 from xdsl.ir import Block, Region
 from xdsl.irdl import (IRDLOperation, irdl_op_definition, var_operand_def, operand_def,
                        var_result_def, region_def, prop_def, traits_def, AttrSizedOperandSegments)
@@ -48,16 +48,19 @@ class ForallOp(IRDLOperation):
     irdl_options = (AttrSizedOperandSegments(as_property=True),)
 
     def verify_(self):
-        if self.dynamicLowerBound or self.dynamicUpperBound or self.dynamicStep:
-            raise VerifyException("MVP forall binding supports static bounds only")
-        if (tuple(self.staticLowerBound.iter_values()) != (0,)
-                or tuple(self.staticStep.iter_values()) != (1,)
-                or len(self.staticUpperBound) != 1 or next(self.staticUpperBound.iter_values()) <= 0):
-            raise VerifyException("MVP forall requires one positive zero-based unit-step domain")
+        rank = len(self.staticLowerBound)
+        if not rank or len(self.staticUpperBound) != rank or len(self.staticStep) != rank:
+            raise VerifyException("forall bounds and steps must have matching nonempty ranks")
+        for static, dynamic in ((self.staticLowerBound, self.dynamicLowerBound),
+                                (self.staticUpperBound, self.dynamicUpperBound), (self.staticStep, self.dynamicStep)):
+            if sum(n == DYNAMIC_INDEX for n in static.iter_values()) != len(dynamic):
+                raise VerifyException("forall static/dynamic bound counts differ")
+        if any(n != DYNAMIC_INDEX and n <= 0 for n in self.staticStep.iter_values()):
+            raise VerifyException("forall static steps must be positive")
         types = tuple(value.type for value in self.outputs)
         if tuple(value.type for value in self.results) != types:
             raise VerifyException("forall results must match shared outputs")
-        if tuple(arg.type for arg in self.body.block.args) != (IndexType(), *types):
+        if tuple(arg.type for arg in self.body.block.args) != (IndexType(),) * rank + types:
             raise VerifyException("forall block arguments must be IV then shared outputs")
         if not isinstance(self.body.block.last_op, InParallelOp):
             raise VerifyException("forall must end in scf.forall.in_parallel")
