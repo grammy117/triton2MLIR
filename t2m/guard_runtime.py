@@ -9,9 +9,9 @@ from .guarded_memory import MAP_TYPE, argument_type, internal_arguments
 from .memory_contract import guard_layout
 
 
-def allocate(abi, dimensions, entry, body, append):
+def allocate(abi, dimensions, entry, body, append, *, atomics=False):
     values, completed = {}, {}
-    layout = guard_layout(abi.as_dict())
+    layout = guard_layout(abi.as_dict(), atomics=atomics)
     def constant(n, type_=IndexType()):
         return append(entry, arith.ConstantOp.from_int_and_width(n, type_)).result
     one = constant(1)

@@ -33,7 +33,7 @@ def demo(out, *, size=1024, block=256, operation="add"):
             "numerical_check": "passed", "merlin_staged_execution": "not-certified"}
 
 
-def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured"):
+def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary"):
     from .examples import tensor_kernels as kernels
     from .frontend import capture_ttir
     from .shared_tensor import TensorABI, TensorBuffer, convert_shared
@@ -121,6 +121,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3)))
         example_dimensions = {"n": 23, "tiles": 2}
         buffer_effects, buffer_dtypes = {"out": "write"}, {"x": "i32", "out": "i32"}
+    elif kernel == "atomic-rmw":
+        from .examples.atomic_kernels import indexed_atomic
+        fn, constants = indexed_atomic, {"B": 8, "OP": "add", "SCALAR": False, "MASK": True, "FRESH": False,
+                                         "SEM": "relaxed", "SCOPE": "gpu"}
+        shapes, grid = [("n",), ("n",), ("m",), ("n",)], (GridExtent("n", 8),)
+        runtime_scalars = (RuntimeScalar("n", "i32", 4, bounds=(0, 31)), RuntimeScalar("m", "i32", 5, bounds=(0, 37)))
+        example_dimensions = {"n": 13, "m": 17}
+        buffer_effects = {"state": "readwrite", "old": "write"}
+        buffer_dtypes = {name: "i32" for name in ("x", "index", "state", "old")}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("iterations", "i32", 1, bounds=(-2, 5)),)
@@ -156,6 +165,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
+    elif kernel == "atomic-rmw":
+        names = ["x", "index", "state", "old"]
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
     output_effect = "write" if kernel in ("ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "online-attention", "dynamic-count", "dynamic-matmul", "dynamic-gather") else "readwrite"
@@ -166,11 +177,21 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     source.write_text(capture_ttir(fn, {**{b.name: "*fp32" if b.dtype == "f32" else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants))
-    result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy)
+    result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
     additional = []
-    if kernel in ("matrix-add", "tiled-add"):
+    if kernel == "atomic-rmw":
+        n, m = (example_dimensions[name] for name in ("n", "m"))
+        values, index, state = np.arange(n, dtype=np.int32) - 5, np.arange(n, dtype=np.int32), np.arange(m, dtype=np.int32) + 50
+        active = np.arange(n) % 3 != 1
+        index[~active] = -1000
+        arrays = [values, index, state, np.asarray(n, np.int32), np.asarray(m, np.int32)]
+        golden, old = state.copy(), np.zeros(n, np.int32)
+        old[active] = state[index[active]]
+        golden[index[active]] += values[active]
+        additional = [old]
+    elif kernel in ("matrix-add", "tiled-add"):
         golden = arrays[0] + arrays[1]
     elif kernel == "indirect-store":
         arrays[1] = np.array([17, 5, 11, -99, 3, 8, 7, 16, 0, 14, 12, -1, 6], dtype=np.int32)
@@ -314,6 +335,7 @@ def main(argv=None):
     tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     tensor.add_argument("--address-policy", choices=("structured", "source-words"), default="structured",
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
+    tensor.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
@@ -321,10 +343,11 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
+    sd.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
     coverage.add_argument("corpus", type=Path)
@@ -340,6 +363,7 @@ def main(argv=None):
     bind.add_argument("--optimizer", type=Path)
     bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
+    bind.add_argument("--effect-profile", choices=("ordinary", "atomics"), default="ordinary")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)
@@ -375,7 +399,7 @@ def main(argv=None):
             summary = demo(args.out, size=args.size, block=args.block, operation=args.operation)
         elif args.command == "shared-demo":
             summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python,
-                                  memory_profile=args.memory_profile, address_policy=args.address_policy)
+                                  memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile)
         elif args.command == "shared-coverage":
             from .coverage import qualify_corpus
             report = qualify_corpus(args.corpus, args.out, optimizer=args.optimizer, stage=args.stage,
@@ -402,7 +426,8 @@ def main(argv=None):
                 implementation = convert_shared(args.bindings.parent / item["ttir"], TensorABI.from_dict(abi),
                                                 work / f"kernel-{i}", optimizer=args.optimizer,
                                                 memory_profile=item.get("memory_profile", args.memory_profile),
-                                                address_policy=item.get("address_policy", args.address_policy))
+                                                address_policy=item.get("address_policy", args.address_policy),
+                                                effect_profile=item.get("effect_profile", args.effect_profile))
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
                                                results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
@@ -456,7 +481,7 @@ def main(argv=None):
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
             result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer,
-                                    memory_profile=args.memory_profile, address_policy=args.address_policy)
+                                    memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile)
             if args.inputs:
                 with np.load(args.inputs, allow_pickle=False) as saved:
                     if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:

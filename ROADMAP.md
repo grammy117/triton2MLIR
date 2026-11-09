@@ -21,6 +21,10 @@ see [source-word memory](docs/source_words.md).
 Unsigned i32/i64 high products and Triton's integer Philox now also execute
 through Merlin, preserving source word arithmetic and runtime seed/counter
 inputs in standard MLIR; see [the numeric contract](docs/integer_products.md).
+[Integer RMW atomics](docs/atomic_memory.md) now retain collisions, old values,
+masks and source order/scope through actual Merlin execution under an explicit
+private-invocation profile. CAS, broader effects and tuple model-reference
+capture remain separate completion requirements.
 
 ## The product contract
 

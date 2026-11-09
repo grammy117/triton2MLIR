@@ -56,7 +56,8 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("memory evidence differs from source provenance: " + name)
     stage = json.loads(artifacts["memory-stage.json"])
     admission = json.loads(artifacts["memory-admission.json"]) if profile in GUARDED_PROFILES else None
-    version2 = admission is not None and admission.get("schema") == "t2m.memory-admission.v2"
+    version3 = admission is not None and admission.get("schema") == "t2m.memory-admission.v3"
+    version2 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v2", "t2m.memory-admission.v3")
     if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != ("memory-effects" if version2 else "memory-ir")
             or stage.get("stage_completed") is not True
             or stage.get("artifacts", {}).get("source.ttir") != record(artifacts["memory-input.mlir"])
@@ -66,31 +67,40 @@ def validate_memory_evidence(trace, artifacts):
         spec = json.loads(json.dumps(trace.get("spec")))
         if not isinstance(spec, dict) or not isinstance(spec.get("buffers"), list):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
-        layout = guard_layout(spec) if version2 else {"guard_storage_bytes_per_output_element": 16}
-        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2")
+        layout = guard_layout(spec, atomics=version3) if version2 else {"guard_storage_bytes_per_output_element": 16}
+        from .guard_protocol import ATOMIC, ORDINARY
+        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2", "t2m.memory-admission.v3")
                 or admission.get("strategy") != "runtime-guarded-private-output-state"
                 or admission.get("spec") != spec or admission.get("internal_arguments") != guarded_arguments(spec)
                 or admission.get("guarded_input_sha256") != record(artifacts["memory-input.mlir"])["sha256"]
                 or admission.get("continuation_output_sha256") != record(artifacts["memory-stage.mlir"])["sha256"]
                 or any(admission.get(key) != value for key, value in layout.items())
-                or version2 and admission.get("ownership_protocol") != "sticky-complemented-program-fragments"
+                or version2 and admission.get("ownership_protocol") != (ATOMIC if version3 else ORDINARY).name
                 or admission.get("writable_reads") != ("shared-readers-or-single-writer-program" if version2 else "refused")
                 or admission.get("fresh_initialization") != "post-grid-complete-write-coverage"):
             raise ValueError("guarded memory admission does not bind its source/ABI/continuation")
         buffers = {b["name"]: b for b in spec["buffers"]}
-        inventory = {r["id"] for r in trace.get("normalized_operations", trace.get("source_operations", []))}
+        records = trace.get("normalized_operations", trace.get("source_operations", []))
+        inventory = {r["id"] for r in records}
         if not isinstance(admission.get("accesses"), list):
             raise ValueError("guarded memory admission lacks its access inventory")
         for access in admission["accesses"]:
             buffer = buffers.get(access.get("buffer"))
-            write = access.get("opcode") in ("tts.store", "tts.scatter")
-            if (buffer is None or access.get("opcode") not in ("tts.load", "tts.store", "tts.gather", "tts.scatter")
-                    or access.get("effect") != ("write" if write else "read")
+            atomic = version3 and access.get("opcode") == "tts.unstructured_atomic_rmw"
+            write = access.get("opcode") in ("tts.store", "tts.scatter") or atomic
+            allowed = ("tts.load", "tts.store", "tts.gather", "tts.scatter") + (("tts.unstructured_atomic_rmw",) if version3 else ())
+            if (buffer is None or access.get("opcode") not in allowed
+                    or access.get("effect") != ("atomic-readwrite" if atomic else "write" if write else "read")
                     or write and buffer["effect"] == "read"
                     or not write and buffer["effect"] != "read" and not version2
                     or not access.get("source_ids") or any(s not in inventory for s in access["source_ids"])
                     or not access.get("tile") or any(type(n) is not int or n <= 0 for n in access["tile"])):
                 raise ValueError("guarded memory access inventory differs from its source/effect contract")
+        if version3:
+            from .atomic_memory import validate_evidence
+            if profile != WORD_PROFILE:
+                raise ValueError("atomic memory evidence requires its source-word address profile")
+            validate_evidence(admission, memory, records, buffers)
     if profile == WORD_PROFILE:
         from .word_evidence import check_word_stage, replay_events
         word_stage = json.loads(artifacts["word-stage.json"])

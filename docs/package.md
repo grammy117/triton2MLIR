@@ -117,6 +117,15 @@ Compatibility metadata makes these representation differences explicit, with
 the same public ABI. Original source/inventory remain separate.
 See [source-word semantics and evidence](source_words.md).
 
+`--effect-profile atomics` additionally requires guarded-buffer/source-words and
+selects the explicit private-invocation integer RMW contract. Public arguments
+and results retain their tensor/scalar ABI. `memory-admission.v3` binds thirty-bit
+owner fragments, atomic-compatible participation, actual payload accounting and
+source operation/order/scope. Standard RMW events retain old values inside
+exactly-once SCF regions; source-undefined inactive old values explicitly refine
+to zero. Package differences name this policy, its stronger standard ordering
+and grid-derived guard cost. See [atomic memory](atomic_memory.md).
+
 The additional explicit `shared-guarded-buffer` profile uses the same public
 tensor/scalar ABI with runtime memory admission instead of an affine tensor
 witness. `memory-admission.json` replaces `memory-witness.mlir`; the other three

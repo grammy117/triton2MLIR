@@ -24,4 +24,6 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("TTIR cat uses a checked pre-layout join/transpose/reshape expansion in lhs-then-rhs order, choosing a permitted ordering; original native source and normalized graphs remain distinct")
     if dynamic:
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
+    if trace.get("memory", {}).get("effect_profile") == "private-invocation-integer-atomics-v1":
+        differences.append("explicit private-invocation integer atomics use standard memref RMW operations and original old values; v3 thirty-bit owner fragments permit atomic collisions while rejecting ordinary races; source scope/order are retained with stronger standard acq_rel semantics; inactive undefined old values refine to zero; tensor/scalar ABI is unchanged")
     return differences

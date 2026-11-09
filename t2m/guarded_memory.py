@@ -14,7 +14,7 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .memory_contract import guarded_arguments, guard_layout
-from .guard_protocol import ORDINARY
+from .guard_protocol import ATOMIC, ORDINARY
 
 # MLIR arith::AtomicRMWKind::{assign,ori} (ArithBase.td), not device opcodes.
 ATOMIC_ASSIGN = 3
@@ -52,13 +52,14 @@ def normalize_scalars(module, source_ids):
     reports = []
     for op in list(module.walk()):
         name = opcode(op)
-        if name not in ("tts.gather", "tts.scatter") or isinstance(op.operands[1].type, TensorType):
+        if name not in ("tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw") or isinstance(op.operands[1].type, TensorType):
             continue
         def refuse(message):
             raise ConversionError(message, source_id=next(iter(source_ids(op.location)), None), opcode=name)
         if op.operands[1].type not in (builtin.i32, builtin.i64):
             refuse("scalar memory offsets require signed i32/i64 source words")
-        write = name == "tts.scatter"
+        atomic = name == "tts.unstructured_atomic_rmw"
+        write = name == "tts.scatter" or atomic
         positions = [1, 2] if write else [1]
         if write:
             if len(op.operands) not in (3, 4) or isinstance(op.operands[2].type, TensorType):
@@ -79,10 +80,10 @@ def normalize_scalars(module, source_ids):
             wrapped = tensor.FromElementsOp(operands[position])
             before.append(wrapped)
             operands[position] = wrapped.result
-        converted = type(op).create(operands=operands, result_types=[] if write else [TensorType(op.results[0].type, [1])],
+        converted = type(op).create(operands=operands, result_types=[] if write and not atomic else [TensorType(op.results[0].type, [1])],
             properties=op.properties, attributes=op.attributes, location=op.location)
         before.append(converted)
-        if not write:
+        if not write or atomic:
             zero = arith.ConstantOp.from_int_and_width(0, IndexType())
             extracted = tensor.ExtractOp(converted.results[0], [zero.result], op.results[0].type)
             before.extend([zero, extracted])
@@ -95,7 +96,7 @@ def normalize_scalars(module, source_ids):
     return reports
 
 
-def instrument(module, abi, source_ids):
+def instrument(module, abi, source_ids, *, atomics=False):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
@@ -103,9 +104,12 @@ def instrument(module, abi, source_ids):
     original = list(function.walk())
     buffers = {arg: value for arg, (kind, value) in zip(entry.args, abi.source_bindings, strict=True) if kind == "buffer"}
     descriptors = {}
-    layout = guard_layout(abi.as_dict())
+    layout = guard_layout(abi.as_dict(), atomics=atomics)
+    protocol = ATOMIC if atomics else ORDINARY
     supported = {"tt.func", "tt.return", "tt.get_program_id", "tt.get_num_programs", "tts.make_tptr",
                  "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter"}
+    if atomics:
+        supported.add("tts.unstructured_atomic_rmw")
     controls = {"scf.for", "scf.if", "scf.while", "scf.condition", "scf.yield"}
 
     def refuse(op, message):
@@ -125,7 +129,7 @@ def instrument(module, abi, source_ids):
     for value in (*buffers, *(v for op in original for v in op.results if _pointer_type(v.type))):
         for use in value.uses:
             if use.index != 0 or opcode(use.operation) not in {
-                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter"}:
+                    "tts.make_tptr", "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw"}:
                 refuse(use.operation, "pointer escaped the guarded logical buffer boundary")
 
     arguments = internal_arguments(abi)
@@ -146,7 +150,7 @@ def instrument(module, abi, source_ids):
 
     def describe(op, write):
         name = opcode(op)
-        if name in ("tts.gather", "tts.scatter"):
+        if name in ("tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw"):
             if op.operands[0] not in buffers:
                 refuse(op, "indirect memory base must be a declared logical buffer")
             buffer, index = buffers[op.operands[0]], op.operands[1]
@@ -230,31 +234,39 @@ def instrument(module, abi, source_ids):
         if name in ("tts.make_tptr", "tts.make_gather_scatter_tptr"):
             descriptors[op.results[0]] = pointer(op)
             continue
-        if name not in ("tts.load", "tts.store", "tts.gather", "tts.scatter"):
+        if name not in ("tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw"):
             continue
-        write = name in ("tts.store", "tts.scatter")
+        atomic = name == "tts.unstructured_atomic_rmw"
+        write = name in ("tts.store", "tts.scatter") or atomic
+        atomic_contract = None
+        if atomic:
+            from .atomic_memory import contract
+            atomic_contract = contract(op, source_ids)
         access = describe(op, write)
         if not access.sizes or any(n <= 0 for n in access.sizes):
             refuse(op, "memory guards require a positive static tile shape")
         if write and access.buffer.effect == "read":
             refuse(op, "source stores into a declared read-only buffer")
-        before = guard_loops(op, access, extra, write=write, owner_words=layout["owner_words_per_element"])
+        before = guard_loops(op, access, extra, write=write, owner_words=layout["owner_words_per_element"], atomic=atomic, protocol=protocol)
         op.parent.insert_ops_before(before, op)
-        if write:
+        if write and not atomic:
             op.parent.insert_ops_after(guard_loops(op, access, extra, write=True, cleanup=True,
-                owner_words=layout["owner_words_per_element"]), op)
+                owner_words=layout["owner_words_per_element"], protocol=protocol), op)
         accesses.append({"source_ids": source_ids(op.location), "opcode": name, "buffer": access.buffer.name,
-                         "effect": "write" if write else "read", "tile": list(access.sizes),
-                         "guard": "bounds-owner-lane-uniqueness" if write else "active-bounds" if access.buffer.effect == "read" else "bounds-read-ownership-initialization",
-                         "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked"})
-    return {"schema": "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
+                         "effect": "atomic-readwrite" if atomic else "write" if write else "read", "tile": list(access.sizes),
+                         "guard": "bounds-atomic-compatibility-initialization" if atomic else "bounds-owner-lane-uniqueness" if write else "active-bounds" if access.buffer.effect == "read" else "bounds-read-ownership-initialization",
+                         "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked",
+                         **({"atomic": atomic_contract} if atomic else {})})
+    from .atomic_memory import EFFECT_PROFILE
+    return {"schema": "t2m.memory-admission.v3" if atomics else "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
             "spec": abi.as_dict(), "internal_arguments": arguments, "accesses": accesses,
             "scalar_normalizations": scalar_normalizations,
             "control_flow": [{"opcode": opcode(op), "source_ids": source_ids(op.location)} for op in original
                              if opcode(op) in ("scf.for", "scf.while", "scf.if")],
             "writable_reads": "shared-readers-or-single-writer-program", "fresh_initialization": "post-grid-complete-write-coverage",
-            "ownership_protocol": "sticky-complemented-program-fragments",
+            "ownership_protocol": protocol.name,
             "parallelism": "original-logical-grid-and-payload-retained",
+            **({"effect_profile": EFFECT_PROFILE} if atomics else {}),
             **layout}
 
 

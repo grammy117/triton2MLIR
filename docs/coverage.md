@@ -1,5 +1,11 @@
 # Measured coverage and remaining boundaries
 
+[Integer RMW atomics](atomic_memory.md) now have an explicit private-invocation
+profile through actual Merlin execution: all nine integer operations, scalar/
+tiled i32/i64, collisions, original old values, initialization and race checks.
+The 102 focused cases and the independent 4,663-history ownership oracle do not
+close CAS, floating atomics, publication/synchronization, aliases or target work.
+
 The pinned [v3.7.1 source inventory](ttir_operations.md) contains all 50 `tt`
 operation definitions, extracted with TableGen and partitioned by semantic
 family. It establishes an opcode denominator, not universal operation, type,

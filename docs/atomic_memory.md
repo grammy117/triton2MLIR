@@ -1,8 +1,11 @@
 # Private-invocation atomic memory through the tensor interface
 
-Status: implementation plan with the native RMW middle layer verified. Atomics
-are still refused by the product frontend. The plan extends the full objective;
-it does not redefine all-kernel coverage as accepting a diagnostic or opaque call.
+Status: implemented for the explicit private-invocation integer RMW profile.
+`--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
+selects it; the default ordinary-memory profile continues to refuse atomics.
+The public tensor/scalar ABI is retained with explicit v3 memory admission.
+CAS, floating atomics, external publication/synchronization and arbitrary
+region-local atomic/pointer state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
 access-category rules, including differences at bit 30 and bit 60. The eighteen
@@ -24,7 +27,7 @@ Meta `17f0c234ce474bee334af36e351c62eca7852836` already supplies:
 The existing optimizer has executed this exact path for a captured Triton
 integer indexed atomic-add kernel. Both native stages and standard xDSL
 verification pass; source operation, scope and order survive to the TTS stage.
-This probe does not yet pass the product's memory admission or Merlin execution.
+The product now also passes standalone packaging and actual Merlin execution.
 
 LLVM `a47bddccec30255619bb8c37fa59700e661d4e66`,
 `MemRefToLLVM.cpp`, lowers standard RMW atomics with `acq_rel` ordering.
@@ -94,3 +97,47 @@ atomic update remain executable operations.
 Pure opcode appearances, source-stage success, stronger-order annotations and
 host-only execution are distinct evidence. None certifies all effects, all
 numeric modes, all targets or the completed all-TTIR goal.
+
+## Qualified representation and results
+
+V3 uses `private-invocation-integer-atomics-v1`, thirty-bit fragments and
+`sticky-complemented-atomic-participants-v1`. It retains all nine integer RMW
+kinds: add, exchange, bitwise AND/OR/XOR, signed min/max and unsigned min/max.
+Actual native payload accounting checks one standard RMW event per admitted
+source event, its buffer/type/operation and original old-value result. A masked
+inactive output-iter-arg becomes a local zero, avoiding undefined output reads
+without initializing a whole tile or touching inactive source memory.
+
+The first Merlin run exposed upstream elementwise fusion cloning an effectful
+tensor generic: updates executed twice. Each atomic generic now remains inside
+standard `scf.execute_region no_inline`, which executes once and retains the
+complete parallel tile. Pure generics outside the event keep ordinary fusion.
+No opaque call or global serialization replaces the atomic algorithm. The
+boundary and minimum source order/scope remain in provenance; annotations
+cannot authorize duplicating effects or weakening the executable ordering.
+
+The 102 focused cases pass across i32/i64, scalar/tiled events and every integer
+RMW kind. Checks include active/inactive bounds, all source orders/scopes,
+real fresh initialization, colliding updates, old values feeding later atomics,
+and ordinary/atomic conflicts in both orders. A reused Merlin ticket-allocation
+library checks the returned words as a permutation, including signed wraparound,
+without imposing a lane order on the source. The visible disjoint-index demo
+uses a deterministic independent reference:
+
+```bash
+python -m t2m shared-demo --kernel atomic-rmw \
+  --memory-profile guarded-buffer --address-policy source-words \
+  --effect-profile atomics --optimizer /path/to/triton-shared-opt \
+  --python /path/to/native-env/bin/python --out out/atomic-rmw
+```
+
+Existing ordinary guarded/selected-memory/model/event regressions pass all 53
+cases. Merlin's 88 standalone/derived intake tests and structure gates pass at
+`ab2c892e3823457c871300989283859f5ba37517`. Its staging validates source-only
+custody, v3 cost/protocol and declared atomic facts, excluding evaluator values.
+Actual source/guard/linearization and accelerator proofs remain separate.
+
+A real model2MLIR tuple-result atomic capture exposed an additional package
+gap: its bundle currently saves only the first model result golden. Capturing
+and verifying all original tensor result references is the next integration
+requirement; dropping the atomic's old-value result would not satisfy it.
