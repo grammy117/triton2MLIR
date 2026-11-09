@@ -100,3 +100,25 @@ def selected_words(x, y, encoded, out, n, m, choice, B: tl.constexpr, CANCEL: tl
         pointer = tl.where((lane + choice) % 2 == 0, x + index, y + m - 1 - index)
     value = tl.load(pointer, lane < n, other=0)
     tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
+def selected_permute(x, y, out, n, m, choice, B: tl.constexpr, MODE: tl.constexpr):
+    if MODE == 1:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+        choose = (lane + choice) % 2 == 0
+        pointers = tl.join(tl.where(choose, x + lane, y + m - 1 - lane),
+                           tl.where(choose, y + m - 1 - lane, x + lane))
+        left, right = tl.split(pointers)
+        value = tl.load(left, lane < n, other=0) - 2 * tl.load(right, lane < n, other=0)
+        tl.store(out + lane, value, lane < n)
+    else:
+        block = tl.program_id(0) * (2 * B)
+        lane = block + tl.arange(0, B)
+        pointers = tl.cat(x + lane, y + m - 1 - lane, can_reorder=True)
+        index = block + tl.arange(0, 2 * B)
+        if MODE == 2:
+            selected = (tl.arange(0, 2 * B) * 6 + choice) % (2 * B)
+            pointers = tl.gather(pointers, selected, 0)
+        value = tl.load(pointers, index < n, other=-7)
+        tl.store(out + index, value, index < n)

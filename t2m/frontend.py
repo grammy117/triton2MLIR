@@ -17,10 +17,11 @@ BLOCK_POINTER_OPS = frozenset(("tt.make_tensor_ptr", "tt.advance"))
 TENSOR_DESCRIPTOR_OPS = frozenset(("tt.make_tensor_descriptor", "tt.descriptor_load", "tt.descriptor_store",
                                    "tt.descriptor_gather", "tt.descriptor_scatter", "tt.descriptor_reduce"))
 DESCRIPTOR_OPS = BLOCK_POINTER_OPS | TENSOR_DESCRIPTOR_OPS
+INTAKE_NORMALIZATION_OPS = DESCRIPTOR_OPS | frozenset(("tt.cat",))
 
 
 def _expand_tensor_pointers(path, inventory_path):
-    """Worker-only official, pre-layout rewrite; never invoke a target backend."""
+    """Worker-only checked intake rewrites; never invoke a target backend."""
     import resource
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
@@ -32,9 +33,11 @@ def _expand_tensor_pointers(path, inventory_path):
     operations = []
     module.walk(operations.append)
     names = {op.get_name() for op in operations}
-    if not names & DESCRIPTOR_OPS:
-        raise ConversionError("input does not use the supported tensor-pointer normalization")
+    if not names & INTAKE_NORMALIZATION_OPS:
+        raise ConversionError("input does not use a supported intake normalization")
     pipeline = []
+    if "tt.cat" in names:
+        pipeline.extend(("t2m-expand-cat-preserve-order", "canonicalize"))
     if names & TENSOR_DESCRIPTOR_OPS:
         pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
     if names & BLOCK_POINTER_OPS:
@@ -66,7 +69,10 @@ def _expand_tensor_pointers(path, inventory_path):
                         "output_types": [str(v.get_type()) for v in outputs]})
     Path(inventory_path).write_text(json.dumps({"operations": records, "blocks": list(blocks.values()),
         "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries",
-        "normalization_passes": pipeline}, indent=2) + "\n")
+        "normalization_passes": pipeline,
+        "normalized_opcodes": sorted(names & INTAKE_NORMALIZATION_OPS)}, indent=2) + "\n")
+    if "tt.cat" in names:
+        _expand_cats(ir, context, module, operations)
     manager = ir.pass_manager(context)
     if names & TENSOR_DESCRIPTOR_OPS:
         passes.ttir.add_rewrite_tensor_descriptor_to_pointer(manager)
@@ -81,8 +87,48 @@ def _expand_tensor_pointers(path, inventory_path):
     return str(module)  # Keep source NameLocs; str_nodebug discards provenance.
 
 
+def _expand_cats(ir, native_context, module, operations):
+    """Choose lhs-then-rhs order allowed by TTIR cat, using native builders.
+
+    Triton v3.7.1 language/core.py::cat uses join/trans/reshape for ordered
+    concatenation. Meta 17f0c234's CatConverter chooses the same dimension-zero
+    order via tensor.concat. No physical layout or element reordering is needed.
+    """
+    from xdsl.dialects.builtin import NoneAttr, TensorType
+    from xdsl.parser import Parser
+    from .ir import context
+    type_context = context()
+    type_context.allow_unregistered = True
+    builder = ir.builder(native_context)
+    for op in operations:
+        if op.get_name() != "tt.cat":
+            continue
+        inputs = [op.get_operand(i) for i in range(op.get_num_operands())]
+        result = op.get_result(0)
+        # Native bindings expose types only as objects/assembly. Parse their
+        # complete typed assembly structurally; do not infer IR from lines.
+        types = [Parser(type_context, str(v.get_type())).parse_type() for v in (*inputs, result)]
+        if (len(inputs) != 2 or not all(isinstance(t, TensorType) for t in types)
+                or types[0] != types[1] or len(types[0].get_shape()) != 1
+                or types[2].get_shape() != (2 * types[0].get_shape()[0],)
+                or any(not isinstance(t.encoding, NoneAttr) for t in types)):
+            raise ConversionError("cat intake requires equal rank-one pre-layout inputs and a doubled result", opcode="tt.cat")
+        builder.set_loc(result.get_loc())
+        builder.set_insertion_point_after(op)
+        joined = builder.create_join(*inputs)
+        transposed = builder.create_trans(joined, [1, 0])
+        expanded = builder.create_reshape(transposed, list(types[2].get_shape()), False)
+        result.replace_all_uses_with(expanded)
+    if not module.verify():
+        raise ConversionError("cat expansion produced invalid native TTIR", opcode="tt.cat")
+    from triton._C.libtriton import passes
+    manager = ir.pass_manager(native_context)
+    passes.common.add_canonicalizer(manager)
+    manager.run(module, "triton2mlir-expand-cat")
+
+
 def expand_tensor_pointers(source, work):
-    """Bound the pinned official pass in a child; retain exact input/output."""
+    """Bound native intake rewrites in a child; retain exact input/output."""
     source, work = Path(source), Path(work)
     data = source.read_bytes()
     if not 0 < len(data) <= 4 * 1024 * 1024:
@@ -104,9 +150,11 @@ def expand_tensor_pointers(source, work):
             raise ConversionError("official tensor-pointer rewrite exceeded 30 seconds") from exc
     if process.returncode or not output.stat().st_size:
         raise ConversionError("official tensor-pointer rewrite failed; inspect " + str(work / "stderr.log"))
-    pipeline = json.loads((work / "inventory.json").read_text())["normalization_passes"]
+    inventory = json.loads((work / "inventory.json").read_text())
+    pipeline = inventory["normalization_passes"]
     report = {"schema": "t2m.intake-pass.v1", "triton_version": PINNED_TRITON,
               "pass": pipeline[0], "pipeline": pipeline, "target_backend": "not-invoked",
+              "normalized_opcodes": inventory["normalized_opcodes"],
               "source_sha256": hashlib.sha256(data).hexdigest(),
               "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
     (work / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")

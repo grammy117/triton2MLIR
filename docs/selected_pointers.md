@@ -58,6 +58,26 @@ empty domains and actual selected out-of-bounds errors. Actual Merlin libraries
 reuse independent inputs, choices, counts and shapes without recompilation;
 original input bytes and compiled library bytes remain unchanged.
 
+Cat, split and repeated intra-tile gather now also retain selectors and offsets
+through native and actual Merlin libraries, over empty/scalar/ragged inputs.
+The installed optimizer predates the surveyed Meta cat/gather converters.
+Native Triton first verifies the original cat source and inventories its graph;
+a bounded intake adapter expands equal rank-one inputs to join/transpose/reshape
+in lhs-then-rhs order. This chooses an ordering allowed by
+[Triton 3.7.1 cat semantics](https://github.com/triton-lang/triton/blob/v3.7.1/include/triton/Dialect/Triton/IR/TritonOps.td#L472).
+Original source and normalized graphs remain distinct, and package compatibility
+records the choice. It does not select a physical layout or require a new build.
+
+Intra-tile `tt.gather` expands directly to parallel `linalg.generic` with
+`tensor.extract`, adapting Meta's `TensorGatherToLinalgPass.cpp` and its two-axis
+fixtures at the recorded revision. The adapter matches the actual typed source
+operation; a caller marker attribute cannot authorize the rewrite. Executable
+axis-index checks precede extraction. Pointer normalization applies the same
+gather to both selector and offset, including repeated indices. Static numeric
+tensors are admitted; pointer tensors first need the source-word path. The
+12-case pointer-shape/block-pointer regression passes, including the existing
+official descriptor and block-pointer intake paths.
+
 The runnable package example exercises an intervening write followed by a
 lane-selected read/modify/write. Results are the new X state, new Y state and
 selected values, in ABI declaration order:

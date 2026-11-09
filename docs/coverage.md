@@ -146,6 +146,13 @@ cover explicit rounding and inactive-bit cases, not all half operation policies.
 
 The remaining boundaries are:
 
+The source-word selected-buffer path additionally qualifies cat/split and
+repeated intra-tile `tt.gather` through actual Merlin libraries. A checked native
+intake rewrite bridges cat absent from the installed optimizer; a direct
+parallel generic/extract expansion adapts Meta's tile-gather lowering. Original
+source graphs, chosen ordering and version boundaries remain explicit in the
+[selected-pointer contract](selected_pointers.md).
+
 [Runtime scalar ABI v3](runtime_abi.md) now has f32/f64/i32 payload and i1
 source-branch execution cases through Merlin. Runtime values are not specialized;
 non-dense stride, general grid and address-domain profiles still require separate work.

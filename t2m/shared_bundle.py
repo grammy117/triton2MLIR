@@ -84,6 +84,8 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
         differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")
         if any(t["missing_other_zero_refinement"] for t in selected):
             differences.append("inactive undefined source load values use the pinned upstream gather's zero refinement; this does not assert that inactive source memory was initialized or read")
+    if any("t2m-expand-cat-preserve-order" in t.get("pipeline", []) for t in trace.get("transformations", [])):
+        differences.append("TTIR cat uses a checked pre-layout join/transpose/reshape expansion in lhs-then-rhs order, choosing a permitted ordering; original native source and normalized graphs remain distinct")
     if result.spec.dynamic:
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,

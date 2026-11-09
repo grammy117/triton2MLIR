@@ -14,6 +14,13 @@ The surveyed source is pinned to **17f0c234ce474bee334af36e351c62eca7852836**, w
 **142586f90aac9b917af1081e4697b085027e13b2**. The stock-wheel path currently uses Triton 3.7.1;
 these are separate version contracts, not assumed to be interchangeable.
 
+The installed shared binary also predates the surveyed cat/gather converters.
+The native-verified intake adapter can expand rank-one cat to ordered
+join/transpose/reshape, while the tile-gather adapter reuses Meta's parallel
+generic/extract form with executable index checks. This is an explicit version
+bridge, with separate original/normalized source graphs and package differences;
+see [the qualified selector compositions](selected_pointers.md).
+
 ## Source-backed reuse map
 
 | Roadmap capability | Existing upstream mechanism / fixtures | Work owned here |
