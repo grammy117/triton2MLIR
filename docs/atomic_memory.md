@@ -177,3 +177,14 @@ Twelve combinations execute natively and reuse actual Merlin libraries over
 five independent invocations each. Three rehashed event tests reject changes
 to operation/order/scope. Merlin's 93 staging and 90 native loop/lifetime cases
 pass, including refusal of unknown/external atomic snapshot dependencies.
+
+The subsequent ordinary-memory/pointer/event/atomic/model regression run passes
+all 145 cases with existing native/model2MLIR/Merlin environments enabled.
+Together with the 17 new region cases, this qualifies the changed paths without
+asserting a new complete-suite or universal-coverage result. Merlin's loop reuse
+and staging changes are at `6a13a1a617244ad69e869c49a37e937dbdcd0739`;
+its documentation and structure gates pass. The visible `out/atomic-rmw/`
+package passes native comparison and all 20 artifact checks. Its separate
+`out/atomic-rmw-merlin/` qualification passes actual Merlin host execution,
+unchanged-input/reference comparison and all 45 artifact checks. Accelerator
+execution remains unperformed.

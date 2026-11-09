@@ -19,6 +19,9 @@ selected-buffer pointer state through native and Merlin execution: 17 new
 producer cases, 93 staging cases and 90 native consumer loop/lifetime cases
 pass. See [atomic memory](atomic_memory.md). CAS, floating atomics, broader
 effects and external synchronization still require executable implementations.
+The following 145-case pointer/event/atomic/model regression also passes;
+`out/atomic-rmw/` and its separate Merlin qualification provide a visible,
+fully verified host-executed package. Accelerator coverage remains open.
 
 For each operation/type/attribute/composition, track these separately:
 
