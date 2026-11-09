@@ -79,6 +79,11 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
         differences.append("explicit guarded standard-memory payload with an independent runtime admission report; active bounds, read/write ownership, completed initialization and per-store lane uniqueness are executable; source-base gathers retain memory effects before optimization; grid-derived metadata cost is explicit; no pure tensor witness is asserted")
     if profile == WORD_PROFILE:
         differences.append("explicit source-word address policy retains source integer arithmetic before signed i64 pointer-offset accumulation; raw offset tensors replace structured pointer views; word-stage input/output evidence is retained")
+    selected = [t for t in trace.get("transformations", []) if t.get("kind") == "selected-pointer-memory"]
+    if selected:
+        differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")
+        if any(t["missing_other_zero_refinement"] for t in selected):
+            differences.append("inactive undefined source load values use the pinned upstream gather's zero refinement; this does not assert that inactive source memory was initialized or read")
     if result.spec.dynamic:
         differences.append("ABI v5 named runtime tensor dimensions and logical ceil-divided grids; dynamic result allocation uses scalar bindings; Merlin staging uses compile-signature v2")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,

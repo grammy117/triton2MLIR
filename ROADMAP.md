@@ -382,8 +382,12 @@ checks. Nested branch-selected pointer state and conditional reductions now
 also qualify, with original init reads, helper inlining and changing choices/counts.
 Conditional destination planning retains branches, uses complete value copies
 where needed and leaves native alias/lifetime checks enabled.
-Mixed-base joins, broader while ownership, aliases and broader effects
-still need work. See [the contract](docs/source_words.md).
+Finite mixed-base joins, lane selection and changing loop bases now also
+qualify through logical selectors paired with source-word offsets. Accesses stay
+at their original position, retaining intervening writes and source masks/fills.
+Uniform selectors stay scalar; source shape operations keep selector/offset
+fields paired. Broader while ownership, aliases and broader effects still need
+work. See [the selector contract](docs/selected_pointers.md).
 
 Tiled online attention now also qualifies through Merlin: two contractions,
 query-tile reuse and `(maximum, normalization, accumulator)` remain inside the

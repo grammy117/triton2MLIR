@@ -1,0 +1,68 @@
+# Selected logical buffers with source-word offsets
+
+The explicit `guarded-buffer` / `source-words` path now supports finite mixed-base
+pointer state. Public arguments/results remain the existing functional
+tensor/scalar ABI. Internal pointers become a logical buffer selector plus an
+i64 element offset, with no GPU address space, physical pointer or launcher ABI.
+
+Source-entry buffer identities propagate through pointer arithmetic, selections,
+shape operations and every branch/backedge to a fixed point. Every path must
+retain the same element type and refer to a declared buffer. Pointer observations,
+unknown producers and pointee-changing casts remain located refusals. General
+aliases between the declared buffers still need a separate ABI contract.
+
+## Transformation and granularity
+
+`pointer_control.py` shares the same source-word offset conversion for fixed and
+selected bases. `pointer_select.py` adds selectors only where roots can differ:
+
+- Uniform program/branch selection stays scalar i32, including tensor pointers.
+  Lane-varying choices use an i32 tensor with the pointer's logical shape.
+- For/while/if state gains only the required selector fields. While before and
+  after state are handled separately, including different arities.
+- Pointer shape transformations apply the same logical transformation to both
+  fields. Original arithmetic producing offsets retains its word width; pointer
+  increments are sign-extended separately into i64.
+- At each original load/store, predicated accesses resolve the selected buffer.
+  The load is not hoisted into the earlier pointer-selection branch. Intervening
+  stores remain visible, including reads after writes through a selected pointer.
+
+Only the selected root is read/written for an active lane. Unselected buffers may
+be empty or have invalid dormant offsets. Source masks and fills remain value
+dataflow. Per-root loads use a disposable zero fill and the final selection
+retains the original fill, including nonuniform tensors. When source `other` is
+absent, inactive undefined values use the same zero refinement as the pinned
+upstream gather converter; this is recorded explicitly and grants no source
+memory initialization fact. Active bounds, read initialization, ownership and
+duplicate-store checks remain executable through the existing guarded profile.
+
+The resulting standard MLIR keeps source tiles, predicates, loops and reuse.
+Multiple predicated accesses are an explicit representation difference: a later
+consumer may combine their selector/base calculation using its own legal memory
+representation. The frontend chooses no physical memory mapping. Performance
+has not been benchmarked.
+
+## Source/provenance and qualification
+
+The existing receipt binds exact TTIR, typed source operations, normalized
+`word-input.mlir`, native stage output/pipeline and admission evidence. The
+transformation report records base argument ordinals, selector granularity and
+original memory-event source IDs. `compatibility.json` records the selected-base
+representation and any inactive-undefined refinement. Source intent grants no
+rewrite or effect permission; Merlin independently checks the artifact contract.
+
+Maintained tests cover scalar/tiled branches, lane-varying selection, different
+base extents and offsets, intervening writes, selected read/modify/write updates,
+for/while changing bases and final pointers, join/transpose/reshape, zero trips,
+empty domains and actual selected out-of-bounds errors. Actual Merlin libraries
+reuse independent inputs, choices, counts and shapes without recompilation;
+original input bytes and compiled library bytes remain unchanged.
+
+Reuse boundary: Meta triton-shared `17f0c234ce474bee334af36e351c62eca7852836`,
+`lib/AnalysisStructured/PtrAnalysis.cpp` reconciles branch pointer states and
+selects bases. Its `if_returning_mixed_structured_ptrs.mlir` fixture demonstrates
+mixed structured/unstructured results. That path promotes offsets to index;
+this adapter keeps source integer words before the unchanged official
+`offset-bit-width=64` stage. `UnstructuredToMemrefPass.cpp::GatherConverter`
+documents zero when masked `other` is absent. Existing upstream gather/scatter
+conversion, memory admission and Merlin lowering remain reused.

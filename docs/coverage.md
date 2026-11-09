@@ -28,8 +28,10 @@ final pointers and narrow word arithmetic. Nested branches, pointer-returning
 helpers and conditional reductions with nonzero initial state also qualify
 through unchanged Merlin libraries over independent choices/counts/shapes.
 Reduction/init semantics and native alias/lifetime checks remain intact.
-Mixed-base joins/backedges refuse;
-broader while ownership and aliases remain open. These checks do not imply
+Finite mixed-base joins/backedges and lane selection now additionally execute
+through [logical selectors](selected_pointers.md), retaining original memory
+positions, mutations, masks/fills and paired shape transformations.
+Broader while ownership and aliases remain open. These checks do not imply
 universal opcode/attribute coverage.
 
 [Tiled online attention](attention.md) now also qualifies through the actual

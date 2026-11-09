@@ -95,9 +95,12 @@ The receipt additionally binds `word-input.mlir`, `word-tensor.mlir` and
 `word-stage.json`; admission/provenance bind their policy and hashes. Merlin
 checks/copies these compiler-only members for standalone and static derived
 models. Function/grid annotations retain original access intent through model
-inlining. Same-base pointer branches/while normalize region state to i64 offsets
-before that native stage; the transformation report retains source IDs and
-the all-edges single-base contract. Original source/inventory remain separate.
+inlining. Pointer branches/loops normalize region state to i64 offsets before
+that native stage; finite mixed bases add logical i32 selectors and predicated
+accesses at the original memory event. The transformation report retains source
+IDs, selector/base contracts and any upstream inactive-undefined zero refinement.
+Compatibility metadata makes these representation differences explicit, with
+the same public ABI. Original source/inventory remain separate.
 See [source-word semantics and evidence](source_words.md).
 
 The additional explicit `shared-guarded-buffer` profile uses the same public

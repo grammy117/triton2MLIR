@@ -73,9 +73,9 @@ pipeline when those control edges are present:
 
 1. Propagate source-entry buffer identities over pointer construction, shape
    transformations, selections, branch yields, loop initial values and every
-   backedge to a fixed point. Every pointer must have exactly one base on all
-   paths and retain its element type. A mixed-base branch or backedge refuses
-   before native lowering; it needs an explicit buffer-selector representation.
+   backedge to a fixed point. Every pointer must have a finite set of declared
+   bases on all paths and retain its element type. Fixed-base state uses just
+   the offset; mixed-base state adds the [logical selector](selected_pointers.md).
 2. Represent pointer-valued region arguments/results as scalar/tensor i64
    element offsets. Follow `scf.condition` and `scf.yield` separately; while
    input/output state can have different arities. Preserve source predicates,
@@ -84,6 +84,8 @@ pipeline when those control edges are present:
 3. Reconstruct a local base-plus-offset pointer at each original load/store.
    The upstream converter then owns gather/scatter and arithmetic conversion;
    the existing guarded memory continuation checks the original active accesses.
+   Selected bases resolve at the original memory event, preserving intervening
+   writes, per-lane masks/fills and changing loop bases. Uniform selectors stay scalar.
 
 The transformation report retains the affected source IDs and base/width
 contract. `word-input.mlir` binds the exact resulting input to the native
@@ -150,6 +152,6 @@ runtime shapes; another retains changing pointer-loop counts. Real model2MLIR
 GEMM captures retain learned parameters, surrounding model math, contractions
 and loops through the same interface, including block/descriptor intake.
 
-Mixed-base pointer tensors, broader while ownership profiles, alias groups,
+Broader while ownership profiles, alias groups,
 physical pointer observations and broader numeric/effect profiles remain open.
 This policy expands address coverage; it is not full TTIR coverage.

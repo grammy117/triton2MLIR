@@ -62,11 +62,16 @@ def test_pointer_control_native_preserves_regions_shapes_and_edges(tmp_path, loo
         np.testing.assert_array_equal(actual, expected)
 
 
-def test_mixed_base_branch_is_a_located_refusal_before_upstream_lowering(tmp_path):
-    from t2m.diagnostics import ConversionError
-    with pytest.raises(ConversionError, match="ttir.op.*mixed-base state"):
-        capture(tmp_path, mixed=True)
-    assert not (tmp_path / "translation/tensor-ir").exists()
+@pytest.mark.parametrize("choice", [0, 1])
+def test_mixed_base_branch_executes_the_selected_logical_buffer(tmp_path, choice):
+    from t2m.native import execute_native
+    result = capture(tmp_path, mixed=True)
+    x = np.arange(18, dtype=np.float32).reshape(2, 9)
+    y = x.copy() + 100
+    arrays = [x, y, np.asarray(9, dtype=np.int32), np.asarray(choice, dtype=np.int32)]
+    (actual,), _ = execute_native(result.mlir_text, arrays, tmp_path / "native", python=NATIVE,
+                                 shape_abi=result.spec.runtime_shapes())
+    np.testing.assert_array_equal(actual, (x if choice else y)[0])
 
 
 def test_actual_while_iteration_checks_memory_bounds(tmp_path):
@@ -79,9 +84,8 @@ def test_actual_while_iteration_checks_memory_bounds(tmp_path):
                        shape_abi=result.spec.runtime_shapes())
 
 
-def test_a_different_backedge_base_cannot_hide_in_a_pointer_cycle(tmp_path):
+def test_a_different_backedge_base_participates_in_the_selector_state(tmp_path):
     from xdsl.dialects import builtin
-    from t2m.diagnostics import ConversionError
     from t2m.pointer_control import normalize_pointer_control
     from t2m.shared_tensor import _source_ids
     capture(tmp_path, loop=True)
@@ -94,8 +98,16 @@ def test_a_different_backedge_base_cannot_hide_in_a_pointer_cycle(tmp_path):
     alternate.location = update.location
     update.parent.insert_op_before(alternate, update)
     update.operands = [alternate.results[0], update.operands[1]]
-    with pytest.raises(ConversionError, match="ttir.op.*mixed-base state"):
-        normalize_pointer_control(module, _source_ids)
+    reports = normalize_pointer_control(module, _source_ids)
+    # xDSL's temporary arith.extsi/cmpi definitions are scalar-only; native
+    # MLIR owns verification of these intermediate tensor arithmetic forms.
+    from t2m.ir import text
+    from t2m.upstream import lower_with_shared
+    normalized = tmp_path / "normalized.ttir"
+    normalized.write_text(text(module))
+    lower_with_shared(normalized, tmp_path / "normalized-source", optimizer=OPT, stage="source")
+    assert any(r["kind"] == "selected-pointer-memory" and r["bases"] == [0, 1] for r in reports)
+    assert len(loop.results) == 4 and str(loop.results[-1].type) == "i32"
 
 
 def test_while_before_and_after_state_need_not_have_equal_arity():

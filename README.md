@@ -62,6 +62,8 @@ pointer recurrences and nonlinear grids through the official unstructured
 converter. Same-base pointer branches and runtime while loops also qualify
 through Merlin, retaining their control flow, word math and final pointers.
 [The policy and package differences](docs/source_words.md) are explicit.
+Finite mixed-buffer branches, lane selections and changing loop bases also
+qualify through that path; [selectors keep each original memory event](docs/selected_pointers.md).
 `shared-demo --kernel online-attention` retains query-tile reuse, two tile
 contractions and running softmax state through Merlin's tensor interface. See
 [the measured attention profile](docs/attention.md).

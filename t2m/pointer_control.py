@@ -1,13 +1,14 @@
-"""Expose same-base pointer control state as signed i64 element offsets.
+"""Expose pointer state as logical bases and signed i64 element offsets.
 
 Meta triton-shared 17f0c234's TritonToUnstructuredPass.cpp provides the
 base/offset representation and offset-bit-width policy. Its use traversal
 handles scf.for but leaves pointer-valued scf.if/while unresolved. This narrow
-adapter supplies those region edges before running the unchanged upstream
+adapter supplies those region edges and finite selectors before running the unchanged upstream
 converter. It does not choose a physical address, memory space or grid mapping.
 """
 
 from collections import deque
+from dataclasses import dataclass
 
 from xdsl.dialects import arith, builtin
 from xdsl.dialects.builtin import IntegerType, TensorType
@@ -17,11 +18,58 @@ from xdsl.rewriter import Rewriter
 from .diagnostics import ConversionError
 
 
+@dataclass
+class PointerState:
+    operations: tuple
+    controls: tuple
+    entry: object
+    function: object
+    values: tuple
+    types: dict
+    bases: dict
+    edges: dict
+
+
+def offset_type(type_):
+    return TensorType(builtin.i64, type_.get_shape()) if isinstance(type_, TensorType) else builtin.i64
+
+
+def lower_offsets(state):
+    """Shared source-word conversion for single- and selected-base state."""
+    from .shared_tensor import opcode
+    offsets = {}
+    for value in state.values:
+        if isinstance(value, BlockArgument) and value.block is state.entry:
+            zero = arith.ConstantOp.from_int_and_width(0, 64)
+            zero.location = state.function.location
+            state.entry.insert_op_before(zero, state.entry.first_op)
+            offsets[value] = zero.result
+        else:
+            offsets[value] = Rewriter.replace_value_with_new_type(value, offset_type(value.type))
+    for op in state.operations:
+        op.operands = [offsets.get(v, v) for v in op.operands]
+    for op in state.operations:
+        if opcode(op) != "tt.addptr":
+            continue
+        lhs, rhs = op.operands
+        added = []
+        if rhs.type != lhs.type:
+            extended = arith.ExtSIOp(rhs, lhs.type)
+            added.append(extended)
+            rhs = extended.result
+        result = arith.AddiOp(lhs, rhs)
+        added.append(result)
+        for emitted in added:
+            emitted.location = op.location
+        Rewriter.replace_op(op, added)
+
+
 def normalize_pointer_control(module, source_ids):
     from .shared_tensor import _pointer_type, opcode
 
     original = list(module.walk())
-    controls = [op for op in original if opcode(op) in ("scf.if", "scf.while")
+    controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
+                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather")
                 and any(_pointer_type(v.type) for v in (*op.results,
                     *(a for region in op.regions for block in region.blocks for a in block.args)))]
     if not controls:
@@ -106,11 +154,10 @@ def normalize_pointer_control(module, source_ids):
                 pending.append(user)
     for value in values:
         owner = value.block.parent_op() if isinstance(value, BlockArgument) else value.owner
-        if len(bases[value]) != 1:
-            refuse(owner, "pointer control requires one logical base on every path; mixed-base state needs a selector contract")
-        base = next(iter(bases[value]))
+        if not bases[value]:
+            refuse(owner, "pointer control has no established source-entry base")
         element = value.type.element_type if isinstance(value.type, TensorType) else value.type
-        if element != base.type:
+        if any(element != base.type for base in bases[value]):
             refuse(owner, "pointer control cannot change the logical buffer element type")
         for use in value.uses:
             op, position = use.operation, use.index
@@ -123,9 +170,6 @@ def normalize_pointer_control(module, source_ids):
             if not allowed:
                 refuse(op, "pointer control cannot observe or escape a logical buffer address")
 
-    def offset_type(type_):
-        return TensorType(builtin.i64, type_.get_shape()) if isinstance(type_, TensorType) else builtin.i64
-
     # Validate arithmetic before mutating anything. Only addptr's operand is
     # extended; computations producing it keep their original source widths.
     for op in original:
@@ -135,34 +179,17 @@ def normalize_pointer_control(module, source_ids):
             if not isinstance(rhs, IntegerType) or not 1 <= rhs.width.data <= 64:
                 refuse(op, "pointer control requires integer element offsets no wider than i64")
 
+    state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges)
+    if any(len(roots) > 1 for roots in bases.values()):
+        from .pointer_select import normalize_selected
+        return normalize_selected(state, source_ids)
+    # The official converter already handles same-base for state. Leave that
+    # supported case upstream when no other pointer control needs this adapter.
+    if all(opcode(op) == "scf.for" for op in controls):
+        return []
     memory = {op: (types[op.operands[0]], next(iter(bases[op.operands[0]])))
               for op in original if opcode(op) in ("tt.load", "tt.store")}
-    offsets = {}
-    for value in values:
-        if isinstance(value, BlockArgument) and value.block is entry:
-            zero = arith.ConstantOp.from_int_and_width(0, 64)
-            zero.location = functions[0].location
-            entry.insert_op_before(zero, entry.first_op)
-            offsets[value] = zero.result
-        else:
-            offsets[value] = Rewriter.replace_value_with_new_type(value, offset_type(value.type))
-    for op in original:
-        op.operands = [offsets.get(v, v) for v in op.operands]
-
-    for op in original:
-        if opcode(op) != "tt.addptr":
-            continue
-        lhs, rhs = op.operands
-        added = []
-        if rhs.type != lhs.type:
-            extended = arith.ExtSIOp(rhs, lhs.type)
-            added.append(extended)
-            rhs = extended.result
-        result = arith.AddiOp(lhs, rhs)
-        added.append(result)
-        for emitted in added:
-            emitted.location = op.location
-        Rewriter.replace_op(op, added)
+    lower_offsets(state)
 
     # Reconstruct pointers only at memory events. Upstream now sees local
     # base+offset uses and no pointer-valued structured region edge.
