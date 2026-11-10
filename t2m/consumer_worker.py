@@ -101,7 +101,7 @@ def compile_model(staged, work):
     (work / "compilation.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
 
-def execute_model(staged, work, arguments, *, evaluation=None):
+def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     from diagnostic_runtime import prepare_stdout
     prepare_stdout()
     import numpy as np
@@ -143,9 +143,14 @@ def execute_model(staged, work, arguments, *, evaluation=None):
     if record(work / "model.so") != compiled["shared_library"]:
         raise ValueError("Merlin shared library changed before invocation")
     model = HostModel.load(str((work / "model.so").resolve()))
+    if observed:
+        from process_outcome import started
+        started(evaluation,backend="merlin-host",program=staged / "program.mlir",arguments=arguments,
+            implementation={"kind":"shared-library","artifact":record(work / "model.so")})
     before = [a.tobytes() for a in arrays]
     first = None
-    for invocation in range(2):
+    invocations = 1 if observed else 2
+    for invocation in range(invocations):
         if invocation:
             for output in outputs:
                 output.fill(np.nan if np.issubdtype(output.dtype, np.floating) else 85)
@@ -160,7 +165,7 @@ def execute_model(staged, work, arguments, *, evaluation=None):
         first = observed
     np.savez(evaluation / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
     (evaluation / "evaluation.json").write_text(json.dumps({"schema": "t2m.merlin-host-evaluation.v1",
-        "invocations": 2, "functional_inputs_preserved": True, "outputs": record(evaluation / "outputs.npz"),
+        "invocations": invocations, "functional_inputs_preserved": True, "outputs": record(evaluation / "outputs.npz"),
         "arguments": record(arguments), "source_program": record(staged / "program.mlir"),
         "shared_library": record(work / "model.so")}, indent=2) + "\n")
 
@@ -177,5 +182,7 @@ if __name__ == "__main__":
         execute_model(staged, work, remaining[0])
     elif mode == "invoke" and len(remaining) == 2:
         execute_model(staged, work, remaining[0], evaluation=remaining[1])
+    elif mode == "observe" and len(remaining) == 2:
+        execute_model(staged, work, remaining[0], evaluation=remaining[1],observed=True)
     else:
         raise ValueError("expected a compiler-only compile or separate evaluator invocation")

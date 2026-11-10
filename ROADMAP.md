@@ -1,6 +1,6 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
-**Updated 2026-11-09.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-10.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.
@@ -8,8 +8,10 @@ The active [completion plan](docs/completion_plan.md) orders the remaining front
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 [Source assertions](docs/source_assertions.md) now retain scalar/tensor checks,
 messages and failure effects through upstream standard lowering and real Merlin
-execution, including a complete model2MLIR state/tuple capture. Diagnostic-only
-and initial expected-failure packages remain explicit effect-ABI work.
+execution, including a complete model2MLIR state/tuple capture.
+[Observable-outcome packages](docs/effect_abi.md) now also admit void and
+initially failing entries through real Merlin compilation/invocation, preserving
+actual signatures and exact independent outcome references.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

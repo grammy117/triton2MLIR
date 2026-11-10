@@ -93,6 +93,15 @@ def _host_worker(mode, root, staged, host, extra, environment, python):
         raise ValueError("Merlin host " + mode + " failed: " + (stdout + stderr)[-4000:])
 
 
+def observe_merlin_host(work, arguments, out, *, merlin_root, python=None):
+    from .process_outcome import observe
+    work, out = Path(work).resolve(), Path(out).absolute()
+    out.mkdir(parents=True,exist_ok=False)
+    command = [str(python or sys.executable),str(Path(__file__).with_name("consumer_worker.py")),"observe",
+        str(Path(merlin_root).resolve()),str(work / "compiler"),str(work / "host"),str(Path(arguments).resolve()),str(out)]
+    return observe(command,out,timeout=60,environment=dict(os.environ,OMP_NUM_THREADS="1",OPENBLAS_NUM_THREADS="1",TMPDIR=str(out)))
+
+
 def invoke_merlin_host(work, arguments, out, *, merlin_root, python=None):
     """Invoke an existing compiled library; there is no compiler call here."""
     work, out, root = Path(work), Path(out).resolve(), Path(merlin_root).resolve()

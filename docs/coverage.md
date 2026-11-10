@@ -1,13 +1,22 @@
 # Measured coverage and remaining boundaries
 
+[Observable-outcome packets](effect_abi.md) now support real void and initially
+failing entries through the actual Merlin compiler/library ABI. The 40 focused
+cases qualify zero-argument, scalar and readonly dynamic tensor calls in all
+memory profiles, exact diagnostics, normal return, source abort and reused
+libraries. Rehashed source/outcome and real-result signature refusals remain
+checked. The 73 existing producer regressions and 230 Merlin staging tests pass.
+Expected failures are explicit observed outcomes, not successful tensor values.
+
 [Source assertions](source_assertions.md) now have actual native/Merlin success
 and failure checks, including scalar/tensor conditions, original source regions,
 zero trips and complete model2MLIR tuple/state captures in all three profiles.
 The focused suite has 24 cases; the diagnostic/guard/consumer regression passes
 41. The subsequent explicit 15-package observation report retains all 50
 definitions, with 24 observed and 20 present in captures of Merlin-qualified
-packages. Effect-only, initial expected-failure and length-aware diagnostic
-contracts remain open alongside other external effects and target materialization.
+packages. Length-aware diagnostics remain open alongside other external effects
+and target materialization; effect-only and initial expected-failure packaging
+uses the separate outcome profile above.
 
 `package-coverage` now provides the [receipt-bound observation registry](package_coverage.md)
 against all 50 pinned TTIR definitions. Its initial explicit 13-package selection

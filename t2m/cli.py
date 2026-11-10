@@ -419,6 +419,7 @@ def main(argv=None):
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
+    tensor.add_argument("--effect-reference",type=Path,help="independent JSON termination/stream reference; excludes numeric --reference")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
     tensor.add_argument("--rtol", type=float, default=0)
     tensor.add_argument("--atol", type=float, default=0)
@@ -438,6 +439,13 @@ def main(argv=None):
     coverage.add_argument("--stage", choices=tuple(STAGES), default="tensor-ir")
     coverage.add_argument("--limit", type=int, default=1000)
     coverage.add_argument("--budget", type=float, default=120)
+    effect = commands.add_parser("effect-demo",help="package real void/initial-failure kernels with observable outcome references")
+    effect.add_argument("--case",choices=("constant-fail","empty-return","scalar-check","tensor-check","fail-before-store"),default="constant-fail")
+    effect.add_argument("--out",type=Path,required=True)
+    effect.add_argument("--optimizer",type=Path)
+    effect.add_argument("--python",type=Path)
+    effect.add_argument("--memory-profile",choices=("tensor","buffer","guarded-buffer"),default="tensor")
+    effect.add_argument("--address-policy",choices=("structured","source-words"),default="structured")
     packages = commands.add_parser("package-coverage", help="index verified package observations against all pinned TTIR definitions")
     packages.add_argument("bundles", nargs="+", type=Path)
     packages.add_argument("--qualification", action="append", type=Path, default=[], help="explicit standalone Merlin qualification; matched by source receipt")
@@ -471,7 +479,7 @@ def main(argv=None):
     invoke = commands.add_parser("invoke-merlin", help="run a qualified native library with new arguments and references")
     invoke.add_argument("qualification", type=Path)
     invoke.add_argument("--inputs", type=Path, required=True)
-    invoke.add_argument("--reference", type=Path, required=True, help="independent NPZ with out0, out1, ...")
+    invoke.add_argument("--reference", type=Path, required=True, help="independent numeric NPZ or effect-outcome JSON for the qualified profile")
     invoke.add_argument("--out", type=Path, required=True)
     invoke.add_argument("--merlin-root", type=Path, required=True)
     invoke.add_argument("--merlin-python", type=Path)
@@ -483,6 +491,10 @@ def main(argv=None):
     try:
         if args.command == "demo":
             summary = demo(args.out, size=args.size, block=args.block, operation=args.operation)
+        elif args.command == "effect-demo":
+            from .effect_demo import demo as effect_demo
+            summary = effect_demo(args.out,case=args.case,optimizer=args.optimizer,python=args.python,
+                memory_profile=args.memory_profile,address_policy=args.address_policy)
         elif args.command == "shared-demo":
             summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python,
                                   memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add)
@@ -536,12 +548,18 @@ def main(argv=None):
                            compiler_python=args.python, clang=args.merlin_clang, rtol=args.rtol, atol=args.atol)
             summary = {"qualification": str(args.out), "compiler_input_staging": "passed",
                        "merlin_native_host_execution": "passed", "accelerator_execution": "not-performed"}
+            receipt = json.loads((args.out / "qualification.json").read_text())
+            if receipt["schema"] == "t2m.merlin-effect-qualification.v1":
+                observed = json.loads((args.out / "host/execution.json").read_text())
+                summary.update(merlin_native_host_execution="matched-expected-outcome",termination=observed["termination"])
         elif args.command == "invoke-merlin":
             from .invocation import invoke_kernel
-            invoke_kernel(args.qualification, args.inputs, args.reference, args.out, merlin_root=args.merlin_root,
+            report = invoke_kernel(args.qualification, args.inputs, args.reference, args.out, merlin_root=args.merlin_root,
                           python=args.merlin_python, rtol=args.rtol, atol=args.atol)
             summary = {"invocation": str(args.out), "reference_comparison": "passed",
                        "native_compilation": "reused-qualified-library", "accelerator_execution": "not-performed"}
+            if report.get("schema") == "t2m.merlin-effect-invocation.v1":
+                summary["termination"] = report["termination"]
         elif args.command == "verify-merlin-invocation":
             from .invocation import verify_invocation
             report = verify_invocation(args.invocation)
@@ -566,7 +584,9 @@ def main(argv=None):
         elif args.command == "shared-tensor":
             from .shared_tensor import TensorABI, convert_shared
             from .shared_bundle import write_shared_bundle
-            if bool(args.inputs) != bool(args.reference):
+            if args.effect_reference and (args.reference or args.rtol or args.atol):
+                raise ValueError("effect references exclude numeric references and tolerances")
+            if not args.effect_reference and bool(args.inputs) != bool(args.reference):
                 raise ValueError("provide both --inputs and --reference to publish a checked bundle")
             if args.out.exists():
                 raise FileExistsError(args.out)
@@ -574,7 +594,16 @@ def main(argv=None):
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
             result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer,
                                     memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add)
-            if args.inputs:
+            if args.effect_reference:
+                from .effect_bundle import write_effect_bundle
+                inputs = []
+                if args.inputs:
+                    with np.load(args.inputs,allow_pickle=False) as saved:
+                        if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:
+                            raise ValueError("effect inputs must contain every argument in ABI order")
+                        inputs = [saved[f"in{i}"].copy() for i in range(len(abi.inputs))]
+                write_effect_bundle(result,args.out,inputs,json.loads(args.effect_reference.read_text()),work=work / "native",python=args.python)
+            elif args.inputs:
                 with np.load(args.inputs, allow_pickle=False) as saved:
                     if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:
                         raise ValueError("inputs must contain exactly in0, in1, ... in ABI order")
@@ -592,7 +621,7 @@ def main(argv=None):
                 (args.out / "spec.json").write_text(json.dumps(abi.as_dict(), indent=2, sort_keys=True) + "\n")
                 for name, payload in result.auxiliary_artifacts.items():
                     (args.out / name).write_text(payload)
-            summary = {"out": str(args.out), "profile": result.trace.get("profile", "shared-functional-tensor"), "checked_bundle": bool(args.inputs),
+            summary = {"out": str(args.out), "profile": result.trace.get("profile", "shared-functional-tensor"), "checked_bundle": bool(args.inputs or args.effect_reference),
                        "merlin_staged_execution": "not-certified"}
         else:
             spec = KernelSpec.from_dict(json.loads(args.spec.read_text()))

@@ -61,3 +61,9 @@ packages and remain outside this selection. Keep them in separately measured
 corpus/refusal reports; `shared-coverage` continues to measure upstream stages
 without granting product coverage. A maintained full corpus, refusal matrix,
 numeric/effect closure and applicable target evidence remain completion gates.
+
+Observable-outcome receipts/qualifications are also admitted as explicit
+`reference_kind: observable-effects`. Their normal-return or assertion-failure
+outcome remains recorded separately from numeric tolerances. A matched source
+failure does not imply every inventoried operation executed or that a tensor
+result was produced; source and per-operation execution coverage stay distinct.

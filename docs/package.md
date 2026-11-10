@@ -13,9 +13,12 @@ separate member. Evaluator extra/golden archives never supply compiler values.
 
 [Source assertions](source_assertions.md) additionally retain their observable
 diagnostic/failure effect as standard `cf.assert` operations. Public tensor/scalar
-ABI and receipt schemas are unchanged; compatibility metadata records the source
-effect and native stdio transport. Effect-only and initial expected-failure
-packages still require separate contracts.
+ABI and receipt schemas are unchanged for ordinary tensor packages;
+compatibility metadata records the source effect and native stdio transport.
+[Effect-only/initial expected-failure packages](effect_abi.md) use explicit
+`t2m.effect-kernel-receipt.v1` and `reference.json`, omitting numeric goldens.
+They retain actual void or tensor-result signatures, outcome observations and
+compiler-only custody rather than fabricating a result.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 

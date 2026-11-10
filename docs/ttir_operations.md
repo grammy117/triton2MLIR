@@ -21,7 +21,7 @@ implementation paths and open requirements.
 
 | Family | Operations (all have `tt.` prefix) | Current path / remaining gate |
 |---|---|---|
-| Functions | `func`, `call`, `return` | Native helper inlining, source inventory and declared entry ABI. General entry returns/CFGs still need explicit bindings. |
+| Functions | `func`, `call`, `return` | Native helper inlining, source inventory and declared entry ABI. [ABI v6/outcome packets](effect_abi.md) now preserve void and initially failing entries through Merlin. General value-returning entries/CFGs still need explicit bindings. |
 | Logical domain | `get_program_id`, `get_num_programs`, `make_range` | Unmapped logical forall, checked runtime launch bindings and source-width arithmetic. |
 | Pointer memory | `addptr`, `load`, `store` | Tensor proofs or explicit guarded source-word memory. Aliases, non-dense storage, volatile/order policies remain separate. |
 | Structured descriptors | `advance`, `make_tensor_ptr`, `make_tensor_descriptor`, `descriptor_load`, `descriptor_store` | Official pre-layout normalization for measured local descriptor forms. External descriptor ABI remains open. |
@@ -36,7 +36,7 @@ implementation paths and open requirements.
 | Tile histogram | `histogram` | Standard indexed tensor state with exact masks; global atomics and broader element/counter types remain separate. |
 | Element maps | `map_elementwise`, `map_elementwise.return` | Pack-one numeric regions retain scalar control. Packed lane grouping and memory/effectful maps remain open. |
 | Atomics | `atomic_cas`, `atomic_rmw` | [Private integer profile](atomic_memory.md) retains RMW i32/i64 and CAS i16/i32/i64, original old values, collisions, scope/order, branch/loop recurrences and finite selected buffers through actual Merlin execution. The typed profile adds bitwise f32/f64 exchange, IEEE f64 addition, explicit IEEE/FTZ f32 addition and all nine integer RMWs on equal-width floating storage, retaining the source floating min/max algorithm. Integer-word CAS additionally retains i16/i32/i64 comparisons on f16/f32/f64 storage through standard atomic regions and actual Merlin/model2MLIR execution. Other floating policies, external effects and broader synchronization remain open. |
-| Assertions | `assert` | [Upstream scalar/lane-wise CF assertions](source_assertions.md) retain conditions, messages, loop/branch placement and actual failures through native/Merlin execution and real model2MLIR captures in all three memory profiles. Length-aware messages, effect-only and initial expected-failure package contracts remain open. |
+| Assertions | `assert` | [Upstream scalar/lane-wise CF assertions](source_assertions.md) retain conditions, messages, loop/branch placement and actual failures through native/Merlin execution and real model2MLIR captures in all three memory profiles. [Outcome packets](effect_abi.md) now cover void and initially failing kernels. Length-aware messages and target diagnostic handling remain open. |
 | External effects / implementations | `extern_elementwise`, `elementwise_inline_asm`, `print` | Qualified library/intrinsic/diagnostic contracts required. Backend-observing assembly cannot be inferred from provenance. |
 | Indexed descriptor effects | `descriptor_gather`, `descriptor_scatter`, `descriptor_reduce` | Descriptor ABI, indexing and write/reduction conflict semantics remain open. |
 | Physical observations | `ptr_to_int`, `int_to_ptr` | Concrete address-space/identity contract required; a pure logical tensor ABI does not supply it. |

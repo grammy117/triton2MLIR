@@ -20,6 +20,11 @@ def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, pyth
     if not np.isfinite(rtol) or not np.isfinite(atol) or min(rtol, atol) < 0:
         raise ValueError("invocation comparison needs finite nonnegative tolerances")
     verified = verify_kernel_qualification(qualification)
+    if verified["schema"] == "t2m.merlin-effect-qualification.v1":
+        if rtol or atol:
+            raise ValueError("effect references use exact outcomes, not numeric tolerances")
+        from .effect_consumer import invoke_effect_kernel
+        return invoke_effect_kernel(qualification,arguments,reference,out,merlin_root=merlin_root,python=python)
     if qualification.resolve() in out.parents:
         raise ValueError("invocation evidence must be outside its immutable qualification")
     out.mkdir(parents=True, exist_ok=False)
@@ -61,6 +66,9 @@ def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, pyth
 def verify_invocation(out):
     out = Path(out)
     report = json.loads((out / "invocation.json").read_text())
+    if report.get("schema") == "t2m.merlin-effect-invocation.v1":
+        from .effect_consumer import verify_effect_invocation
+        return verify_effect_invocation(out)
     required = {"source/qualification.json", "source/compiler/signature.json", "source/compiler/compile-inputs.json",
                 "source/host/compilation.json", "evaluator/inputs.npz", "evaluator/reference.npz",
                 "evaluation/outputs.npz", "evaluation/evaluation.json"}

@@ -183,7 +183,15 @@ def main(work):
             else:
                 packed.append(ctypes.pointer(SCALAR_CTYPES[str(type_)](array.item())))
         packed.extend(ctypes.pointer(ctypes.pointer(runtime.get_ranked_memref_descriptor(a))) for a in outputs)
+        observed = not signature.results or (work / "observe-config.json").is_file()
+        if observed:
+            from process_outcome import started, record
+            started(work,backend="native-jit",program=work / "model.mlir",arguments=work / "inputs.npz",
+                implementation={"kind":"llvm-jit","artifact":record(work / "lowered-llvm.mlir")})
+            before = [a.tobytes() for a in arrays]
         engine.invoke(name, *packed)
+        if observed and any(a.tobytes() != original for a,original in zip(arrays,before,strict=True)):
+            raise ValueError("native effect-only entry mutated a readonly input")
         if callback_errors:
             raise ValueError("native runtime copy failed: " + "; ".join(callback_errors))
     np.savez(work / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})

@@ -577,3 +577,21 @@ External functions/assembly, synchronization, broader low-precision arithmetic,
 runtime/alias models, the complete maintained corpus/refusal matrix and target
 materialization remain required work. This does not redefine the goal around
 the successful tensor-returning or host-executed cases.
+
+The first two effect/package gates above are now implemented in
+[ABI v6 and observable-outcome packets](effect_abi.md). Real zero-argument,
+scalar and readonly dynamic tensor kernels keep their actual void signatures;
+initially failing tensor kernels retain declared results without publishing
+values. Independent JSON references bind exact return/assertion-failure outcomes
+and byte streams. Invocation-phase records distinguish source failures from
+setup errors, timeouts and unrelated signals. Native observations never become
+compiler inputs: Merlin independently stages and compiles the portable payload.
+
+The 40 focused producer/consumer/CLI cases pass, including all memory profiles,
+empty/tail/full domains, loop zero trips, repeated use of one library and
+rehashed outcome refusals. Another 73 existing numeric/diagnostic/model/coverage
+regressions and 230 Merlin staging checks pass. A further rehashed-signature
+case verifies that failure cannot hide a real tensor result. Saved constant-fail
+and fail-before-store demos reach actual Merlin execution with no numeric golden.
+Length-aware diagnostics and broader print/external/synchronization contracts
+remain open, along with the original numeric/runtime/alias/corpus/target work.

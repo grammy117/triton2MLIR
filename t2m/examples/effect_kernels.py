@@ -22,3 +22,9 @@ def check_tensor(x, n, limit, B:tl.constexpr):
 @triton.jit
 def constant_check(FAIL:tl.constexpr):
     tl.device_assert(not FAIL, "constant source assertion")
+
+
+@triton.jit
+def fail_before_store(out,B:tl.constexpr):
+    tl.device_assert(False,"failure precedes real output")
+    tl.store(out + tl.arange(0,B),0)

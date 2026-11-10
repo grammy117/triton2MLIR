@@ -47,10 +47,10 @@ and native runtime dependency. Source messages use the upstream
 reaches the caller, and failed invocations receive no success receipt.
 
 The current text transport requires NUL-free messages. Embedded NULs are a
-located refusal until a length-aware diagnostic ABI can preserve them. Effect-only
-kernels without tensor results and initial packages whose only expected outcome
-is failure still need separate package contracts; they are not silently assigned
-dummy results or claimed as complete by this profile. Other print, external
+located refusal until a length-aware diagnostic ABI can preserve them.
+[Observable-outcome packages](effect_abi.md) now separately support void kernels
+and initial expected failures, retaining actual result types and independent
+termination/stream references without dummy results. Other print, external
 function, assembly and synchronization effects retain their existing gates.
 
 ## Executed cases and visible demos

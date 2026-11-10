@@ -29,6 +29,11 @@ def qualify_kernel(capture, out, *, merlin_root, python=None, compiler_python=No
     if not np.isfinite(rtol) or not np.isfinite(atol) or min(rtol, atol) < 0:
         raise ValueError("Merlin kernel comparison needs finite nonnegative tolerances")
     receipt = verify_bundle(capture)
+    if receipt["schema"] == "t2m.effect-kernel-receipt.v1":
+        if rtol or atol:
+            raise ValueError("effect references use exact outcomes, not numeric tolerances")
+        from .effect_consumer import qualify_effect_kernel
+        return qualify_effect_kernel(capture,out,merlin_root=root,python=python,compiler_python=compiler_python,clang=clang)
     if receipt["schema"] != "t2m.capture-receipt.v2":
         raise ValueError("standalone Merlin qualification requires the shared functional tensor profile")
     if capture in out.parents:
@@ -80,6 +85,9 @@ def verify_kernel_qualification(out):
     """Check retained consumer/source/library/reference relationships and bytes."""
     out = Path(out)
     receipt = json.loads((out / "qualification.json").read_text())
+    if receipt.get("schema") == "t2m.merlin-effect-qualification.v1":
+        from .effect_consumer import verify_effect_qualification
+        return verify_effect_qualification(out)
     required = {"input-receipt.json", "compiler/compile-inputs.json", "compiler/program.mlir", "compiler/signature.json",
                 "host/model.so", "host/outputs.npz", "host/execution.json", "host/evaluation.json", "host/compilation.json"}
     if receipt.get("schema") != "t2m.merlin-kernel-qualification.v1" or not required <= set(receipt.get("artifacts", {})):

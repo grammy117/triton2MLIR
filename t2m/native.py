@@ -15,6 +15,14 @@ import numpy as np
 
 
 def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None):
+    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root)
+
+
+def observe_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None):
+    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root,observe_outcome=True)
+
+
+def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, observe_outcome=False):
     work = Path(work)
     arrays = [np.asarray(x) for x in inputs]
     if sum(x.nbytes for x in arrays) > 64 * 1024 * 1024:
@@ -27,6 +35,12 @@ def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, comp
         (work / "shape-abi.json").write_text(json.dumps(shape_abi, sort_keys=True) + "\n")
     np.savez(work / "inputs.npz", **{f"in{i}": x for i, x in enumerate(arrays)})
     runner = Path(__file__).with_name("native_runner.py")
+    if observe_outcome:
+        from .process_outcome import observe
+        (work / "observe-config.json").write_text(json.dumps({"schema":"t2m.observe-config.v1"})+"\n")
+        return observe([str(python or sys.executable),str(runner),str(work.resolve())],work,timeout=30,
+            environment=dict(os.environ,OMP_NUM_THREADS="1",OPENBLAS_NUM_THREADS="1",TMPDIR=str(work.resolve()),
+                **({"T2M_MERLIN_ROOT":str(compiler_support_root)} if compiler_support_root is not None else {})))
     try:
         process = subprocess.run([str(python or sys.executable), str(runner), str(work.resolve())],
                                  capture_output=True, text=True, timeout=30,

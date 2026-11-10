@@ -35,6 +35,8 @@ DIFFERENCES = [
 
 
 def write_shared_bundle(result, out, inputs, references, *, work, python=None, rtol=0, atol=0):
+    if result.spec.effect_only:
+        raise ValueError("effect-only kernels require an explicit observable-outcome reference")
     out = Path(out)
     if out.exists():
         raise FileExistsError(out)

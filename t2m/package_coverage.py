@@ -103,7 +103,7 @@ def package_coverage(bundles, *, qualifications=()):
     for path in bundles:
         root = Path(path).absolute()
         receipt = _receipt(root, "capture_receipt.json")
-        if receipt.get("schema") not in ("t2m.capture-receipt.v2", "t2m.bound-model-receipt.v1"):
+        if receipt.get("schema") not in ("t2m.capture-receipt.v2", "t2m.bound-model-receipt.v1", "t2m.effect-kernel-receipt.v1"):
             raise ValueError("coverage requires shared tensor or bound model packages")
         verify_bundle(root)
         pin = _record(root / "capture_receipt.json")
@@ -111,6 +111,7 @@ def package_coverage(bundles, *, qualifications=()):
             raise ValueError("duplicate package receipt in coverage selection")
         selected.add(pin["sha256"])
         model = receipt["schema"] == "t2m.bound-model-receipt.v1"
+        effect = receipt["schema"] == "t2m.effect-kernel-receipt.v1"
         prefix = "consumer/" if model else ""
         consumer = root if model else qualified.get(pin["sha256"])
         host = None
@@ -118,19 +119,23 @@ def package_coverage(bundles, *, qualifications=()):
             filename = prefix + "host/execution.json"
             if not model or filename in receipt["artifacts"]:
                 host = _json(_member(consumer, filename))
-        host_schema = "t2m.merlin-host-qualification.v1" if model else "t2m.merlin-kernel-host-qualification.v1"
+        host_schema = "t2m.merlin-effect-host-qualification.v1" if effect else "t2m.merlin-host-qualification.v1" if model else "t2m.merlin-kernel-host-qualification.v1"
         if host is not None and (host.get("schema") != host_schema
-                or host.get("host_execution") != "passed" or host.get("reference_comparison") != "passed"
+                or host.get("host_execution") != ("matched-expected-outcome" if effect else "passed") or host.get("reference_comparison") != "passed"
                 or host.get("whole_body_lowering") != "passed"
                 or host.get("compiler_input_staging") != "passed"
                 or host.get("evaluator_data_supplied_to_compiler") is not False):
             raise ValueError("coverage Merlin observations require the complete host qualification")
         package = {"path": str(root), "receipt": pin, "schema": receipt["schema"],
             "merlin_host": host is not None, "native_reference_comparison": "passed",
+            "reference_kind":"observable-effects" if effect else "numeric-tensors",
             "accelerator_execution": "not-qualified-by-this-report"}
         if host is not None:
             package["host_report"] = _record(consumer / (prefix + "host/execution.json"))
-            package["merlin_numeric_policy"] = {key:host[key] for key in ("rtol", "atol")}
+            if effect:
+                package["merlin_effect_policy"] = {"termination":host["termination"],"comparison":"exact-streams-and-termination"}
+            else:
+                package["merlin_numeric_policy"] = {key:host[key] for key in ("rtol", "atol")}
         packages.append(package)
         directories = sorted(receipt["kernel_artifacts"].values()) if model else [""]
         for directory in directories:
@@ -148,6 +153,8 @@ def package_coverage(bundles, *, qualifications=()):
                 "payload_sha256": trace["mlir_sha256"], "source_graph": "original-source-operations",
                 "inventory_authority": "byte-bound producer declaration; not independent source proof",
                 "merlin_host": host is not None, "profile": trace.get("profile", "functional-tensor"),
+                "reference_kind":"observable-effects" if effect else "numeric-tensors",
+                **({"host_outcome":host["termination"]} if effect and host is not None else {}),
                 "abi": trace["spec"], "operations": trace["source_operations"],
                 "normalized_operation_counts": dict(Counter(op["opcode"] for op in trace.get("normalized_operations", [])))})
     if set(qualified) - selected:
@@ -162,6 +169,6 @@ def package_coverage(bundles, *, qualifications=()):
         "merlin_observed_definition_count": sum(bool(row["merlin_cases"]) for row in observations["ttir"].values()),
         "unmeasured_definitions": [name for name,row in observations["ttir"].items() if not row["cases"]],
         "refusal_coverage": "not-collected-by-package-selection; use upstream corpus reports separately",
-        "operation_execution_coverage": "not-measured; host evidence concerns the containing package, including its declared reference tolerances",
+        "operation_execution_coverage": "not-measured; host evidence concerns the containing package and its explicit numeric/effect reference policy",
         "universal_opcode_type_attribute_coverage": "not-established",
         "target_materialization": "not-qualified-by-this-report"}

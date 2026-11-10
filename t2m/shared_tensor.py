@@ -308,7 +308,7 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
                         "properties": {k: str(v) for k, v in op.properties.items()},
                         "attributes": {k: str(v) for k, v in op.attributes.items() if k != "op_name"}})
         op.location = NameLoc(StringAttr(source_id), op.location)
-        if name == "tt.assert":
+        if name in ("tt.assert", "cf.assert"):
             from .source_assertions import contract as assertion_contract
             records[-1]["source_assertion"] = assertion_contract(op, source_id)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:

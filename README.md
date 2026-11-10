@@ -40,6 +40,9 @@ operations and native/Merlin evidence separate.
 `shared-demo --kernel checked-copy` now also preserves
 [source assertions](docs/source_assertions.md), including observable failure
 diagnostics and original loop/branch placement through Merlin.
+`effect-demo` also packages void and initially failing kernels with
+[explicit outcome references](docs/effect_abi.md), preserving their real public
+signatures through the same compiler and native library interface.
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.
