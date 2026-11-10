@@ -345,14 +345,11 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
             if isinstance(value, builtin.FloatAttr) and host_math.isnan(value.value.data):
                 raise ConversionError("NaN constant payload preservation is not qualified", source_id=source_id, opcode=name)
         if name == "tt.dot":
-            precision = op.properties.get("inputPrecision", op.attributes.get("inputPrecision"))
-            if not isinstance(precision, IntegerAttr) or precision.value.data != 2:
-                raise ConversionError("dot precision must explicitly be IEEE; upstream drops this policy", source_id=source_id, opcode=name)
-            accumulator = op.operands[2].owner
-            value = getattr(accumulator, "properties", {}).get("value")
-            positive_zero = (isinstance(value, builtin.DenseIntOrFPElementsAttr) and value.is_splat()
-                and all(v == 0 and (not isinstance(v, float) or host_math.copysign(1, v) > 0) for v in value.get_values()))
-            records[-1]["restore_matmul_accumulator"] = not positive_zero
+            from .contractions import dot_contract, zero_accumulator
+            records[-1]["dot_numeric"] = dot_contract(op, source_id)
+            zero = zero_accumulator(op.operands[2])
+            records[-1]["dot_numeric"]["source_accumulator_zero"] = zero
+            records[-1]["restore_matmul_accumulator"] = zero != "positive"
     return records
 
 
@@ -364,15 +361,30 @@ def _restore_accumulators(module, records):
     Refuse changed/ambiguous patterns instead of guessing from operation order.
     """
     required = {r["id"] for r in records if r.get("restore_matmul_accumulator")}
-    repaired, observed = [], set()
+    negative = {r["id"] for r in records if r.get("dot_numeric",{}).get("source_accumulator_zero") == "negative"}
+    repaired, observed, plans = [], set(), []
     for matmul in list(module.walk()):
         ids = set(_source_ids(matmul.location)) & required
         if opcode(matmul) not in ("linalg.matmul", "linalg.batch_matmul") or not ids:
             continue
         users = {use.operation for use in matmul.results[0].uses}
+        add = next(iter(users)) if len(users) == 1 else None
+        source_add = add is not None and ids <= set(_source_ids(add.location))
+        if ids <= negative and not source_add:
+            # Shared skips constant -0 as if it were +0. Retain subsequent
+            # consumers and reconstruct this proved source constant only.
+            from .contractions import zero_accumulator
+            seed = matmul.operands[2].owner
+            if (not hasattr(seed,"name") or opcode(seed) != "linalg.fill"
+                    or len(seed.inputs) != 1 or zero_accumulator(seed.inputs[0]) != "positive"):
+                raise ConversionError("upstream skipped-zero accumulator is not the qualified positive-zero seed")
+            plans.append(("negative-zero",matmul,None,None,ids))
+            observed.update(ids)
+            continue
         if len(users) != 1:
             raise ConversionError("upstream accumulator expansion has ambiguous contraction uses")
-        add = next(iter(users))
+        if not source_add:
+            raise ConversionError("upstream accumulator add lost its original dot correspondence")
         if not isinstance(add, GenericOp) or len(add.inputs) != 2 or len(add.outputs) != 1 or len(add.results) != 1:
             raise ConversionError("upstream nonzero accumulator expansion is not the qualified pointwise add")
         rank = len(matmul.results[0].type.get_shape())
@@ -387,14 +399,26 @@ def _restore_accumulators(module, records):
         accumulator = next((v for v in add.inputs if v is not matmul.results[0]), None)
         if accumulator is None or accumulator.type != matmul.results[0].type:
             raise ConversionError("upstream source accumulator has an incompatible tensor type")
-        matmul.operands = (*matmul.operands[:2], accumulator)
-        add.results[0].replace_all_uses_with(matmul.results[0])
-        add.parent.erase_op(add)
+        plans.append(("source-C",matmul,add,accumulator,ids))
         observed.update(ids)
-        repaired.append({"kind": "restore-source-contraction-accumulator", "source_ids": sorted(ids),
-                         "checked_pattern": "unique-use identity-map pointwise add of contraction and source C"})
     if observed != required:
         raise ConversionError("upstream did not expose every required source accumulator for restoration")
+    for kind,matmul,add,accumulator,ids in plans:
+        if kind == "negative-zero":
+            seed = arith.ConstantOp(builtin.DenseIntOrFPElementsAttr.from_list(matmul.results[0].type,[-0.]))
+            seed.location = matmul.location
+            matmul.parent.insert_op_before(seed,matmul)
+            matmul.operands = (*matmul.operands[:2],seed.result)
+            repaired.append({"kind":"restore-source-negative-zero-accumulator","source_ids":sorted(ids),
+                "checked_pattern":"proved constant/splat negative source zero; upstream positive-zero fill seed"})
+        else:
+            # Earlier source-C repairs may have replaced this dependency.
+            accumulator = next(v for v in add.inputs if v is not matmul.results[0])
+            matmul.operands = (*matmul.operands[:2], accumulator)
+            add.results[0].replace_all_uses_with(matmul.results[0])
+            add.parent.erase_op(add)
+            repaired.append({"kind": "restore-source-contraction-accumulator", "source_ids": sorted(ids),
+                             "checked_pattern": "same-source unique-use identity-map pointwise add of contraction and source C"})
     return repaired
 
 
@@ -1356,11 +1380,17 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if source_assertions:
         next(iter(result.ops)).attributes["prov.source_assertions"] = StringAttr(json.dumps(source_assertions, sort_keys=True))
     source_names = {r["id"]: r["opcode"] for r in records}
+    contractions = {record["id"]: {**record["dot_numeric"], "intake_accumulator_value":record["inputs"][2]}
+        for record in records if "dot_numeric" in record}
     for op in result.walk():
         if memory_profile in ("buffer", "guarded-buffer"):
             op.attributes.setdefault("prov.family", StringAttr("triton"))
             op.attributes.setdefault("prov.op", StringAttr(op.name.split(".")[-1]))
         ids = _source_ids(op.location)
+        if op.name in ("linalg.matmul", "linalg.batch_matmul"):
+            contracts = {source_id:contractions[source_id] for source_id in ids if source_id in contractions}
+            if contracts:
+                op.attributes["prov.contraction_contracts"] = StringAttr(json.dumps(contracts,sort_keys=True))
         if op.name == "arith.bitcast" and word_views:
             views = [r for r in word_views if set(ids) & set(r["source_ids"])]
             if views:

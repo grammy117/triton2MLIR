@@ -1,5 +1,24 @@
 # Measured coverage and remaining boundaries
 
+[Mixed FP8 contractions](fp8_contractions.md) now retain named matmul,
+original C, runtime M/N/K, typed-zero padding and logical tiles through the
+Merlin interface. The 24 dynamic packages cover all sixteen FP8 input pairs
+in tensor form and all same-format pairs in buffer/guarded form. Twelve more
+packages preserve negative-zero C and a downstream runtime add. Reused
+libraries distinguish empty/zero-K/ragged domains, initial accumulation and
+post-contraction addition. Precision/typed-zero and direct repair/refusal
+checks complete the 93-case slice. Nine source-width division checks support
+the actual `cdiv` loop form; 64 native narrowing/widening cases qualify named
+generalization, scalar fill transport, callbacks and complete-body refusal.
+F32 alternate precision, broader accumulators, scaled dot, model/alias/effect
+closure and applicable targets remain open.
+The saved mixed-FP8 demo and qualification verify 26/45 artifacts. Its explicit
+28-package source report retains 29/50 definitions observed and 25 in
+host-qualified captures. Dense signed-zero round-trips and six actual constant
+returns also pass both-reader checks; the consumer's reader/format suite
+passes 70 cases, including exhaustive BF16/f16 code decoding. None of these
+counts changes the universal operation/type/attribute denominator.
+
 [FP8 narrowing and distinct-format conversion](float_casts.md#fp8-narrowing-and-explicit-overflow-contracts)
 now retain explicit RTNE/RTZ and three overflow/infinity profiles in standard
 MLIR. The 32 standard-source/FP8/mode cases cover every f16/BF16 source word

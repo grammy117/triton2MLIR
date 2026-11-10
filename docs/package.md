@@ -41,6 +41,20 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+FP8 contractions retain their named matmul and original accumulator in the
+portable payload. Derived `prov.contraction_contracts` records source formats,
+precision applicability, accumulation bound and intake C identity without
+granting arithmetic or hardware permissions. Selected native widening uses
+official named-op generalization before scalar cast expansion, retaining
+generalized fill transport and every ownership callback. Proved negative zero
+and later source additions remain distinct. This changes neither the public
+ABI nor package schema; [the implementation and evidence](fp8_contractions.md)
+explicitly separate host execution from accelerator qualification.
+The cooperating readers preserve complete dense element words when deciding
+whether a constant is a splat, including mixed signed zeros. Exact finite
+format decoding uses binary exponent scaling. These are correctness repairs
+within the existing MLIR and archive representations, without a schema change.
+
 FP8 conversion additionally requires an explicit overflow/infinity contract
 (`ieee`, `satfinite`, or `satfinite-nan-inf`). Standard executable clamps,
 casts and RTZ correction implement that profile; annotations retain intent.

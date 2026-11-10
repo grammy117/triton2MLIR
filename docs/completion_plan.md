@@ -685,6 +685,17 @@ and exact adjacent words remain separate policies. The native implementation
 uses standard integer significand rounding before widening/BF16 legalization,
 without changed storage or ownership. A global selected profile is explicit;
 heterogeneous per-cast backend contracts are still an open requirement.
-Continue FP8 arithmetic, heterogeneous policies, mixed/scaled dot,
+Mixed FP8→f32 contractions now additionally preserve named tile structure,
+original C, runtime M/N/K and K padding through 24 actual Merlin packages.
+All sixteen input pairs qualify in tensor form; every same-format pair also
+qualifies in the buffer profiles. Twelve signed-zero/downstream-add packages
+retain those separate observations. The complete 93-case slice includes
+precision applicability, typed-zero and direct repair/refusal checks. Native
+generalization uses an official pass without changing portable named ops.
+Source-width signed quotient intervals also support actual `cdiv` loop bounds
+without supplying affine alignment facts. See [the source-backed contract and
+scaled-dot implementation order](fp8_contractions.md). All A–G requirements and
+the full definition/type/attribute/composition denominator remain intact.
+Continue FP8 arithmetic, heterogeneous policies, broader and scaled dot,
 runtime/alias and external/effect closure, maintained corpus and applicable
 target materialization. Standard cast closure is not full TTIR closure.

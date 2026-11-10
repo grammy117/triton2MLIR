@@ -67,6 +67,8 @@ precise division/sqrt, with [independent IEEE references and BF16 consumer suppo
 [standard-format conversion and caller-intent evidence](docs/float_casts.md#rounding-and-standard-format-conversion).
 `shared-demo --kernel fp8-narrow --fp8-overflow satfinite` retains
 [per-step FP8 rounding and explicit overflow/infinity contracts](docs/float_casts.md#fp8-narrowing-and-explicit-overflow-contracts).
+`shared-demo --kernel fp8-dot` retains
+[mixed FP8 contractions, runtime K tiles and original accumulators](docs/fp8_contractions.md).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.
