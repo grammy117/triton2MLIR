@@ -1214,6 +1214,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         middle_source = work / "expanded-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
     word_input = middle_source.read_text() if source_words else None
+    from .structured_state import data_control_report
+    data_control = data_control_report(middle_module, _source_ids) if not source_words else None
     if isolated_events:
         from .word_events import convert_events, print_ir
         from .word_evidence import record as word_record
@@ -1228,7 +1230,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             "events": events, "compute": {"input": compute_input, "native_stage": compute_stage}}
     else:
         stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
-            stage="source-word-tensor" if source_words else "tensor-ir")
+            stage="source-word-tensor" if source_words else "tensor-ir-data-control" if data_control else "tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
@@ -1241,6 +1243,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             report["source_ids"] = ids
             print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
+    if data_control:
+        transformations.append(data_control)
     if print_reports:
         transformations.append({"kind":"source-logical-print-events","prints":print_reports,
             "scope":"one-event-per-logical-program-operand-element; physical replicas abstracted"})

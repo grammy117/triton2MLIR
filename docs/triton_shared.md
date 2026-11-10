@@ -5,6 +5,23 @@ Use its analyses, converters and corpus as the primary reuse path for broader ke
 triton2MLIR supplies the functional tensor ABI, logical launch normalization, intent/provenance,
 semantic qualification and model2MLIR/Merlin package contract.
 
+The structured tensor path selects the upstream `skip-prepass=true` option
+when `t2m/structured_state.py` proves every SCF region is numeric and its
+transitive state uses reach only numeric computation, diagnostics or stored
+data. Pointer arithmetic, masks, buffer accesses inside regions, calls and
+unknown effects retain the original pipeline. The installed `0c27923` binary
+otherwise wraps i64 data recurrences in `tts.get_structured_state` although
+its verifier accepts only i32 tensor state. Meta `17f0c234` documents this
+boxing and later removal in `TritonToStructuredPass.cpp`; its
+`get_structured_state_int_element_types.mlir` and
+`tensor_indices_loop_iterargs_not_used_ptranalysis_prepass.mlir` tests expose
+the distinction. The supported option is declared in
+`Conversion/TritonToStructured/Passes.td`. This selection keeps the actual
+loops, tensor widths, diagnostics and reuse, runs the same pointer conversion
+and memory checks, and records the proof and exact pipeline in provenance.
+It supplies no permission to skip pointer-state normalization in mixed memory
+recurrences.
+
 The [full memory bridge probe and plan](full_memory_bridge.md) now demonstrates
 the full shared pipeline through Merlin's actual whole-body compiler. Its later
 memory form is usable at that consumer boundary; general functional ABI,
