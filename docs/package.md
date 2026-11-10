@@ -53,9 +53,18 @@ Typed input preparation accepts overlapping readonly tensors by copying their
 exact logical values before serialization. Runtime scalar carriers are captured
 by value even when their backing bytes overlap tensor storage. The trace names
 `readonly-input-value-snapshots-v1`; compiled tensor inputs remain independent.
-Writable tensor overlaps refuse before copying and require an actual alias/state
-interface. This changes neither the ABI nor receipt schema; compatibility
+Undeclared writable tensor overlaps refuse before copying and require an actual
+alias/state interface. This changes neither the ABI nor receipt schema; compatibility
 metadata records the rule. See [readonly aliases](readonly_aliases.md).
+
+[Allocation-state bindings](allocation_state.md) now provide that explicit
+source interface through `shared-tensor --allocation-bindings`. The public entry
+takes roots once, passes source pointers/offsets through a real TTIR call and
+returns each updated root once. `source.ttir` contains this bound program and
+the private source body; pre-wrapper original bytes remain in conversion work.
+The descriptive binding table records both hashes without granting semantics.
+Existing ABI/receipt schemas and compiler/evaluator separation remain unchanged;
+compatibility metadata records the source/signature difference.
 
 Non-dense source-allocation packages keep owning flat tensors, including
 padding, with typed runtime origins, signed element strides and capacities.

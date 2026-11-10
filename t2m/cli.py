@@ -34,6 +34,11 @@ def demo(out, *, size=1024, block=256, operation="add"):
 
 
 def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+    if kernel in ("allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot"):
+        from .allocation_state_demo import demo
+        return demo(out,optimizer=optimizer,python=python,
+                    dtype={"allocation-state-dot":"f32","allocation-state-half-dot":"f16","allocation-state-bfloat-dot":"bf16"}[kernel],
+                    memory_profile=memory_profile,address_policy=address_policy)
     if kernel in ("readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot"):
         from .readonly_alias_demo import demo
         return demo(out,optimizer=optimizer,python=python,
@@ -454,6 +459,7 @@ def main(argv=None):
     tensor = commands.add_parser("shared-tensor", help="adapt shared tensor computation and structured memory into functional tensors")
     tensor.add_argument("ttir", type=Path)
     tensor.add_argument("--abi", type=Path, required=True)
+    tensor.add_argument("--allocation-bindings",type=Path,help="explicit source-order pointer/scalar bindings into the owning allocation ABI")
     tensor.add_argument("--out", type=Path, required=True)
     tensor.add_argument("--optimizer", type=Path)
     tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
@@ -470,7 +476,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot", "readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
@@ -642,8 +648,14 @@ def main(argv=None):
                 raise FileExistsError(args.out)
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
-            result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer,
-                                    memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add, fp8_overflow=args.fp8_overflow)
+            options = dict(optimizer=args.optimizer,memory_profile=args.memory_profile,address_policy=args.address_policy,
+                           effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow)
+            if args.allocation_bindings:
+                from .allocation_bindings import arguments_from_dict,convert_allocations
+                entry,bindings = arguments_from_dict(json.loads(args.allocation_bindings.read_text()))
+                result = convert_allocations(args.ttir,abi,bindings,work / "translation",source_entry=entry,**options)
+            else:
+                result = convert_shared(args.ttir,abi,work / "translation",**options)
             if args.effect_reference:
                 from .effect_bundle import write_effect_bundle
                 inputs = []

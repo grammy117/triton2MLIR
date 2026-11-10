@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Explicit allocation state](allocation_state.md) now qualifies writable source
+pointer sharing, including runtime offsets, read-after-write loops and one
+returned root. Seven real Merlin libraries cover i64 updates and f32/f16/BF16
+tiled GEMM with shared C/output storage. Twenty-three focused cases pass,
+including native CLI packaging; 24 additional invocations reuse those libraries
+and two real guard failures refuse bounds/cross-program conflicts. The generic
+consumer fusion fix passes 109 Merlin regressions while retaining pure fusion.
+Mixed-type aliases, independently strided C, model views and targets remain open.
+The 35 existing readonly/strided-memory regressions pass. The visible BF16
+package and qualification verify 33/52 artifacts. The explicit 40-package
+report at `out/allocation-state-coverage/coverage.json` retains 31/50 observed
+definitions and 27 in host-qualified captures; this adds composition evidence.
+
 [Readonly input aliases](readonly_aliases.md) now qualify both typed package
 writers, including f32/f16/BF16 tiled operands alongside independent writable
 output state. By-value scalar carriers can also share writable tensor storage.

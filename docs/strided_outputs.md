@@ -75,3 +75,7 @@ python -m t2m qualify-merlin out/strided-bfloat-output \
 Aliases between declared source allocations, C loaded from the strided output
 itself, logical-view model adapters, broader effects and applicable target
 materialization remain in the full [completion plan](completion_plan.md).
+An [explicit allocation-state entry](allocation_state.md) now additionally
+binds dense source C and strided output into one root, preserving source sharing
+and returning its full updated state. Independently strided C and model view
+adapters remain separate qualifications.

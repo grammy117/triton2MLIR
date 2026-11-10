@@ -12,8 +12,10 @@ Merlin. Original K reuse, typed accumulators and active bounds remain intact;
 [strided writable output state](docs/strided_outputs.md) also preserves every
 untouched output word and rejects conflicting stores. [Readonly aliases](docs/readonly_aliases.md)
 now prepare independent logical input values, and aliased scalar carriers retain
-their by-value semantics through Merlin. Writable tensor aliases, strided
-output-C reads, model compositions and target handling remain open.
+their by-value semantics through Merlin. [Allocation-state bindings](docs/allocation_state.md)
+now express writable source aliases with runtime offsets and one returned root,
+including shared C/output GEMM. Mixed-type alias groups, independently strided
+C, model view adapters and target handling remain open.
 [Pure external math](docs/external_math.md) now reuses shared conversions for
 52 f32/f64 default-library declarations, with typed/purity/library checks and
 standard math through Merlin. Arbitrary libraries and effects remain separate.

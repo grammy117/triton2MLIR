@@ -7,6 +7,8 @@ from .input_storage import READONLY_SNAPSHOTS
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if trace.get("source_argument_binding", {}).get("schema") == "t2m.source-allocation-bindings.v1":
+        differences.append("the public allocation-state entry takes each root once and binds original source pointer arguments through an executable TTIR call, with explicit element offsets and scalar bindings; source.ttir is this bound program and includes the private original kernel body; source operations and pointer sharing remain executable before upstream inlining; each writable root is returned once with all untouched state preserved; original pre-wrapper source bytes remain in conversion work rather than a separate package artifact; callers must supply the declared root ABI, and unrelated writable input overlaps still refuse")
     if trace.get("memory", {}).get("input_preparation") == READONLY_SNAPSHOTS:
         differences.append("overlapping readonly tensor arguments are snapshotted as independent logical values before serialization, preserving dtype and every input word; aliased scalar carriers are loaded by value without changing tensor storage; physical pointer identity and volatile observations remain outside this profile; overlap between tensor arguments involving writable storage still requires an explicit alias/state interface and refuses before copying; serialized/compiler inputs gain no alias dependency or permission to discard guards, and the generic raw-MLIR executor keeps its independent-input requirement")
     if any(buffer.get("dtype") in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")

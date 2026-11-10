@@ -83,3 +83,6 @@ The visible demo passes live overlapping operands to the writer; the saved
 archive contains their independent values. A serialized NPZ carries no physical
 alias relationship. Writable tensor aliases, strided output-C reads, logical-view
 model adapters and applicable targets remain in the [completion plan](completion_plan.md).
+Declared writable source sharing now has an [allocation-state entry](allocation_state.md):
+callers pass one root and explicit offsets rather than overlapping independent
+tensor values. The preparation rule and its undeclared-overlap refusal stay intact.

@@ -8,7 +8,7 @@ from .scalar_abi import RuntimeScalar
 from .shared_tensor import TensorABI, TensorBuffer, convert_shared
 
 
-def convert(work, *, dtype="f32", optimizer=None, writable=False):
+def capture(work, *, dtype="f32", writable=False):
     from .examples.strided_memory_kernels import strided_tiled_dot, strided_output_dot
 
     if dtype not in ("f32", "f16", "bf16"):
@@ -35,7 +35,12 @@ def convert(work, *, dtype="f32", optimizer=None, writable=False):
         grid=(GridExtent("m",16),GridExtent("n",16)),runtime_scalars=scalars,
         intent=("Tiled contraction over source allocations with runtime signed/padded/broadcast views; source K reuse; hardware mapping undecided"
                 + ("; partial strided output writes preserve incoming allocation state" if writable else "")))
-    return convert_shared(source,abi,work / "translate",optimizer=optimizer,
+    return source,abi
+
+
+def convert(work, *, dtype="f32", optimizer=None, writable=False):
+    source,abi = capture(work,dtype=dtype,writable=writable)
+    return convert_shared(source,abi,Path(work) / "translate",optimizer=optimizer,
                           memory_profile="guarded-buffer",address_policy="source-words")
 
 

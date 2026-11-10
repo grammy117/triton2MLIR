@@ -91,15 +91,27 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Explicit allocation-state entries now bind aliased source pointers through real
+TTIR calls before upstream inlining. Seven actual Merlin libraries retain shared
+updates, runtime offsets, loops and full-allocation words; f32/f16/BF16 tiled GEMM
+binds dense C and strided output into one root. Twenty-three focused cases pass,
+including the generic CLI, 24 successful library replays and two compiled guard
+refusals. The discovered consumer load/store fusion bug has a generic correctness
+fix with 109 Merlin regressions passing. See [allocation state](allocation_state.md).
+Continue B/C with mixed-type/byte alias groups, model view adapters, independently
+strided C and complete portable pre-wrapper source custody; broader E/F and
+applicable target/corpus gates remain open. The bound source and public signature
+differences are explicit; alias annotations grant no lowering permission.
+
 Readonly tensor aliases now pass both typed package writers as exact independent
 logical values. Runtime scalar carriers sharing tensor storage are captured by
 value before invocation. Nine actual Merlin libraries preserve original inputs
 and complete results through 33 additional invocations; writable tensor overlap
 still refuses before any copies or native work. Twenty preparation checks and
 all nine integration cases pass, alongside 100 relevant regressions. See
-[the input and state boundary](readonly_aliases.md). Continue B/C with writable
-tensor aliases/shared root state, strided output-C read/modify/write and model
-view adapters; broader E/F and applicable target gates remain open.
+[the input and state boundary](readonly_aliases.md). The explicit root entry
+above handles declared writable source sharing; unrelated writable input tensors
+still require their actual shared-state mapping.
 
 Strided writable output allocations now additionally qualify f32/f16/BF16
 tiled GEMM through actual Merlin libraries. The public functional result

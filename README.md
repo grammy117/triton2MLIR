@@ -23,7 +23,10 @@ these branches; retain existing branch names and published history.
 [Readonly aliases](docs/readonly_aliases.md) now pass through typed package
 preparation as exact independent input values; by-value scalar carriers retain
 their initial values even when backed by writable tensor storage. Writable
-tensor overlaps still require an explicit shared-state interface.
+source aliases now have an [explicit allocation-state interface](docs/allocation_state.md),
+with runtime offsets, shared updates and one returned root. The generic
+`shared-tensor --allocation-bindings` route records its signature/source differences;
+undeclared writable overlaps still refuse.
 
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
