@@ -24,6 +24,14 @@ def main(work):
     prepare_stdout()
     resource.setrlimit(resource.RLIMIT_DATA, (512 * 1024 * 1024, 512 * 1024 * 1024))
     work = Path(work)
+    (work / "compiler.log").write_text("")
+
+    def compiler_diagnostic(*values, **options):
+        # Adapter progress is compiler evidence, never source kernel stdout.
+        # Retain it separately even when the subsequent source call aborts.
+        with (work / "compiler.log").open("a") as stream:
+            print(*values, **dict(options, file=stream))
+
     with np.load(work / "inputs.npz", allow_pickle=False) as saved:
         arrays = [saved[f"in{i}"].copy() for i in range(len(saved.files))]
     with ir.Context() as context:
@@ -95,7 +103,7 @@ def main(work):
                 raise ValueError("native generic atomics require the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0, str(Path(root).resolve() / "src"))
             from merlin.llvmlower import atomic_compare_exchange
-            namespace = {"ir": ir}
+            namespace = {"ir": ir, "print": compiler_diagnostic}
             exec(atomic_compare_exchange.SUPPORT, namespace)
             word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "f32", "f64")
                 for op in operations(module.operation))
@@ -115,7 +123,26 @@ def main(work):
             "builtin.module(convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
-            passmanager.PassManager.parse(pipeline).run(module.operation)
+            needs_literal_diagnostics = pipeline == pipelines[-1] and any(
+                op.name == "cf.assert" and "\x00" in ir.StringAttr(op.attributes["msg"]).value
+                for op in operations(module.operation))
+            if needs_literal_diagnostics:
+                root = os.environ.get("T2M_MERLIN_ROOT")
+                if not root:
+                    raise ValueError("length-aware native diagnostics require the explicit T2M_MERLIN_ROOT compiler support path")
+                sys.path.insert(0, str(Path(root).resolve() / "src"))
+                from merlin.llvmlower import length_aware_diagnostics
+                scope = {"ir": ir, "print": compiler_diagnostic}
+                exec(length_aware_diagnostics.SUPPORT, scope)
+                head, _, tail = pipeline.removeprefix("builtin.module(").removesuffix(")").partition("convert-cf-to-llvm")
+                passmanager.PassManager.parse("builtin.module("+head.rstrip(",")+")").run(module.operation)
+                count = scope["_diag_lower"](module)
+                passmanager.PassManager.parse("builtin.module(convert-cf-to-llvm"+tail+")").run(module.operation)
+                import hashlib
+                adapters.append({"name":"merlin-length-aware-literal-diagnostics", "assertions":count,
+                    "support_sha256":hashlib.sha256(length_aware_diagnostics.SUPPORT.encode()).hexdigest()})
+            else:
+                passmanager.PassManager.parse(pipeline).run(module.operation)
             if adapters and pipeline == pipelines[0]:
                 namespace["_cas_restore"](module)
             if pipeline == pipelines[-1] and any(str(value.type) == "bf16" for op in operations(module.operation)
@@ -125,7 +152,7 @@ def main(work):
                     raise ValueError("BF16 native transport requires the explicit T2M_MERLIN_ROOT compiler support path")
                 sys.path.insert(0, str(Path(root).resolve() / "src"))
                 from merlin.llvmlower import bfloat_transport
-                scope = {"ir": ir}
+                scope = {"ir": ir, "print": compiler_diagnostic}
                 exec(bfloat_transport.SUPPORT, scope)
                 count = scope["_bf_transport"](module)
                 import hashlib

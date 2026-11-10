@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Length-aware literal assertions](literal_diagnostics.md) now pass 75 focused
+diagnostic/source/effect regression cases through the actual native/Merlin
+interface; Merlin's corresponding native/serialization/BF16 checks pass 70.
+NUL/UTF-8, rank-two/dynamic conditions, reused libraries, original CF messages,
+BF16 and CAS compositions retain exact outcomes and original public signatures.
+The saved literal-check package/qualification pass 29/49 artifact checks.
+General print formatting, external/synchronization effects and target handling
+remain open; this adds qualified assertion forms, not universal opcode coverage.
+The explicit 18-package report at `out/literal-diagnostic-coverage/coverage.json`
+retains all 50 definitions, with 24 observed and 20 present in captures of
+Merlin-qualified packages. Adding a message form does not increase the number
+of distinct observed definitions.
+
 [Observable-outcome packets](effect_abi.md) now support real void and initially
 failing entries through the actual Merlin compiler/library ABI. The 40 focused
 cases qualify zero-argument, scalar and readonly dynamic tensor calls in all
@@ -14,7 +27,7 @@ zero trips and complete model2MLIR tuple/state captures in all three profiles.
 The focused suite has 24 cases; the diagnostic/guard/consumer regression passes
 41. The subsequent explicit 15-package observation report retains all 50
 definitions, with 24 observed and 20 present in captures of Merlin-qualified
-packages. Length-aware diagnostics remain open alongside other external effects
+packages. General print diagnostics remain open alongside other external effects
 and target materialization; effect-only and initial expected-failure packaging
 uses the separate outcome profile above.
 

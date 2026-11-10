@@ -12,6 +12,9 @@ execution, including a complete model2MLIR state/tuple capture.
 [Observable-outcome packages](docs/effect_abi.md) now also admit void and
 initially failing entries through real Merlin compilation/invocation, preserving
 actual signatures and exact independent outcome references.
+[Length-aware literal diagnostics](docs/literal_diagnostics.md) now retain
+embedded NUL and escaped UTF-8 through native and Merlin execution, including
+BF16/CAS compositions. General print formatting remains a separate effect gate.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

@@ -47,6 +47,18 @@ DTYPES = {name: getattr(builtin, name) for name in
 
 
 class SharedParser(Parser):
+    def _parse_optional_builtin_attr(self):
+        attribute = super()._parse_optional_builtin_attr()
+        # Native MLIR escapes non-ASCII UTF-8 bytes in string attributes.
+        # xDSL otherwise gives those tokens its distinct BytesAttr carrier,
+        # which cannot satisfy the standard cf.assert StringAttr property.
+        if isinstance(attribute, builtin.BytesAttr):
+            try:
+                return StringAttr(attribute.data.decode("utf-8"))
+            except UnicodeDecodeError:
+                pass
+        return attribute
+
     # xDSL 0.68 parses dense<0xFF800000> : tensor<...xf32> as the
     # numeric integer 4286578688. MLIR uses IEEE *bits* here. Adapt the
     # typed token conversion, not printed IR lines or operation semantics.

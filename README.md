@@ -43,6 +43,8 @@ diagnostics and original loop/branch placement through Merlin.
 `effect-demo` also packages void and initially failing kernels with
 [explicit outcome references](docs/effect_abi.md), preserving their real public
 signatures through the same compiler and native library interface.
+`effect-demo --case literal-check` also exercises embedded NUL and Unicode
+messages through the [length-aware diagnostic path](docs/literal_diagnostics.md).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

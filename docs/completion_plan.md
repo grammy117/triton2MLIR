@@ -593,5 +593,15 @@ rehashed outcome refusals. Another 73 existing numeric/diagnostic/model/coverage
 regressions and 230 Merlin staging checks pass. A further rehashed-signature
 case verifies that failure cannot hide a real tensor result. Saved constant-fail
 and fail-before-store demos reach actual Merlin execution with no numeric golden.
-Length-aware diagnostics and broader print/external/synchronization contracts
-remain open, along with the original numeric/runtime/alias/corpus/target work.
+The literal portion of the third effect gate is now implemented through
+[length-aware assertion lowering](literal_diagnostics.md). Complete NUL/UTF-8
+messages survive real native and Merlin execution without changing portable
+CF operations or public signatures. The nine end-to-end cases include all
+memory profiles, rank-two/dynamic conditions, reused libraries, original CF
+messages, BF16 and CAS compositions, and truncated-reference refusal. The
+native compiler's progress log is separately bound so it cannot pollute
+source stdout. The combined frontend regression passes 75 cases. Merlin's
+70 native/serialization/BF16 cases and docs/structure
+gates pass. General print/formatting and broader external/synchronization
+contracts remain open, along with the original numeric/runtime/alias/corpus/
+target work.

@@ -19,6 +19,11 @@ compatibility metadata records the source effect and native stdio transport.
 `t2m.effect-kernel-receipt.v1` and `reference.json`, omitting numeric goldens.
 They retain actual void or tensor-result signatures, outcome observations and
 compiler-only custody rather than fabricating a result.
+[Length-aware assertions](literal_diagnostics.md) keep those schemas and actual
+signatures, declare the native diagnostic feature, and add a bound
+`native/compiler.log` independently of source outcome streams. Original v1
+effect packets remain readable. Compiler logs and references remain excluded
+from Merlin's compiler projection.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 

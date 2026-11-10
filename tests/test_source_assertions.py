@@ -34,9 +34,8 @@ def test_source_debug_option_rejects_untyped_values_before_importing_triton():
         capture_ttir(None,{}, {}, debug="true")
 
 
-def test_embedded_nul_cannot_silently_truncate_the_source_diagnostic():
+def test_embedded_nul_keeps_the_complete_source_diagnostic():
     from xdsl.dialects.builtin import StringAttr
-    from t2m.diagnostics import ConversionError
     from t2m.shared_tensor import parse_shared, opcode
     from t2m.source_assertions import contract
     module = parse_shared('''builtin.module {func.func @f(%c:i1) {
@@ -45,9 +44,19 @@ def test_embedded_nul_cannot_silently_truncate_the_source_diagnostic():
     }}''')
     op = next(op for op in module.walk() if opcode(op) == "tt.assert")
     op.properties["message"] = StringAttr("before\x00after")
-    with pytest.raises(ConversionError,match="length-aware") as error:
-        contract(op,"ttir.op.nul")
-    assert error.value.source_id == "ttir.op.nul"
+    record = contract(op,"ttir.op.nul")
+    assert record["diagnostic_text"] == "Assertion `before\x00after` failed\n"
+    assert record["source_ids"] == ["ttir.op.nul"]
+
+
+@pytest.mark.parametrize("opname,key", [("tt.assert","message"),("cf.assert","msg")])
+def test_native_escaped_utf8_is_a_lossless_literal_string(opname,key):
+    from t2m.shared_tensor import parse_shared,opcode
+    from t2m.source_assertions import contract
+    source = 'module {func.func @entry(%c:i1) {"'+opname+'"' + r'(%c) <{'+key+r'="before\00\CE\BB\00after"}> : (i1)->() func.return}}'
+    module = parse_shared(source)
+    record = contract(next(op for op in module.walk() if opcode(op)==opname),"source.utf8")
+    assert record["message"] == "before\x00λ\x00after"
 
 
 @REQUIRED

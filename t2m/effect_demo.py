@@ -6,7 +6,7 @@ import numpy as np
 
 from .dynamic_abi import GridExtent
 from .effect_bundle import write_effect_bundle
-from .examples.effect_kernels import check_scalar,check_tensor,constant_check,fail_before_store
+from .examples.effect_kernels import check_scalar,check_tensor,constant_check,fail_before_store,check_diagnostic
 from .frontend import capture_ttir
 from .scalar_abi import RuntimeScalar
 from .shared_tensor import TensorABI,TensorBuffer,convert_shared
@@ -22,12 +22,18 @@ def demo(out,*,case="constant-fail",optimizer=None,python=None,memory_profile="t
         fail = case == "constant-fail"
         kernel,signature,constants = constant_check,{"FAIL":"constexpr"},{"FAIL":fail}
         abi,arrays,message = TensorABI(kernel.__name__,(),effect_only=True,grid=(3,)),[],"constant source assertion"
-    elif case == "scalar-check":
+    elif case in ("scalar-check","literal-check"):
         kernel,signature,constants = check_scalar,{"value":"i32","steps":"i32"},{}
+        message = "effect scalar must be nonnegative"
+        if case == "literal-check":
+            kernel = check_diagnostic
+            message = 'before\x00after %s "value"\nλ\x00end'
+            signature = dict(signature,MESSAGE="constexpr")
+            constants = {"MESSAGE":message}
         abi = TensorABI(kernel.__name__,(),runtime_scalars=(RuntimeScalar("value","i32",0,bounds=(-9,9)),
             RuntimeScalar("steps","i32",1,bounds=(0,4))),effect_only=True,grid=(3,))
         arrays = [np.asarray(-1,np.int32),np.asarray(3,np.int32)]
-        fail,message = arrays[1].item() > 0 and arrays[0].item() < 0,"effect scalar must be nonnegative"
+        fail = arrays[1].item() > 0 and arrays[0].item() < 0
     elif case == "tensor-check":
         kernel,signature,constants = check_tensor,{"x":"*i32","n":"i32","limit":"i32","B":"constexpr"},{"B":8}
         abi = TensorABI(kernel.__name__,(TensorBuffer("x",("n",),dtype="i32"),),grid=(GridExtent("n",8),),

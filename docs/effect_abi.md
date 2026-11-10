@@ -82,7 +82,9 @@ python -m t2m qualify-merlin out/effect-constant-fail \
 ```
 
 Other demos are `empty-return`, `scalar-check`, `tensor-check` and
-`fail-before-store`. Memory profiles keep their existing selection/evidence
+`fail-before-store`. `literal-check` additionally exercises embedded NUL and
+Unicode through the explicit [length-aware diagnostic path](literal_diagnostics.md).
+Memory profiles keep their existing selection/evidence
 rules. Saved TTIR uses `shared-tensor --effect-reference reference.json`;
 `--inputs` is optional only for an empty input roster. Effect references exclude
 numeric references/tolerances. `invoke-merlin` accepts outcome JSON for a
@@ -104,9 +106,11 @@ not universal opcode execution coverage.
 
 ## Remaining effects
 
-Assertions currently use the NUL-free literal text transport described in
-[source assertions](source_assertions.md). Length-aware diagnostics, general
-`tt.print`, external implementations, assembly and synchronization still need
+Assertions now retain embedded NUL and Unicode through the explicit
+[length-aware literal transport](literal_diagnostics.md). New packets bind
+`native/compiler.log` separately from source streams; original v1 packets
+remain readable. General `tt.print`, arbitrary binary diagnostic formats,
+external implementations, assembly and synchronization still need
 executable contracts. Accelerator materialization/diagnostic handling remains
 unqualified. The full goal also retains numeric, runtime/alias and maintained
 corpus/refusal requirements.

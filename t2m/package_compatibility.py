@@ -17,6 +17,9 @@ def kernel_representation_differences(trace, *, dynamic=False):
     transformations = trace.get("transformations", [])
     if any(t.get("kind") == "source-fail-stop-assertions" for t in transformations):
         differences.append("source assertions use upstream scalar/lane-wise standard cf.assert at original control positions, with source condition/message IDs retained; failing native invocations print literal diagnostics and abort using the evaluator's libc stdout/setbuf transport; the public tensor/scalar ABI is unchanged")
+        if any("\x00" in assertion["message"] for t in transformations if t.get("kind") == "source-fail-stop-assertions"
+                for assertion in t["assertions"]):
+            differences.append("embedded NUL diagnostics require Merlin's explicit lower_length_aware_diagnostics native feature and T2M_MERLIN_ROOT for native verification; the complete UTF-8 literal plus linefeed uses an internal byte-counted putchar/abort expansion after ownership checks; portable cf.assert and public/package schemas are unchanged")
     if any(t.get("kind") == "logical-boolean-byte-memory" for t in transformations):
         differences.append("exclusive Triton Boolean byte loads observed by nonzero tests and stores of zero-extended i1 values become logical i1 tensor memory; masks, fills and original source IDs remain explicit; raw byte observations and changed byte addressing require a separate storage ABI")
     if any(t.get("kind") == "logical-pointer-word-view" for t in transformations):

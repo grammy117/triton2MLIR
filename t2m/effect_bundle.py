@@ -23,9 +23,10 @@ NATIVE = {"model.mlir","inputs.npz","lowered-llvm.mlir","invocation-started.json
           "stdout.bin","stderr.bin","outcome.json"}
 
 
-def _native_files(spec, reference):
+def _native_files(spec, reference, *, compiler_log=False):
     return NATIVE | ({"shape-abi.json"} if spec.dynamic else set()) | (
-        {"outputs.npz","execution.json"} if reference["termination"] == "return" else set())
+        {"outputs.npz","execution.json"} if reference["termination"] == "return" else set()) | (
+        {"compiler.log"} if compiler_log else set())
 
 
 def _comparison(root, spec, reference, trace):
@@ -54,7 +55,7 @@ def write_effect_bundle(result, out, inputs, reference, *, work, python=None, co
     out.mkdir(parents=True)
     (out / "model.mlir").write_text(result.mlir_text)
     (out / "source.ttir").write_text(result.source_ttir)
-    for name in _native_files(result.spec,reference):
+    for name in _native_files(result.spec,reference,compiler_log=True):
         target = out / "native" / name
         target.parent.mkdir(exist_ok=True)
         shutil.copyfile(work / name,target)
@@ -79,7 +80,7 @@ def write_effect_bundle(result, out, inputs, reference, *, work, python=None, co
     _json(out / "execution.json",{"schema":"t2m.effect-execution.v1","input_sha256":result.trace["mlir_sha256"],
         "reference":_record(out / "reference.json"),"observation":_record(out / "native/outcome.json"),**comparison,
         "source_kernel_execution":"not-performed","consumer_execution":"not-performed"})
-    required = CORE | set(PROFILE_FILES[profile]) | {"native/"+name for name in _native_files(result.spec,reference)}
+    required = CORE | set(PROFILE_FILES[profile]) | {"native/"+name for name in _native_files(result.spec,reference,compiler_log=True)}
     _json(out / "capture_receipt.json",{"schema":SCHEMA,"profile":profile,
         "artifacts":{name:_record(out / name) for name in sorted(required)},
         "materialized_abi":{"complete":True,"inputs":len(result.spec.inputs),"outputs":len(result.spec.outputs)},
@@ -105,7 +106,9 @@ def verify_effect_bundle(out):
             raise ValueError("effect artifact integrity mismatch: "+name)
     spec = TensorABI.from_dict(json.loads((out / "spec.json").read_text()))
     reference,trace = (json.loads((out / name).read_text()) for name in ("reference.json","provenance.json"))
-    required = CORE | set(PROFILE_FILES[receipt["profile"]]) | {"native/"+name for name in _native_files(spec,reference)}
+    # Additive compiler evidence; original v1 packets remain readable.
+    required = CORE | set(PROFILE_FILES[receipt["profile"]]) | {"native/"+name for name in _native_files(
+        spec,reference,compiler_log="native/compiler.log" in receipt.get("artifacts",{}))}
     if set(receipt.get("artifacts",{})) != required or receipt.get("outcome_reference") != "reference.json":
         raise ValueError("effect receipt lacks its complete explicit outcome profile")
     if (trace.get("spec") != json.loads(json.dumps(spec.as_dict())) or trace.get("mlir_sha256") != _record(out / "model.mlir")["sha256"]

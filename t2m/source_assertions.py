@@ -20,9 +20,6 @@ def contract(op, source_id):
     if scalar != i1 or name == "cf.assert" and isinstance(condition, TensorType) or not isinstance(message, StringAttr) or op.results or op.regions:
         raise ConversionError("source assertion requires one logical i1 condition and a literal diagnostic message",
                               source_id=source_id, opcode=name)
-    if "\x00" in message.data:
-        raise ConversionError("embedded NUL diagnostics require a length-aware runtime ABI",
-                              source_id=source_id, opcode=name)
     return {"source_ids":[source_id], "condition_type":str(condition), "message":message.data,
         "diagnostic_text": ("Assertion `"+message.data+"` failed" if name == "tt.assert" else message.data) + "\n",
         "semantics":"abort-if-any-source-condition-is-false",

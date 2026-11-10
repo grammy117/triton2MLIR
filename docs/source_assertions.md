@@ -46,8 +46,10 @@ and native runtime dependency. Source messages use the upstream
 `abort`. Both successful checks and actual failures are tested; failure text
 reaches the caller, and failed invocations receive no success receipt.
 
-The current text transport requires NUL-free messages. Embedded NULs are a
-located refusal until a length-aware diagnostic ABI can preserve them.
+[Length-aware literal diagnostics](literal_diagnostics.md) now retain embedded
+NUL and escaped UTF-8 using an explicit late native expansion. Portable
+assertions and the public tensor/scalar/void ABI remain standard; native
+support selection and the additive bound compiler log are explicit.
 [Observable-outcome packages](effect_abi.md) now separately support void kernels
 and initial expected failures, retaining actual result types and independent
 termination/stream references without dummy results. Other print, external
