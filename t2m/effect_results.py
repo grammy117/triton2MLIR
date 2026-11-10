@@ -12,7 +12,7 @@ import zipfile
 import numpy as np
 
 from .runtime_shapes import resolve_shapes
-from .tensor_storage import DTYPES,FLOAT_FORMATS,assert_tensor_close,assert_ieee_words
+from .tensor_storage import DTYPES,FLOAT_FORMATS,FP8_NUMPY_NAMES,assert_tensor_close,assert_ieee_words
 
 ARCHIVE = "reference.npz"
 LIMIT = 64*1024*1024
@@ -88,7 +88,7 @@ def validate_results(spec,inputs,arrays,comparisons):
             raise ValueError(f"result out{index} differs from the actual typed runtime shape/ABI")
         if value.dtype == "i1" and np.any(array.view(np.uint8) > 1):
             raise ValueError("result reference has noncanonical Boolean storage")
-        if policy["kind"] == "ieee" and value.dtype not in FLOAT_FORMATS:
+        if policy["kind"] == "ieee" and value.dtype not in (*FLOAT_FORMATS, *FP8_NUMPY_NAMES):
             raise ValueError("IEEE result comparison requires a declared floating tensor type")
         if value.dtype.startswith("i") and policy["kind"] == "values" and (policy["rtol"] or policy["atol"]):
             raise ValueError("integer result comparisons require exact values or words")

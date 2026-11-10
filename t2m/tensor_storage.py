@@ -43,6 +43,20 @@ def assert_tensor_close(actual, expected, dtype, *, rtol=0, atol=0):
 
 def assert_ieee_words(actual,expected,dtype):
     """Exact finite/infinite/zero words; NaN class without payload selection."""
+    if dtype in FP8_NUMPY_NAMES:
+        left, right = (np.asarray(value) for value in (actual, expected))
+        if left.dtype != np.uint8 or right.dtype != np.uint8:
+            raise ValueError("FP8 archive storage requires raw uint8 words")
+        def isnan(words):
+            if dtype.endswith("FNUZ"):
+                return words == 128
+            if dtype == "f8E4M3FN":
+                return (words & 127) == 127
+            return ((words & 124) == 124) & ((words & 3) != 0)
+        left_nan, right_nan = isnan(left), isnan(right)
+        np.testing.assert_array_equal(left_nan, right_nan)
+        np.testing.assert_array_equal(left[~left_nan], right[~right_nan])
+        return
     if dtype not in FLOAT_FORMATS:
         raise ValueError("IEEE result comparison requires a declared floating tensor type")
     exponent,fraction = FLOAT_FORMATS[dtype]

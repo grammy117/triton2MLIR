@@ -33,7 +33,11 @@ def demo(out, *, size=1024, block=256, operation="add"):
             "numerical_check": "passed", "merlin_staged_execution": "not-certified"}
 
 
-def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None):
+def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+    if kernel == "fp8-narrow":
+        from .fp8_cast_demo import demo
+        return demo(out,optimizer=optimizer,python=python,memory_profile=memory_profile,address_policy=address_policy,
+            effect_profile=effect_profile,f32_atomic_add=f32_atomic_add,fp8_overflow=fp8_overflow or "satfinite")
     if kernel == "rounded-cast":
         from .float_cast_demo import demo
         return demo(out,optimizer=optimizer,python=python,memory_profile=memory_profile,address_policy=address_policy,
@@ -226,7 +230,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     source.write_text(capture_ttir(fn, {**{b.name: "*fp" + b.dtype[1:] if b.dtype in ("f16", "f32", "f64") else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants, debug=capture_debug))
-    result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
+    result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add, fp8_overflow=fp8_overflow)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
     additional = []
@@ -429,6 +433,7 @@ def main(argv=None):
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
     tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
+    tensor.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 finite-overflow and infinity conversion contract")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--effect-reference",type=Path,help="independent JSON streams/outcome; v2 binds adjacent reference.npz; excludes --reference")
@@ -437,12 +442,13 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("rounded-cast", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("rounded-cast", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
     sd.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     sd.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
+    sd.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 contract; fp8-narrow demo defaults to satfinite")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
     coverage = commands.add_parser("shared-coverage", help="measure a fixed upstream stage on a real MLIR fixture corpus")
     coverage.add_argument("corpus", type=Path)
@@ -471,6 +477,7 @@ def main(argv=None):
     bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
     bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
+    bind.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="default FP8 contract; each binding may override it")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)
@@ -510,7 +517,7 @@ def main(argv=None):
                 memory_profile=args.memory_profile,address_policy=args.address_policy)
         elif args.command == "shared-demo":
             summary = shared_demo(args.out, kernel=args.kernel, optimizer=args.optimizer, python=args.python,
-                                  memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add)
+                                  memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add, fp8_overflow=args.fp8_overflow)
         elif args.command == "shared-coverage":
             from .coverage import qualify_corpus
             report = qualify_corpus(args.corpus, args.out, optimizer=args.optimizer, stage=args.stage,
@@ -544,7 +551,8 @@ def main(argv=None):
                                                 work / f"kernel-{i}", optimizer=args.optimizer,
                                                 memory_profile=item.get("memory_profile", args.memory_profile),
                                                 address_policy=item.get("address_policy", args.address_policy),
-                                                effect_profile=item.get("effect_profile", args.effect_profile))
+                                                effect_profile=item.get("effect_profile", args.effect_profile),
+                                                fp8_overflow=item.get("fp8_overflow", args.fp8_overflow))
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
                                                results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
@@ -606,7 +614,7 @@ def main(argv=None):
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
             result = convert_shared(args.ttir, abi, work / "translation", optimizer=args.optimizer,
-                                    memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add)
+                                    memory_profile=args.memory_profile, address_policy=args.address_policy, effect_profile=args.effect_profile, f32_atomic_add=args.f32_atomic_add, fp8_overflow=args.fp8_overflow)
             if args.effect_reference:
                 from .effect_bundle import write_effect_bundle
                 inputs = []

@@ -415,8 +415,11 @@ qualifies every encoding through 48 format/destination/profile combinations,
 with portable casts retained and a separately selected native implementation.
 Standard-format RTNE/RTZ narrowing, equal-width f16/BF16 changes and
 double-rounding-safe f64→16-bit conversions now also execute through 42
-pair/mode/profile combinations. FP8 narrowing/overflow, equal-width FP8
-formats and contractions remain work; see
+pair/mode/profile combinations. FP8 narrowing and distinct-format changes now
+retain three explicit overflow/infinity contracts, exact source rounding and
+per-step state through actual Merlin execution. The 127-case slice covers
+standard sources, all distinct FP8 pairs and three memory profiles; heterogeneous
+per-cast policies, FP8 arithmetic/contractions and scaled dot remain work; see
 [the delivery order and upstream cast gaps](docs/float_casts.md). This work
 does not imply whole-opcode or all-target coverage.
 

@@ -1,5 +1,23 @@
 # Measured coverage and remaining boundaries
 
+[FP8 narrowing and distinct-format conversion](float_casts.md#fp8-narrowing-and-explicit-overflow-contracts)
+now retain explicit RTNE/RTZ and three overflow/infinity profiles in standard
+MLIR. The 32 standard-source/FP8/mode cases cover every f16/BF16 source word
+and wider exponent/midpoint boundaries. Sixteen saturation cases and all 24
+distinct FP8 format/mode changes also pass independent rational references.
+Twelve TTIR packages exercise the memory/overflow profiles, and twelve real
+source-loop packages retain each cast through reused Merlin libraries with
+changing runtime dimensions, counts and scalar increments. Four codec
+cross-checks, exact FP8 non-NaN/NaN-class comparisons and transactional refusals
+plus sixteen original-standard-cast/noninterference cases complete this
+127-case slice. The 48 native narrowing/widening cases and
+structure checks pass. Mixed per-cast backend policies, FP8 arithmetic/scaled
+dot, broader model/effect contracts and applicable targets remain open.
+The saved `out/fp8-narrow` package and `out/fp8-narrow-merlin` qualification
+verify 26/45 artifacts. `out/fp8-narrow-coverage/coverage.json` selects 27
+packages, with 29/50 definitions observed and 25 in host-qualified captures.
+These are source composition observations, not universal opcode coverage.
+
 [Standard floating conversions](float_casts.md#rounding-and-standard-format-conversion)
 now qualify all seven standard narrowing/format pairs in RTNE and RTZ across
 three memory profiles (42 combinations), including every f16/BF16 source word,
@@ -9,7 +27,7 @@ cases additionally retain every narrowing boundary while runtime counts,
 dimensions and scalar increments change through the same Merlin library.
 The public RTZ demo and 88 rounding/FP8 regressions pass; native source
 verification, reference exclusion and ordinary ownership/lifetime checks remain
-active. FP8 saturation/equal-width formats, scaled contractions, broader
+active. Mixed numeric policies, scaled contractions, broader
 runtime/effect profiles and applicable target materialization remain open.
 The saved `out/rounded-cast` package and its Merlin qualification verify
 26/45 artifacts. `out/rounded-cast-coverage/coverage.json` selects 26 packages,
@@ -22,8 +40,9 @@ format/destination/memory-profile combinations check every source encoding,
 retain portable casts and adjacent exact words, and reuse compiled libraries
 over changing/empty domains and source loop counts. Sixteen independent codec
 cross-checks validate the rational reference. The 48 native feature/BF16
-regressions and visible widening/transport demos pass. Narrowing, RTZ,
-equal-width formats, scaled contractions and applicable targets remain open.
+regressions and visible widening/transport demos pass. The additional
+narrowing/RTZ/equal-width evidence is listed above; scaled contractions and
+applicable targets remain open.
 The saved widening package and Merlin qualification verify 26/45 artifacts.
 `out/fp8-widen-coverage/coverage.json` selects 25 packages: 29 of the 50
 definitions are observed and 25 occur in captures of host-qualified packages.
@@ -38,7 +57,7 @@ Three saved-demo profile tests additionally bind exact word references, with
 evaluator archives excluded from compilation. The reader/reference regressions
 pass 65 cases; both Merlin xDSL readers pass 25 cases, and 138 destination,
 lifetime and C storage cases pass. These extend type/composition evidence;
-FP8 numeric casts, scaled contractions and staged targets remain open.
+FP8 arithmetic, scaled contractions and staged targets remain open.
 The saved `out/fp8-transport` package and its Merlin qualification verify
 26 and 45 artifacts respectively. A further 63 reader/reference/f32/BF16
 regressions pass after the transport changes.

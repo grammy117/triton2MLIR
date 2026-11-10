@@ -65,6 +65,8 @@ precise division/sqrt, with [independent IEEE references and BF16 consumer suppo
 [exact widening to standard floating types](docs/float_casts.md#executable-widening).
 `shared-demo --kernel rounded-cast` preserves explicit RTZ with
 [standard-format conversion and caller-intent evidence](docs/float_casts.md#rounding-and-standard-format-conversion).
+`shared-demo --kernel fp8-narrow --fp8-overflow satfinite` retains
+[per-step FP8 rounding and explicit overflow/infinity contracts](docs/float_casts.md#fp8-narrowing-and-explicit-overflow-contracts).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

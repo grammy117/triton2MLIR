@@ -676,6 +676,15 @@ bridge avoids f64→16-bit double rounding without a missing native helper.
 The real public RTZ source demo uses independent rational references. Intake
 caller provenance fields survive upstream rewriting and emission, with complete
 source-ID intent mappings for merged operations; tags grant no semantics.
-Continue FP8 narrowing/saturation/equal-width formats, mixed/scaled dot,
+FP8 narrowing and distinct-format changes now also have executable RTNE/RTZ
+and three explicit overflow/infinity contracts. The 127-case slice covers all
+f16/BF16 words, wider source boundaries, every distinct FP8 pair and actual
+Merlin libraries across three memory profiles. Twelve source-loop cases retain
+per-step rounding under changing counts/dimensions/scalars; computed NaN class
+and exact adjacent words remain separate policies. The native implementation
+uses standard integer significand rounding before widening/BF16 legalization,
+without changed storage or ownership. A global selected profile is explicit;
+heterogeneous per-cast backend contracts are still an open requirement.
+Continue FP8 arithmetic, heterogeneous policies, mixed/scaled dot,
 runtime/alias and external/effect closure, maintained corpus and applicable
 target materialization. Standard cast closure is not full TTIR closure.

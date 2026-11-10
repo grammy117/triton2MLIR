@@ -1116,7 +1116,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1125,6 +1125,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     """
     if memory_profile not in ("tensor", "buffer", "guarded-buffer"):
         raise ValueError("memory profile must be explicitly tensor, buffer or guarded-buffer")
+    from .fp8_casts import POLICIES, expand_fp8_casts
+    if fp8_overflow not in (None, *POLICIES):
+        raise ValueError("FP8 overflow policy must be ieee, satfinite or satfinite-nan-inf")
     if address_policy not in ("structured", "source-words"):
         raise ValueError("address policy must be explicitly structured or source-words")
     source_words = address_policy == "source-words"
@@ -1218,9 +1221,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     histogram_reports = expand_histograms(middle_module, _source_ids)
     from .integer_products import expand_high_products
     product_reports = expand_high_products(middle_module, _source_ids)
+    fp8_reports = expand_fp8_casts(middle_module, _source_ids, overflow=fp8_overflow)
     from .float_casts import expand_float_casts
     cast_reports = expand_float_casts(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or cast_reports:
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1273,6 +1277,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(map_reports)
     transformations.extend(histogram_reports)
     transformations.extend(product_reports)
+    transformations.extend(fp8_reports)
     transformations.extend(cast_reports)
     if isolated_events:
         transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],

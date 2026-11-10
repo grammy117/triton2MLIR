@@ -123,8 +123,9 @@ verify 26 and 45 artifacts respectively. The explicit 25-package observation
 report at `out/fp8-widen-coverage/coverage.json` records 29/50 definitions
 observed and 25 present in host-qualified captures; these are composition
 observations rather than whole-opcode closure.
-FP8 narrowing/saturation, equal-width FP8 formats, arithmetic, scaled dot,
-broader model bindings and target materialization remain required work.
+The widening evidence does not by itself establish narrowing, arithmetic,
+scaled dot, broader model bindings or target materialization. Explicit
+narrowing and equal-width conversion contracts are qualified below.
 
 ## Rounding and standard-format conversion
 
@@ -215,3 +216,94 @@ before claiming those casts are portable; provenance alone cannot select it.
 Use existing upstream conversion/expansion passes where their semantic
 contracts agree. Keep source format, rounding, saturation/NaN policy and
 source-operation IDs explicit in both portable MLIR and lowering evidence.
+
+## FP8 narrowing and explicit overflow contracts
+
+All four FP8 destinations now accept f16/BF16/f32/f64 and changes between
+distinct FP8 formats. `convert_shared(..., fp8_overflow=...)` requires the
+source's declared overflow/infinity contract; it does not infer one from a
+backend name, provenance, observed data or the AST capture descriptor.
+Same-format identity conversions retain their existing exact word behavior.
+
+| Policy | Finite overflow | Source infinity | Source NaN |
+|---|---|---|---|
+| `ieee` | RTNE uses the format's overflow boundary; RTZ uses signed maximum finite | E5M2 retains infinity; finite-only formats produce NaN | NaN class |
+| `satfinite` | Signed maximum finite | Signed maximum finite | NaN class |
+| `satfinite-nan-inf` | Signed maximum finite | NaN | NaN class |
+
+These are explicit software numeric profiles. They do not claim that all
+Triton backends agree: the pinned NVIDIA converter includes modern satfinite
+RTNE paths and an E5M2 RTZ bit-truncation route, while AMD's FNUZ software
+converter saturates finite overflow but converts infinity to NaN. The pinned
+Triton conversion tests skip some architecture/infinity combinations. See
+[NVIDIA source](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/third_party/nvidia/lib/TritonNVIDIAGPUToLLVM/ElementwiseOpToLLVM.cpp),
+[AMD source](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/third_party/amd/lib/TritonAMDGPUToLLVM/ElementwiseOpToLLVM.cpp)
+and [source tests](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/python/test/unit/language/test_conversions.py).
+One selected profile applies to the conversion invocation. Arbitrary kernels
+with different per-cast backend policies still require explicit mixed-policy
+binding rather than treating a global profile as universal source equivalence.
+
+The portable tensor tile uses one elementwise `linalg.generic` containing
+standard clamps, selections and casts. f16/BF16/FP8 sources extend exactly to
+f32; f64 retains its original precision. RTZ compares the nearest result's
+exact extension with the original magnitude and corrects an overshooting
+destination word toward zero. FNUZ correction into the reserved `0x80` NaN
+word becomes positive zero only on that correction branch. Actual input NaNs
+retain NaN class. The source's cast family, formats, rounding, policy, location
+and original IDs remain traceable, alongside caller provenance.
+
+At the native source seam, Merlin's explicit `lower_fp8_narrowing` implements
+standard scalar RTNE `arith.truncf`. Integer quotient/remainder ties-to-even
+rounding operates on the original f32/f64 significand, including FP8
+subnormals, finite-only top binades, overflow and nonfinite values. Source
+f16/BF16 first extends exactly to f32. This reuses upstream arithmetic and
+LLVM legalization; it adds no device instruction or codec dependency to
+compilation. Source policy remains in executable surrounding operations.
+Narrowing runs before the existing widening/BF16 seams, with every ownership
+callback forwarded. Shaped native casts, nonneutral flags and unqualified
+properties refuse before edits. The public tensor ABI and byte storage are
+unchanged.
+An existing standard `arith.truncf` already specifies its numeric semantics:
+the TTIR overflow profile leaves it unchanged and requires no extra policy.
+
+The focused suite qualifies 32 standard-source/format/mode cases, including
+all 65,536 f16/BF16 words, all wider exponents and adjacent target midpoints.
+Sixteen further cases check the two saturation policies. All 24 distinct FP8
+format/mode changes check every source word. An independent exact-rational
+palette oracle and four standard-codec cross-checks distinguish computed NaN
+class from exact finite/zero/infinity words. Twelve actual TTIR packages
+qualify the three overflow profiles across the memory profiles. Twelve real
+source-loop packages additionally retain each rounding boundary and reuse
+their Merlin libraries across empty/ragged shapes, trip counts and scalar
+increments. These are measured combinations, not every cross-product or
+accelerator qualification. Native feature/widening checks pass 48 cases.
+Sixteen additional native tests execute original standard `arith.truncf`
+for every wider-source/FP8 pair, including all f16/BF16 words, while proving
+that a TTIR saturation profile cannot reinterpret these standard casts.
+
+The v2 `ieee` result comparison now accepts the declared FP8 formats: exact
+non-NaN words, NaN class only. FNUZ recognizes its single reserved NaN word;
+E4M3FN and E5M2 retain their different masks. `words` still means exact bytes.
+Older consumers that restrict `ieee` to the four wider types will reject
+these packages and need the updated reader. Compiler staging excludes all
+reference values and their digests as before.
+
+```bash
+export T2M_MERLIN_ROOT=/path/to/merlin
+python -m t2m shared-demo --kernel fp8-narrow --fp8-overflow satfinite \
+  --out out/fp8-narrow --python /path/to/native-python
+python -m t2m qualify-merlin out/fp8-narrow \
+  --out out/fp8-narrow-merlin --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --python /path/to/native-python \
+  --merlin-clang /path/to/compatible-clang
+```
+
+This public source demo defaults explicitly to E4M3FN/RTZ/satfinite, with
+runtime per-step FP8 rounding. `shared-tensor` has no implicit policy.
+Its saved package and Merlin qualification verify 26/45 artifacts; the
+explicit 27-package observation report still records 29/50 definitions
+observed and 25 in host-qualified captures. The new numeric combinations
+do not establish whole-opcode closure.
+`bind-model` accepts `--fp8-overflow` and per-binding `fp8_overflow` overrides.
+FP8 arithmetic/contractions/scaled dot, heterogeneous per-cast policies,
+broader model/effect profiles and applicable target execution remain required.

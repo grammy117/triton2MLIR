@@ -41,6 +41,16 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+FP8 conversion additionally requires an explicit overflow/infinity contract
+(`ieee`, `satfinite`, or `satfinite-nan-inf`). Standard executable clamps,
+casts and RTZ correction implement that profile; annotations retain intent.
+Native execution selects Merlin's separate `lower_fp8_narrowing` feature
+before widening/BF16 legalization. Tensor types, byte storage and receipt
+schema are unchanged. The existing v2 `ieee` result policy now admits the
+declared FP8 formats, preserving every non-NaN word and NaN class. Older
+readers restricted to wider types reject these packages; exact `words` keeps
+its byte comparison. See [the FP8 contract](float_casts.md#fp8-narrowing-and-explicit-overflow-contracts).
+
 Selected floating conversions use a deterministic standard MLIR composite,
 with explicit source/target types, source IDs and rounding annotations.
 RTZ correction, equal-width format bridges and round-to-odd f64→16-bit

@@ -144,7 +144,21 @@ def main(work):
             namespace["_cas_suspend"](module)
             restore_atomics = namespace["_cas_restore"]
         has_bfloat = any("bf16" in str(value.type) for op in operations(module.operation) for value in (*op.operands, *op.results))
-        from fp8_math import requires_widening
+        from fp8_math import requires_widening,requires_narrowing
+        if requires_narrowing(operations(module.operation)):
+            root = os.environ.get("T2M_MERLIN_ROOT")
+            if not root:
+                raise ValueError("native FP8 narrowing requires the explicit T2M_MERLIN_ROOT compiler support path")
+            sys.path.insert(0,str(Path(root).resolve() / "src"))
+            from merlin.llvmlower import fp8_narrowing
+            scope = {"ir":ir}
+            exec(fp8_narrowing.SUPPORT,scope)
+            count = scope["_fp8_narrow"](module)
+            if count:
+                import hashlib
+                adapters.append({"name":"merlin-fp8-narrowing","scalar_casts":count,
+                    "support_sha256":hashlib.sha256(fp8_narrowing.SUPPORT.encode()).hexdigest(),
+                    "numeric_contract":"standard-RTNE; source-overflow-and-infinity-policies-remain-executable"})
         if requires_widening(operations(module.operation)):
             root = os.environ.get("T2M_MERLIN_ROOT")
             if not root:
