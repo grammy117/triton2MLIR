@@ -84,13 +84,13 @@ def _host_worker(mode, root, staged, host, extra, environment, python):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                text=True, env=environment, start_new_session=True)
     try:
-        _, stderr = process.communicate(timeout=60)
+        stdout, stderr = process.communicate(timeout=60)
     except subprocess.TimeoutExpired as exc:
         os.killpg(process.pid, signal.SIGKILL)
         process.communicate()
         raise ValueError("Merlin host " + mode + " exceeded 60 seconds") from exc
     if process.returncode:
-        raise ValueError("Merlin host " + mode + " failed: " + stderr[-4000:])
+        raise ValueError("Merlin host " + mode + " failed: " + (stdout + stderr)[-4000:])
 
 
 def invoke_merlin_host(work, arguments, out, *, merlin_root, python=None):

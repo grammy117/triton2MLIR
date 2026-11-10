@@ -20,6 +20,8 @@ SCALAR_CTYPES = {"f32": ctypes.c_float, "f64": ctypes.c_double, "i8": ctypes.c_i
 
 def main(work):
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    from diagnostic_runtime import prepare_stdout
+    prepare_stdout()
     resource.setrlimit(resource.RLIMIT_DATA, (512 * 1024 * 1024, 512 * 1024 * 1024))
     work = Path(work)
     with np.load(work / "inputs.npz", allow_pickle=False) as saved:

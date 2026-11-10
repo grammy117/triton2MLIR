@@ -102,6 +102,8 @@ def compile_model(staged, work):
 
 
 def execute_model(staged, work, arguments, *, evaluation=None):
+    from diagnostic_runtime import prepare_stdout
+    prepare_stdout()
     import numpy as np
     from merlin.llvmlower.abi import HostModel, ScalarArg
     from runtime_shapes import resolve_shapes

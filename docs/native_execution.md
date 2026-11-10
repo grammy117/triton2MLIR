@@ -1,5 +1,14 @@
 # Native execution evidence
 
+Native evaluator workers make C stdout unbuffered through the host libc
+`stdout`/`setbuf` ABI before invoking compiled code. Upstream `cf.assert`
+lowers to `puts` followed by `abort`; buffering a piped stream otherwise loses
+the diagnostic. Failure exceptions retain bounded stdout/stderr text, including
+literal format characters, quotes, newlines and UTF-8. This applies only to
+owned evaluator subprocesses; portable IR and compiler inputs are unchanged.
+The worker still aborts on failure and produces no successful invocation
+receipt. Missing native stdio support is an explicit runtime refusal.
+
 `t2m.native.execute_native(mlir_text, inputs, work, python=existing_python)`
 executes the **serialized standard MLIR** with an existing torch-mlir installation.
 It verifies registered operations, bufferizes a temporary copy, lowers through
