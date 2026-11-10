@@ -57,3 +57,66 @@ def scaled_dot_tile(
         rhs_k_pack=RHS_K_PACK,
     )
     tl.store(out_ptr + indices, result)
+
+
+@triton.jit
+def scaled_dot_dynamic(
+    a_ptr,
+    b_ptr,
+    sa_ptr,
+    sb_ptr,
+    c_ptr,
+    out_ptr,
+    m,
+    n,
+    k,
+    packed_k,
+    groups,
+    BM: tl.constexpr,
+    BN: tl.constexpr,
+):
+    # Allocation extents are ABI data. Their relation to logical K is an
+    # executable source assertion, not an assumption from a test's input.
+    tl.device_assert(packed_k == tl.cdiv(k, 2), "packed K extent differs")
+    tl.device_assert(groups == tl.cdiv(k, 32), "scale group extent differs")
+    rows = tl.program_id(0) * BM + tl.arange(0, BM)
+    cols = tl.program_id(1) * BN + tl.arange(0, BN)
+    packed = tl.arange(0, 16)
+    c = tl.load(
+        c_ptr + rows[:, None] * n + cols[None, :],
+        (rows[:, None] < m) & (cols[None, :] < n),
+        other=0.0,
+    )
+    for step in range(tl.cdiv(k, 32)):
+        indices = step * 16 + packed
+        a = tl.load(
+            a_ptr + rows[:, None] * packed_k + indices[None, :],
+            (rows[:, None] < m) & (indices[None, :] < packed_k),
+            other=0,
+        )
+        b = tl.load(
+            b_ptr + indices[:, None] * n + cols[None, :],
+            (indices[:, None] < packed_k) & (cols[None, :] < n),
+            other=0,
+        )
+        # An odd logical tail leaves an inactive high nibble in a live byte.
+        # Keep arbitrary caller bits there from entering the contraction.
+        word_mask = tl.where(indices * 2 + 1 < k, 255, 15).to(tl.uint8)
+        a = a & word_mask[None, :]
+        b = b & word_mask[:, None]
+        sa = tl.load(
+            sa_ptr + rows[:, None] * groups + step,
+            (rows[:, None] < m) & (step < groups),
+            other=127,
+        )
+        sb = tl.load(
+            sb_ptr + cols[:, None] * groups + step,
+            (cols[:, None] < n) & (step < groups),
+            other=127,
+        )
+        c = tl.dot_scaled(a, sa, "e2m1", b, sb, "e2m1", acc=c)
+    tl.store(
+        out_ptr + rows[:, None] * n + cols[None, :],
+        c,
+        (rows[:, None] < m) & (cols[None, :] < n),
+    )

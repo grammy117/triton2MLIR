@@ -106,7 +106,12 @@ M/N-packed demo also executes through Merlin. Numeric precision is the
 explicit `logical-mx-f64-v1` choice allowed by MX's implementation-defined
 boundary; target-dependent emulation and accelerator equivalence are separate
 profiles. See [the exact contract](scaled_dot.md).
-Continue with source runtime/ragged scaled recurrences and model bindings,
+Runtime FP4 scaled recurrences now additionally qualify changing M/N/K,
+packed/group extents, odd-nibble tails, empty/zero-trip domains and two source
+assertion failures through the same libraries in all three memory profiles.
+The native consumer's checked independent seed copy resolves imported private
+loop state; 160 destination/ownership cases pass without relaxing lifetime checks.
+Continue with scaled model bindings and broader format/packing compositions,
 then the remaining E numeric/external/RNG profiles, B/C irregular alias/stride
 cases and F/G effects/corpus/target gates above. Reserved FP6 source packing
 remains unresolved rather than being guessed. All A–G workstreams remain open.

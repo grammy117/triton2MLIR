@@ -111,3 +111,93 @@ def demo(
         "native_execution": "passed",
         "merlin_execution": "requires separate qualify-merlin invocation",
     }
+
+
+def dynamic_demo(
+    out,
+    *,
+    optimizer=None,
+    python=None,
+    memory_profile="tensor",
+    address_policy="structured",
+    effect_profile="ordinary",
+    f32_atomic_add=None,
+):
+    from .dynamic_abi import GridExtent
+    from .examples.scaled_dot_kernels import scaled_dot_dynamic
+    from .examples.scaled_dot_reference import dynamic_inputs, dynamic_reference
+    from .scalar_abi import RuntimeScalar
+
+    out = Path(out)
+    if out.exists():
+        raise FileExistsError(out)
+    work = out.with_name(out.name + ".work")
+    work.mkdir(parents=True, exist_ok=False)
+    source = work / "source.ttir"
+    signature = {
+        name: "*u8" if i < 4 else "*fp32" if i < 6 else "i32" if i < 11 else "constexpr"
+        for i, name in enumerate(scaled_dot_dynamic.arg_names)
+    }
+    source.write_text(
+        capture_ttir(
+            scaled_dot_dynamic,
+            signature,
+            {"BM": 16, "BN": 16},
+            debug=True,
+            source_target=("hip", "gfx942", 64),
+        )
+    )
+    abi = TensorABI(
+        "scaled_dot_dynamic",
+        (
+            TensorBuffer("a", ("m", "packed_k"), dtype="i8"),
+            TensorBuffer("b", ("packed_k", "n"), dtype="i8"),
+            TensorBuffer("sa", ("m", "groups"), dtype="i8"),
+            TensorBuffer("sb", ("n", "groups"), dtype="i8"),
+            TensorBuffer("initial", ("m", "n")),
+            TensorBuffer("out", ("m", "n"), "write"),
+        ),
+        grid=(GridExtent("m", 16), GridExtent("n", 16)),
+        runtime_scalars=tuple(
+            RuntimeScalar(name, "i32", i + 6, bounds=(0, upper))
+            for i, (name, upper) in enumerate(
+                [("m", 35), ("n", 21), ("k", 65), ("packed_k", 33), ("groups", 3)]
+            )
+        ),
+    )
+    result = convert_shared(
+        source,
+        abi,
+        work / "translate",
+        optimizer=optimizer,
+        memory_profile=memory_profile,
+        address_policy=address_policy,
+        effect_profile=effect_profile,
+        f32_atomic_add=f32_atomic_add,
+    )
+    arrays = dynamic_inputs(17, 19, 37)
+    policy = {
+        "schema": "t2m.effect-reference.v2",
+        "termination": "return",
+        "stdout": "",
+        "stderr": "",
+        "results": {"archive": "reference.npz", "comparisons": [{"kind": "ieee"}]},
+    }
+    write_effect_bundle(
+        result,
+        out,
+        arrays,
+        policy,
+        references=[dynamic_reference(*arrays)],
+        work=work / "native",
+        python=python,
+    )
+    return {
+        "bundle": str(out),
+        "kernel": abi.entry,
+        "logical_tiles": [16, 16, 32],
+        "runtime_dimensions": [17, 19, 37],
+        "numeric_profile": PROFILE,
+        "native_execution": "passed",
+        "merlin_execution": "requires separate qualify-merlin invocation",
+    }

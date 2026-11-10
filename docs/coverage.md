@@ -10,12 +10,21 @@ five public operand formats, optional/mixed scale types, batched tiles,
 accumulator formats, exhaustive E8M0 codes, refusal and real consumer execution.
 Four source-captured packages and the visible M/N-packed demo compile and
 execute through Merlin. The internal-precision profile is explicit; reserved
-FP6 enums, runtime/ragged scaled compositions and applicable targets remain
+FP6 enums, broader scaled compositions and applicable targets remain
 open. These are measured compositions, not universal scaled-dot coverage.
 The visible demo and Merlin qualification reopen and verify 25/45 artifacts.
 The explicit 29-package report at `out/scaled-dot-coverage/coverage.json`
 records 30/50 definitions observed and 26 in host-qualified captures. This
 extends observations without changing the definition/type/attribute denominator.
+Three more runtime FP4 packages now reuse their actual Merlin libraries over
+empty/zero-K/odd-tail/multiple-tile domains and reject inconsistent packed/group
+extents via source assertions. The native consumer's 160 destination/ownership
+tests retain every lifetime check. See the runtime section of the scaled contract.
+The runtime buffer demo and qualification verify 30/49 artifacts. Its explicit
+30-package observation report at `out/scaled-dot-dynamic-coverage/coverage.json`
+retains 30/50 observed definitions and 26 in host-qualified captures. Unobserved
+definitions in that selection are not automatically unsupported; maintained
+composition/corpus closure remains a separate requirement.
 
 [Mixed FP8 contractions](fp8_contractions.md) now retain named matmul,
 original C, runtime M/N/K, typed-zero padding and logical tiles through the

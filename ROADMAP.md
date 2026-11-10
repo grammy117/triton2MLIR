@@ -9,7 +9,8 @@ compiler-staging, payload-materialization and coverage work with explicit eviden
 [Scaled contractions](docs/scaled_dot.md) now preserve FP4 K/M/N packing,
 optional E8M0/E4M3FN scales, mixed operand types and original C through standard
 tiled MLIR and real Merlin packages. The internal-precision profile is explicit;
-runtime/ragged scaled compositions and applicable target materialization remain.
+runtime/ragged FP4 source loops also replay through all three memory profiles.
+Broader scaled compositions and applicable target materialization remain.
 [Source assertions](docs/source_assertions.md) now retain scalar/tensor checks,
 messages and failure effects through upstream standard lowering and real Merlin
 execution, including a complete model2MLIR state/tuple capture.

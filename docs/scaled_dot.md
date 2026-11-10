@@ -82,9 +82,40 @@ python -m t2m qualify-merlin out/scaled-dot --out out/scaled-dot-merlin \
   --python /path/to/native-python --merlin-clang /path/to/compatible-clang
 ```
 
-The demo uses 16×16×64 logical tiles with M-packed A and N-packed B. Remaining
-qualification includes source runtime/ragged scaled loops, model bindings,
-reserved FP6 storage, additional target numeric profiles and applicable
+The static demo uses 16×16×64 logical tiles with M-packed A and N-packed B.
+
+## Runtime FP4 loops and packed tails
+
+`scaled-dot-dynamic` additionally retains runtime M/N/K, packed allocation
+dimensions, scale-group extents and the source K loop over 16×16×32 tiles.
+An odd logical K masks the unused high nibble of the last live byte on both
+operands; arbitrary caller bits there cannot enter the contraction. Each
+source dot rounds its result before the next source iteration. The frontend
+does not replace the whole kernel with one higher-precision matmul.
+Original source assertions enforce the packed-K/group relationships; actual
+allocation dimensions remain runtime ABI data rather than inferred constants.
+
+Three additional tests qualify tensor, buffer and guarded-buffer libraries.
+Each library replays empty M/N, K=0, K=1/31/32/65, ragged output tiles and
+changed scalar/shape data without recompilation. Independent rational
+references retain per-tile rounding. Two inconsistent allocation relationships
+per library fail through the original assertion and publish no tensor result.
+
+The selected native consumer can copy a restricted import from actual private
+storage into independent carried state before the loop, after validating the
+complete producer/capture plan. This preserves zero-trip values and keeps
+native alias/lifetime checks. The consumer's 160 destination/ownership cases
+pass. The earlier 96 shared-tensor/float-cast regressions also pass.
+The final combined scaled-dot/runtime/conditional-read/tail-proof run passes
+87 cases without skips against the updated consumer.
+The buffer demo is reproducible with `shared-demo --kernel scaled-dot-dynamic
+--memory-profile buffer`, followed by `qualify-merlin` as above.
+Its capture/qualification verify 30/49 artifacts. The independently reopened
+30-package observation report retains 30/50 definitions observed and 26 in
+host-qualified captures; an unobserved definition is not an unsupported-op verdict.
+
+Remaining qualification includes broader runtime format/packing compositions,
+model bindings, reserved FP6 storage, target numeric profiles and applicable
 accelerator materialization. These remain in the full
 [completion plan](completion_plan.md). This slice establishes no universal
 opcode/type/attribute/kernel coverage.

@@ -127,3 +127,45 @@ def reference(
             )
         words[index] = convert_word(accumulator, "f64", "f32", "rtne")
     return words.view(np.float32)
+
+
+def dynamic_inputs(m, n, k):
+    packed, groups = (k + 1) // 2, (k + 31) // 32
+    a = np.resize(np.arange(256, dtype=np.uint8), (m, packed))
+    b = np.resize(np.arange(255, -1, -1, dtype=np.uint8), (packed, n))
+    if k % 2:
+        a[:, -1] |= 0xF0
+        b[-1, :] |= 0xF0
+    sa = np.resize(np.asarray([127, 126, 128], np.uint8), (m, groups))
+    sb = np.resize(np.asarray([126, 128, 127], np.uint8), (n, groups))
+    initial = np.resize(
+        np.asarray([0.0, -0.0, 2**24, -(2**24), 3.0, -5.0], np.float32), (m, n)
+    )
+    return [
+        a.view(np.int8),
+        b.view(np.int8),
+        sa.view(np.int8),
+        sb.view(np.int8),
+        initial,
+        *(np.asarray(value, np.int32) for value in (m, n, k, packed, groups)),
+    ]
+
+
+def dynamic_reference(a, b, sa, sb, initial, m, n, k, packed_k, groups):
+    m, n, k, packed_k, groups = (int(value) for value in (m, n, k, packed_k, groups))
+    if packed_k != (k + 1) // 2 or groups != (k + 31) // 32:
+        raise ValueError("source allocation/logical extent relation differs")
+    output = initial.copy()
+    for step in range(groups):
+        left = np.zeros((m, 16), np.int8)
+        right = np.zeros((16, n), np.int8)
+        start, stop = step * 16, min((step + 1) * 16, packed_k)
+        left[:, : stop - start] = a[:, start:stop]
+        right[: stop - start, :] = b[start:stop, :]
+        if k % 2 and stop == packed_k:
+            left.view(np.uint8)[:, stop - start - 1] &= 0x0F
+            right.view(np.uint8)[stop - start - 1, :] &= 0x0F
+        output = reference(
+            left, right, sa[:, step : step + 1], sb[:, step : step + 1], output
+        )
+    return output

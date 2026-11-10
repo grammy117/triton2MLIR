@@ -49,6 +49,11 @@ The selected precision differs from Triton's target-dependent software
 emulation and does not assert GPU instruction equivalence. ABI and receipt
 schemas are unchanged; compatibility metadata records the difference.
 See [the numeric and dataflow contract](scaled_dot.md).
+Runtime FP4 packages retain logical K and packed/group allocation extents as
+distinct scalar/shape bindings with executable source assertions. Per-tile
+rounding, loop state and unused-nibble masks remain in the payload. Selected
+native materialization may add an independently owned copy of imported private
+loop state after its complete proof; no ABI, alias or lifetime rule is waived.
 
 FP8 contractions retain their named matmul and original accumulator in the
 portable payload. Derived `prov.contraction_contracts` records source formats,
