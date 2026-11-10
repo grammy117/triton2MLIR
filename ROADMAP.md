@@ -17,8 +17,11 @@ embedded NUL and escaped UTF-8 through native and Merlin execution, including
 BF16/CAS compositions. Broader print forms and target handling remain effect gates.
 [Logical print events](docs/logical_prints.md) now retain numeric values,
 word/decimal formatting, source order and logical coordinates in standard
-MLIR, with physical thread replicas abstracted explicitly. Mixed returning
-tensor/diagnostic references and the broader effect/target gates remain open.
+MLIR, with physical thread replicas abstracted explicitly.
+[Mixed returning tensors and diagnostics](docs/mixed_effects.md) now share a
+single observed call, complete per-result references and reusable Merlin
+library. Numeric control retains original tensor widths and recurrence;
+functional inputs remain readonly. Broader effect/target gates remain open.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

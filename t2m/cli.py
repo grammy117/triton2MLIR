@@ -419,7 +419,7 @@ def main(argv=None):
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
-    tensor.add_argument("--effect-reference",type=Path,help="independent JSON termination/stream reference; excludes numeric --reference")
+    tensor.add_argument("--effect-reference",type=Path,help="independent JSON streams/outcome; v2 binds adjacent reference.npz; excludes --reference")
     tensor.add_argument("--python", type=Path, help="existing native torch-mlir environment, for bundle checks")
     tensor.add_argument("--rtol", type=float, default=0)
     tensor.add_argument("--atol", type=float, default=0)
@@ -439,9 +439,9 @@ def main(argv=None):
     coverage.add_argument("--stage", choices=tuple(STAGES), default="tensor-ir")
     coverage.add_argument("--limit", type=int, default=1000)
     coverage.add_argument("--budget", type=float, default=120)
-    effect = commands.add_parser("effect-demo",help="package real void/initial-failure kernels with observable outcome references")
+    effect = commands.add_parser("effect-demo",help="package real tensor/void/failing kernels with observable outcome references")
     effect.add_argument("--case",choices=("constant-fail","empty-return","scalar-check","tensor-check","fail-before-store","literal-check",
-                                        "print-words","print-hex"),default="constant-fail")
+                                        "print-words","print-hex","mixed-results"),default="constant-fail")
     effect.add_argument("--out",type=Path,required=True)
     effect.add_argument("--optimizer",type=Path)
     effect.add_argument("--python",type=Path)
@@ -586,7 +586,7 @@ def main(argv=None):
             from .shared_tensor import TensorABI, convert_shared
             from .shared_bundle import write_shared_bundle
             if args.effect_reference and (args.reference or args.rtol or args.atol):
-                raise ValueError("effect references exclude numeric references and tolerances")
+                raise ValueError("effect references exclude --reference/--rtol/--atol; use explicit v2 per-result policies")
             if not args.effect_reference and bool(args.inputs) != bool(args.reference):
                 raise ValueError("provide both --inputs and --reference to publish a checked bundle")
             if args.out.exists():
@@ -603,7 +603,10 @@ def main(argv=None):
                         if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:
                             raise ValueError("effect inputs must contain every argument in ABI order")
                         inputs = [saved[f"in{i}"].copy() for i in range(len(abi.inputs))]
-                write_effect_bundle(result,args.out,inputs,json.loads(args.effect_reference.read_text()),work=work / "native",python=args.python)
+                from .effect_results import ARCHIVE,load_archive
+                reference = json.loads(args.effect_reference.read_text())
+                numeric = load_archive(args.effect_reference.parent / ARCHIVE,len(abi.outputs)) if reference.get("schema") == "t2m.effect-reference.v2" else None
+                write_effect_bundle(result,args.out,inputs,reference,work=work / "native",python=args.python,references=numeric)
             elif args.inputs:
                 with np.load(args.inputs, allow_pickle=False) as saved:
                     if set(saved.files) != {f"in{i}" for i in range(len(abi.inputs))}:

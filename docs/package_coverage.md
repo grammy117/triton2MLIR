@@ -67,3 +67,7 @@ Observable-outcome receipts/qualifications are also admitted as explicit
 outcome remains recorded separately from numeric tolerances. A matched source
 failure does not imply every inventoried operation executed or that a tensor
 result was produced; source and per-operation execution coverage stay distinct.
+Mixed returning packets use `reference_kind: observable-effects-and-tensors`.
+Their qualified host observations retain both the exact stream/termination
+policy and the complete per-result word/value policies. This remains source
+composition evidence, without inferring that every source operation executed.

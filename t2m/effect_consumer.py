@@ -13,10 +13,21 @@ from .bundle import _json, _record
 from .consumer import _host_worker, observe_merlin_host
 from .effect_bundle import SCHEMA, verify_effect_bundle
 from .effect_reference import compare_outcome, validate_reference, validate_inputs
+from .effect_results import ARCHIVE,reference_members,load_archive,validate_results
 from .kernel_consumer import STAGE
 from .shared_tensor import TensorABI, parse_shared
 
 QUALIFICATION = "t2m.merlin-effect-qualification.v1"
+
+
+def _compare(compiler,host,evaluation,evaluator,reference,spec,signature):
+    with np.load(evaluator / "inputs.npz",allow_pickle=False) as saved:
+        if set(saved.files) != {f"in{i}" for i in range(len(spec.inputs))}:
+            raise ValueError("effect comparison requires the complete argument roster")
+        inputs = validate_inputs(spec,[saved[f"in{i}"] for i in range(len(spec.inputs))])
+    return compare_outcome(evaluation,reference,backend="merlin-host",program=_record(compiler / "program.mlir"),
+        arguments=_record(evaluator / "inputs.npz"),implementation={"kind":"shared-library","artifact":_record(host / "model.so")},
+        result_count=len(signature["outputs"]),spec=spec,inputs=inputs,numeric_reference=evaluator / ARCHIVE)
 
 
 def checked_signature(compiler):
@@ -63,14 +74,12 @@ def qualify_effect_kernel(capture,out,*,merlin_root,python=None,compiler_python=
     _host_worker("compile",root,out / "compiler",host,[],environment,python)
     evaluator = out / "evaluator"
     evaluator.mkdir()
-    for name in ("inputs.npz","reference.json"):
+    reference = json.loads((capture / "reference.json").read_text())
+    for name in ("inputs.npz",*reference_members(reference)):
         shutil.copyfile(capture / name,evaluator / name)
-    reference = json.loads((evaluator / "reference.json").read_text())
     observe_merlin_host(out,evaluator / "inputs.npz",out / "evaluation",merlin_root=root,python=python)
-    _,signature = checked_signature(out / "compiler")
-    comparison = compare_outcome(out / "evaluation",reference,backend="merlin-host",program=_record(out / "compiler/program.mlir"),
-        arguments=_record(evaluator / "inputs.npz"),implementation={"kind":"shared-library","artifact":_record(host / "model.so")},
-        result_count=len(signature["outputs"]))
+    spec,signature = checked_signature(out / "compiler")
+    comparison = _compare(out / "compiler",host,out / "evaluation",evaluator,reference,spec,signature)
     compilation = json.loads((host / "compilation.json").read_text())
     _json(host / "execution.json",{**compilation,"schema":"t2m.merlin-effect-host-qualification.v1",**comparison,
         "host_execution":"matched-expected-outcome","reference":_record(evaluator / "reference.json"),
@@ -113,8 +122,10 @@ def verify_effect_qualification(out):
     for name,digest in stage["members"].items():
         if "compiler/"+name not in receipt["artifacts"] or _record(out / "compiler" / name)["sha256"] != digest:
             raise ValueError("effect compiler member differs from its byte binding")
-    for name in ("inputs.npz","reference.json"):
-        if _record(out / "evaluator" / name) != source["artifacts"][name]:
+    reference = json.loads((out / "evaluator/reference.json").read_text())
+    validate_reference(reference)
+    for name in ("inputs.npz",*reference_members(reference)):
+        if "evaluator/"+name not in receipt["artifacts"] or _record(out / "evaluator" / name) != source["artifacts"].get(name):
             raise ValueError("initial effect qualification differs from its original reference case")
     compilation = json.loads((out / "host/compilation.json").read_text())
     if (compilation.get("schema") != "t2m.merlin-host-compilation.v1" or compilation.get("whole_body_lowering") != "passed"
@@ -130,9 +141,7 @@ def verify_effect_qualification(out):
     spec,signature = checked_signature(out / "compiler")
     if source.get("materialized_abi") != {"complete":True,"inputs":len(spec.inputs),"outputs":len(spec.outputs)}:
         raise ValueError("effect qualification changed the original public argument/result roster")
-    comparison = compare_outcome(out / "evaluation",reference,backend="merlin-host",program=_record(out / "compiler/program.mlir"),
-        arguments=_record(out / "evaluator/inputs.npz"),implementation={"kind":"shared-library","artifact":_record(out / "host/model.so")},
-        result_count=len(signature["outputs"]))
+    comparison = _compare(out / "compiler",out / "host",out / "evaluation",out / "evaluator",reference,spec,signature)
     report = json.loads((out / "host/execution.json").read_text())
     if (report.get("schema") != "t2m.merlin-effect-host-qualification.v1" or any(report.get(k) != v for k,v in comparison.items())
             or report.get("host_execution") != "matched-expected-outcome" or report.get("reference") != _record(out / "evaluator/reference.json")
@@ -152,12 +161,16 @@ def invoke_effect_kernel(qualification,arguments,reference,out,*,merlin_root,pyt
     expected = json.loads(Path(reference).read_text())
     trace = json.loads((qualification / "compiler/source/compiler-provenance.json").read_text())
     validate_reference(expected,trace)
-    if expected["termination"] == "return" and spec.outputs:
+    mixed = expected["schema"] == "t2m.effect-reference.v2"
+    if expected["termination"] == "return" and spec.outputs and not mixed:
         raise ValueError("returned tensor values require numeric references")
     with np.load(arguments,allow_pickle=False) as arrays:
         if set(arrays.files) != {f"in{i}" for i in range(len(spec.inputs))}:
             raise ValueError("effect invocation requires the complete input roster")
-        validate_inputs(spec,[arrays[f"in{i}"] for i in range(len(spec.inputs))])
+        inputs = validate_inputs(spec,[arrays[f"in{i}"] for i in range(len(spec.inputs))])
+    if mixed:
+        validate_results(spec,inputs,load_archive(Path(reference).parent / ARCHIVE,len(spec.outputs)),
+            expected["results"]["comparisons"])
     stage = json.loads((qualification / "compiler/compile-inputs.json").read_text())
     names = {"qualification.json","input-receipt.json","compiler/compile-inputs.json",
              "host/compilation.json","host/model.so","host/model.ll","host/prepared.mlir"} | {"compiler/"+name for name in stage["members"]}
@@ -170,10 +183,10 @@ def invoke_effect_kernel(qualification,arguments,reference,out,*,merlin_root,pyt
     evaluator.mkdir()
     shutil.copyfile(arguments,evaluator / "inputs.npz")
     shutil.copyfile(reference,evaluator / "reference.json")
+    if mixed:
+        shutil.copyfile(Path(reference).parent / ARCHIVE,evaluator / ARCHIVE)
     observe_merlin_host(out / "source",evaluator / "inputs.npz",out / "evaluation",merlin_root=merlin_root,python=python)
-    comparison = compare_outcome(out / "evaluation",expected,backend="merlin-host",program=_record(out / "source/compiler/program.mlir"),
-        arguments=_record(evaluator / "inputs.npz"),implementation={"kind":"shared-library","artifact":_record(out / "source/host/model.so")},
-        result_count=len(signature["outputs"]))
+    comparison = _compare(out / "source/compiler",out / "source/host",out / "evaluation",evaluator,expected,spec,signature)
     if verify_effect_qualification(qualification) != original:
         raise ValueError("effect qualification changed during invocation")
     report = {"schema":"t2m.merlin-effect-invocation.v1","native_compilation":"reused-qualified-library",**comparison,
@@ -219,13 +232,13 @@ def verify_effect_invocation(out):
     expected = json.loads((out / "evaluator/reference.json").read_text())
     trace = json.loads((source / "compiler/source/compiler-provenance.json").read_text())
     validate_reference(expected,trace)
+    if any("evaluator/"+name not in report["artifacts"] for name in reference_members(expected)):
+        raise ValueError("effect invocation lacks its complete result reference artifacts")
     with np.load(out / "evaluator/inputs.npz",allow_pickle=False) as arrays:
         if set(arrays.files) != {f"in{i}" for i in range(len(spec.inputs))}:
             raise ValueError("effect invocation has an incomplete input roster")
         validate_inputs(spec,[arrays[f"in{i}"] for i in range(len(spec.inputs))])
-    comparison = compare_outcome(out / "evaluation",expected,backend="merlin-host",program=_record(source / "compiler/program.mlir"),
-        arguments=_record(out / "evaluator/inputs.npz"),implementation={"kind":"shared-library","artifact":_record(source / "host/model.so")},
-        result_count=len(signature["outputs"]))
+    comparison = _compare(source / "compiler",source / "host",out / "evaluation",out / "evaluator",expected,spec,signature)
     if (any(report.get(k) != v for k,v in comparison.items()) or report.get("reference") != _record(out / "evaluator/reference.json")
             or report.get("observation") != _record(out / "evaluation/outcome.json")):
         raise ValueError("effect invocation does not bind its actual independent outcome comparison")

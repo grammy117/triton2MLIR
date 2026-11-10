@@ -54,6 +54,9 @@ messages through the [length-aware diagnostic path](docs/literal_diagnostics.md)
 `effect-demo --case print-words` and `print-hex` now also exercise
 [logical print events](docs/logical_prints.md), retaining values, source order
 and logical coordinates while explicitly abstracting physical print replicas.
+`effect-demo --case mixed-results` now returns a complete tensor tuple and
+its diagnostic stream from one native/Merlin call, retaining runtime state
+recurrence and exact i64 words. See [the explicit mixed reference profile](docs/mixed_effects.md).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

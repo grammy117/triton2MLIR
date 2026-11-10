@@ -112,6 +112,9 @@ def package_coverage(bundles, *, qualifications=()):
         selected.add(pin["sha256"])
         model = receipt["schema"] == "t2m.bound-model-receipt.v1"
         effect = receipt["schema"] == "t2m.effect-kernel-receipt.v1"
+        effect_reference = _json(root / "reference.json") if effect else None
+        mixed = effect and effect_reference["schema"] == "t2m.effect-reference.v2"
+        reference_kind = "observable-effects-and-tensors" if mixed else "observable-effects" if effect else "numeric-tensors"
         prefix = "consumer/" if model else ""
         consumer = root if model else qualified.get(pin["sha256"])
         host = None
@@ -128,12 +131,16 @@ def package_coverage(bundles, *, qualifications=()):
             raise ValueError("coverage Merlin observations require the complete host qualification")
         package = {"path": str(root), "receipt": pin, "schema": receipt["schema"],
             "merlin_host": host is not None, "native_reference_comparison": "passed",
-            "reference_kind":"observable-effects" if effect else "numeric-tensors",
+            "reference_kind":reference_kind,
             "accelerator_execution": "not-qualified-by-this-report"}
+        if mixed:
+            package["native_numeric_policy"] = {"results":effect_reference["results"]["comparisons"]}
         if host is not None:
             package["host_report"] = _record(consumer / (prefix + "host/execution.json"))
             if effect:
                 package["merlin_effect_policy"] = {"termination":host["termination"],"comparison":"exact-streams-and-termination"}
+                if mixed:
+                    package["merlin_numeric_policy"] = {"results":host["result_comparisons"]}
             else:
                 package["merlin_numeric_policy"] = {key:host[key] for key in ("rtol", "atol")}
         packages.append(package)
@@ -153,7 +160,7 @@ def package_coverage(bundles, *, qualifications=()):
                 "payload_sha256": trace["mlir_sha256"], "source_graph": "original-source-operations",
                 "inventory_authority": "byte-bound producer declaration; not independent source proof",
                 "merlin_host": host is not None, "profile": trace.get("profile", "functional-tensor"),
-                "reference_kind":"observable-effects" if effect else "numeric-tensors",
+                "reference_kind":reference_kind,
                 **({"host_outcome":host["termination"]} if effect and host is not None else {}),
                 "abi": trace["spec"], "operations": trace["source_operations"],
                 "normalized_operation_counts": dict(Counter(op["opcode"] for op in trace.get("normalized_operations", [])))})

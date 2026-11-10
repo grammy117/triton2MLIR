@@ -27,7 +27,12 @@ from Merlin's compiler projection.
 [Logical source prints](logical_prints.md) add standard `vector.print` to the
 portable body and declare the logical event/formatting/software profile.
 Physical thread replicas are abstracted; public rosters and receipts are
-unchanged. Mixed successful tensor/output-stream reference packets remain open.
+unchanged. [Mixed successful tensor/output-stream packets](mixed_effects.md)
+add explicit `t2m.effect-reference.v2` plus a complete `reference.npz` tuple
+and per-result word/value policies, retaining the outer effect receipt and
+actual tensor ABI. Both references and their individual digests remain outside
+compiler staging. This evaluator layout differs from model2MLIR's ordinary
+golden/extras layout; compatibility metadata records the extension.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 

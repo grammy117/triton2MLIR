@@ -362,7 +362,7 @@ warnings, with all existing native/model2MLIR/Merlin environments enabled.
 The tensor histogram demo at `out/histogram-tensor/` passes separate compiler
 staging/native execution under `out/histogram-tensor-merlin/`, with all 38
 qualification artifacts verified. The f32 and f16 selected-memory model demos
-each verify all 101 bound artifacts. Merlin remains at compiler-intake anchor
+each verify all 101 bound artifacts. That measurement used Merlin anchor
 `5f989aaf19f1a2326e10012be6d1436456893f4b`; its 83 destination/deallocation tests
 and documentation/structure gates passed for the loop-read extension.
 
@@ -615,8 +615,12 @@ while values, source control positions, exact words and logical coordinates
 remain executable. All 53 focused cases, seven CLI cases, 68 existing frontend
 regressions and 84 Merlin native/binding/staging checks pass.
 
-The next required package gate is **returning tensor values and diagnostic
-streams together**, with independent numeric and observable-output references,
-compiler exclusion, one-call evaluation and reused-library verification.
+The package gate for **returning tensor values and diagnostic streams
+together** now has an explicit [mixed reference profile](mixed_effects.md):
+complete typed result archives, per-slot word/value policies, compiler
+exclusion, one-call evaluation and reused-library verification. Numeric i64
+recurrence retains its width/control/data reuse through the supported upstream
+prepass selection; native functional inputs receive the upstream readonly
+argument contract. Both checks preserve the original memory/ownership gates.
 Pointer diagnostics need logical-address semantics; broader numeric, external/
 assembly/synchronization, corpus/runtime/alias and target work stays in scope.

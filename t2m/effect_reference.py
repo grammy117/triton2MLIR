@@ -9,14 +9,20 @@ import numpy as np
 from .process_outcome import record
 from .runtime_shapes import resolve_shapes
 from .tensor_storage import DTYPES
+from .effect_results import validate_policy,compare_results
 
 
 def validate_reference(reference, trace=None):
-    if (not isinstance(reference,dict) or set(reference) != {"schema","termination","stdout","stderr"}
-            or reference["schema"] != "t2m.effect-reference.v1"
+    mixed = isinstance(reference,dict) and reference.get("schema") == "t2m.effect-reference.v2"
+    if (not isinstance(reference,dict) or set(reference) != {"schema","termination","stdout","stderr"} | ({"results"} if mixed else set())
+            or reference["schema"] not in ("t2m.effect-reference.v1","t2m.effect-reference.v2")
             or reference["termination"] not in ("return","assertion_failure")
             or any(not isinstance(reference[key],str) or len(reference[key].encode("utf-8")) > 4*1024*1024 for key in ("stdout","stderr"))):
         raise ValueError("effect reference requires explicit termination and exact bounded text streams")
+    if mixed:
+        if reference["termination"] != "return":
+            raise ValueError("mixed numeric references require an actual returning outcome")
+        validate_policy(reference["results"])
     if trace is not None and reference["termination"] == "assertion_failure":
         assertions = [r["source_assertion"] for r in trace.get("normalized_operations",trace.get("source_operations",[])) if "source_assertion" in r]
         messages = {a.get("diagnostic_text","Assertion `"+a["message"]+"` failed\n") for a in assertions}
@@ -44,7 +50,8 @@ def validate_inputs(spec, arrays):
     return arrays
 
 
-def compare_outcome(directory, reference, *, backend, program, arguments, implementation, result_count):
+def compare_outcome(directory, reference, *, backend, program, arguments, implementation, result_count,
+                    spec=None, inputs=None, numeric_reference=None):
     """Demand real invocation phase and an exact expected observed outcome.
 
     Setup crashes, timeouts, other signals and missing completion cannot be
@@ -68,20 +75,37 @@ def compare_outcome(directory, reference, *, backend, program, arguments, implem
     code = 0 if reference["termination"] == "return" else -int(signal.SIGABRT)
     if outcome["returncode"] != code or any((root / (key+".bin")).read_bytes() != reference[key].encode("utf-8") for key in ("stdout","stderr")):
         raise ValueError("actual effect outcome differs from its independent reference")
+    numeric = {}
+    published_count = 0
     if reference["termination"] == "return":
-        if result_count:
+        mixed = reference["schema"] == "t2m.effect-reference.v2"
+        if result_count and not mixed:
             raise ValueError("returned tensor results require a numeric reference profile")
-        with np.load(root / "outputs.npz",allow_pickle=False) as outputs:
-            if outputs.files:
-                raise ValueError("void effect invocation published unexpected tensor results")
+        if mixed:
+            if spec is None or inputs is None or numeric_reference is None or result_count != len(spec.outputs):
+                raise ValueError("mixed outcomes require the actual complete typed ABI, arguments and numeric references")
+            published_count = compare_results(root / "outputs.npz",numeric_reference,reference,spec,inputs)
+            numeric = {"result_comparison":"passed","numeric_reference":record(numeric_reference),
+                "result_comparisons":reference["results"]["comparisons"],"result_outputs":record(root / "outputs.npz")}
+        else:
+            with np.load(root / "outputs.npz",allow_pickle=False) as outputs:
+                if outputs.files:
+                    raise ValueError("void effect invocation published unexpected tensor results")
         completion = root / ("execution.json" if backend == "native-jit" else "evaluation.json")
         completed = json.loads(completion.read_text())
         if backend == "native-jit" and (completed.get("native_mlir_verified") is not True or completed.get("llvm_lowering_verified") is not True):
             raise ValueError("returned effect invocation lacks its completed native lowering")
+        if backend == "native-jit" and mixed and (completed.get("invocations") != 1 or completed.get("functional_inputs_preserved") is not True
+                or completed.get("outputs") != record(root / "outputs.npz") or completed.get("arguments") != arguments
+                or completed.get("source_program") != program):
+            raise ValueError("returned mixed invocation lacks its completed one-call native result bindings")
         if backend == "merlin-host" and (completed.get("invocations") != 1 or completed.get("functional_inputs_preserved") is not True
                 or completed.get("outputs") != record(root / "outputs.npz")):
             raise ValueError("returned effect invocation lacks its completed readonly host call")
+        if backend == "merlin-host" and mixed and (completed.get("arguments") != arguments
+                or completed.get("source_program") != program or completed.get("shared_library") != implementation["artifact"]):
+            raise ValueError("returned mixed invocation differs from its actual host program/library/arguments")
     elif any((root / name).exists() for name in ("outputs.npz","execution.json","evaluation.json")):
         raise ValueError("failed effect invocation cannot publish completed result evidence")
-    return {"termination":reference["termination"],"reference_comparison":"passed","result_count":0,
-            "declared_result_count":result_count,"outputs_published":reference["termination"] == "return"}
+    return {"termination":reference["termination"],"reference_comparison":"passed","result_count":published_count,
+            "declared_result_count":result_count,"outputs_published":reference["termination"] == "return",**numeric}

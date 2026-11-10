@@ -1,5 +1,22 @@
 # Measured coverage and remaining boundaries
 
+[Mixed tensor results and diagnostic streams](mixed_effects.md) now reach
+the same Merlin interface with an explicit v2 reference, complete typed result
+archives and per-result word/value policies. The 92 new reference/integration
+cases pass, including all three memory profiles, exact words for all nine
+existing carriers, runtime shapes/loops, one-call observation, reused libraries
+and rehashed semantic refusals. Another 51 effect/CLI/registry regressions pass.
+Fourteen control-state cases check the upstream prepass selection, and three
+native regressions preserve readonly tensor accumulators. Merlin's eight
+staging fixtures forbid reads of references and evaluator digests; its docs
+and structure gates pass. These transport/effect results do not qualify broader
+low-precision arithmetic, pointer diagnostics, external/synchronization effects,
+runtime/alias models, the maintained full corpus or target materialization.
+The saved mixed demo and actual qualification pass 26/45 artifact checks;
+its reused-library invocation passes 25. The 20-package observation report
+at `out/mixed-result-coverage/coverage.json` retains all 50 definitions,
+with 25 observed and 21 present in captures of host-qualified packages.
+
 [Logical print events](logical_prints.md) now have 53 focused cases through
 actual native/Merlin execution, plus seven CLI cases. All three memory
 profiles retain signed/unsigned words, floating decimal/hex profiles, logical
@@ -11,8 +28,7 @@ The explicit 19-package observation report at
 `out/logical-print-coverage/coverage.json` retains all 50 pinned definitions:
 25 observed, with 21 present in captures of Merlin-qualified packages. These
 are selected composition observations, not universal opcode/type support.
-Mixed returning tensor/stream references, pointer/FP8 print forms and target
-materialization remain required work.
+Pointer/FP8 print forms and target materialization remain required work.
 
 [Length-aware literal assertions](literal_diagnostics.md) now pass 75 focused
 diagnostic/source/effect regression cases through the actual native/Merlin

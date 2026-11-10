@@ -39,6 +39,13 @@ still compared byte-for-byte; source print metadata never supplies its values.
 Initially failing tensor kernels retain their actual declared result ABI;
 they publish no fabricated values.
 
+Returning tensor kernels now also use an explicit
+[mixed reference v2](mixed_effects.md), adding `reference.npz` and complete
+per-result word/value policies while comparing all tensors, exact streams and
+termination from one call. Their ordinary tensor-result ABI remains intact;
+effect-only ABI v6 is reserved for real void entries. Original reference v1
+packets retain their existing meaning.
+
 The package omits `golden.npy`, retains an empty valid `extra.npz`, and declares
 these differences in `compatibility.json`. A void function has no tensor
 result. An empty result archive records no values; an aborting function writes

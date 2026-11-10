@@ -14,12 +14,13 @@ pytestmark = pytest.mark.skipif(not (OPT and NATIVE),reason="existing native too
 
 @pytest.mark.parametrize("case", ["constant-fail","empty-return","fail-before-store","tensor-check",
     pytest.param("print-words",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required")),
-    pytest.param("print-hex",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required"))])
+    pytest.param("print-hex",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required")),
+    pytest.param("mixed-results",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required"))])
 def test_effect_examples_are_real_checked_packets(tmp_path,capsys,case):
     out = tmp_path / "capture"
     assert main(["effect-demo","--case",case,"--out",str(out),"--optimizer",OPT,"--python",NATIVE]) == 0
     summary = json.loads(capsys.readouterr().out)
-    assert summary["reference_comparison"] == "passed" and summary["result_count"] == 0
+    assert summary["reference_comparison"] == "passed" and summary["result_count"] == (2 if case == "mixed-results" else 0)
     assert verify_bundle(out)["schema"] == "t2m.effect-kernel-receipt.v1"
     assert not (out / "golden.npy").exists()
 
