@@ -4,8 +4,8 @@ Meta 17f0c234 TritonToUnstructuredPass.cpp propagates offsets through pointer
 bitcasts when storage strides agree (bitcast_ptr_unstructured.mlir). Reuse that
 base/offset boundary, but keep our public storage element and bitcast each
 loaded/stored value. This avoids physical pointer casts and whole-buffer copies.
-Sub-byte types, changed strides and differently typed selected roots need a
-separate address/representation contract.
+Sub-byte types and changed strides need a separate address/representation
+contract. Finite selected roots retain their own equal-width storage types.
 """
 
 from functools import lru_cache
@@ -42,6 +42,50 @@ def compatible(left, right):
         return False
 
 
+def lower_memory_view(op, view, storage, fill=None):
+    """Use actual storage at one ordinary event and return its logical value."""
+    from .shared_tensor import opcode
+    def cast(value, element_, before=True):
+        type_ = builtin.TensorType(element_, value.type.get_shape()) if isinstance(value.type, builtin.TensorType) else element_
+        result = arith.BitcastOp(value, type_)
+        result.location = op.location
+        (op.parent.insert_op_before if before else op.parent.insert_op_after)(result, op)
+        return result.result
+    if opcode(op) == "tt.store":
+        op.operands = [op.operands[0], cast(op.operands[1], storage), *op.operands[2:]]
+        return None
+    original_fill = original_mask = None
+    if fill is not None:
+        original_fill, original_mask = op.operands[fill], op.operands[1]
+        # Integer fill bits may be a signaling NaN in storage. Select the
+        # original fill after the register bitcast, never as a float literal.
+        zero = (arith.ConstantOp(builtin.FloatAttr(0.0, storage)) if isinstance(storage, builtin.AnyFloat)
+                else arith.ConstantOp.from_int_and_width(0, storage))
+        zero.location = op.location
+        op.parent.insert_op_before(zero, op)
+        value = zero.result
+        if isinstance(original_fill.type, builtin.TensorType):
+            splat = builtin.UnregisteredOp.with_name("tt.splat").create(operands=[value],
+                result_types=[builtin.TensorType(storage, original_fill.type.get_shape())], location=op.location)
+            op.parent.insert_op_before(splat, op)
+            value = splat.results[0]
+        operands = list(op.operands)
+        operands[fill] = value
+        op.operands = operands
+    old = op.results[0]
+    type_ = builtin.TensorType(storage, old.type.get_shape()) if isinstance(old.type, builtin.TensorType) else storage
+    loaded = Rewriter.replace_value_with_new_type(old, type_)
+    restored = cast(loaded, view, before=False)
+    loaded.replace_uses_with_if(restored, lambda use: use.operation is not restored.owner)
+    if original_fill is not None:
+        selected = arith.SelectOp(original_mask, restored, original_fill)
+        selected.location = op.location
+        op.parent.insert_op_after(selected, restored.owner)
+        restored.replace_uses_with_if(selected.result, lambda use: use.operation is not selected)
+        restored = selected.result
+    return restored
+
+
 def normalize(state, source_ids, *, typed_atomics=False):
     from .shared_tensor import _array, opcode
     from .word_events import MEMORY_EVENTS
@@ -56,7 +100,32 @@ def normalize(state, source_ids, *, typed_atomics=False):
         scalar = state.types[pointer].element_type if isinstance(state.types[pointer], builtin.TensorType) else state.types[pointer]
         root, *others = sorted(roots, key=lambda v: v.index)
         if any(other.type != root.type for other in others):
-            refuse(op, "selected pointer views need one logical storage element type across all roots")
+            # Selection will split the original event before applying each
+            # root's register view. Validate all roots before any mutation.
+            view = element(scalar)
+            for base in (root, *others):
+                if scalar == base.type:
+                    continue
+                if not compatible(scalar, base.type):
+                    refuse(op, "pointer views require equal byte-aligned element widths without address-space changes")
+                storage = element(base.type)
+                atomic = opcode(op) not in ("tt.load", "tt.store")
+                cas = opcode(op) == "tt.atomic_cas"
+                if atomic and (not typed_atomics or opcode(op) not in ("tt.atomic_rmw", "tt.atomic_cas")
+                        or view not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64))
+                        or storage not in ((builtin.f16, builtin.f32, builtin.f64) if cas else (builtin.f32, builtin.f64))):
+                    refuse(op, "atomic word views require a separately qualified typed atomic region expansion")
+                reports.append({"kind": "logical-atomic-word-view" if atomic else "logical-pointer-word-view",
+                    "source_ids": source_ids(op.location), "opcode": opcode(op), "storage_dtype": str(storage),
+                    "value_dtype" if atomic else "view_dtype": str(view), "element_bits": storage.bitwidth,
+                    "roots": [base.index], **({"address_units": "equal-width-elements"} if atomic else {
+                        "expansion": "per-root-original-storage-memory-event-with-register-bitcasts",
+                        "offsets": "unchanged-source-word-elements"})})
+            if opcode(op) == "tt.load":
+                segments = _array(op, "operandSegmentSizes")
+                if len(segments) != 3 or sum(segments) != len(op.operands):
+                    refuse(op, "logical word load requires explicit mask/fill segments")
+            continue
         if scalar == root.type:
             continue
         if not compatible(scalar, root.type):
@@ -83,44 +152,7 @@ def normalize(state, source_ids, *, typed_atomics=False):
         type_ = state.types[pointer]
         state.memory_types[op] = builtin.TensorType(root.type, type_.get_shape()) if isinstance(type_, builtin.TensorType) else root.type
     for op, root, view, storage, fill in plan:
-        def cast(value, element_, before=True):
-            type_ = builtin.TensorType(element_, value.type.get_shape()) if isinstance(value.type, builtin.TensorType) else element_
-            result = arith.BitcastOp(value, type_)
-            result.location = op.location
-            (op.parent.insert_op_before if before else op.parent.insert_op_after)(result, op)
-            return result.result
-        if opcode(op) == "tt.store":
-            op.operands = [op.operands[0], cast(op.operands[1], storage), *op.operands[2:]]
-        else:
-            original_fill = original_mask = None
-            if fill is not None:
-                original_fill, original_mask = op.operands[fill], op.operands[1]
-                # An integer fill may encode a signaling NaN in the storage
-                # type. Keep those bits in the value domain rather than letting
-                # native constant folding quiet/canonicalize a floating literal.
-                zero = (arith.ConstantOp(builtin.FloatAttr(0.0, storage)) if isinstance(storage, builtin.AnyFloat)
-                        else arith.ConstantOp.from_int_and_width(0, storage))
-                zero.location = op.location
-                op.parent.insert_op_before(zero, op)
-                value = zero.result
-                if isinstance(original_fill.type, builtin.TensorType):
-                    splat = builtin.UnregisteredOp.with_name("tt.splat").create(operands=[value],
-                        result_types=[builtin.TensorType(storage, original_fill.type.get_shape())], location=op.location)
-                    op.parent.insert_op_before(splat, op)
-                    value = splat.results[0]
-                operands = list(op.operands)
-                operands[fill] = value
-                op.operands = operands
-            old = op.results[0]
-            type_ = builtin.TensorType(storage, old.type.get_shape()) if isinstance(old.type, builtin.TensorType) else storage
-            loaded = Rewriter.replace_value_with_new_type(old, type_)
-            restored = cast(loaded, view, before=False)
-            loaded.replace_uses_with_if(restored, lambda use: use.operation is not restored.owner)
-            if original_fill is not None:
-                selected = arith.SelectOp(original_mask, restored, original_fill)
-                selected.location = op.location
-                op.parent.insert_op_after(selected, restored.owner)
-                restored.replace_uses_with_if(selected.result, lambda use: use.operation is not selected)
+        lower_memory_view(op, view, storage, fill)
         reports.append({"kind": "logical-pointer-word-view", "source_ids": source_ids(op.location),
             "opcode": opcode(op), "storage_dtype": str(storage), "view_dtype": str(view),
             "element_bits": storage.bitwidth, "roots": sorted(v.index for v in state.bases[op.operands[0]]),

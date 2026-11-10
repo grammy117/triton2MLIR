@@ -24,8 +24,12 @@ def kernel_representation_differences(trace, *, dynamic=False):
     selected = [t for t in transformations if t.get("kind") == "selected-pointer-memory"]
     if selected:
         differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")
+        if any(t.get("expansion") == "per-root-original-storage-memory-event-with-register-bitcasts" for t in transformations):
+            differences.append("selected ordinary memory retains each root's own equal-width storage dtype; predicated loads/stores perform register bitcasts at the original event and preserve source fills after loading; shared element offsets do not imply a shared storage representation; artifact and public tensor/scalar ABI schemas are unchanged")
         if any(t["missing_other_zero_refinement"] for t in selected):
             differences.append("inactive undefined source load values use the pinned upstream gather's zero refinement; this does not assert that inactive source memory was initialized or read")
+    if any(t.get("kind") == "logical-selector-permutation" for t in transformations):
+        differences.append("closed selector permutations retain immutable initial selector tiles and carry scalar i32 table indices through the original loop; logical per-lane choices are decoded at their uses, while original source-word offset recurrences remain executable; this changes internal control representation without a GPU mapping, new public argument or native lifetime exemption")
     if any("t2m-expand-cat-preserve-order" in t.get("pipeline", []) for t in transformations):
         differences.append("TTIR cat uses a checked pre-layout join/transpose/reshape expansion in lhs-then-rhs order, choosing a permitted ordering; original native source and normalized graphs remain distinct")
     if dynamic:

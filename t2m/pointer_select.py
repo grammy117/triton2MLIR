@@ -49,8 +49,11 @@ def normalize_selected(state, source_ids):
                 varying[user] = True
                 pending.append(user)
 
+    from .pointer_permutations import selector_tables
+    encoded, permutation_reports = selector_tables(state, varying, operands, args, results)
+
     def tag_type(value):
-        return TensorType(builtin.i32, state.types[value].get_shape()) if varying[value] else builtin.i32
+        return TensorType(builtin.i32, state.types[value].get_shape()) if varying[value] and value not in encoded else builtin.i32
 
     def at(op, new):
         new.location = op.location
@@ -81,6 +84,29 @@ def normalize_selected(state, source_ids):
             tags[value] = root_tag(next(iter(state.bases[value])))
         return tags[value]
 
+    def logical_tag(value, before):
+        if value not in encoded:
+            return tag(value)
+        table, field = encoded[value], tag(value)
+        type_ = TensorType(builtin.i32, state.types[value].get_shape())
+        result = broadcast(logical_tag(table.initials[-1], before), type_, before)
+        for i in reversed(range(len(table.initials) - 1)):
+            constant = at(before, arith.ConstantOp.from_int_and_width(i, 32))
+            equal = at(before, arith.CmpiOp(field, constant, "eq"))
+            condition = broadcast(equal, TensorType(builtin.i1, type_.get_shape()), before)
+            incoming = broadcast(logical_tag(table.initials[i], before), type_, before)
+            result = at(before, arith.SelectOp(condition, incoming, result))
+        return result
+
+    def edge_tag(value, target, before):
+        if target in encoded:
+            table = encoded[target]
+            if before is table.loop:
+                return at(before, arith.ConstantOp.from_int_and_width(table.initials.index(value), 32))
+            assert encoded.get(value) == table
+            return tag(value)
+        return broadcast(logical_tag(value, before), tag_type(target), before)
+
     def add_result(op, value):
         result = OpResult(tag_type(value), op, len(op.results))
         op.results = SSAValues((*op.results, result))
@@ -108,15 +134,16 @@ def normalize_selected(state, source_ids):
         if not pointer_results or opcode(op) in ("scf.for", "scf.while", "scf.if"):
             continue
         name = opcode(op)
-        if name == "tt.addptr":
-            tags[pointer_results[0]] = tag(operands[op][0])
+        if name == "tt.addptr" or name == "tt.bitcast" and pointer_results[0] in encoded:
+            value = pointer_results[0]
+            tags[value] = tag(operands[op][0]) if value in encoded else logical_tag(operands[op][0], op)
         elif name == "arith.select":
             value = pointer_results[0]
-            left, right = (broadcast(tag(v), tag_type(value), op) for v in operands[op][1:])
+            left, right = (broadcast(logical_tag(v, op), tag_type(value), op) for v in operands[op][1:])
             tags[value] = at(op, arith.SelectOp(operands[op][0], left, right))
         else:
             pointers = [v for v in operands[op] if v in state.bases]
-            incoming = [tag(v) for v in pointers]
+            incoming = [logical_tag(v, op) for v in pointers]
             if all(v.type == builtin.i32 for v in incoming) and len(set(incoming)) == 1 and all(tag_type(v) == builtin.i32 for v in pointer_results):
                 for value in pointer_results:
                     tags[value] = incoming[0]
@@ -128,7 +155,7 @@ def normalize_selected(state, source_ids):
                 else:
                     type_ = state.types[value]
                     type_ = TensorType(builtin.i32, type_.get_shape()) if isinstance(type_, TensorType) else builtin.i32
-                    actual.append(broadcast(tag(value), type_, op))
+                    actual.append(broadcast(logical_tag(value, op), type_, op))
             copied = raw(name, actual, [tag_type(v) for v in results[op]], dict(op.properties), dict(op.attributes))
             copied.location = op.location
             op.parent.insert_op_before(copied, op)
@@ -145,19 +172,19 @@ def normalize_selected(state, source_ids):
             body = op.regions[0].block
             terminal = body.last_op
             slots = mixed(args[body][1:])
-            op.operands = [*op.operands, *(broadcast(tag(operands[op][i + 3]), tag_type(args[body][i + 1]), op) for i in slots)]
-            terminal.operands = [*terminal.operands, *(broadcast(tag(operands[terminal][i]), tag_type(args[body][i + 1]), terminal) for i in slots)]
+            op.operands = [*op.operands, *(edge_tag(operands[op][i + 3], args[body][i + 1], op) for i in slots)]
+            terminal.operands = [*terminal.operands, *(edge_tag(operands[terminal][i], args[body][i + 1], terminal) for i in slots)]
         elif name == "scf.while":
             before, after = (region.block for region in op.regions)
             condition, terminal = before.last_op, after.last_op
             inputs, outputs = mixed(args[before]), mixed(results[op])
-            op.operands = [*op.operands, *(broadcast(tag(operands[op][i]), tag_type(args[before][i]), op) for i in inputs)]
-            condition.operands = [*condition.operands, *(broadcast(tag(operands[condition][i + 1]), tag_type(results[op][i]), condition) for i in outputs)]
-            terminal.operands = [*terminal.operands, *(broadcast(tag(operands[terminal][i]), tag_type(args[before][i]), terminal) for i in inputs)]
+            op.operands = [*op.operands, *(edge_tag(operands[op][i], args[before][i], op) for i in inputs)]
+            condition.operands = [*condition.operands, *(edge_tag(operands[condition][i + 1], results[op][i], condition) for i in outputs)]
+            terminal.operands = [*terminal.operands, *(edge_tag(operands[terminal][i], args[before][i], terminal) for i in inputs)]
         elif name == "scf.if":
             for region in op.regions:
                 terminal = region.block.last_op
-                terminal.operands = [*terminal.operands, *(broadcast(tag(operands[terminal][i]), tag_type(results[op][i]), terminal) for i in mixed(results[op]))]
+                terminal.operands = [*terminal.operands, *(edge_tag(operands[terminal][i], results[op][i], terminal) for i in mixed(results[op]))]
 
     memory_reports = []
     for op in original:
@@ -169,14 +196,14 @@ def normalize_selected(state, source_ids):
         roots = sorted(state.bases[pointer], key=lambda value: value.index)
         offset = op.operands[0]
 
-        def address(base):
+        def address(base, pointer_type=type_):
             root = base
-            scalar = type_.element_type if isinstance(type_, TensorType) else type_
+            scalar = pointer_type.element_type if isinstance(pointer_type, TensorType) else pointer_type
             if scalar != base.type:
                 root = at(op, raw("tt.bitcast", [base], [scalar]))
-            if isinstance(type_, TensorType):
-                root = at(op, raw("tt.splat", [root], [type_]))
-            return at(op, raw("tt.addptr", [root, offset], [type_]))
+            if isinstance(pointer_type, TensorType):
+                root = at(op, raw("tt.splat", [root], [pointer_type]))
+            return at(op, raw("tt.addptr", [root, offset], [pointer_type]))
 
         if len(roots) == 1:
             op.operands = [address(roots[0]), *op.operands[1:]]
@@ -184,7 +211,7 @@ def normalize_selected(state, source_ids):
         if name == "tt.atomic_cas":
             from .compare_exchange import dispatch
             ids = source_ids(op.location)
-            dispatch(op, roots, offset, tag(pointer), pointer_type=type_)
+            dispatch(op, roots, offset, logical_tag(pointer, op), pointer_type=type_)
             memory_reports.append({"kind": "selected-pointer-memory", "source_ids": ids, "opcode": name,
                 "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
                 "memory_position": "original-event; conditional-CAS-in-parallel-logical-tile",
@@ -211,7 +238,7 @@ def normalize_selected(state, source_ids):
                 other = internal_zero
         merged = other
         for base in roots:
-            selector = tag(pointer)
+            selector = logical_tag(pointer, op)
             reference = broadcast(root_tag(base), selector.type, op)
             compared_type = TensorType(builtin.i1, selector.type.get_shape()) if isinstance(selector.type, TensorType) else builtin.i1
             comparison = arith.CmpiOp.create(operands=[selector, reference], result_types=[compared_type],
@@ -221,18 +248,24 @@ def normalize_selected(state, source_ids):
             properties = dict(op.properties)
             attributes = dict(op.attributes)
             attributes["prov.pointer_base_ordinal"] = IntegerAttr(base.index, builtin.i32)
+            actual_type = type_ if atomic else TensorType(base.type, type_.get_shape()) if isinstance(type_, TensorType) else base.type
+            selected_pointer = address(base, actual_type)
             if write:
-                selected = raw(name, [address(base), op.operands[1], mask], [], properties, attributes)
+                selected = raw(name, [selected_pointer, op.operands[1], mask], [], properties, attributes)
             elif atomic:
-                selected = raw(name, [address(base), op.operands[1], mask], [op.results[0].type], properties, attributes)
+                selected = raw(name, [selected_pointer, op.operands[1], mask], [op.results[0].type], properties, attributes)
             else:
                 properties["operandSegmentSizes"] = DenseArrayBase.from_list(builtin.i32, [1, 1, 1])
                 attributes.pop("operandSegmentSizes", None)
-                selected = raw(name, [address(base), mask, internal_zero], [op.results[0].type], properties, attributes)
+                selected = raw(name, [selected_pointer, mask, internal_zero], [op.results[0].type], properties, attributes)
             selected.location = op.location
             op.parent.insert_op_before(selected, op)
+            returned = selected.results[0] if not write else None
+            if not atomic and actual_type != type_:
+                from .pointer_views import element, lower_memory_view
+                returned = lower_memory_view(selected, element(type_), element(base.type), None if write else 2)
             if not write:
-                merged = at(op, arith.SelectOp(mask, selected.results[0], merged))
+                merged = at(op, arith.SelectOp(mask, returned, merged))
         memory_reports.append({"kind": "selected-pointer-memory", "source_ids": source_ids(op.location),
             "opcode": name, "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
             "memory_position": "original-event; no-hoisting-across-effects",
@@ -241,7 +274,11 @@ def normalize_selected(state, source_ids):
 
     reports = [{"kind": "selected-pointer-control", "source_ids": source_ids(op.location), "opcode": opcode(op),
         "pointer_offset_bits": 64, "selector_bits": 32, "selector_domain": "source-entry-buffer-argument-ordinals",
-        "base_contract": "finite-source-entry-buffers; unchanged-element-type",
+        "base_contract": "finite-source-entry-buffers; equal-width-element-address-units",
         "source_integer_arithmetic": "unchanged-before-signed-extension", "control_flow": "original-regions-and-edge-order"}
         for op in state.controls]
+    reports.extend({"kind": "logical-selector-permutation", "source_ids": source_ids(loop.location),
+        "state_positions": cycle, "selector_tiles": "immutable-original-values",
+        "carried_representation": "scalar-i32-table-index", "offsets": "original-source-word-recurrences"}
+        for loop, cycle in permutation_reports)
     return reports + memory_reports

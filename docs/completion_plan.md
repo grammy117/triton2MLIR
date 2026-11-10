@@ -479,6 +479,15 @@ half floating ABI conversions. Source region/selection/rank-two compositions,
 constants and actual model2MLIR tuple captures are qualified. The stage-v2
 typed-template variant is an explicit package difference, with complete producer
 replay and consumer custody checks. This closes word CAS within the private
-typed profile; differing storage selectors, other numeric formats, descriptors,
+typed profile; mixed-storage atomic selectors, other numeric formats, descriptors,
 external effects/synchronization, maintained coverage and staged accelerator
 materialization remain completion requirements.
+
+Ordinary selected memory now retains different equal-width storage dtypes per
+root, including exact fills, selected writes/read-after-write observations and
+final pointer state. Closed selector permutations keep immutable tiles and
+carry scalar table indices through original loops. The 52 focused cases,
+75 existing pointer/event regressions and three true model2MLIR captures reach
+the actual Merlin interface. Native ownership/lifetime rules are unchanged.
+See [mixed storage](mixed_storage.md); general computed selector recurrences,
+aliases/layouts and the remaining workstreams above are still completion gates.

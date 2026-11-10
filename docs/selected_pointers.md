@@ -7,8 +7,10 @@ i64 element offset, with no GPU address space, physical pointer or launcher ABI.
 
 Source-entry buffer identities propagate through pointer arithmetic, selections,
 shape operations and every branch/backedge to a fixed point. Every path must
-retain the same element type and refer to a declared buffer. Pointer observations,
-unknown producers and pointee-changing casts remain located refusals. General
+retain equal-width element address units and refer to a declared buffer.
+[Mixed storage](mixed_storage.md) additionally preserves each root's actual
+dtype through ordinary register views. Pointer observations, unknown producers
+and changed-width casts remain located refusals. General
 aliases between the declared buffers still need a separate ABI contract.
 
 ## Transformation and granularity
@@ -41,6 +43,9 @@ Multiple predicated accesses are an explicit representation difference: a later
 consumer may combine their selector/base calculation using its own legal memory
 representation. The frontend chooses no physical memory mapping. Performance
 has not been benchmarked.
+Closed selector-tile permutations now carry scalar table indices through source
+loops, retaining immutable initial tiles and the original offset recurrences.
+Computed selectors do not inherit this rule; native lifetime gates remain intact.
 
 ## Source/provenance and qualification
 

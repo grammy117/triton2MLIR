@@ -316,6 +316,18 @@ floating ABI conversions. The stage-v2 typed-template addition is explicit in
 is introduced. This does not qualify differently typed selected roots or
 arbitrary synchronization/accelerator behavior.
 
+### Selected ordinary storage representations
+
+[Mixed storage selectors](mixed_storage.md) now qualify ordinary memory through
+equal-width integer/floating roots without changing their public tensor types.
+The 52 focused cases retain exact fills, selected updates, read-after-write
+observations and final pointers. Closed two-/three-way selector permutations
+carry scalar indices into immutable tiles through original for/while loops.
+Actual Merlin libraries vary counts, choices and shapes; three genuine model2MLIR
+captures preserve weights and raw results. Another 75 pointer/event regressions
+pass. General computed selector recurrences, aliases/layouts, mixed-storage
+atomics and accelerator materialization remain separate qualification gates.
+
 ### F64 atomic addition
 
 The typed profile admits IEEE f64 FADD with round-to-nearest-even and subnormal

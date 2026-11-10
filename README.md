@@ -99,6 +99,10 @@ through `T2M_MERLIN_ROOT`. The policy is independent of hardware mapping.
 [Logical pointer word views](docs/pointer_views.md) also preserve equal-width
 reinterpretation through selected buffers and runtime loops, with register
 bitcasts on the original tensor storage types.
+[Mixed storage selectors](docs/mixed_storage.md) also retain ordinary memory
+through f16/i16, f32/i32 and f64/i64 roots. Closed per-lane selector permutations
+carry scalar table indices in the original loops, preserving tiling and reuse
+through actual Merlin execution and genuine model2MLIR captures.
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

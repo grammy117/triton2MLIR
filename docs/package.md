@@ -127,6 +127,14 @@ Compatibility metadata makes these representation differences explicit, with
 the same public ABI. Original source/inventory remain separate.
 See [source-word semantics and evidence](source_words.md).
 
+Selected ordinary memory may additionally use equal-width roots with different
+storage dtypes. Each root keeps its public type and uses register bitcasts at
+its original predicated event. Closed selector-tile permutations retain immutable
+tiles and carry scalar table indices in the original loop. These internal
+representations are explicit in transformation/provenance and compatibility
+metadata; artifact names, stage versions and public ABI are unchanged.
+See [mixed storage](mixed_storage.md).
+
 `--effect-profile atomics` additionally requires guarded-buffer/source-words and
 selects the explicit private-invocation integer RMW/CAS contract. Public arguments
 and results retain their tensor/scalar ABI. `memory-admission.v3` binds thirty-bit

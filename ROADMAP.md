@@ -476,5 +476,9 @@ native/Merlin execution and three genuine model2MLIR tuple-result captures.
 The 42 semantic compositions, 36 producer evidence checks, three demos and 15
 model cases pass. Public storage types are unchanged; the additive stage-v2
 typed-template boundary is explicit in [package differences](docs/package.md).
-Mixed storage selectors and broader numeric/effect contracts remain open.
+Ordinary [mixed storage selectors](docs/mixed_storage.md) now qualify all three
+word widths through actual Merlin execution and genuine model2MLIR captures.
+Closed selector permutations carry scalar indices into immutable selector tiles,
+preserving source loops and offset recurrences without native lifetime exemptions.
+Mixed-storage atomics and broader numeric/effect contracts remain open.
 See [logical views](docs/pointer_views.md).
