@@ -56,6 +56,13 @@ dense logical inputs as physical storage. Dense C/results retain their M×N
 shape; ABI v5 and receipt schemas stay unchanged. Caller descriptions survive
 the rebuilt function as `prov.intent` and still grant no semantics. See
 [strided memory](strided_memory.md) for exact scope and remaining view/alias work.
+[Strided output state](strided_outputs.md) additionally takes the output
+allocation as an incoming readwrite tensor and returns its complete updated
+one-dimensional state. Runtime output origin/strides/capacity remain explicit;
+all inactive bytes are preserved, including NaN payloads and signed zeros.
+This changes the data signature relative to a fresh dense output, without a new
+ABI or receipt schema. The actual caller inputs remain immutable under the
+functional interface. No cross-allocation alias or target permission follows.
 
 Pure default-library math uses the explicit
 `logical-libdevice-standard-math-v1` profile, preserving checked symbol/library,

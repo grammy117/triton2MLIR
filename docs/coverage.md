@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Strided writable output state](strided_outputs.md) now qualifies three added
+f32/f16/BF16 GEMM packages through Merlin, with the whole returned allocation
+checked word for word. Twenty-seven replayed layouts/domains retain all padding
+and original K/C dataflow; nine lane/grid/bounds conflicts remain refused
+invocations. The combined six-case read/output integration matrix passes.
+Aliasing between declared allocations, output-C reads, model compositions and
+applicable targets remain separate requirements.
+The visible BF16 output package verifies 33 producer and 52 qualification
+artifacts. The explicit 38-package report remains at 31/50 observed definitions
+and 27 in host-qualified captures, with no universal opcode/type/attribute claim.
+
 [Runtime non-dense allocations](strided_memory.md) now have three actual
 f32/f16/BF16 GEMM packages through the guarded source-word interface. Thirty
 replayed layouts/domains retain padding, reversed/column-major/broadcast reads,
@@ -9,8 +20,8 @@ cases and 14 source/emission regressions pass. The visible BF16 allocation
 demo and qualification verify 33/52 artifacts. Its explicit 37-package report
 still observes 31/50 definitions, with 27 in host-qualified captures; this is
 broader measured memory composition, not a new universal opcode claim.
-Caller intent now survives rebuilt standard-memory functions. Strided writable
-state, cross-allocation aliases, broader models and targets remain open.
+Caller intent now survives rebuilt standard-memory functions. Output-C reads,
+cross-allocation aliases, broader models and targets remain open.
 
 [Pure external math](external_math.md) now qualifies 52 f32/f64 declarations
 through six actual Merlin libraries, retaining all 26 results, source runtime

@@ -91,6 +91,17 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Strided writable output allocations now additionally qualify f32/f16/BF16
+tiled GEMM through actual Merlin libraries. The public functional result
+retains all incoming prefix/suffix/padding words, while active signed-stride
+stores retain original C and the source K loop. Three added typed packages
+replay 27 valid layouts/domains and reject nine lane/grid/bounds conflicts;
+the combined six-case read/output matrix passes. See [strided output state](strided_outputs.md).
+Continue B/C with cross-allocation aliases, output-C read/modify/write and
+logical-view model compositions, then the broader E/F and applicable target
+gates below. The functional allocation result is an explicit interface choice,
+not an implicit dense logical view or an accelerator performance claim.
+
 The existing guarded source-word path now has real runtime non-dense allocation
 qualification for f32/f16/BF16 tiled GEMM: padded, column-major, signed/reversed
 and repeated readonly addresses retain original masks, source K reuse and C.
@@ -99,7 +110,7 @@ out-of-bounds observations. Owning source-allocation tensors and runtime
 origin/stride/capacity parameters use ABI v5; no dense logical repacking or new
 layout schema is implied. Common emission preserves caller intent on rebuilt
 standard-memory functions. See [the exact boundary](strided_memory.md).
-Continue B/C with strided writable output state and cross-allocation aliases,
+Continue B/C with output-C read/modify/write and cross-allocation aliases,
 then learned model compositions, broader numeric/effect cases and applicable
 target materialization. This corrects an overly broad non-dense-stride gap:
 the pure dense witness remains narrower, while source-allocation execution

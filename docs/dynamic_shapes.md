@@ -92,10 +92,12 @@ recovery. See [the launch-domain proof and negative cases](logical_grid_bounds.m
 The guarded source-word path additionally qualifies non-dense runtime source
 allocations with explicit origins, signed strides and capacities, retaining
 tiled GEMM and its K loop; see [strided memory](strided_memory.md). The pure
-logical-tensor witness, strided output state, general shape expressions and
+logical-tensor witness, general shape expressions and
 cross-allocation aliasing still need their own proofs. Compiler staging
 establishes declared type/binding consistency; actual
 guard semantics, memory coverage, numeric and execution evidence remain separate.
+[Strided output state](strided_outputs.md) additionally returns the full incoming
+allocation with partial stores and unchanged holes through actual Merlin.
 
 Source memory-loop bounds also admit signed truncated, floor and ceil division
 when the complete operand intervals exclude zero divisors and signed overflow.

@@ -65,9 +65,11 @@ describe selected compositions and do not close all type/attribute coverage.
 
 Public tensor/scalar ABI v5 and package schemas are unchanged. This profile
 qualifies source allocations and dense results; a pure logical-tensor witness
-for arbitrary non-dense views, strided writable output state, aliases between
-declared allocations, learned model compositions and applicable target
+for arbitrary non-dense views, aliases between declared allocations,
+learned model compositions and applicable target
 materialization remain work in the [completion plan](completion_plan.md).
+[Strided writable outputs](strided_outputs.md) additionally retain the complete
+incoming output allocation and reject conflicting stores through the same path.
 
 ```bash
 export T2M_MERLIN_ROOT=/path/to/merlin

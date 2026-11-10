@@ -53,6 +53,29 @@ def arguments(m,n,k,strides,dtype,*,sensitive=False):
     return values,output
 
 
-def policy():
+def output_arguments(m,n,k,strides,out_strides,dtype,*,sensitive=False,conflicts=False):
+    values,dense = arguments(m,n,k,strides,dtype,sensitive=sensitive)
+    row,col = out_strides
+    if m and n:
+        low = min(0,(m-1)*row)+min(0,(n-1)*col)
+        high = max(0,(m-1)*row)+max(0,(n-1)*col)
+        origin,count = 7-low,7+high-low+13+1
+        addresses = {origin+i*row+j*col for i in range(m) for j in range(n)}
+        if len(addresses) != m*n and not conflicts:
+            raise ValueError("reference requires independent logical output addresses")
+    else:
+        origin,count = 0,11
+    # Keep noncanonical NaNs, signed zero and ordinary finite words in holes.
+    words = np.asarray([0x7FC01234,0xFFC05678,0,0x80000000,0x3F800000,0xBF800000],np.uint32)
+    initial = np.resize(words,count).view(np.float32)
+    expected = initial.copy()
+    if m and n and not conflicts:
+        view = np.ndarray((m,n),dtype=np.float32,buffer=expected,offset=origin*4,strides=(row*4,col*4))
+        view[...] = dense
+    return [*values[:3],initial,*values[3:],*(np.asarray(v,np.int64) for v in (*out_strides,origin)),
+            np.asarray(count,np.int32)],expected
+
+
+def policy(*,words=False):
     return {"schema":"t2m.effect-reference.v2","termination":"return","stdout":"","stderr":"",
-            "results":{"archive":"reference.npz","comparisons":[{"kind":"ieee"}]}}
+            "results":{"archive":"reference.npz","comparisons":[{"kind":"words" if words else "ieee"}]}}
