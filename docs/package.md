@@ -161,7 +161,11 @@ receipt schemas and tensor/scalar ABI are unchanged. Other floating arithmetic
 needs separate numeric policies.
 Compatibility metadata names these
 differences for standalone and model packages. Word events additionally bind
-storage/value types and unchanged element address units in `word_view`. Their
+storage/value types and unchanged element address units in per-event `word_view`
+facts. Original atomic primitive contracts remain shared across call contexts;
+exact legacy source-enriched records also remain readable. This allows one
+callee to act on integer and floating storage in different calls without
+overwriting the original source intent. Their
 standard generic atomic regions retain source integer updates and returned bits;
 Merlin's explicit native word legalization supplies a checked internal helper
 through ownership/lifetime conversion. This is a native-toolchain compatibility

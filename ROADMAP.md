@@ -452,7 +452,9 @@ Atomic updates on same-width logical word views now retain all nine i32/i64
 RMWs on floating storage and Triton min/max through native/Merlin execution,
 including real model2MLIR tuples. Branches, for/while recurrences, scalar/vector
 events, lane/uniform buffer selection and repeated inlined helpers now also
-qualify for both word widths. IEEE f64 addition now uses upstream standard
+qualify for both word widths. Original primitive contracts remain shared while
+per-event storage views support calls on integer and floating storage. IEEE
+f64 addition now uses upstream standard
 atomic conversion through native/Merlin execution, source regions, colliding
 old-value histories and actual model2MLIR tuples. F32 now explicitly selects
 IEEE or sign-preserving input/result FTZ, retaining executable numeric policy

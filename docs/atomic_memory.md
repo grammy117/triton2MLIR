@@ -319,10 +319,20 @@ remain additional work.
 ## Integer word updates and floating min/max
 
 The v4 `typed-atomics` profile now additionally retains all nine i32/i64 RMW
-operations on equal-width f32/f64 storage. Each source operation, access and
+operations on equal-width f32/f64 storage. Each memory event, access and
 payload binds a `word_view` with storage/value dtypes, element bits and
 `equal-width-elements` address units. Legacy integer-only admission still refuses
 these views. No floating-add rounding policy is inferred.
+
+The original typed primitive remains shared across inlined call contexts;
+storage views are per-event facts in bindings, access/payload evidence and
+`prov.logical_word_views`. One callee can therefore update integer storage in
+one call and equal-width floating word storage in another. Evidence accepts
+the exact primitive contract or the exact legacy source-enriched contract;
+it does not ignore changed primitive fields or mismatched legacy views.
+This changes provenance representation, not tensor/scalar ABI or arithmetic.
+The mixed-storage helper executes bit-exactly through Merlin for both widths;
+95 producer word/region/context tests and 149 consumer staging tests pass.
 
 The address analysis keeps the original pointer type and an event-specific
 storage/view type. Ordinary loads/stores may use storage/register bitcasts while

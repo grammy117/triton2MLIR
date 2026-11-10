@@ -160,11 +160,25 @@ def test_word_source_binding_retains_inlined_caller_context(change):
     elif change == "width": records[1]["atomic"]["word_bits"] = 64
     if change is None:
         bind_source(records, [report])
-        assert records[1]["atomic"]["word_view"]["storage_dtype"] == "f32"
+        assert records[1]["atomic"] == {"word_bits": 32}
         assert "atomic" not in records[0]
     else:
         with pytest.raises(ConversionError, match="typed source RMW"):
             bind_source(records, [report])
+
+
+@pytest.mark.parametrize("source_view", ["per-event", "legacy", "wrong-view", "wrong-primitive"])
+def test_word_evidence_accepts_per_event_storage_without_changing_source_primitive(source_view):
+    from t2m.atomic_memory import validate_evidence
+    admission, memory, records, buffers = word_evidence()
+    if source_view == "per-event": records[0]["atomic"].pop("word_view")
+    elif source_view == "wrong-view": records[0]["atomic"]["word_view"]["storage_dtype"] = "f64"
+    elif source_view == "wrong-primitive": records[0]["atomic"]["operation"] = "xor"
+    if source_view in ("per-event", "legacy"):
+        validate_evidence(admission, memory, records, buffers)
+    else:
+        with pytest.raises(ValueError, match="atomic memory"):
+            validate_evidence(admission, memory, records, buffers)
 
 
 @pytest.mark.parametrize("change", [None, "profile", "dtype", "source", "lost-view", "storage", "value", "units", "bits", "kind", "old"])

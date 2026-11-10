@@ -43,7 +43,8 @@ def bind_source(records, reports):
                 continue  # Inlined call-site locations also retain caller IDs.
             if record.get("atomic", {}).get("word_bits") != info["element_bits"]:
                 raise ConversionError("atomic word view differs from its typed source RMW inventory", source_id=source)
-            record["atomic"]["word_view"] = info
+            # Storage is a fact of this event/call context. The original
+            # primitive may also be called with ordinary integer storage.
             found = True
         if not found:
             raise ConversionError("atomic word view lacks an original typed source RMW", source_id=report["source_ids"][0])

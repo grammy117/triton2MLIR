@@ -305,3 +305,19 @@ def constant_fadd(state, old, B: tl.constexpr, WIDTH: tl.constexpr, WORD: tl.con
     value = tl.full((B,), WORD, integer).to(state.dtype.element_ty, bitcast=True)
     previous = tl.atomic_add(state + lane, value, sem="acq_rel", scope="gpu")
     tl.store(old + lane, previous)
+
+
+@triton.jit
+def atomic_word_update(state, old, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    previous = tl.atomic_add(state + lane, (lane + 1).to(state.dtype.element_ty), sem="acq_rel", scope="gpu")
+    tl.store(old + lane, previous)
+
+
+@triton.jit
+def mixed_storage_atomic(integer_state, floating_state, old_integer, old_word,
+                         B: tl.constexpr, WIDTH: tl.constexpr):
+    word: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    atomic_word_update(integer_state, old_integer, B=B)
+    atomic_word_update(floating_state.to(tl.pointer_type(word), bitcast=True),
+                       old_word.to(tl.pointer_type(word), bitcast=True), B=B)
