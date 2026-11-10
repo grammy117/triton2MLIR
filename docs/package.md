@@ -11,6 +11,12 @@ additive `m2m.compiler-constants.v1` receipt profile. Derived packages retain
 parent bytes and public ABI; Merlin's checked compiler-only projection is a
 separate member. Evaluator extra/golden archives never supply compiler values.
 
+[Source assertions](source_assertions.md) additionally retain their observable
+diagnostic/failure effect as standard `cf.assert` operations. Public tensor/scalar
+ABI and receipt schemas are unchanged; compatibility metadata records the source
+effect and native stdio transport. Effect-only and initial expected-failure
+packages still require separate contracts.
+
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
 The [upstream-based frontend](shared_tensor.md) uses the same core filenames with an explicitly

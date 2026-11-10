@@ -49,6 +49,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     example_dimensions = {}
     buffer_effects = {}
     buffer_dtypes = {}
+    capture_debug = None
     if kernel == "tiled-add":
         fn, constants, shapes, grid = kernels.tiled_add, {"N": 16, "BM": 4, "BN": 8}, [(8, 16)] * 3, (2, 2)
     elif kernel == "tiled-matmul":
@@ -90,6 +91,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "runtime-affine":
         fn, constants, shapes, grid = kernels.runtime_affine, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
         runtime_scalars = (RuntimeScalar("alpha", "f32", 1), RuntimeScalar("bias", "f32", 3))
+    elif kernel == "checked-copy":
+        from .examples.assertion_kernels import checked_copy
+        fn, constants, shapes, grid = checked_copy, {"B":8,"MODE":2,"RANK":2}, [(17,),(17,)], (3,)
+        buffer_dtypes = {"x":"i32", "out":"i32"}
+        runtime_scalars = (RuntimeScalar("n","i32",2,bounds=(-4,17)), RuntimeScalar("steps","i32",3,bounds=(0,4)),
+                           RuntimeScalar("limit","i32",4,bounds=(-100,100)))
+        capture_debug = True
     elif kernel == "runtime-prefix":
         fn, constants, shapes, grid = kernels.runtime_prefix, {"B": 8}, [(13,), (13,)], (4,)
         runtime_scalars = (RuntimeScalar("n", "i32", 1, bounds=(0, 13)),)
@@ -205,7 +213,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(fn, {**{b.name: "*fp" + b.dtype[1:] if b.dtype in ("f16", "f32", "f64") else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
-                                      **{n: "constexpr" for n in constants}}, constants))
+                                      **{n: "constexpr" for n in constants}}, constants, debug=capture_debug))
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
@@ -269,6 +277,11 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "runtime-affine":
         arrays[1:] = [np.asarray(1.5, dtype=np.float32), np.asarray(-3, dtype=np.float32)]
         golden = arrays[0] * arrays[1] + arrays[2]
+    elif kernel == "checked-copy":
+        arrays = [np.arange(17,dtype=np.int32) % 9 - 4, np.full((17,),-77,np.int32),
+                  np.asarray(13,np.int32), np.asarray(3,np.int32), np.asarray(5,np.int32)]
+        golden = arrays[1].copy()
+        golden[:13] = arrays[0][:13] + 2
     elif kernel == "runtime-prefix":
         arrays[2] = np.asarray(7, dtype=np.int32)
         golden = arrays[1].copy()
@@ -411,7 +424,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

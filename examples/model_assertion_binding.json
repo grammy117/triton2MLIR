@@ -1,0 +1,19 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [{
+    "kernel": "t2m_demo::checked_copy",
+    "ttir": "../out/source-assertions/source.ttir",
+    "operands": {"x": "x", "out": "initial"},
+    "scalar_arguments": {"n": 13, "steps": 3, "limit": 5},
+    "abi": {
+      "schema": "t2m.shared-tensor-abi.v1",
+      "entry": "checked_copy",
+      "buffers": [
+        {"name": "x", "shape": [17], "effect": "read", "dtype": "i32"},
+        {"name": "out", "shape": [17], "effect": "readwrite", "dtype": "i32"}
+      ],
+      "scalar_constants": [13, 3, 5],
+      "grid": [3]
+    }
+  }]
+}

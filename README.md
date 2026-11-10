@@ -37,6 +37,9 @@ See [the package differences](docs/package.md) and [native execution scope](docs
 The [package coverage command](docs/package_coverage.md) indexes verified
 captures against the full pinned TTIR inventory, keeping unknown/unmeasured
 operations and native/Merlin evidence separate.
+`shared-demo --kernel checked-copy` now also preserves
+[source assertions](docs/source_assertions.md), including observable failure
+diagnostics and original loop/branch placement through Merlin.
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

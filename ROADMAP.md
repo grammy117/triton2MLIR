@@ -6,6 +6,10 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+[Source assertions](docs/source_assertions.md) now retain scalar/tensor checks,
+messages and failure effects through upstream standard lowering and real Merlin
+execution, including a complete model2MLIR state/tuple capture. Diagnostic-only
+and initial expected-failure packages remain explicit effect-ABI work.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

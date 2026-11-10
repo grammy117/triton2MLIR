@@ -289,12 +289,15 @@ def capture(kernel, spec):
     return _wrap(module, context, spec, "triton-source")
 
 
-def capture_ttir(kernel, signature, constexprs):
+def capture_ttir(kernel, signature, constexprs, *, debug=None):
     """Capture general pre-layout TTIR; apply semantic ABI checks downstream.
 
     Unlike the reference frontend's `_wrap`, this preserves regions, arbitrary
-    ranks and source types. No CPU/GPU backend compilation or launch is run.
+    ranks and source types. ``debug`` selects Triton's source diagnostic option;
+    None retains the backend default. No backend compilation or launch is run.
     """
+    if debug is not None and type(debug) is not bool:
+        raise ValueError("capture debug must be a Boolean source option")
     _, context = _context()
     from triton.backends.compiler import GPUTarget
     from triton.compiler.compiler import ASTSource, make_backend
@@ -303,7 +306,7 @@ def capture_ttir(kernel, signature, constexprs):
     target = GPUTarget("cuda", 80, 32)
     backend = make_backend(target)
     backend.load_dialects(context)
-    options = backend.parse_options({})
+    options = backend.parse_options({} if debug is None else {"debug": debug})
     source = ASTSource(fn=kernel, signature=signature, constexprs=constexprs)
     module = source.make_ir(target, options, backend.get_codegen_implementation(options),
                             backend.get_module_map(), context)

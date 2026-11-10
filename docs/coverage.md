@@ -1,5 +1,14 @@
 # Measured coverage and remaining boundaries
 
+[Source assertions](source_assertions.md) now have actual native/Merlin success
+and failure checks, including scalar/tensor conditions, original source regions,
+zero trips and complete model2MLIR tuple/state captures in all three profiles.
+The focused suite has 24 cases; the diagnostic/guard/consumer regression passes
+41. The subsequent explicit 15-package observation report retains all 50
+definitions, with 24 observed and 20 present in captures of Merlin-qualified
+packages. Effect-only, initial expected-failure and length-aware diagnostic
+contracts remain open alongside other external effects and target materialization.
+
 `package-coverage` now provides the [receipt-bound observation registry](package_coverage.md)
 against all 50 pinned TTIR definitions. Its initial explicit 13-package selection
 observes 22 definitions, with 18 present in captures of nine Merlin-qualified

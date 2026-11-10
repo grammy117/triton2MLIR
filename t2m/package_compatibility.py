@@ -15,6 +15,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(t.get("kind") == "source-fail-stop-assertions" for t in transformations):
+        differences.append("source assertions use upstream scalar/lane-wise standard cf.assert at original control positions, with source condition/message IDs retained; failing native invocations print literal diagnostics and abort using the evaluator's libc stdout/setbuf transport; the public tensor/scalar ABI is unchanged")
     if any(t.get("kind") == "logical-boolean-byte-memory" for t in transformations):
         differences.append("exclusive Triton Boolean byte loads observed by nonzero tests and stores of zero-extended i1 values become logical i1 tensor memory; masks, fills and original source IDs remain explicit; raw byte observations and changed byte addressing require a separate storage ABI")
     if any(t.get("kind") == "logical-pointer-word-view" for t in transformations):

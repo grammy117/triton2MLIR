@@ -297,11 +297,14 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
                         "properties": {k: str(v) for k, v in op.properties.items()},
                         "attributes": {k: str(v) for k, v in op.attributes.items() if k != "op_name"}})
         op.location = NameLoc(StringAttr(source_id), op.location)
-        if name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
+        if name == "tt.assert":
+            from .source_assertions import contract as assertion_contract
+            records[-1]["source_assertion"] = assertion_contract(op, source_id)
+        elif name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
             records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise",
-                    "tt.print", "tt.assert") or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
+                    "tt.print") or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
                                   source_id=source_id, opcode=name)
         if name == "tt.load":
@@ -1198,6 +1201,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
+    source_assertions = [record["source_assertion"] for record in records if "source_assertion" in record]
+    if source_assertions:
+        transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
+            "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
@@ -1278,6 +1285,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []
+    if source_assertions:
+        next(iter(result.ops)).attributes["prov.source_assertions"] = StringAttr(json.dumps(source_assertions, sort_keys=True))
     source_names = {r["id"]: r["opcode"] for r in records}
     for op in result.walk():
         if memory_profile in ("buffer", "guarded-buffer"):

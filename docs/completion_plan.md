@@ -551,3 +551,29 @@ remain open, alongside dynamic/alias model contracts and target materialization.
 Noncanonical Boolean storage, broader low-precision
 arithmetic, FP8/scaled dot and external effects still require executable
 contracts; these transport results do not close them.
+
+Source `tt.assert` now additionally reaches the actual Merlin interface using
+the existing upstream scalar/lane-wise CF conversion. All 24 focused cases
+retain condition/message provenance and source loop/branch positions, exercise
+successful and failing invocations, and qualify a real three-result model2MLIR
+capture in all memory profiles. The 41 existing diagnostic/guard/consumer cases
+also pass. The saved standalone qualification/model pass 45/80 artifact checks.
+The explicit 15-package registry now observes 24 definitions, with 20 present
+in captures of host-qualified packages. See [the assertion contract](source_assertions.md).
+
+The next effect/package gates are concrete extensions of the original scope:
+
+1. Admit effect-only kernels with no tensor result through an explicit package
+   and Merlin signature profile. Keep actual void control/effects; never invent
+   a tensor result to fit the current package writer.
+2. Represent initial expected-failure outcomes and diagnostic references,
+   including always-failing source assertions. Bind actual execution/termination
+   evidence without fabricating a successful numeric golden or success receipt.
+3. Add a length-aware diagnostic ABI before accepting embedded NUL messages or
+   broader print/formatting effects. Retain exact bytes, source order and failure
+   scope through the selected consumer implementation.
+
+External functions/assembly, synchronization, broader low-precision arithmetic,
+runtime/alias models, the complete maintained corpus/refusal matrix and target
+materialization remain required work. This does not redefine the goal around
+the successful tensor-returning or host-executed cases.
