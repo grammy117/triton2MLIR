@@ -114,8 +114,12 @@ Its capture/qualification verify 30/49 artifacts. The independently reopened
 30-package observation report retains 30/50 definitions observed and 26 in
 host-qualified captures; an unobserved definition is not an unsupported-op verdict.
 
+Three real model2MLIR bindings now retain packed parameters, scale buffers,
+learned C/bias and complete tuple references through Merlin host execution;
+see [model integration](model_integration.md). Runtime model scalar/shape
+adaptation remains separate work.
 Remaining qualification includes broader runtime format/packing compositions,
-model bindings, reserved FP6 storage, target numeric profiles and applicable
+runtime model bindings, reserved FP6 storage, target numeric profiles and applicable
 accelerator materialization. These remain in the full
 [completion plan](completion_plan.md). This slice establishes no universal
 opcode/type/attribute/kernel coverage.

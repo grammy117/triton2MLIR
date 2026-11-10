@@ -111,7 +111,10 @@ packed/group extents, odd-nibble tails, empty/zero-trip domains and two source
 assertion failures through the same libraries in all three memory profiles.
 The native consumer's checked independent seed copy resolves imported private
 loop state; 160 destination/ownership cases pass without relaxing lifetime checks.
-Continue with scaled model bindings and broader format/packing compositions,
+Three actual scaled model packages now preserve learned weights, scale buffers,
+packed parameters and complete tuple references through native and Merlin host
+execution in tensor/buffer/guarded profiles. See [model integration](model_integration.md).
+Continue with runtime scalar/shape model bindings and broader format/packing compositions,
 then the remaining E numeric/external/RNG profiles, B/C irregular alias/stride
 cases and F/G effects/corpus/target gates above. Reserved FP6 source packing
 remains unresolved rather than being guessed. All A–G workstreams remain open.

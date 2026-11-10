@@ -1,0 +1,21 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [{
+    "kernel": "t2m_demo::scaled_dot",
+    "ttir": "../out/scaled-dot/source.ttir",
+    "abi": {
+      "schema": "t2m.shared-tensor-abi.v2",
+      "entry": "scaled_dot_tile",
+      "buffers": [
+        {"name": "a", "shape": [8, 64], "dtype": "i8", "effect": "read"},
+        {"name": "b", "shape": [64, 8], "dtype": "i8", "effect": "read"},
+        {"name": "sa", "shape": [16, 2], "dtype": "i8", "effect": "read"},
+        {"name": "sb", "shape": [16, 2], "dtype": "i8", "effect": "read"},
+        {"name": "initial", "shape": [16, 16], "effect": "read"},
+        {"name": "out", "shape": [16, 16], "effect": "write"}
+      ],
+      "grid": [1]
+    },
+    "scalar_arguments": {"lhs_k_pack": false, "rhs_k_pack": false}
+  }]
+}

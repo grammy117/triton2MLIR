@@ -30,6 +30,31 @@ checks. General mutation/schema negotiation and downstream staged payload
 support still need explicit capabilities; the binder does not silently change
 model2MLIR's registry rules or certify a target's materializer.
 
+## Scaled contraction model
+
+`scripts/capture_scaled_dot_model.py` captures a real `torch.library.triton_op`
+with M/N-packed FP4 operands, scale buffers, learned initial C and bias, packed
+RHS parameter bytes, surrounding model additions and two complete outputs.
+Its independent PyTorch CPU implementation decodes nibbles and E8M0 scales,
+then performs the declared f64 multiply/add recurrence and final f32 rounding.
+It imports neither the frontend compiler nor its rational reference.
+The [binding configuration](../examples/scaled_dot_binding.json) reuses the
+visible `scaled-dot` source. Three tensor/buffer/guarded model packages retain
+all original weight/input/reference bytes and execute the complete model
+through native LLVM and Merlin. Exact result words, tuple references, compiler
+custody, source correspondence and functional input preservation remain checked.
+The `logical-mx-f64-v1` difference stays explicit in compatibility metadata;
+this measures model binding/host execution, not accelerator qualification.
+
+```bash
+/path/to/m2m-python scripts/capture_scaled_dot_model.py --out out/scaled-dot-model-static/capture
+python -m t2m bind-model out/scaled-dot-model-static/capture \
+  --bindings examples/scaled_dot_binding.json --out out/scaled-dot-model-static/bound \
+  --python /path/to/native-python --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --merlin-clang /path/to/clang \
+  --merlin-host
+```
+
 ## Checked model bundle and Merlin interface
 
 The `bind-model` command reads `t2m.kernel-bindings.v1` JSON descriptions, translates
