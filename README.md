@@ -9,6 +9,12 @@ and [plan.md](plan.md) for the architecture.
 Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will reuse
 [triton-shared's existing passes and analyses](docs/triton_shared.md).
 
+TTIR integration development uses `ttir-experiment-grammy` in both
+[Merlin](https://github.com/ucb-bar/merlin/tree/ttir-experiment-grammy) and
+[model2MLIR](https://github.com/grammy117/model2MLIR/tree/ttir-experiment-grammy).
+This standalone triton2MLIR repository uses `main`. Publish tested changes to
+these branches; retain existing branch names and published history.
+
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
