@@ -93,7 +93,7 @@ def write_effect_bundle(result, out, inputs, reference, *, work, python=None, co
             "void entries have no tensor results or artificial output storage; failed tensor entries retain their declared result ABI and publish no values",
             "native observation retains exact byte streams, termination and invocation-phase bindings; this is producer observation, not source-equivalence attestation",
             "reference and observation artifacts are evaluator-only; compiler-only staging must exclude their values and digests",
-            *(["reference.json v2 combines exact streams with reference.npz and complete per-result word/value policies; older effect readers refuse this reference version; returning tensor ABI is unchanged"] if mixed else []),
+            *(["reference.json v2 combines exact streams with reference.npz and complete per-result word/IEEE/value policies; older readers refuse unknown reference versions or policy kinds; returning tensor ABI is unchanged"] if mixed else []),
             *kernel_representation_differences(result.trace,dynamic=result.spec.dynamic)]})
     _json(out / "meta.json",{"frontend":"triton2MLIR","entry":result.spec.entry,"outcome_reference":"observable-effects-and-tensors" if mixed else "observable-effects",
         "source_closure_verified":False,"target_execution":"not-performed"})

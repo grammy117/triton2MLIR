@@ -9,6 +9,7 @@ import pytest
 from t2m.effect_reference import validate_reference
 from t2m.effect_results import load_archive,validate_policy,validate_results,compare_results
 from t2m.shared_tensor import TensorABI,TensorBuffer
+from t2m.tensor_storage import DTYPES,FLOAT_FORMATS
 
 
 def reference(comparisons=None):
@@ -39,6 +40,41 @@ def test_versions_are_explicit_and_old_void_profiles_remain_valid():
     assert validate_reference(v1) == v1
     with pytest.raises(ValueError):
         validate_reference(dict(v1,results=reference()["results"]))
+
+
+@pytest.mark.parametrize("dtype",list(FLOAT_FORMATS))
+@pytest.mark.parametrize("change",["nan-payload","zero-sign","finite-bit","infinity-sign","nan-class"])
+def test_ieee_policy_preserves_all_words_except_nan_payload_choice(tmp_path,dtype,change):
+    exponent,fraction = FLOAT_FORMATS[dtype]
+    width = 1+exponent+fraction
+    exp_mask = ((1 << exponent)-1) << fraction
+    sign = 1 << (width-1)
+    words = np.asarray([sign,0,exp_mask|1,exp_mask|(1 << (fraction-1)),exp_mask,sign|exp_mask,1,exp_mask-1],dtype=f"uint{width}")
+    expected_words,actual_words = words.copy(),words.copy()
+    if change == "nan-payload": actual_words[2:4] ^= sign|3
+    elif change == "zero-sign": actual_words[0] ^= sign
+    elif change == "finite-bit": actual_words[-1] ^= 1
+    elif change == "infinity-sign": actual_words[4] ^= sign
+    elif change == "nan-class": actual_words[2] = exp_mask
+    expected_array,actual_array = (value if dtype == "bf16" else value.view(DTYPES[dtype]) for value in (expected_words,actual_words))
+    spec = TensorABI("f",(TensorBuffer("out",(len(words),),"write",dtype),))
+    ref = reference([{"kind":"ieee"}])
+    validate_reference(ref)
+    golden,actual = tmp_path / "reference.npz",tmp_path / "outputs.npz"
+    np.savez(golden,out0=expected_array);np.savez(actual,out0=actual_array)
+    if change == "nan-payload":
+        assert compare_results(actual,golden,ref,spec,[]) == 1
+    else:
+        with pytest.raises(ValueError,match="numeric value reference"):
+            compare_results(actual,golden,ref,spec,[])
+
+
+def test_ieee_policy_cannot_relax_integer_results_or_accept_extra_options():
+    spec = TensorABI("f",(TensorBuffer("out",(1,),"write","i64"),))
+    with pytest.raises(ValueError,match="declared floating"):
+        validate_results(spec,[],[np.asarray([2**53+1],np.int64)],[{"kind":"ieee"}])
+    with pytest.raises(ValueError):
+        validate_reference(reference([{"kind":"ieee","rtol":0}]))
 
 
 @pytest.mark.parametrize("change",["missing","extra","duplicate","object","truncated","oversized-header"])

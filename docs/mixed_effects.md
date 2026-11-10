@@ -61,6 +61,17 @@ comparison. A numeric tolerance never relaxes diagnostic bytes. Existing i1,
 i8/i16/i32/i64, f16/BF16/f32/f64 carriers remain distinct from broader numeric
 operation support.
 
+The additional explicit policy `{"kind":"ieee"}` compares every finite,
+infinite and signed-zero word exactly, while requiring NaN positions to match
+without choosing their payload, sign or signaling representation. It accepts
+only declared f16/BF16/f32/f64 tensors, with no tolerances or extra options.
+This permits exact rounding checks for operations whose NaN result class is
+defined but whose NaN payload is unspecified. It supplies no implementation
+or rounding permission to compilation. Older v2 readers that do not implement
+this policy must refuse its unknown kind; the original `words` and `values`
+policies keep their meanings. NaN representation-sensitive source code still
+requires an exact word reference and an applicable implementation contract.
+
 The outer `t2m.effect-kernel-receipt.v1`, qualification and invocation schemas
 remain unchanged. The nested v2 reference and added archive are explicit
 extensions: older readers must refuse an unknown reference version. Original

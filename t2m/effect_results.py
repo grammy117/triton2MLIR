@@ -12,7 +12,7 @@ import zipfile
 import numpy as np
 
 from .runtime_shapes import resolve_shapes
-from .tensor_storage import DTYPES,assert_tensor_close
+from .tensor_storage import DTYPES,FLOAT_FORMATS,assert_tensor_close,assert_ieee_words
 
 ARCHIVE = "reference.npz"
 LIMIT = 64*1024*1024
@@ -34,8 +34,8 @@ def validate_policy(results):
         raise ValueError("mixed result references require reference.npz and complete per-result comparisons")
     for policy in results["comparisons"]:
         if not isinstance(policy,dict):
-            raise ValueError("result comparison must be an explicit word or value policy")
-        if policy == {"kind":"words"}:
+            raise ValueError("result comparison must be an explicit word, IEEE or value policy")
+        if policy in ({"kind":"words"},{"kind":"ieee"}):
             continue
         if (set(policy) != {"kind","rtol","atol"} or policy["kind"] != "values"
                 or any(not _tolerance(policy[key]) for key in ("rtol","atol"))):
@@ -88,6 +88,8 @@ def validate_results(spec,inputs,arrays,comparisons):
             raise ValueError(f"result out{index} differs from the actual typed runtime shape/ABI")
         if value.dtype == "i1" and np.any(array.view(np.uint8) > 1):
             raise ValueError("result reference has noncanonical Boolean storage")
+        if policy["kind"] == "ieee" and value.dtype not in FLOAT_FORMATS:
+            raise ValueError("IEEE result comparison requires a declared floating tensor type")
         if value.dtype.startswith("i") and policy["kind"] == "values" and (policy["rtol"] or policy["atol"]):
             raise ValueError("integer result comparisons require exact values or words")
     return tuple(np.asarray(value) for value in arrays)
@@ -103,6 +105,8 @@ def compare_results(actual_path,reference_path,reference,spec,inputs):
             if policy["kind"] == "words":
                 if left.tobytes(order="C") != right.tobytes(order="C"):
                     raise ValueError(f"actual result out{index} differs from its exact word reference")
+            elif policy["kind"] == "ieee":
+                assert_ieee_words(left,right,value.dtype)
             else:
                 assert_tensor_close(left,right,value.dtype,rtol=policy["rtol"],atol=policy["atol"])
         except AssertionError as error:
