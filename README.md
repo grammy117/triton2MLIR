@@ -34,6 +34,10 @@ The optional fetcher extracts a pinned standalone optimizer from a verified dist
 it builds nothing and installs no target backend. An existing optimizer is also supported.
 See [the package differences](docs/package.md) and [native execution scope](docs/native_execution.md).
 
+The [package coverage command](docs/package_coverage.md) indexes verified
+captures against the full pinned TTIR inventory, keeping unknown/unmeasured
+operations and native/Merlin evidence separate.
+
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.
 [Lifted source constants](docs/lifted_constants.md) also retain original typed

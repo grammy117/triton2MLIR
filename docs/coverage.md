@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+`package-coverage` now provides the [receipt-bound observation registry](package_coverage.md)
+against all 50 pinned TTIR definitions. Its initial explicit 13-package selection
+observes 22 definitions, with 18 present in captures of nine Merlin-qualified
+packages. These are selected composition observations; unmeasured definitions,
+unknown operations, other dialects and the remaining full corpus/refusal work
+remain explicit. This count is not overall opcode support.
+
 [Lifted source constants](lifted_constants.md) now bind exact safetensors bytes
 into the actual Merlin interface for f16/bf16/f32/f64, logical Boolean and
 signed i8/i16/i32/i64 models in all three memory profiles. Observation and

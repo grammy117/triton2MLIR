@@ -518,7 +518,8 @@ model cases cover all three memory profiles and unique non-NaN legacy embeddings
 The 62 existing model/atomic/half regressions, 30 model2MLIR capture checks and
 50 Merlin staging/constant-reader checks pass. The visible observation/matmul
 models pass 81/80 artifact checks including actual Merlin host execution.
-Legacy widened NaNs still require original words. Dynamic/alias model contracts, direct BF16 arithmetic
+Legacy widened NaNs still require original words. Dynamic/alias model
+contracts, direct BF16 arithmetic
 policies, FP8/scaled-dot, external effects, descriptors and accelerator
 materialization remain completion gates; no numeric or ownership check is waived.
 
@@ -539,10 +540,14 @@ The final 33-case model run and 13-case Boolean suite pass, alongside 36
 integer/reference regressions and 48 model2MLIR source capture checks. Saved
 final packages pass 82/81 artifact checks; accelerator execution is unperformed.
 
-The next package/coverage work must retain this same compiler/evaluator
-boundary while covering dynamic/alias model contracts and joining the pinned
-50-op denominator to receipt-bound package/native/Merlin outcomes. Unknown
-operations, unmeasured type/attribute compositions and target materialization
-remain in that registry. Noncanonical Boolean storage, broader low-precision
+The [package observation registry](package_coverage.md) now joins all 50 pinned
+definitions to receipt-bound package/native/Merlin outcomes and available
+typed source forms. Its explicit 13-package selection observes 22 definitions;
+18 occur in captures of nine host-qualified packages. The ten registry/corpus
+tests pass. Native original-source attribute dictionaries remain explicitly
+unavailable rather than empty; their exact source bytes stay archived.
+A maintained full corpus/refusal matrix and independent source dispositions
+remain open, alongside dynamic/alias model contracts and target materialization.
+Noncanonical Boolean storage, broader low-precision
 arithmetic, FP8/scaled dot and external effects still require executable
 contracts; these transport results do not close them.

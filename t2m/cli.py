@@ -425,6 +425,10 @@ def main(argv=None):
     coverage.add_argument("--stage", choices=tuple(STAGES), default="tensor-ir")
     coverage.add_argument("--limit", type=int, default=1000)
     coverage.add_argument("--budget", type=float, default=120)
+    packages = commands.add_parser("package-coverage", help="index verified package observations against all pinned TTIR definitions")
+    packages.add_argument("bundles", nargs="+", type=Path)
+    packages.add_argument("--qualification", action="append", type=Path, default=[], help="explicit standalone Merlin qualification; matched by source receipt")
+    packages.add_argument("--out", type=Path, required=True)
     bind = commands.add_parser("bind-model", help="replace model2MLIR registered kernel calls and write a natively checked model bundle")
     bind.add_argument("capture", type=Path)
     bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
@@ -476,6 +480,12 @@ def main(argv=None):
             summary = {key: report[key] for key in ("measured_cases", "discovered_cases", "complete_corpus_measured",
                        "stage_successes", "source_native_verified", "inventory_failures", "elapsed_seconds")}
             summary["functional_tensor_coverage"] = report["functional_tensor_coverage"]
+        elif args.command == "package-coverage":
+            from .package_coverage import package_coverage
+            report = package_coverage(args.bundles, qualifications=args.qualification)
+            args.out.mkdir(parents=True, exist_ok=False)
+            (args.out / "coverage.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+            summary = {key: report[key] for key in ("definition_count", "observed_definition_count", "merlin_observed_definition_count", "unmeasured_definitions")}
         elif args.command == "bind-model":
             from .model_binding import KernelBinding
             from .model_bundle import write_model_bundle

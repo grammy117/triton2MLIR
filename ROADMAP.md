@@ -6,6 +6,9 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+The [package observation registry](docs/package_coverage.md) now joins verified
+package evidence to the complete pinned 50-op inventory, preserving unmeasured
+definitions, exact typed forms and separate native/Merlin statuses.
 [BF16 storage and casts](docs/bfloat_precision.md) now reach the actual Merlin
 interface in all three memory profiles, retaining typed contractions, original
 F32 accumulators and exact uncomputed words. [BF16 model captures](docs/bfloat_models.md)

@@ -49,8 +49,9 @@ llvm-tblgen --dump-json include/triton/Dialect/Triton/IR/TritonOps.td \
   -I include > records.json
 ```
 
-This survey does not close the maintained-coverage workstream. The next registry
-must join these complete source definitions to typed source dispositions,
-receipt-bound package/native/Merlin outcomes and explicit refusals, while
-retaining unmeasured operations and standard dialects in the report. Unknown
-future operations must never inherit support from a family label.
+The [package observation registry](package_coverage.md) now joins all 50
+definitions to typed source forms and receipt-bound package/native/Merlin
+outcomes, retaining unmeasured definitions, unknown TTIR and other dialects.
+Source dispositions, a maintained full kernel/refusal corpus and applicable
+target evidence remain open. An observation in one composition is not a
+universal type/attribute or source-version compatibility claim.

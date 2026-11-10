@@ -1,0 +1,61 @@
+"""Pinned operation names from Triton TableGen, not a support allowlist.
+
+Generated from llvm-tblgen --dump-json records for Triton v3.7.1. See
+docs/ttir_operations.md for source pins and reproduction. Definition names
+and source coordinates are metadata; no upstream conversion code is copied.
+"""
+
+SOURCE = {'repository': 'https://github.com/triton-lang/triton', 'release': 'v3.7.1', 'revision': 'f797708c0626e5f9840ca5b0a98790e2c7cb09ad', 'path': 'include/triton/Dialect/Triton/IR/TritonOps.td', 'sha256': '19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef', 'bytes': 50703}
+
+OPERATIONS = {
+    'tt.addptr': {'record': 'TT_AddPtrOp', 'definition': 'TritonOps.td:193'},
+    'tt.advance': {'record': 'TT_AdvanceOp', 'definition': 'TritonOps.td:208'},
+    'tt.assert': {'record': 'TT_AssertOp', 'definition': 'TritonOps.td:987'},
+    'tt.atomic_cas': {'record': 'TT_AtomicCASOp', 'definition': 'TritonOps.td:386'},
+    'tt.atomic_rmw': {'record': 'TT_AtomicRMWOp', 'definition': 'TritonOps.td:350'},
+    'tt.bitcast': {'record': 'TT_BitcastOp', 'definition': 'TritonOps.td:67'},
+    'tt.broadcast': {'record': 'TT_BroadcastOp', 'definition': 'TritonOps.td:491'},
+    'tt.call': {'record': 'CallOp', 'definition': 'TritonOps.td:1083'},
+    'tt.cat': {'record': 'TT_CatOp', 'definition': 'TritonOps.td:514'},
+    'tt.clampf': {'record': 'TT_ClampFOp', 'definition': 'TritonOps.td:111'},
+    'tt.descriptor_gather': {'record': 'TT_DescriptorGatherOp', 'definition': 'TritonOps.td:1360'},
+    'tt.descriptor_load': {'record': 'TT_DescriptorLoadOp', 'definition': 'TritonOps.td:1291'},
+    'tt.descriptor_reduce': {'record': 'TT_DescriptorReduceOp', 'definition': 'TritonOps.td:1339'},
+    'tt.descriptor_scatter': {'record': 'TT_DescriptorScatterOp', 'definition': 'TritonOps.td:1386'},
+    'tt.descriptor_store': {'record': 'TT_DescriptorStoreOp', 'definition': 'TritonOps.td:1319'},
+    'tt.dot': {'record': 'TT_DotOp', 'definition': 'TritonOps.td:658'},
+    'tt.dot_scaled': {'record': 'TT_DotScaledOp', 'definition': 'TritonOps.td:700'},
+    'tt.elementwise_inline_asm': {'record': 'TT_ElementwiseInlineAsmOp', 'definition': 'TritonOps.td:880'},
+    'tt.expand_dims': {'record': 'TT_ExpandDimsOp', 'definition': 'TritonOps.td:451'},
+    'tt.extern_elementwise': {'record': 'TT_ExternElementwiseOp', 'definition': 'TritonOps.td:827'},
+    'tt.fp_to_fp': {'record': 'TT_FpToFpOp', 'definition': 'TritonOps.td:81'},
+    'tt.func': {'record': 'FuncOp', 'definition': 'TritonOps.td:1161'},
+    'tt.gather': {'record': 'TT_GatherOp', 'definition': 'TritonOps.td:931'},
+    'tt.get_num_programs': {'record': 'TT_GetNumProgramsOp', 'definition': 'TritonOps.td:636'},
+    'tt.get_program_id': {'record': 'TT_GetProgramIdOp', 'definition': 'TritonOps.td:616'},
+    'tt.histogram': {'record': 'TT_HistogramOp', 'definition': 'TritonOps.td:907'},
+    'tt.int_to_ptr': {'record': 'TT_IntToPtrOp', 'definition': 'TritonOps.td:40'},
+    'tt.join': {'record': 'TT_JoinOp', 'definition': 'TritonOps.td:526'},
+    'tt.load': {'record': 'TT_LoadOp', 'definition': 'TritonOps.td:226'},
+    'tt.make_range': {'record': 'TT_MakeRangeOp', 'definition': 'TritonOps.td:854'},
+    'tt.make_tensor_descriptor': {'record': 'TT_MakeTensorDescOp', 'definition': 'TritonOps.td:1043'},
+    'tt.make_tensor_ptr': {'record': 'TT_MakeTensorPtrOp', 'definition': 'TritonOps.td:1000'},
+    'tt.map_elementwise': {'record': 'TT_MapElementwiseOp', 'definition': 'TritonOps.td:806'},
+    'tt.map_elementwise.return': {'record': 'TT_MapElementwiseReturnOp', 'definition': 'TritonOps.td:817'},
+    'tt.mulhiui': {'record': 'TT_MulhiUIOp', 'definition': 'TritonOps.td:174'},
+    'tt.precise_divf': {'record': 'TT_PreciseDivFOp', 'definition': 'TritonOps.td:158'},
+    'tt.precise_sqrt': {'record': 'TT_PreciseSqrtOp', 'definition': 'TritonOps.td:142'},
+    'tt.print': {'record': 'TT_PrintOp', 'definition': 'TritonOps.td:966'},
+    'tt.ptr_to_int': {'record': 'TT_PtrToIntOp', 'definition': 'TritonOps.td:53'},
+    'tt.reduce': {'record': 'TT_ReduceOp', 'definition': 'TritonOps.td:741'},
+    'tt.reduce.return': {'record': 'TT_ReduceReturnOp', 'definition': 'TritonOps.td:764'},
+    'tt.reshape': {'record': 'TT_ReshapeOp', 'definition': 'TritonOps.td:466'},
+    'tt.return': {'record': 'ReturnOp', 'definition': 'TritonOps.td:1262'},
+    'tt.scan': {'record': 'TT_ScanOp', 'definition': 'TritonOps.td:774'},
+    'tt.scan.return': {'record': 'TT_ScanReturnOp', 'definition': 'TritonOps.td:796'},
+    'tt.splat': {'record': 'TT_SplatOp', 'definition': 'TritonOps.td:427'},
+    'tt.split': {'record': 'TT_SplitOp', 'definition': 'TritonOps.td:546'},
+    'tt.store': {'record': 'TT_StoreOp', 'definition': 'TritonOps.td:301'},
+    'tt.trans': {'record': 'TT_TransOp', 'definition': 'TritonOps.td:566'},
+    'tt.unsplat': {'record': 'TT_UnsplatOp', 'definition': 'TritonOps.td:441'},
+}
