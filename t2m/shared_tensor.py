@@ -115,13 +115,18 @@ class TensorABI:
     grid: tuple[int | GridExtent, ...] = (1,)
     intent: str = ""
     runtime_scalars: tuple[RuntimeScalar, ...] = ()
+    effect_only: bool = False
 
     def __post_init__(self):
-        if not self.entry.isidentifier() or not self.buffers:
+        if type(self.effect_only) is not bool:
+            raise ValueError("effect-only ABI selection must be Boolean")
+        if not self.entry.isidentifier() or not self.buffers and not self.effect_only:
             raise ValueError("tensor ABI requires an entry and buffers")
         names = [b.name for b in (*self.buffers, *self.runtime_scalars)]
-        if len(set(names)) != len(names) or not self.outputs:
+        if len(set(names)) != len(names) or not self.outputs and not self.effect_only:
             raise ValueError("tensor ABI requires unique names and at least one writable result")
+        if self.effect_only and self.outputs:
+            raise ValueError("effect-only ABI requires readonly buffers and no tensor results")
         validate_dimensions(self)
         if not 1 <= len(self.grid) <= 3 or any(type(n) is not int or not 0 < n < 2**31 for n in self.grid_bounds) or host_math.prod(self.grid_bounds) >= 2**63:
             raise ValueError("logical grid requires 1..3 positive i32 dimensions and an i64-size domain")
@@ -154,6 +159,8 @@ class TensorABI:
     def as_dict(self):
         schema = "t2m.shared-tensor-abi.v2" if any(b.effect == "write" for b in self.buffers) else "t2m.shared-tensor-abi.v1"
         fields = asdict(self)
+        if not self.effect_only:
+            fields.pop("effect_only")
         if self.runtime_scalars:
             schema = "t2m.shared-tensor-abi.v4" if any(s.bounds is not None for s in self.runtime_scalars) else "t2m.shared-tensor-abi.v3"
             fields["runtime_scalars"] = tuple(s.as_dict() for s in self.runtime_scalars)
@@ -162,6 +169,8 @@ class TensorABI:
         if self.dynamic:
             schema = "t2m.shared-tensor-abi.v5"
             fields["grid"] = tuple(g.as_dict() if isinstance(g, GridExtent) else g for g in self.grid)
+        if self.effect_only:
+            schema = "t2m.shared-tensor-abi.v6"
         return {"schema": schema, **fields}
 
     @property
@@ -184,14 +193,16 @@ class TensorABI:
     def from_dict(cls, value):
         fields = dict(value)
         schema = fields.pop("schema", "t2m.shared-tensor-abi.v1")
-        if schema not in tuple("t2m.shared-tensor-abi.v" + str(i) for i in range(1, 6)):
+        if schema not in tuple("t2m.shared-tensor-abi.v" + str(i) for i in range(1, 7)):
             raise ValueError("unknown shared tensor ABI schema")
-        if schema not in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4", "t2m.shared-tensor-abi.v5") and fields.get("runtime_scalars"):
+        if (schema == "t2m.shared-tensor-abi.v6") != (fields.get("effect_only") is True):
+            raise ValueError("effect-only kernels require explicit ABI v6")
+        if schema not in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4", "t2m.shared-tensor-abi.v5", "t2m.shared-tensor-abi.v6") and fields.get("runtime_scalars"):
             raise ValueError("runtime scalar arguments require ABI v3")
         if schema in ("t2m.shared-tensor-abi.v3", "t2m.shared-tensor-abi.v4", "t2m.shared-tensor-abi.v5") and not fields.get("runtime_scalars"):
             raise ValueError("ABI v3 requires declared runtime scalar arguments")
         fields["runtime_scalars"] = tuple(RuntimeScalar(**{**s, **({"bounds": tuple(s["bounds"])} if "bounds" in s else {})}) for s in fields.get("runtime_scalars", ()))
-        if schema != "t2m.shared-tensor-abi.v5" and (schema == "t2m.shared-tensor-abi.v4") != any(s.bounds is not None for s in fields["runtime_scalars"]):
+        if schema not in ("t2m.shared-tensor-abi.v5", "t2m.shared-tensor-abi.v6") and (schema == "t2m.shared-tensor-abi.v4") != any(s.bounds is not None for s in fields["runtime_scalars"]):
             raise ValueError("guarded runtime scalar bounds require explicit ABI v4")
         fields["buffers"] = tuple(TensorBuffer(**{**b, "shape": tuple(b["shape"])}) for b in fields["buffers"])
         for name in ("grid", "scalar_constants"):
@@ -199,7 +210,7 @@ class TensorABI:
                 fields[name] = tuple(fields[name])
         fields["grid"] = tuple(GridExtent(**g) if isinstance(g, dict) else g for g in fields.get("grid", (1,)))
         result = cls(**fields)
-        if result.dynamic != (schema == "t2m.shared-tensor-abi.v5"):
+        if schema != "t2m.shared-tensor-abi.v6" and result.dynamic != (schema == "t2m.shared-tensor-abi.v5"):
             raise ValueError("runtime tensor dimensions and grids require explicit ABI v5")
         return result
 
