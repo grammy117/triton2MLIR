@@ -17,6 +17,17 @@ No Triton target backend or device runtime is used.
 
 The subprocess copies inputs, checks their declared shapes/dtypes, supports multiple
 tensor results, and records its native provider/version and exact input-IR hash.
+Before bufferization, every tensor argument receives upstream's
+`bufferization.writable=false` contract. This includes the incoming tensor
+version of a source readwrite buffer: native code must return its new version
+without changing caller-owned storage. MLIR inserts private copies where
+required while retaining the original loops and tensor dataflow. The native
+execution report records this adapter. Observed calls still check the actual
+input bytes after one invocation, and bind the complete output archive, source
+program and arguments; a mutation remains a failure. The contract follows LLVM
+`a47bddccec30255619bb8c37fa59700e661d4e66`,
+`FuncBufferizableOpInterfaceImpl.cpp::isWritable` and
+`one-shot-module-bufferize.mlir` readonly-argument tests.
 It retains the legalized LLVM module and actual outputs for inspection. Its generic
 strided-copy callback supports the MLIR unranked-memref runtime ABI without building
 runner-utils. Tests execute a genuinely strided copy and check multiple-result order.

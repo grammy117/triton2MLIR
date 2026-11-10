@@ -99,6 +99,24 @@ def main(work):
             name = native_name
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         adapters = []
+        # A functional tensor argument is borrowed and readonly, including
+        # the incoming version of a source readwrite buffer. Upstream's
+        # function-boundary bufferizer otherwise assumes writable arguments
+        # and may overwrite a caller's accumulator in place.
+        argument_attrs = (list(ir.ArrayAttr(function.attributes["arg_attrs"]))
+            if "arg_attrs" in function.attributes else [ir.DictAttr.get({}) for _ in signature.inputs])
+        readonly_count = 0
+        for i,type_ in enumerate(signature.inputs):
+            if isinstance(type_,ir.RankedTensorType):
+                attrs = {item.name:item.attr for item in ir.DictAttr(argument_attrs[i])}
+                attrs["bufferization.writable"] = ir.BoolAttr.get(False)
+                argument_attrs[i] = ir.DictAttr.get(attrs)
+                readonly_count += 1
+        if readonly_count:
+            function.attributes["arg_attrs"] = ir.ArrayAttr.get(argument_attrs)
+            adapters.append({"name":"readonly-functional-tensor-inputs","arguments":readonly_count,
+                "upstream_contract":"bufferization.writable=false"})
+        restore_atomics = None
         def operations(op):
             yield op
             for region in op.regions:
@@ -124,6 +142,7 @@ def main(work):
                 "support_sha256": hashlib.sha256(atomic_compare_exchange.SUPPORT.encode()).hexdigest(),
                 "prepared_sha256": hashlib.sha256(prepared.read_bytes()).hexdigest()})
             namespace["_cas_suspend"](module)
+            restore_atomics = namespace["_cas_restore"]
         has_bfloat = any("bf16" in str(value.type) for op in operations(module.operation) for value in (*op.operands, *op.results))
         pipelines = (
             "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
@@ -154,8 +173,8 @@ def main(work):
                     "support_sha256":hashlib.sha256(selected.SUPPORT.encode()).hexdigest()})
             else:
                 passmanager.PassManager.parse(pipeline).run(module.operation)
-            if adapters and pipeline == pipelines[0]:
-                namespace["_cas_restore"](module)
+            if restore_atomics is not None and pipeline == pipelines[0]:
+                restore_atomics(module)
             if pipeline == pipelines[-1] and any(str(value.type) == "bf16" for op in operations(module.operation)
                     for value in (*op.operands, *op.results)):
                 root = os.environ.get("T2M_MERLIN_ROOT")
@@ -229,7 +248,7 @@ def main(work):
             before = [a.tobytes() for a in arrays]
         engine.invoke(name, *packed)
         if observed and any(a.tobytes() != original for a,original in zip(arrays,before,strict=True)):
-            raise ValueError("native effect-only entry mutated a readonly input")
+            raise ValueError("native functional entry mutated a readonly input")
         if callback_errors:
             raise ValueError("native runtime copy failed: " + "; ".join(callback_errors))
     np.savez(work / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
@@ -238,6 +257,8 @@ def main(work):
         "execution": "native-host-LLVM-JIT", "provider": "torch-mlir",
         "provider_version": version("torch-mlir"), "runtime": "bounded-generic-strided-copy",
         "source_triton_executed": False, "consumer_execution": "not-performed",
+        **({"invocations":1,"functional_inputs_preserved":True,"outputs":record(work / "outputs.npz"),
+            "arguments":record(work / "inputs.npz"),"source_program":record(work / "model.mlir")} if observed else {}),
         **({"compiler_adapters": adapters} if adapters else {})}, indent=2) + "\n")
 
 
