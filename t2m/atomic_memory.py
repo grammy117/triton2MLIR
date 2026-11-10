@@ -17,10 +17,12 @@ EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
 ATOMIC_SCHEMAS = ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
 # Source enum -> source name, standard arith::AtomicRMWKind.
-RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1),
+RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1), 5: ("fadd", 0),
        6: ("max", 6), 7: ("min", 10), 8: ("umax", 7), 9: ("umin", 11), 10: ("exch", 3)}
 ORDERS = {1: "relaxed", 2: "acquire", 3: "release", 4: "acq_rel"}
 SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
+FLOAT_CONTRACTS = {("exch", "f32"): "bitwise-exchange", ("exch", "f64"): "bitwise-exchange",
+                   ("fadd", "f64"): "ieee-f64-rne-add"}
 
 
 def payload(info):
@@ -59,8 +61,11 @@ def validate_evidence(admission, memory, records, buffers):
                 or buffer.get("dtype") != dtype
                 or word and (profile != TYPED_EFFECT_PROFILE or floating or info.get("operation") == "cas"
                     or info.get("word_bits") not in (32, 64) or info["word_view"] != expected_view)
-                or floating and (profile != TYPED_EFFECT_PROFILE or info.get("operation") != "exch"
-                    or dtype != "f" + str(info.get("word_bits")) or info.get("numeric_contract") != "bitwise-exchange")
+                or floating and (profile != TYPED_EFFECT_PROFILE
+                    or (info.get("operation"), dtype) not in FLOAT_CONTRACTS
+                    or dtype != "f" + str(info.get("word_bits"))
+                    or info.get("numeric_contract") != FLOAT_CONTRACTS.get((info.get("operation"), dtype)))
+                or not floating and info.get("operation") == "fadd"
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
                 or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64))
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
@@ -103,10 +108,10 @@ def contract(op, source_ids, *, typed=False):
         values.append(value.value.data)
     kind, order, scope = values
     operation, standard_kind = ("cas", "compare-exchange") if cas else RMW[kind]
-    if floating and operation != "exch":
+    if (not floating and operation == "fadd") or (floating and (operation, str(element)) not in FLOAT_CONTRACTS):
         refuse("floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract")
     return {"operation": operation, "standard_kind": standard_kind, "word_bits": element.bitwidth,
-        **({"value_dtype": str(element), "numeric_contract": "bitwise-exchange"} if floating else {}),
+        **({"value_dtype": str(element), "numeric_contract": FLOAT_CONTRACTS[operation, str(element)]} if floating else {}),
         "source_order": ORDERS[order], "source_scope": SCOPES[scope],
         "logical_scope": "one-logical-program" if scope == 2 else "all-logical-programs-in-private-invocation",
         "standard_order": "acq_rel", "external_participants": "excluded-by-private-buffer-ABI"}
@@ -207,6 +212,9 @@ def adapt_payload(module, abi, admission, source_ids):
             "prov.atomic_source_scope": builtin.StringAttr(info["source_scope"]),
             "prov.atomic_logical_scope": builtin.StringAttr(info["logical_scope"]),
             "prov.atomic_standard_order": builtin.StringAttr("acq_rel")})
+        if "numeric_contract" in info:
+            op.attributes.update({"prov.atomic_numeric_contract": builtin.StringAttr(info["numeric_contract"]),
+                                  "prov.atomic_value_dtype": builtin.StringAttr(info["value_dtype"])})
         reports.append({"source_ids": ids, "buffer": buffer.name, **info, "inactive_old_value": refinement,
                         "effect_boundary": "standard-execute-region-no-inline",
                         "payload": payload(info)})

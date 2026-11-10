@@ -452,8 +452,10 @@ Atomic updates on same-width logical word views now retain all nine i32/i64
 RMWs on floating storage and Triton min/max through native/Merlin execution,
 including real model2MLIR tuples. Branches, for/while recurrences, scalar/vector
 events, lane/uniform buffer selection and repeated inlined helpers now also
-qualify for both word widths. Next: floating-add numeric contracts and the
-remaining universal intake gaps.
+qualify for both word widths. IEEE f64 addition now uses upstream standard
+atomic conversion through native/Merlin execution, source regions, colliding
+old-value histories and actual model2MLIR tuples. Next: f32 flush-to-zero and
+other floating numeric contracts, word CAS and the remaining universal intake gaps.
 See [atomic memory](docs/atomic_memory.md).
 
 The ordinary-memory foundation for same-width logical pointer views is also

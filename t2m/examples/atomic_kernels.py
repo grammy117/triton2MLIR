@@ -255,3 +255,36 @@ def repeated_region_word_atomic(a, b, out, n, steps, enabled, choice, shift,
                   B=B, SCALAR=SCALAR, WHILE=WHILE, SELECT=SELECT)
     region_atomic(first, second, output + n, n, steps, enabled, ~choice, shift,
                   B=B, SCALAR=SCALAR, WHILE=WHILE, SELECT=SELECT)
+
+
+@triton.jit
+def region_fadd(a, b, out, n, steps, enabled, choice, shift,
+                B: tl.constexpr, SCALAR: tl.constexpr, WHILE: tl.constexpr,
+                SELECT: tl.constexpr):
+    if SCALAR:
+        lane = tl.program_id(0)
+    else:
+        lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = a + lane + shift
+    if SELECT == "lane":
+        pointer = tl.where(lane % 2 == 0, pointer, b + lane + shift)
+    elif SELECT == "uniform":
+        if choice:
+            pointer = b + lane + shift
+    total = (lane * 0).to(a.dtype.element_ty)
+    if enabled:
+        if WHILE:
+            i = 0
+            while i < steps:
+                previous = tl.atomic_add(pointer, i + 1, lane < n, sem="acquire", scope="cta")
+                total += previous
+                pointer += n
+                i += 1
+        else:
+            for i in range(steps):
+                previous = tl.atomic_add(pointer, i + 1, lane < n, sem="relaxed", scope="gpu")
+                total += previous
+                pointer += n
+        last = tl.atomic_add(pointer, total, lane < n, sem="release", scope="sys")
+        total += last
+    tl.store(out + lane, total, lane < n)

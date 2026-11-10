@@ -136,13 +136,17 @@ source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
 
 `--effect-profile typed-atomics` selects the separate
 `private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
-bitwise f32/f64 exchange and integer word RMWs on equal-width f32/f64 storage
+bitwise f32/f64 exchange, IEEE f64 atomic addition and integer word RMWs on equal-width f32/f64 storage
 to integer RMW/CAS while retaining the same public
 tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
-value dtype and `bitwise-exchange` in their source/access/payload declarations.
+value dtype and an operation-specific numeric contract in source/access/payload declarations.
 Standard `memref.atomic_rmw assign` preserves old and new representations;
-inactive undefined old values refine to typed zero. No numeric policy for
-floating arithmetic atomics is implied. Compatibility metadata names these
+inactive undefined old values refine to typed zero. F64 `addf` binds
+`ieee-f64-rne-add`: round-to-nearest-even with subnormals preserved, exact old
+words and unspecified arithmetic NaN payload/sign. It retains the ordinary
+standard atomic operation, with no native helper or ABI/schema change. F32
+addition and other floating arithmetic need separate numeric policies.
+Compatibility metadata names these
 differences for standalone and model packages. Word events additionally bind
 storage/value types and unchanged element address units in `word_view`. Their
 standard generic atomic regions retain source integer updates and returned bits;

@@ -2,11 +2,12 @@
 
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
 and the separately selected typed profile with bitwise f32/f64 exchange and
-integer-word RMWs on f32/f64 storage, including Triton floating min/max.
+integer-word RMWs on f32/f64 storage, including Triton floating min/max,
+and IEEE f64 addition.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
-Floating addition, external publication/synchronization and broader
+Other floating addition policies, external publication/synchronization and broader
 alias/ownership state remain required extensions for the full goal.
 The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
@@ -361,8 +362,8 @@ source-words and typed-atomics. Native qualification additionally requires the
 explicit `T2M_MERLIN_ROOT` compiler-support path.
 `scripts/capture_atomic_model.py --kind min` / `--kind max` captures the model
 source for binding. Word CAS views, differently typed selected roots and broader
-address/alias contracts remain further work; floating addition requires its own
-rounding/subnormal/NaN contract. Accelerator execution remains separate.
+address/alias contracts remain further work; f64 addition has the distinct
+rounding/subnormal/NaN contract below. Accelerator execution remains separate.
 
 ### Canonical atomic identities and assignments
 
@@ -404,3 +405,47 @@ simplification: invariant false loop flags must be removed before lowering
 them into opaque runtime deallocation checks. The allocation-lifetime gate
 remains enabled. Fifteen producer evidence tests and 147 consumer staging/
 deallocation regressions pass for this extension.
+
+### IEEE f64 atomic addition
+
+The typed profile also admits `tt.atomic_rmw fadd` on f64 as
+`ieee-f64-rne-add`: each update rounds to nearest even, preserves subnormal
+inputs/results and signed-zero arithmetic, and produces an arithmetic NaN for
+invalid/NaN arithmetic. Arithmetic NaN payload/sign is unspecified; returned
+old values and untouched storage retain their exact original words. No
+reassociation or deterministic ordering among colliding logical programs is
+promised. This profile excludes external participants and uses the existing
+private-invocation ownership/initialization checks.
+
+This reuses [Meta's FADD conversion and masked/unmasked fixtures at
+17f0c234](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/test/Conversion/UnstructuredToMemref/atomic_rmw.mlir).
+The portable payload is standard `memref.atomic_rmw addf` within the retained
+parallel tensor event and exactly-once boundary. There is no new helper or
+target opcode in the package. Standard executable arithmetic supplies the
+semantics; `prov.atomic_numeric_contract` and source/access/payload declarations
+record the policy. Merlin admits that specific dtype/operation/contract and
+can reuse independent loop result storage around private floating atomics.
+The ordinary native lowering emits LLVM `atomicrmw fadd`.
+
+[PTX's atomic contract](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-atom)
+distinguishes f64 addition from global f32 flush-to-zero addition. The f64
+profile therefore does not implicitly admit f32, f16 or bf16 addition. Those
+need their own executable numeric policies. CPU qualification is separate
+from source GPU execution and does not promise a GPU-specific NaN payload.
+
+Scalar/vector native and actual Merlin tests cover halfway rounding, normal/
+subnormal boundaries, signed zeros, overflow, infinities, quiet/signaling NaNs,
+masked invalid addresses and empty/tail grids. Region tests retain branches,
+for/while pointer/old-value recurrences and uniform/per-lane buffer selection.
+Colliding ticket tests check a valid returned-old permutation without assuming
+lane order. A real model2MLIR f64 model preserves learned parameters and both
+tuple results through Merlin. Run `shared-demo --kernel atomic-fadd` with
+guarded-buffer, source-words and typed-atomics, or use
+`scripts/capture_atomic_model.py --kind fadd` for the model capture.
+
+Measured f64 delivery: all 19 new addition cases pass alongside 75 existing
+integer/exchange numeric regressions (94 total in the focused run). Five f64
+model binding/reference cases and 188 Merlin staging/loop cases pass. The
+documentation/structure gates pass. `out/atomic-fadd/` and
+`out/atomic-fadd-merlin/` retain separately verified portable/native products;
+accelerator execution is not performed and full TTIR coverage remains open.

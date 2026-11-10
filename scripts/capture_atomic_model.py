@@ -14,8 +14,9 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 
 
 def capture(out, kind="add"):
-    if kind not in ("add", "cas", "exch", "min", "max"):
-        raise ValueError("atomic model kind must be add, cas, exch, min or max")
+    if kind not in ("add", "cas", "exch", "min", "max", "fadd"):
+        raise ValueError("atomic model kind must be add, cas, exch, min, max or fadd")
+    dtype = torch.float64 if kind == "fadd" else torch.float32 if kind in ("exch", "min", "max") else torch.int32
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -34,7 +35,7 @@ def capture(out, kind="add"):
                 SCALAR=False, SEM="relaxed", SCOPE="gpu")
         else:
             wrap_triton(kernels.indexed_atomic)[(2,)](x, index, updated, old, n=13, m=17, B=8,
-                OP=kind, SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
+                OP="add" if kind == "fadd" else kind, SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
         return updated, old
 
     @atomic_update.register_kernel("cpu")
@@ -61,7 +62,7 @@ def capture(out, kind="add"):
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.state = torch.nn.Parameter(torch.arange(17, dtype=torch.float32 if kind in ("exch", "min", "max") else torch.int32) + 50, requires_grad=False)
+            self.state = torch.nn.Parameter(torch.arange(17, dtype=dtype) + 50, requires_grad=False)
             index = torch.arange(16 if kind == "cas" else 13, dtype=torch.int32)
             if kind == "cas":
                 index += 50
@@ -77,7 +78,7 @@ def capture(out, kind="add"):
     KERNEL_REGISTRY[qualname] = KernelSpec(qualname)
     try:
         torch.set_num_threads(1)
-        model, values = Model().eval(), (torch.arange(16 if kind == "cas" else 13, dtype=torch.float32 if kind in ("exch", "min", "max") else torch.int32) - 5,)
+        model, values = Model().eval(), (torch.arange(16 if kind == "cas" else 13, dtype=dtype) - 5,)
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(model, values, backend="fx_importer", weights_path=str(out / "weights.safetensors"), capture_trace=True)
         if not result.ok:
@@ -95,6 +96,6 @@ def capture(out, kind="add"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--kind", choices=("add", "cas", "exch", "min", "max"), default="add")
+    parser.add_argument("--kind", choices=("add", "cas", "exch", "min", "max", "fadd"), default="add")
     arguments = parser.parse_args()
     print(capture(arguments.out, arguments.kind))

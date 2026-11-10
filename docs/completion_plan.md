@@ -447,7 +447,11 @@ algorithm. Standard generic atomic regions retain source bits and old values;
 a checked native feature emits one integer LLVM atomic per primitive while
 retaining ownership/lifetime gates. Native and actual Merlin raw-word tests
 cover exceptional float representations, and real min/max model2MLIR captures
-retain weights and tuple results. Next, qualify source region/selection
-compositions, then extend the distinct floating-add numeric contract and other
-universal gaps. This remains bounded coverage rather than arbitrary-kernel
-completion.
+retain weights and tuple results. Source region/selection compositions now
+qualify, including repeated inlined helpers with distinct memory contexts.
+IEEE f64 addition also qualifies through standard upstream atomic conversion,
+native/Merlin region and collision tests, and a genuine f64 model2MLIR model.
+It records round-to-nearest-even, subnormal preservation and unspecified
+arithmetic NaN payload/sign without changing the package ABI. Next, implement
+f32 flush-to-zero and other floating policies, word CAS and the other universal
+gaps. This remains bounded coverage rather than arbitrary-kernel completion.

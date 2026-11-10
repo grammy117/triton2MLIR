@@ -119,6 +119,11 @@ def test_float_contract_is_explicit_and_operation_specific():
         info = contract(source(element), lambda _: ["source"], typed=True)
         assert info["numeric_contract"] == "bitwise-exchange" and info["value_dtype"] == str(element)
         for kind in (1, 2, 3, 4, 5, 6, 7, 8, 9):
+            if kind == 5 and element == builtin.f64:
+                addition = contract(source(element, kind), lambda _: ["source"], typed=True)
+                assert addition["numeric_contract"] == "ieee-f64-rne-add"
+                assert addition["standard_kind"] == 0
+                continue
             with pytest.raises(ConversionError, match="qualified"):
                 contract(source(element, kind), lambda _: ["source"], typed=True)
         for op, typed in ((source(element), False), (source(element, cas=True), True), (source(builtin.f16), True)):
@@ -126,6 +131,8 @@ def test_float_contract_is_explicit_and_operation_specific():
                 contract(op, lambda _: ["source"], typed=typed)
     legacy = contract(source(builtin.i32), lambda _: ["source"])
     assert "value_dtype" not in legacy and legacy["word_bits"] == 32
+    with pytest.raises(ConversionError, match="qualified"):
+        contract(source(builtin.i32, 5), lambda _: ["source"], typed=True)
 
 
 def exchange_evidence():

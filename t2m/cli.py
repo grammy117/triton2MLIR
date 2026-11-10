@@ -127,7 +127,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         shapes, grid = [(16,)] * 4, (2,)
         buffer_effects = {"state": "readwrite", "old": "write"}
         buffer_dtypes = {name: "i32" for name in ("state", "comparison", "value", "old")}
-    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd"):
         from .examples.atomic_kernels import indexed_atomic
         fn, constants = indexed_atomic, {"B": 8, "OP": {"atomic-exchange": "exch", "atomic-min": "min", "atomic-max": "max"}.get(kernel, "add"), "SCALAR": False, "MASK": True, "FRESH": False,
                                          "SEM": "relaxed", "SCOPE": "gpu"}
@@ -135,7 +135,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = (RuntimeScalar("n", "i32", 4, bounds=(0, 31)), RuntimeScalar("m", "i32", 5, bounds=(0, 37)))
         example_dimensions = {"n": 13, "m": 17}
         buffer_effects = {"state": "readwrite", "old": "write"}
-        buffer_dtypes = {name: "f32" if kernel in ("atomic-exchange", "atomic-min", "atomic-max") and name != "index" else "i32"
+        value_dtype = "f64" if kernel == "atomic-fadd" else "f32" if kernel in ("atomic-exchange", "atomic-min", "atomic-max") else "i32"
+        buffer_dtypes = {name: value_dtype if name != "index" else "i32"
                          for name in ("x", "index", "state", "old")}
     elif kernel == "runtime-memory-store":
         fn, constants, shapes, grid = kernels.runtime_memory_accumulate, {"N": 13, "B": 8}, [(13,), (13,)], (2,)
@@ -172,7 +173,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
-    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd"):
         names = ["x", "index", "state", "old"]
     elif kernel == "atomic-cas":
         names = ["state", "comparison", "value", "old"]
@@ -183,7 +184,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
                     dtype=buffer_dtypes.get(n, "i32" if n == "indices" else "f32"))
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
     source = work / "kernel.ttir"
-    source.write_text(capture_ttir(fn, {**{b.name: "*fp32" if b.dtype == "f32" else "*" + b.dtype for b in abi.buffers},
+    source.write_text(capture_ttir(fn, {**{b.name: "*fp" + b.dtype[1:] if b.dtype in ("f32", "f64") else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants))
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile)
@@ -196,11 +197,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         comparison[1::3] += 1
         arrays = [state, comparison, value]
         golden, additional = np.where(state == comparison, value, state), [state.copy()]
-    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max"):
+    elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd"):
         n, m = (example_dimensions[name] for name in ("n", "m"))
         values, index, state = np.arange(n, dtype=np.int32) - 5, np.arange(n, dtype=np.int32), np.arange(m, dtype=np.int32) + 50
-        if kernel in ("atomic-exchange", "atomic-min", "atomic-max"):
-            values, state = values.astype(np.float32), state.astype(np.float32)
+        if kernel in ("atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd"):
+            value_dtype = np.float64 if kernel == "atomic-fadd" else np.float32
+            values, state = values.astype(value_dtype), state.astype(value_dtype)
         active = np.arange(n) % 3 != 1
         index[~active] = -1000
         arrays = [values, index, state, np.asarray(n, np.int32), np.asarray(m, np.int32)]
@@ -367,7 +369,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

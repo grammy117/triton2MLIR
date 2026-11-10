@@ -83,6 +83,9 @@ with guarded-buffer/source-words memory and the unchanged public tensor ABI.
 That profile also retains integer RMWs on floating word views and source floating
 min/max; `shared-demo --kernel atomic-min` / `atomic-max` emits examples. Native
 word-region qualification uses the explicit `T2M_MERLIN_ROOT` support path.
+`shared-demo --kernel atomic-fadd` adds IEEE f64 atomic addition with explicit
+rounding/subnormal/NaN policy through the same package and actual Merlin path.
+F32 flush-to-zero addition remains a separate numeric contract.
 [Logical pointer word views](docs/pointer_views.md) also preserve equal-width
 reinterpretation through selected buffers and runtime loops, with register
 bitcasts on the original tensor storage types.

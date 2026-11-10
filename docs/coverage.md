@@ -273,7 +273,8 @@ are retained under memory admission v4. Integer RMW/CAS remain available; the
 v3 integer-only profile is unchanged. Dedicated raw-word tests cover NaN payloads,
 signaling NaNs, signed zeros and subnormals; a real model2MLIR capture checks
 weights and both tuple results. Floating min/max's integer pointer views and
-floating-add numeric policy remain open; see [atomic memory](atomic_memory.md).
+IEEE f64 addition now have the separate extensions below; other floating-add
+numeric policies remain open. See [atomic memory](atomic_memory.md).
 
 ### Ordinary logical word views
 
@@ -294,7 +295,7 @@ and dynamic empty/tail grids; scalar min/max is included. Real model2MLIR
 min/max models preserve weights and both tuple results. The portable interface
 retains standard atomic regions and word-view provenance; checked native
 legalization emits one integer atomic per primitive without whole-buffer
-conversion. This does not qualify floating add, word CAS, external participants
+conversion. This does not qualify every floating numeric policy, word CAS, external participants
 or accelerator execution. See [atomic memory](atomic_memory.md).
 
 Both widths also qualify inside branch/for/while regions with old-value and
@@ -303,3 +304,15 @@ selection. Repeated inlined helpers retain separate call contexts through the
 actual Merlin interface. Twelve native/Merlin region cases and two additional
 Merlin repeated-helper cases pass with independent raw-integer oracles; these
 are composition tests rather than an arbitrary-kernel coverage claim.
+
+### F64 atomic addition
+
+The typed profile admits IEEE f64 FADD with round-to-nearest-even and subnormal
+preservation. Native/Merlin scalar/vector tests retain exact finite/zero/old
+words and check arithmetic NaN classes separately from payloads. Region
+recurrences, finite buffer selection, collision histories without assumed lane
+order, and a genuine f64 model2MLIR tuple-result model reach the same Merlin
+interface. The portable payload is upstream standard `memref.atomic_rmw addf`,
+with the operation-specific numeric policy recorded in provenance and v4
+source/access/payload declarations. F32 flush-to-zero, f16/bf16 additions and
+accelerator qualification remain open; see [the numeric contract](atomic_memory.md#ieee-f64-atomic-addition).
