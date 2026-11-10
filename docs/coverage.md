@@ -1,5 +1,10 @@
 # Measured coverage and remaining boundaries
 
+[Uniform conditional reads](conditional_reads.md) add a read-bound-only
+subset proof for upstream scalar-gated rectangles. Sixteen tail-proof cases
+and three real Merlin libraries cover both gate values, explicit fills and
+changing/empty/ragged shapes. Store coverage and ownership are not inferred.
+
 [Scaled contractions](scaled_dot.md) now pass 65 checks across FP4 packing,
 five public operand formats, optional/mixed scale types, batched tiles,
 accumulator formats, exhaustive E8M0 codes, refusal and real consumer execution.

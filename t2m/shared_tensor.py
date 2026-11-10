@@ -602,7 +602,8 @@ def _functionalize(module, abi):
                     v = next(values, None)
                     if v is None:
                         raise ConversionError("structured mask is missing a dynamic operand", opcode=opcode(op))
-                    number = recover_extent(mapping.get(v, v), size, [off.form for off in offsets], facts, grid)
+                    number = recover_extent(mapping.get(v, v), size, [off.form for off in offsets], facts, grid,
+                                            allow_read_subset=opcode(op) == "tts.load")
                 active.append(number)
             active = tuple(active)
             if next(values, None) is not None:

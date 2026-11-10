@@ -48,6 +48,62 @@ def test_upstream_tail_normal_form_is_proved_without_grid_enumeration(programs, 
     assert extent.as_dict()["limit"] == limit
 
 
+def test_scalar_gated_read_retains_exact_extent_without_coverage_credit():
+    from t2m.initialization import DefiniteWrites
+    from t2m.shared_tensor import TensorABI, TensorBuffer
+    from t2m.tail_masks import ReadSubsetExtent
+    value, facts, offset = mask_case()
+    block = value.owner.parent
+    zero = arith.ConstantOp.from_int_and_width(0, IndexType())
+    condition = arith.CmpiOp(block.args[0], zero, "eq")
+    selected = arith.SelectOp(condition, value, zero)
+    block.add_ops([zero, condition, selected])
+    extent = recover_extent(selected.result, 16, [offset], facts, (4,), allow_read_subset=True)
+    assert isinstance(extent, ReadSubsetExtent)
+    assert extent.value is selected.result
+    assert extent.fits_access(offset, 53, (4,))
+    assert not extent.fits(offset, 53)
+    assert extent.as_dict()["coverage"] == "read-bound-only-conditional-subset"
+    with pytest.raises(ConversionError, match="unit-prefix"):
+        recover_extent(selected.result, 16, [offset], facts, (4,))
+    abi = TensorABI("gated", (TensorBuffer("out", (53,), "write"),), grid=(4,))
+    initialization = DefiniteWrites(abi)
+    initialization.store(abi.buffers[0], (offset,), (extent,))
+    with pytest.raises(ConversionError, match="no proved complete overwrite"):
+        initialization.finish()
+
+
+def test_gated_constant_read_prefix_and_intermediate_overflow():
+    from t2m.tail_masks import ReadSubsetExtent
+    block = Block(arg_types=[IndexType()])
+    zero = arith.ConstantOp.from_int_and_width(0, IndexType())
+    cap = arith.ConstantOp.from_int_and_width(8, IndexType())
+    condition = arith.CmpiOp(block.args[0], zero, "eq")
+    selected = arith.SelectOp(condition, cap, zero)
+    block.add_ops([zero, cap, condition, selected])
+    extent = recover_extent(selected.result, 8, [Linear()], {}, (1,), allow_read_subset=True)
+    assert isinstance(extent, ReadSubsetExtent) and extent.cap == 8
+    assert extent.fits_access(Linear(), 8, (1,)) and not extent.fits(Linear(), 8)
+    value, facts, offset = mask_case()
+    selection = arith.SelectOp(condition, value, zero)
+    with pytest.raises(ConversionError, match="overflow"):
+        recover_extent(selection.result, 16, [offset], facts, (2**60,), allow_read_subset=True)
+
+
+def test_nested_conditional_read_analysis_has_a_structural_budget():
+    value, facts, offset = mask_case()
+    block = value.owner.parent
+    zero = arith.ConstantOp.from_int_and_width(0, IndexType())
+    condition = arith.CmpiOp(block.args[0], zero, "eq")
+    block.add_ops([zero, condition])
+    for _ in range(33):
+        selected = arith.SelectOp(condition, value, zero)
+        block.add_op(selected)
+        value = selected.result
+    with pytest.raises(ConversionError, match="structural budget"):
+        recover_extent(value, 16, [offset], facts, (4,), allow_read_subset=True)
+
+
 def test_changed_subtraction_is_not_accepted_as_a_tail():
     value, facts, offset = mask_case(wrong_start=True)
     with pytest.raises(ConversionError, match="clipped affine prefix"):

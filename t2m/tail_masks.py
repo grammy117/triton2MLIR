@@ -51,6 +51,23 @@ class TailExtent:
         return (offset + self.offset.scale(-1) + limit + dimension.scale(-1)).bounds(grid)[1] <= 0
 
 
+@dataclass(frozen=True)
+class ReadSubsetExtent(TailExtent):
+    """A runtime conditional subset, sufficient for reads but never coverage.
+
+    Meta MaskState::parseAnd selects the full rectangular extent or zero for
+    a scalar conjunction. Retain that exact SSA; only its upper prefix supplies
+    an access bound. Stores must not rebuild this value as the upper prefix.
+    """
+
+    def fits(self, offset, dimension):
+        return False
+
+    def as_dict(self):
+        return {**super().as_dict(), "formula": "0<=extent<=max(0,min(maximum,limit-offset))",
+                "coverage": "read-bound-only-conditional-subset"}
+
+
 def maximum(size):
     return size.cap if isinstance(size, TailExtent) else size
 
@@ -59,7 +76,7 @@ def describe(size):
     return size.as_dict() if isinstance(size, TailExtent) else size
 
 
-def recover_extent(value, cap, offsets, facts, grid):
+def recover_extent(value, cap, offsets, facts, grid, *, allow_read_subset=False, _subset_depth=0):
     """Match an exact clamp normal form; unsupported masks remain refusals."""
     cache = {}
 
@@ -149,6 +166,27 @@ def recover_extent(value, cap, offsets, facts, grid):
             raise ConversionError("tail mask arithmetic may overflow")
         cache[v] = result
         return result
+
+    owner = value.owner
+    if allow_read_subset and getattr(owner, "name", "") == "arith.select":
+        if _subset_depth >= 32:
+            raise ConversionError("conditional read extent exceeds its structural budget")
+        from xdsl.dialects.builtin import i1
+        # Keep the existing exact unit-prefix analysis for select(cmp,1,0).
+        # A wider selected prefix cannot establish the comparison's own axis
+        # bounds; prove its true branch separately and retain the original SSA.
+        try:
+            true = linear(owner.operands[1], facts, grid)
+        except ConversionError:
+            true = None
+        if (owner.operands[0].type == i1 and true != Linear(1)
+                and linear(owner.operands[2], facts, grid) == Linear()):
+            upper = recover_extent(owner.operands[1], cap, offsets, facts, grid,
+                                   allow_read_subset=True, _subset_depth=_subset_depth + 1)
+            if isinstance(upper, TailExtent):
+                return ReadSubsetExtent(upper.cap, upper.limit, upper.offset, value)
+            if 0 <= upper <= cap:
+                return ReadSubsetExtent(upper, upper, Linear(), value) if upper else 0
 
     tree = expression(value)
     if isinstance(tree, Linear) and not tree.dynamic:

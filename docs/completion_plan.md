@@ -91,6 +91,13 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Uniform conditional reads now retain shared's selected rectangular extents
+through the pure tensor proof as read-only subsets. Bounds do not become
+fresh-output coverage. Sixteen proof cases and three actual Merlin libraries
+cover gate values, fills, tails and empty/runtime shapes; see
+[the exact scope](conditional_reads.md). Broader alias/conditional-store and
+numeric/effect/target work above remains open.
+
 Scaled contractions now have a working standard-MLIR/Merlin vertical slice.
 The 65-case suite covers the five public data formats, FP4 K/M/N packing,
 optional/mixed E8M0/E4M3FN scales, batched tiles, accumulator/result formats,
