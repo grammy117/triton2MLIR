@@ -463,3 +463,11 @@ also retains explicit quieting in its standard atomic region.
 The native FTZ adapter reconstructs complete typed atomic bodies and exact
 internal atomic-load/CAS retry helpers through ownership/lifetime verification.
 No policy is inferred from kernel names, provenance or target capabilities.
+
+The constant audit also exposed the f64 negative-zero quieting gap. New f64
+captures now use `ieee-f64-rne-add-quiet-nans`, with executable quieting in the
+standard atomic region and the shared typed native retry boundary. The old
+standard-addf profile remains readable with its original weaker NaN contract.
+Artifact/receipt names and the tensor/scalar ABI are unchanged. Tests construct
+source constant words explicitly, so a Python constexpr zero-sign conversion
+cannot make the test exercise a different TTIR operation.

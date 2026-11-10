@@ -409,7 +409,7 @@ deallocation regressions pass for this extension.
 ### IEEE f64 atomic addition
 
 The typed profile also admits `tt.atomic_rmw fadd` on f64 as
-`ieee-f64-rne-add`: each update rounds to nearest even, preserves subnormal
+`ieee-f64-rne-add-quiet-nans`: each update rounds to nearest even, preserves subnormal
 inputs/results and signed-zero arithmetic, and produces an arithmetic NaN for
 invalid/NaN arithmetic. Arithmetic NaN payload/sign is unspecified; returned
 old values and untouched storage retain their exact original words. No
@@ -419,13 +419,32 @@ private-invocation ownership/initialization checks.
 
 This reuses [Meta's FADD conversion and masked/unmasked fixtures at
 17f0c234](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/test/Conversion/UnstructuredToMemref/atomic_rmw.mlir).
-The portable payload is standard `memref.atomic_rmw addf` within the retained
-parallel tensor event and exactly-once boundary. There is no new helper or
-target opcode in the package. Standard executable arithmetic supplies the
+The portable payload is a standard generic atomic region with `arith.addf` and
+explicit result NaN quieting, inside the retained parallel tensor event and
+exactly-once boundary. There is no native helper or target opcode in the
+package. Standard executable arithmetic supplies the
 semantics; `prov.atomic_numeric_contract` and source/access/payload declarations
 record the policy. Merlin admits that specific dtype/operation/contract and
 can reuse independent loop result storage around private floating atomics.
-The ordinary native lowering emits LLVM `atomicrmw fadd`.
+The checked native atomic-word feature retains the complete internal
+atomic-load/CAS retry helper through ownership and lifetime verification;
+native qualification requires `T2M_MERLIN_ROOT` and the default 64-bit ABI.
+
+The earlier `ieee-f64-rne-add` contract and its standard `memref.atomic_rmw addf`
+payload remain readable for existing packages. That representation does not
+guarantee NaN quieting after constant normalization: the measured native
+toolchain can simplify addition by negative zero and retain a signaling NaN.
+New captures use the explicit `quiet-nans` contract and payload instead. Core
+artifact names, receipts and tensor/scalar ABI are unchanged; compatibility
+metadata distinguishes the new native-support requirement. Historical
+packages and execution evidence are preserved with their original contracts.
+
+The strict f64 extension passes 32 focused cases plus 101 f32/model
+regressions, and 306 Merlin native/staging/loop cases. The original 20-artifact
+f64 capture and 45-artifact qualification still verify under the legacy
+contract. New `out/atomic-fadd-quiet/` and `out/atomic-fadd-quiet-merlin/`
+products separately verify 20/45 artifacts with actual native execution.
+These measurements do not establish full TTIR or accelerator coverage.
 
 [PTX's atomic contract](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-atom)
 distinguishes f64 addition from global f32 flush-to-zero addition. The f64

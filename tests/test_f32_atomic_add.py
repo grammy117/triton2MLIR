@@ -75,7 +75,7 @@ def test_merlin_f32_add_reuses_library_across_subnormal_and_special_values(tmp_p
 def evidence(policy):
     from copy import deepcopy
     from test_float_atomics import exchange_evidence
-    from t2m.atomic_f32_add import PAYLOAD, IEEE_PAYLOAD
+    from t2m.atomic_float_add import PAYLOAD, IEEE_PAYLOAD
     admission, memory, records, buffers = exchange_evidence()
     admission["f32_atomic_add"] = memory["f32_atomic_add"] = policy
     info = admission["accesses"][0]["atomic"]

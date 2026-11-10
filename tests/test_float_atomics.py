@@ -122,7 +122,7 @@ def test_float_contract_is_explicit_and_operation_specific():
         for kind in (1, 2, 3, 4, 5, 6, 7, 8, 9):
             if kind == 5:
                 addition = contract(source(element, kind), lambda _: ["source"], typed=True, f32_atomic_add="ftz")
-                assert addition["numeric_contract"] == ("ieee-f64-rne-add" if element == builtin.f64 else "f32-rne-sign-preserving-ftz-add")
+                assert addition["numeric_contract"] == ("ieee-f64-rne-add-quiet-nans" if element == builtin.f64 else "f32-rne-sign-preserving-ftz-add")
                 assert addition["standard_kind"] == 0
                 continue
             with pytest.raises(ConversionError, match="qualified"):

@@ -458,6 +458,9 @@ old-value histories and actual model2MLIR tuples. F32 now explicitly selects
 IEEE or sign-preserving input/result FTZ, retaining executable numeric policy
 through standard MLIR, native/Merlin regions and real model binding. Next:
 other floating numeric contracts, word CAS and the remaining universal intake gaps.
+F64 now also retains executable NaN quieting through constant normalization,
+under the versioned `ieee-f64-rne-add-quiet-nans` contract. Legacy packages keep
+their original standard-addf contract and remain readable.
 See [atomic memory](docs/atomic_memory.md).
 
 The ordinary-memory foundation for same-width logical pointer views is also

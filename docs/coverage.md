@@ -312,9 +312,12 @@ preservation. Native/Merlin scalar/vector tests retain exact finite/zero/old
 words and check arithmetic NaN classes separately from payloads. Region
 recurrences, finite buffer selection, collision histories without assumed lane
 order, and a genuine f64 model2MLIR tuple-result model reach the same Merlin
-interface. The portable payload is upstream standard `memref.atomic_rmw addf`,
-with the operation-specific numeric policy recorded in provenance and v4
-source/access/payload declarations. F16/bf16 additions and
+interface. New captures use standard generic atomic regions with explicit
+NaN quieting under `ieee-f64-rne-add-quiet-nans`. The earlier standard-addf
+contract remains readable without a quieting guarantee after constant folding.
+The selected numeric contract/payload is recorded in provenance and v4
+source/access/payload declarations; tensor/scalar ABI and core artifacts are
+unchanged. F16/bf16 additions and
 accelerator qualification remain open; see [the numeric contract](atomic_memory.md#ieee-f64-atomic-addition).
 
 ### F32 atomic addition policies

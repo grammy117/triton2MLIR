@@ -85,6 +85,8 @@ min/max; `shared-demo --kernel atomic-min` / `atomic-max` emits examples. Native
 word-region qualification uses the explicit `T2M_MERLIN_ROOT` support path.
 `shared-demo --kernel atomic-fadd` adds IEEE f64 atomic addition with explicit
 rounding/subnormal/NaN policy through the same package and actual Merlin path.
+New f64 captures retain explicit result NaN quieting in standard atomic regions
+and require the `T2M_MERLIN_ROOT` native support path.
 F32 addition now selects `--f32-atomic-add ieee` or `ftz` explicitly; try
 `shared-demo --kernel atomic-fadd32`. FTZ is executable standard bit arithmetic
 inside the atomic region, including NaN quieting, with checked native support

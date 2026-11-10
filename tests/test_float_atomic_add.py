@@ -1,6 +1,7 @@
 """IEEE f64 atomic addition: exact finite results, old words and NaN classes."""
 
 from copy import deepcopy
+import os
 
 import numpy as np
 import pytest
@@ -50,12 +51,13 @@ def check(actual, expected, arrays, width=64):
 
 
 @NATIVE_REQUIRED
+@pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"), reason="strict atomic numeric regions require explicit Merlin support")
 @pytest.mark.parametrize("scalar", [False, True])
 def test_native_f64_add_keeps_rounding_subnormals_and_old_words(tmp_path, scalar):
     from t2m.native import execute_native
     result = capture(tmp_path, 64, scalar, operation="add")
     info = result.trace["memory"]["atomic_payload"][0]
-    assert info["operation"] == "fadd" and info["numeric_contract"] == "ieee-f64-rne-add"
+    assert info["operation"] == "fadd" and info["numeric_contract"] == "ieee-f64-rne-add-quiet-nans"
     assert "prov.atomic_numeric_contract" in result.mlir_text
     for i, (arrays, expected) in enumerate(domains()):
         actual, _ = execute_native(result.mlir_text, arrays, tmp_path / f"native{i}", python=NATIVE,
@@ -76,22 +78,25 @@ def test_merlin_f64_add_reuses_library_across_rounding_and_special_values(tmp_pa
             check([outputs[f"out{j}"] for j in range(2)], expected, arrays)
 
 
-def evidence():
+def evidence(strict=False):
     admission, memory, records, buffers = exchange_evidence()
     info = admission["accesses"][0]["atomic"]
     info.update(operation="fadd", standard_kind=0, word_bits=64, value_dtype="f64",
-                numeric_contract="ieee-f64-rne-add")
+                numeric_contract="ieee-f64-rne-add-quiet-nans" if strict else "ieee-f64-rne-add")
     admission["atomic_adaptations"][0].update(info)
+    if strict:
+        admission["atomic_adaptations"][0]["payload"] = "standard-memref-generic-f64-quiet-add-with-original-returned-old-value"
     memory["atomic_payload"] = deepcopy(admission["atomic_adaptations"])
     records[0]["atomic"] = deepcopy(info)
     buffers["state"]["dtype"] = "f64"
     return admission, memory, records, buffers
 
 
-@pytest.mark.parametrize("change", [None, "f32", "integer", "ftz", "rounding", "kind", "legacy"])
-def test_f64_add_evidence_cannot_erase_or_change_numeric_policy(change):
+@pytest.mark.parametrize("change", [None, "f32", "integer", "ftz", "rounding", "kind", "legacy", "payload"])
+@pytest.mark.parametrize("strict", [False, True])
+def test_f64_add_evidence_cannot_erase_or_change_numeric_policy(change, strict):
     from t2m.atomic_memory import validate_evidence
-    admission, memory, records, buffers = evidence()
+    admission, memory, records, buffers = evidence(strict)
     info = admission["accesses"][0]["atomic"]
     if change == "f32":
         info.update(word_bits=32, value_dtype="f32")
@@ -105,6 +110,8 @@ def test_f64_add_evidence_cannot_erase_or_change_numeric_policy(change):
     elif change == "legacy":
         admission.update(schema="t2m.memory-admission.v3", effect_profile="private-invocation-integer-atomics-v1")
         memory["effect_profile"] = admission["effect_profile"]
+    elif change == "payload":
+        admission["atomic_adaptations"][0]["payload"] = "standard-memref-atomic-rmw-with-original-returned-old-value" if strict else "standard-memref-generic-f64-quiet-add-with-original-returned-old-value"
     records[0]["atomic"] = deepcopy(info)
     admission["atomic_adaptations"][0] = {**admission["atomic_adaptations"][0], **info}
     if change == "integer":
@@ -177,6 +184,7 @@ def test_merlin_f64_add_preserves_regions_and_selected_pointer_recurrences(tmp_p
 
 
 @NATIVE_REQUIRED
+@pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"), reason="strict atomic numeric regions require explicit Merlin support")
 def test_f64_add_demo_keeps_numeric_contract_in_verified_package(tmp_path):
     from t2m.bundle import verify_bundle
     from t2m.cli import shared_demo

@@ -296,3 +296,12 @@ def constant_fadd32(state, old, B: tl.constexpr, WORD: tl.constexpr):
     value = tl.full((B,), WORD, tl.uint32).to(tl.float32, bitcast=True)
     previous = tl.atomic_add(state + lane, value, sem="acq_rel", scope="gpu")
     tl.store(old + lane, previous)
+
+
+@triton.jit
+def constant_fadd(state, old, B: tl.constexpr, WIDTH: tl.constexpr, WORD: tl.constexpr):
+    lane = tl.arange(0, B)
+    integer: tl.constexpr = tl.uint32 if WIDTH == 32 else tl.uint64
+    value = tl.full((B,), WORD, integer).to(state.dtype.element_ty, bitcast=True)
+    previous = tl.atomic_add(state + lane, value, sem="acq_rel", scope="gpu")
+    tl.store(old + lane, previous)

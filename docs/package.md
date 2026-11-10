@@ -142,14 +142,18 @@ tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
 value dtype and an operation-specific numeric contract in source/access/payload declarations.
 Standard `memref.atomic_rmw assign` preserves old and new representations;
 inactive undefined old values refine to typed zero. F64 `addf` binds
-`ieee-f64-rne-add`: round-to-nearest-even with subnormals preserved, exact old
-words and unspecified arithmetic NaN payload/sign. It retains the ordinary
-standard atomic operation, with no native helper or ABI/schema change.
+`ieee-f64-rne-add-quiet-nans`: round-to-nearest-even with subnormals preserved,
+exact old words and explicit result quieting with unspecified NaN payload/sign.
+It uses a standard generic atomic region and the same checked native helper
+boundary as f32 below. The legacy `ieee-f64-rne-add`/standard-addf representation
+remains readable, with no guarantee of NaN quieting after constant normalization.
+This numeric contract/payload version change leaves core artifacts, receipt
+schemas and the tensor/scalar ABI unchanged.
 F32 addition requires explicit `f32_atomic_add="ieee"` or `"ftz"` (CLI:
 `--f32-atomic-add`). Its selected policy is bound in v4 admission and memory
 evidence as well as source/access/payload contracts. Both use standard generic
 atomic regions with addition and explicit result NaN quieting. FTZ also retains
-executable sign-preserving input/result flushing. Native f32 ownership additionally
+executable sign-preserving input/result flushing. Native strict floating ownership additionally
 requires Merlin's checked atomic-word feature and default 64-bit descriptor/
 index ABI; each complete internal CAS retry helper is restored before lifetime
 checks. Portable MLIR has no native helper or LLVM operations. Core artifacts,

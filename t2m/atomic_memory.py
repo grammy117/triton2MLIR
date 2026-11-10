@@ -12,7 +12,7 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
-from .atomic_f32_add import CONTRACT as F32_ADD_CONTRACT
+from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
@@ -23,15 +23,18 @@ RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1), 5: ("fadd", 
 ORDERS = {1: "relaxed", 2: "acquire", 3: "release", 4: "acq_rel"}
 SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bitwise-exchange",),
-                   ("fadd", "f64"): ("ieee-f64-rne-add",), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
+                   ("fadd", "f64"): (F64_CONTRACT, "ieee-f64-rne-add"), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
 
 
 def payload(info):
+    if info.get("numeric_contract") == F64_CONTRACT:
+        from .atomic_float_add import F64_PAYLOAD
+        return F64_PAYLOAD
     if info.get("numeric_contract") == "ieee-f32-rne-add":
-        from .atomic_f32_add import IEEE_PAYLOAD
+        from .atomic_float_add import IEEE_PAYLOAD
         return IEEE_PAYLOAD
     if info.get("numeric_contract") == F32_ADD_CONTRACT:
-        from .atomic_f32_add import PAYLOAD
+        from .atomic_float_add import PAYLOAD
         return PAYLOAD
     if "word_view" in info:
         from .atomic_word_views import PAYLOAD
@@ -189,8 +192,8 @@ def adapt_payload(module, abi, admission, source_ids):
         observed[index] += 1
         access = accesses[index]
         info = access["atomic"]
-        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add"):
-            from .atomic_f32_add import materialize
+        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add", F64_CONTRACT):
+            from .atomic_float_add import materialize
             op = materialize(op, ftz=info["numeric_contract"] == F32_ADD_CONTRACT)
         ancestor = generic
         while ancestor is not None:
