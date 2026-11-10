@@ -76,6 +76,11 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     elif kernel == "bfloat-matmul":
         fn, constants, shapes = kernels.accumulated_matmul, {"M": 16, "N": 16, "K": 16}, [(16, 16)] * 4
         buffer_dtypes, buffer_effects = {"x": "bf16", "y": "bf16"}, {"out": "write"}
+    elif kernel == "bfloat-observe":
+        from .examples.bfloat_kernels import bfloat_observe
+        fn, constants, shapes, grid = bfloat_observe, {"N": 17, "B": 8}, [(17,)] * 5, (3,)
+        buffer_dtypes = {"x": "bf16", "weight": "bf16", "out": "bf16", "words": "i16"}
+        buffer_effects = {name: "write" for name in ("out", "words", "value")}
     elif kernel == "scan":
         fn, constants, shapes, grid = kernels.scan_tiles, {"N": 53, "B": 16, "KIND": 0, "REVERSE": True}, [(53,)] * 2, (4,)
     elif kernel == "tuple-scan":
@@ -183,6 +188,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["a", "b", "out_a", "out_b"]
     elif kernel == "bfloat-matmul":
         names = ["x", "y", "initial", "out"]
+    elif kernel == "bfloat-observe":
+        names = ["x", "weight", "out", "words", "value"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
     elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32"):
@@ -208,6 +215,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         initial = rng.integers(-5, 6, (16, 16)).astype(np.float32)
         arrays = [*((value.view(np.uint32) >> 16).astype(np.uint16) for value in (x, y)), initial]
         golden = initial + x @ y
+    elif kernel == "bfloat-observe":
+        from .tensor_storage import comparison_values
+        patterns = np.array([0, 0x8000, 1, 0x807f, 0x7f81, 0xffa5, 0x7f80, 0xff80, 0x3f80, 0xbf80,
+            0x7fc2, 0xff81, 2, 0x8001, 0x4000, 0xc000, 0x7f7f], np.uint16)
+        arrays = [patterns, np.roll(patterns, 3)]
+        golden = np.where(np.arange(17) % 2 == 0, *arrays)
+        with np.errstate(invalid="ignore", over="ignore"):
+            value = comparison_values(arrays[0], "bf16") + comparison_values(arrays[1], "bf16")
+        additional = [golden.view(np.int16), value]
     elif kernel.startswith("atomic-word-cas"):
         width = int(kernel.removeprefix("atomic-word-cas"))
         floating, integer = getattr(np, f"float{width}"), getattr(np, f"int{width}")
@@ -395,7 +411,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "bfloat-matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

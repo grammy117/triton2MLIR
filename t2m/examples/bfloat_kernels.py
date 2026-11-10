@@ -30,3 +30,14 @@ def bfloat_choose(x, y, out, n, rounds, B: tl.constexpr, SCALAR: tl.constexpr):
     for step in range(rounds):
         value = tl.where((lane + step) % 3 == 1, other, value)
     tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
+def bfloat_observe(x, weight, out, words, value, N: tl.constexpr, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    a = tl.load(x + lane, lane < N, other=0)
+    b = tl.load(weight + lane, lane < N, other=0)
+    selected = tl.where(lane % 2 == 0, a, b)
+    tl.store(out + lane, selected, lane < N)
+    tl.store(words + lane, selected.to(tl.int16, bitcast=True), lane < N)
+    tl.store(value + lane, a.to(tl.float32) + b.to(tl.float32), lane < N)

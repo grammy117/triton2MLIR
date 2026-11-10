@@ -207,3 +207,12 @@ chosen cat ordering and dynamic dimensions when present. The parent model ABI
 and data files remain byte-identical. This is additive metadata in the existing
 bound-model compatibility schema; it does not manufacture an m2m FX trace for
 the derived program.
+
+[BF16 models](bfloat_models.md) now retain exact inputs/results and learned
+safetensors state through native and actual Merlin execution. The optional
+model2MLIR `tensor_words.npz` remains evaluator data and is excluded from compiler
+staging with its digests. Parent value archives remain unchanged; uniquely
+embedded non-NaN legacy BF16 values may also be recovered with explicit evidence.
+Visible observation and matmul captures retain six tuple results and the
+original BF16/F32 contraction respectively. General lifted-constant compiler
+admission and dynamic/alias model contracts remain separate completion gates.

@@ -4,8 +4,11 @@
 covering complete 16-bit copy/widening domains, RNE boundaries, runtime select
 loops and original BF16/F32 contractions. The combined low-precision and floating
 atomic regression passes 97 cases. The explicit raw-word NumPy encoding differs
-from legacy model2MLIR BF16 archives; complete BF16 model capture, other numeric
-policies, scaled formats and target materialization remain open.
+from legacy model2MLIR BF16 archives. [Real BF16 models](bfloat_models.md) now
+retain learned state and complete results through all three profiles, using
+exact parent words or proved unique legacy embeddings. Their 24 focused cases
+and 62 existing model/atomic/half regressions pass. Other numeric policies,
+general lifted/dynamic model ABIs, scaled formats and target materialization remain open.
 
 [Integer RMW atomics](atomic_memory.md) now have an explicit private-invocation
 profile through actual Merlin execution: all nine integer operations, scalar/

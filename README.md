@@ -124,7 +124,9 @@ with typed narrowing, mixed FP16/FP32 contractions and preserved masked state.
 [BF16 tensor storage](docs/bfloat_precision.md) now also qualifies exact word
 transport, RNE casts, runtime selects/loops and BF16/F32 contractions through
 Merlin. `shared-demo --kernel bfloat-matmul` emits a visible package; its raw
-uint16 archive encoding and remaining model-capture work are explicit.
+uint16 archive encoding is explicit. [BF16 model captures](docs/bfloat_models.md)
+also retain exact source words, learned state and every tuple reference through
+the existing model2MLIR/Merlin interface, preserving the parent's value archives.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

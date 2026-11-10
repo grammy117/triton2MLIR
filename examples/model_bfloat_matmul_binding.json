@@ -1,0 +1,19 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [{
+    "kernel": "t2m_demo::bfloat_matmul",
+    "ttir": "../out/bfloat-matmul/source.ttir",
+    "operands": {"x": "x", "y": "weight", "initial": "initial"},
+    "abi": {
+      "schema": "t2m.shared-tensor-abi.v2",
+      "entry": "accumulated_matmul",
+      "buffers": [
+        {"name": "x", "shape": [16, 16], "effect": "read", "dtype": "bf16"},
+        {"name": "y", "shape": [16, 16], "effect": "read", "dtype": "bf16"},
+        {"name": "initial", "shape": [16, 16], "effect": "read", "dtype": "f32"},
+        {"name": "out", "shape": [16, 16], "effect": "write", "dtype": "f32"}
+      ],
+      "grid": [1]
+    }
+  }]
+}

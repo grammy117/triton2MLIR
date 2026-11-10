@@ -72,8 +72,11 @@ NumPy inputs/references and the unchanged two-byte host descriptors. Numeric
 comparisons decode BF16 before applying tolerances. This explicitly differs
 from model2MLIR's legacy widened F32 archives. Host qualification requires the
 upstream BF16 cast expansion and Merlin's checked scalar LLVM transport feature;
-complete BF16 parent model archives and weights remain unqualified. See
-[the BF16 contract](bfloat_precision.md).
+bound BF16 models now preserve their parent's value archives and consume
+receipt-bound exact-word witnesses or checked unique non-NaN embeddings instead.
+BF16 source weights use Merlin's existing pinned byte reader. These format
+differences and measured model scope are explicit in
+[the BF16 model contract](bfloat_models.md).
 The actual tensor/result allocation extents are dynamic; they are distinct from
 ABI v4's static capacities and changing prefixes. Native execution receives an
 explicit shape-allocation contract derived from `spec.json`. Static packages

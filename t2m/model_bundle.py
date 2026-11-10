@@ -21,11 +21,13 @@ from .model_binding import bind_model
 from .native import execute_native
 from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .package_compatibility import kernel_representation_differences
+from .tensor_storage import DTYPES, comparison_values
+from .model_tensor_words import FILENAME as WORD_ARCHIVE, TensorWords
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
-OPTIONAL_DATA = {"goldens.npz"}
-ITEM_BYTES = {"f16": 2, "f32": 4, "f64": 8, "i64": 8, "i32": 4, "i16": 2, "i8": 1, "i1": 1}
+OPTIONAL_DATA = {"goldens.npz", WORD_ARCHIVE}
+ITEM_BYTES = {name: np.dtype(dtype).itemsize for name, dtype in DTYPES.items()}
 
 
 def _parent(capture):
@@ -44,7 +46,7 @@ def _parent(capture):
     return receipt
 
 
-def _arguments(capture, module, work, python):
+def _arguments(capture, module, work, python, *, compiler_support_root=None):
     entry = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
     if len(entry) != 1:
         raise ValueError("model bundle requires exactly one @forward entry")
@@ -67,7 +69,8 @@ def _arguments(capture, module, work, python):
                                   str(capture.resolve()), str(work.resolve())], capture_output=True,
                                  text=True, timeout=30,
                                  env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
-                                          TMPDIR=str(work.resolve())))
+                                          TMPDIR=str(work.resolve()),
+                                          **({"T2M_MERLIN_ROOT": str(compiler_support_root)} if compiler_support_root is not None else {})))
     except subprocess.TimeoutExpired as exc:
         raise ValueError("model argument materialization exceeded 30 seconds") from exc
     if process.returncode:
@@ -77,7 +80,7 @@ def _arguments(capture, module, work, python):
     return values, json.loads((work / "bindings.json").read_text())
 
 
-def _references(capture, parent, result_types):
+def _references(capture, parent, result_types, *, metadata=None):
     count = len(result_types)
     schemas = []
     for type_ in result_types:
@@ -85,7 +88,7 @@ def _references(capture, parent, result_types):
                 or str(type_.element_type) not in ITEM_BYTES):
             raise ValueError("native model result requires a qualified static tensor dtype")
         dtype = str(type_.element_type)
-        numpy_dtype = np.dtype("bool" if dtype == "i1" else ("float" if dtype.startswith("f") else "int") + dtype[1:])
+        numpy_dtype = np.dtype(DTYPES[dtype])
         schemas.append((type_.get_shape(), numpy_dtype))
     if sum(prod(shape) * dtype.itemsize for shape, dtype in schemas) > 64 * 1024 * 1024:
         raise ValueError("captured model results exceed the 64MiB qualification budget")
@@ -99,7 +102,7 @@ def _references(capture, parent, result_types):
     else:
         if count < 1 or "goldens.npz" not in parent["artifacts"] or declared != count:
             raise ValueError("multi-result models require all independently captured parent result references")
-        pointer = json.loads((capture / "meta.json").read_text()).get("result_references", {})
+        pointer = json.loads((Path(metadata) if metadata is not None else capture / "meta.json").read_text()).get("result_references", {})
         keys = [f"out{i}" for i in range(count)]
         if (pointer.get("schema") != "m2m.flat-tensor-result-references.v1" or pointer.get("path") != "goldens.npz"
                 or pointer.get("keys") != keys or pointer.get("legacy_first_result") != "golden.npy"):
@@ -113,19 +116,33 @@ def _references(capture, parent, result_types):
         if pointer.get("storage_dtypes") != [str(v.dtype) for v in values]:
             raise ValueError("model result-reference storage differs from its captured declaration")
         members["goldens.npz"] = _record(capture / "goldens.npz")
-    for value, (shape, dtype) in zip(values, schemas, strict=True):
-        if value.shape != shape or value.dtype != dtype:
-            raise ValueError("captured golden differs from the complete model result ABI")
+    with TensorWords(capture, metadata=metadata) as words:
+        for i, (value, (shape, dtype), type_) in enumerate(zip(values, schemas, result_types, strict=True)):
+            logical = str(type_.element_type)
+            archive, key = ("golden.npy", None) if count == 1 else ("goldens.npz", f"out{i}")
+            values[i] = words.get(archive, key, value, logical, shape)
+            if values[i].shape != shape or values[i].dtype != dtype:
+                raise ValueError("captured golden differs from the complete model result ABI")
+            if logical == "bf16":
+                if words.witness(archive, key)["artifact"] == WORD_ARCHIVE:
+                    if WORD_ARCHIVE not in parent["artifacts"]:
+                        raise ValueError("BF16 result words lack their original parent receipt member")
+                    members[WORD_ARCHIVE] = _record(capture / WORD_ARCHIVE)
+                if i == 0 and count > 1:
+                    repeated = words.get("golden.npy", None, first, logical, shape)
+                    if not np.array_equal(values[i], repeated):
+                        raise ValueError("BF16 tuple words differ from the exact first golden")
     return values, members
 
 
-def _compare_results(actual, expected, rtol, atol):
+def _compare_results(actual, expected, rtol, atol, result_types):
     if len(actual) != len(expected):
         raise ValueError("complete model result count differs from captured references")
-    for value, golden in zip(actual, expected, strict=True):
+    for value, golden, type_ in zip(actual, expected, result_types, strict=True):
         if value.shape != golden.shape or value.dtype != golden.dtype:
             raise ValueError("captured golden differs from the complete model result ABI")
-        np.testing.assert_allclose(value, golden, rtol=rtol, atol=atol, equal_nan=True)
+        dtype = str(type_.element_type)
+        np.testing.assert_allclose(comparison_values(value, dtype), comparison_values(golden, dtype), rtol=rtol, atol=atol, equal_nan=True)
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
@@ -148,11 +165,11 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     trace["mlir_sha256"] = hashlib.sha256(mlir.encode()).hexdigest()
     trace["weights_retarget"] = "relative canonical filename; payload bytes unchanged"
     work.mkdir(parents=True, exist_ok=False)
-    inputs, sources = _arguments(capture, bound.module, work / "arguments", python)
+    inputs, sources = _arguments(capture, bound.module, work / "arguments", python, compiler_support_root=merlin_root)
     entry = next(op for op in bound.module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
     goldens, reference_members = _references(capture, parent, entry.function_type.outputs)
     actual, execution = execute_native(mlir, inputs, work / "native", python=python, compiler_support_root=merlin_root)
-    _compare_results(actual, goldens, rtol, atol)
+    _compare_results(actual, goldens, rtol, atol, entry.function_type.outputs)
     if _parent(capture) != parent or _record(capture / "capture_receipt.json") != parent_receipt_record:
         raise ValueError("parent capture changed during qualification")
     execution.update({"reference_comparison": "passed", "reference": "unchanged-parent-PyTorch-golden",
@@ -195,7 +212,9 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
-                          *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else [])],
+                          *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),
+                          *(["BF16 arguments/results use exact tensor_words.npz witnesses or checked unique legacy binary32 embeddings without NaNs, preserving parent archives; BF16 weights use Merlin's pinned byte-preserving safetensors reader; evaluator words are excluded from compiler staging"]
+                            if any(str(type_.element_type) == "bf16" for type_ in (*entry.function_type.inputs, *entry.function_type.outputs)) else [])],
           "target_execution": "not-performed"})
     metadata = {"frontend": "model2MLIR+triton2MLIR", "entry": "forward",
                 "native_model_reference_comparison": "passed", "merlin_target_execution": "not-performed",
@@ -214,7 +233,7 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                 actual, host_report = check_merlin_host(out / "consumer", work / "arguments/arguments.npz",
                     merlin_root=merlin_root, python=merlin_python or python, compiler_python=python,
                     clang=merlin_clang or os.environ.get("T2M_MERLIN_CLANG"))
-                _compare_results(actual, goldens, rtol, atol)
+                _compare_results(actual, goldens, rtol, atol, entry.function_type.outputs)
                 host_report.update(schema="t2m.merlin-host-qualification.v1", host_execution="passed", reference_comparison="passed",
                                    reference="unchanged-parent-PyTorch-golden", reference_sha256=_record(out / "golden.npy")["sha256"],
                                    result_count=len(goldens), result_reference_members=reference_members,
@@ -275,6 +294,14 @@ def verify_model_bundle(out):
             if references["out0"].shape != first.shape or references["out0"].dtype != first.dtype or references["out0"].tobytes() != first.tobytes():
                 raise ValueError("model qualification tuple references differ from its legacy first golden")
         reference_members["goldens.npz"] = _record(out / "goldens.npz")
+    if WORD_ARCHIVE in parent["artifacts"] and receipt["parent_artifact_bindings"].get(WORD_ARCHIVE) != WORD_ARCHIVE:
+        raise ValueError("BF16 model lacks unchanged parent word witnesses")
+    from .shared_tensor import parse_shared
+    module = parse_shared((out / "model.mlir").read_text())
+    entries = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
+    if len(entries) != 1 or len(entries[0].function_type.outputs) != result_count:
+        raise ValueError("result witnesses differ from the typed model result count")
+    _, reference_members = _references(out, parent, entries[0].function_type.outputs, metadata=out / "parent/meta.json")
     if (("result_count" in execution or len(reference_members) > 1)
             and execution.get("result_reference_members") != reference_members):
         raise ValueError("model native qualification does not bind every result-reference member")

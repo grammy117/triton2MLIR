@@ -46,6 +46,7 @@ without applying floating arithmetic to the preserved state.
 No receipt or tensor ABI schema changes are needed. `f16` was already a declared
 tensor element type; this adds execution evidence and the missing runner path.
 BF16 now has a separate [raw-word storage/cast profile](bfloat_precision.md).
-Complete BF16 model archives, fp8 storage, alternative rounding profiles, by-value
+BF16 models additionally qualify [exact archives and weights](bfloat_models.md).
+FP8 storage, alternative rounding profiles, by-value
 half scalars and universal numeric equivalence remain open. A dtype appearing
 in this profile does not certify every operation or attribute combination.

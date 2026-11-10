@@ -511,8 +511,23 @@ with original nonzero accumulators. The combined low-precision/floating-atomic
 regression passes 97 cases; native seed and transport gates remain checked.
 The visible `out/bfloat-matmul` package retains `linalg.matmul`, and its separate
 Merlin qualification records host execution. See [BF16](bfloat_precision.md).
-Next numeric/package work must bind exact BF16 source input/result words and
-safetensors weights into real model2MLIR captures while preserving parent
-archives and receipts. Legacy widened archives cannot prove signaling-NaN bits.
-Direct BF16 arithmetic policies, FP8/scaled-dot, external effects, descriptors,
-alias/runtime closure and accelerator materialization remain completion gates.
+Exact BF16 source inputs/results and safetensors weights now also bind into
+real model2MLIR captures while preserving parent archives and receipts. Eight
+model cases cover all three memory profiles and unique non-NaN legacy embeddings;
+15 protocol cases plus a rehashed NaN corruption refusal give 24 focused cases.
+The 62 existing model/atomic/half regressions, 30 model2MLIR capture checks and
+50 Merlin staging/constant-reader checks pass. The visible observation/matmul
+models pass 81/80 artifact checks including actual Merlin host execution.
+Legacy widened NaNs still require original words. General lifted-constant
+compiler admission, dynamic/alias model contracts, direct BF16 arithmetic
+policies, FP8/scaled-dot, external effects, descriptors and accelerator
+materialization remain completion gates; no numeric or ownership check is waived.
+
+The next package gate is general lifted-constant compiler admission. Evaluator
+argument transport already reads exact BF16 extra members, but Merlin still
+rejects a parent receipt with lifted constants. Their immutable source bytes
+must reach the compiler through a separately bound constant/weight member,
+with exact source argument/type/shape correspondence and unchanged public ABI.
+Reading evaluator extra/golden archives during compilation is not an acceptable
+shortcut. Qualify real literal-constant model calls, stale/mistyped bindings and
+complete native/Merlin results before declaring this gate closed.

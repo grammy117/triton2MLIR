@@ -23,9 +23,10 @@ computed NaN payload/sign are not generally specified.
 
 This encoding differs from model2MLIR's legacy BF16 NumPy archives, which widen
 values to F32. Those archives cannot establish original signaling-NaN payloads.
-Real BF16 model-call binding still needs receipt-bound exact input/result words
-and BF16 safetensors weight materialization. No existing capture is silently
-reinterpreted or relabeled as a qualified BF16 model.
+[Real BF16 model-call binding](bfloat_models.md) now uses an additive exact-word
+archive and Merlin's pinned BF16 safetensors reader while preserving every
+parent data file. Legacy non-NaN values may instead use a checked unique F32
+embedding. No NaN payload is inferred from a widened value archive.
 
 ## Reused arithmetic and native transport
 
@@ -77,7 +78,7 @@ Scalar indirect BF16 memory uses the existing one-element normalization in the
 guarded source-word profile. Scalar dynamic accesses in the other two profiles
 retain their existing ranked-tensor refusal. By-value BF16 scalars, direct BF16
 arithmetic policies beyond the measured F32 computation/cast route, other
-rounding modes, BF16 atomics, FP8/scaled-dot, complete model archives and
+rounding modes, BF16 atomics, FP8/scaled-dot, general lifted/dynamic model ABIs and
 accelerator materialization remain completion work.
 
 The visible package keeps a real source contraction and original accumulator:

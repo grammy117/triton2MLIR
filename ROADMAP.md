@@ -8,8 +8,10 @@ The active [completion plan](docs/completion_plan.md) orders the remaining front
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 [BF16 storage and casts](docs/bfloat_precision.md) now reach the actual Merlin
 interface in all three memory profiles, retaining typed contractions, original
-F32 accumulators and exact uncomputed words. Raw uint16 archives, native transport
-legalization and remaining full-model archive requirements are explicit.
+F32 accumulators and exact uncomputed words. [BF16 model captures](docs/bfloat_models.md)
+now additionally bind original source words, weights and all tuple results,
+with legacy archive recovery limited to proved unique non-NaN embeddings.
+Archive differences, native transport and remaining model/target gates are explicit.
 Recent additions retain finite selected-buffer pointer state, cat/split/tile
 gather, and [mapped scalar regions](docs/elementwise_map.md) through actual Merlin
 execution. The selected-memory model demo binds two real model2MLIR kernel calls

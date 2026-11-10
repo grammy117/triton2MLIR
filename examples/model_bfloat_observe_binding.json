@@ -1,0 +1,19 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [{
+    "kernel": "t2m_demo::bfloat_observe",
+    "ttir": "../out/bfloat-observe/source.ttir",
+    "abi": {
+      "schema": "t2m.shared-tensor-abi.v2",
+      "entry": "bfloat_observe",
+      "buffers": [
+        {"name": "x", "shape": [17], "effect": "read", "dtype": "bf16"},
+        {"name": "weight", "shape": [17], "effect": "read", "dtype": "bf16"},
+        {"name": "out", "shape": [17], "effect": "write", "dtype": "bf16"},
+        {"name": "words", "shape": [17], "effect": "write", "dtype": "i16"},
+        {"name": "value", "shape": [17], "effect": "write", "dtype": "f32"}
+      ],
+      "grid": [3]
+    }
+  }]
+}
