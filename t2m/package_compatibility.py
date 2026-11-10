@@ -6,6 +6,9 @@ from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, TENSOR_PROFILE, W
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(buffer.get("dtype") in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
+           for buffer in trace.get("spec", {}).get("buffers", [])):
+        differences.append("FP8 tensors retain their exact logical MLIR format; NumPy inputs/references carry raw uint8 words, decoded only for numeric comparisons through the optional ml-dtypes codec; one-byte storage supplies no numeric cast/overflow policy or by-value FP8 calling convention; exact byte claims require explicit word comparisons")
     if profile == BUFFER_PROFILE:
         differences.append("explicit mixed tensor/memref payload with archived semantic witness and memory continuation; the public tensor/scalar ABI is retained")
     if profile in GUARDED_PROFILES:

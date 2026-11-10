@@ -59,6 +59,8 @@ its diagnostic stream from one native/Merlin call, retaining runtime state
 recurrence and exact i64 words. See [the explicit mixed reference profile](docs/mixed_effects.md).
 `shared-demo --kernel precise-math` also retains both clamp NaN modes and
 precise division/sqrt, with [independent IEEE references and BF16 consumer support](docs/scalar_math.md).
+`shared-demo --kernel fp8-transport` preserves all four FP8 formats through
+[typed byte storage, runtime control and exact word references](docs/float_casts.md).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

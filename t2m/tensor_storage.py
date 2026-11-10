@@ -3,12 +3,16 @@
 BF16 tensors retain bf16 in MLIR. NumPy carries their raw two-byte words as
 uint16, matching Merlin's host descriptor storage. Decode only for numerical
 comparison; never reinterpret those words as integer source arithmetic.
+FP8 tensors similarly retain their format and use raw uint8 archive words.
 """
 
 import numpy as np
 
 DTYPES = {"f16": np.float16, "bf16": np.uint16, "f32": np.float32, "f64": np.float64,
           "i8": np.int8, "i16": np.int16, "i32": np.int32, "i64": np.int64, "i1": np.bool_}
+FP8_NUMPY_NAMES = {"f8E4M3FN":"float8_e4m3fn", "f8E4M3FNUZ":"float8_e4m3fnuz",
+                   "f8E5M2":"float8_e5m2", "f8E5M2FNUZ":"float8_e5m2fnuz"}
+DTYPES.update({name: np.uint8 for name in FP8_NUMPY_NAMES})
 
 # Standard binary interchange formats, independent of any execution target.
 FLOAT_FORMATS = {"f16":(5,10),"bf16":(8,7),"f32":(8,23),"f64":(11,52)}
@@ -16,6 +20,11 @@ FLOAT_FORMATS = {"f16":(5,10),"bf16":(8,7),"f32":(8,23),"f64":(11,52)}
 
 def comparison_values(array, dtype):
     array = np.asarray(array)
+    if dtype in FP8_NUMPY_NAMES:
+        if array.dtype != np.uint8:
+            raise ValueError("FP8 archive storage requires raw uint8 words")
+        import ml_dtypes
+        return array.view(getattr(ml_dtypes, FP8_NUMPY_NAMES[dtype])).astype(np.float32)
     if dtype != "bf16":
         return array
     if array.dtype != np.uint16:

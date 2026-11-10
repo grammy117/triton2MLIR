@@ -644,3 +644,14 @@ raw NaN/zero encodings retain their source bytes. Type-only parsing requires
 no codec. This is reader evidence, not additional successful kernel/numeric
 coverage. Continue with the explicit FP8 storage ABI, numeric rounding and
 overflow, then contractions and targets in [the cast plan](float_casts.md).
+
+The next vertical slice now executes FP8 transport for all four formats through
+the public tensor interface and reused Merlin libraries. Original FP8 types,
+masks, runtime loops and every encoding remain intact in tensor, buffer and
+guarded-buffer profiles. Exact word receipts and separate byte checks retain
+NaNs/zeros; numeric comparisons decode the declared format. Standard native
+byte lowering suffices. Merlin's value-type classification and C storage
+accounting recognize FP8 without relaxing alias, release or lifetime rules.
+Numeric casts still need explicit executable lowering: direct extension probes
+leave unresolved conversion casts. Continue numeric closure, not a transport-only
+definition of success.

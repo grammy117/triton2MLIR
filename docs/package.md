@@ -41,6 +41,13 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+The four pinned FP8 formats retain their distinct MLIR float types and use
+raw `uint8` archive carriers. This explicit model2MLIR archive difference is
+also written into compatibility metadata for ordinary and mixed-reference
+packages. Numeric comparisons decode the declared format; exact byte claims
+require word comparison. No by-value FP8 ABI or numeric cast/overflow policy
+is inferred from storage. See [the transport contract](float_casts.md).
+
 The [upstream-based frontend](shared_tensor.md) uses the same core filenames with an explicitly
 versioned ABI and receipt. `shared-demo` writes complete examples; `shared-tensor` accepts saved
 TTIR plus `--abi`, optionally `--inputs` (`in0`, `in1`, ...) and `--reference` (`out0`, `out1`, ...)

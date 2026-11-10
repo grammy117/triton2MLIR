@@ -41,9 +41,11 @@ from .standard_ops import ForallOp, InParallelOp, ParallelInsertSliceOp
 from .tail_masks import TailExtent, describe, maximum, recover_extent
 from .upstream import inspect_optimizer, lower_with_shared
 from .views import axis_permutation, inverse_permutation
+from .standard_floats import _FP8_BY_NAME
 
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
+DTYPES.update(_FP8_BY_NAME)
 
 
 class SharedParser(Parser):

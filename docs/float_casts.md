@@ -33,9 +33,55 @@ constraints are extended without admitting integers or widening restricted
 float subsets. Both frontend/Merlin import orders share canonical types.
 Native MLIR parse/print also retains the complete dense byte inventory.
 
-This removes a reader prerequisite. It does not yet add FP8 buffer arguments
-or grant successful numeric/operation coverage; those gates remain open.
-No package ABI revision or existing floating comparison policy changes here.
+The tensor ABI now additionally accepts each FP8 format with raw `uint8`
+NumPy archive carriers. Portable MLIR retains the exact float element type;
+numeric comparisons decode it only under that declared type. Incorrect
+numeric/word archive dtypes refuse. No by-value FP8 calling convention is
+implied. Existing package schemas and comparison policies remain unchanged;
+compatibility metadata explicitly names the raw byte archive difference.
+
+`tests/test_fp8_transport.py` qualifies real-source masked loads/stores,
+runtime value selection and zero/nonzero source loops for all four formats.
+Tensor, buffer and guarded-buffer profiles retain source types and control;
+the guarded profile also qualifies scalar memory events. Every encoding
+survives the native JIT and a reused Merlin library over empty, singleton,
+ragged and full domains. Numeric equality alone does not prove NaN or zero
+bits: the tests additionally compare the complete original byte arrays.
+
+The existing native toolchain lowers ordinary FP8 transport to byte storage.
+No custom transport pass, changed public tensor signature, or skipped
+ownership/lifetime gate is needed. Merlin's loop destination and generation
+checks now recognize the four FP8 value types as non-handle elements, while
+unknown calls and invalid/double releases still refuse. Its C-runtime input
+arrays and footprint accounting use one byte per element; compiled C storage
+checks retain all 256 words. Generated C storage is a separate check from
+target compilation/execution and numeric output interpretation.
+
+```bash
+python -m t2m shared-demo --kernel fp8-transport \
+  --out out/fp8-transport --python /path/to/native-python
+python -m t2m qualify-merlin out/fp8-transport \
+  --out out/fp8-transport-merlin --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --python /path/to/native-python \
+  --merlin-clang /path/to/compatible-clang
+```
+
+The default demo uses E4M3FN. `t2m.fp8_demo.demo(dtype=...)` also accepts the
+other three formats. The saved v2 reference selects exact word comparison,
+and compiler staging excludes its reference bytes and digests. The ordinary
+native and Merlin observers each bind one actual invocation to that result.
+
+`capture_ttir(..., source_target=(backend, arch, warp_size))` can select an
+official AST frontend descriptor. The demo uses HIP/gfx942/64 because its
+official frontend admits all four types; the historical CUDA/80/32 default
+remains. This is AST-to-TTIR capture only, without GPU compilation, launch or
+an accelerator execution claim. Typed zero bitcasts supply inactive values
+without requesting an unsupported direct integer-to-FP8 numeric cast.
+
+Numeric conversion remains distinct: the existing LLVM converter leaves
+`arith.extf` from these FP8 formats unresolved in direct probes. RTZ,
+equal-width casts, FP8 narrowing/saturation, arithmetic, scaled dot and
+target materialization remain required work. Transport is not numeric closure.
 
 ## Upstream boundary
 

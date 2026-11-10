@@ -289,12 +289,15 @@ def capture(kernel, spec):
     return _wrap(module, context, spec, "triton-source")
 
 
-def capture_ttir(kernel, signature, constexprs, *, debug=None):
+def capture_ttir(kernel, signature, constexprs, *, debug=None, source_target=None):
     """Capture general pre-layout TTIR; apply semantic ABI checks downstream.
 
     Unlike the reference frontend's `_wrap`, this preserves regions, arbitrary
     ranks and source types. ``debug`` selects Triton's source diagnostic option;
     None retains the backend default. No backend compilation or launch is run.
+    ``source_target`` optionally selects the nominal (backend, arch, warp_size)
+    AST frontend descriptor. This permits source dialect/type choices supported
+    by another official frontend; it supplies no executable target qualification.
     """
     if debug is not None and type(debug) is not bool:
         raise ValueError("capture debug must be a Boolean source option")
@@ -303,7 +306,14 @@ def capture_ttir(kernel, signature, constexprs, *, debug=None):
     from triton.compiler.compiler import ASTSource, make_backend
     if set(signature) != set(kernel.arg_names):
         raise ConversionError("capture signature must describe every source parameter")
-    target = GPUTarget("cuda", 80, 32)
+    if source_target is None:
+        source_target = ("cuda", 80, 32)
+    if (not isinstance(source_target, tuple) or len(source_target) != 3
+            or not isinstance(source_target[0], str) or not source_target[0]
+            or type(source_target[1]) not in (str, int) or type(source_target[2]) is not int
+            or source_target[2] <= 0):
+        raise ValueError("source target requires a (backend, arch, positive warp_size) descriptor")
+    target = GPUTarget(*source_target)
     backend = make_backend(target)
     backend.load_dialects(context)
     options = backend.parse_options({} if debug is None else {"debug": debug})

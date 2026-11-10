@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Four-format FP8 transport](float_casts.md) now executes through the actual
+Merlin compiler interface in tensor, buffer and guarded-buffer profiles.
+Twenty transport/comparison cases cover all 256 words per format, scalar/tiled
+memory, masked tails and empty/ragged runtime domains through reused libraries.
+Three saved-demo profile tests additionally bind exact word references, with
+evaluator archives excluded from compilation. The reader/reference regressions
+pass 65 cases; both Merlin xDSL readers pass 25 cases, and 138 destination,
+lifetime and C storage cases pass. These extend type/composition evidence;
+FP8 numeric casts, scaled contractions and staged targets remain open.
+The saved `out/fp8-transport` package and its Merlin qualification verify
+26 and 45 artifacts respectively. A further 63 reader/reference/f32/BF16
+regressions pass after the transport changes.
+
 [Clamp and precise division/sqrt](scalar_math.md) now pass 95 focused
 numeric/reference/model/BF16 regression cases. Typed TTIR covers
 f16/BF16/f32/f64 in all memory profiles, with empty/single/ragged library reuse,
