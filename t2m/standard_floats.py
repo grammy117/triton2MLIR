@@ -112,6 +112,26 @@ def register_fp8_types():
     from xdsl.parser.attribute_parser import AttrParser
     from xdsl.utils.mlir_lexer import MLIRTokenKind
 
+    dense = builtin.DenseIntOrFPElementsAttr
+    if not getattr(dense, "_portable_exact_splat_hook", False):
+        previous_splat = dense.is_splat
+
+        def exact_splat(self):
+            raw = self.data.data
+            size = self.get_element_type().compile_time_size
+            # Numeric equality alone equates +0 and -0. Only retain a splat
+            # if every complete element has identical bytes. Preserve the
+            # existing NaN classification instead of introducing new splats.
+            return (
+                bool(raw)
+                and len(raw) % size == 0
+                and raw.count(raw[:size]) == len(raw) // size
+                and previous_splat(self)
+            )
+
+        dense.is_splat = exact_splat
+        dense._portable_exact_splat_hook = True
+
     # Cooperating readers use one canonical class per builtin spelling.
     registry = getattr(AttrParser, "_portable_fp8_types", None)
     if registry is None:
