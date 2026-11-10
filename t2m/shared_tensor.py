@@ -1404,6 +1404,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []
+    # The public function is rebuilt in standard-memory profiles as well as
+    # tensor profiles. Keep the caller's description at that common boundary.
+    next(iter(result.ops)).attributes["prov.intent"] = StringAttr(abi.intent)
     if print_reports:
         next(iter(result.ops)).attributes["prov.source_prints"] = StringAttr(json.dumps(print_reports,sort_keys=True))
     if source_assertions:

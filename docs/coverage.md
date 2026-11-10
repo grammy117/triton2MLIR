@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Runtime non-dense allocations](strided_memory.md) now have three actual
+f32/f16/BF16 GEMM packages through the guarded source-word interface. Thirty
+replayed layouts/domains retain padding, reversed/column-major/broadcast reads,
+the original tiled K recurrence and source C. Six active-bounds cases remain
+refused invocations with no returned outputs. The three typed integration
+cases and 14 source/emission regressions pass. The visible BF16 allocation
+demo and qualification verify 33/52 artifacts. Its explicit 37-package report
+still observes 31/50 definitions, with 27 in host-qualified captures; this is
+broader measured memory composition, not a new universal opcode claim.
+Caller intent now survives rebuilt standard-memory functions. Strided writable
+state, cross-allocation aliases, broader models and targets remain open.
+
 [Pure external math](external_math.md) now qualifies 52 f32/f64 declarations
 through six actual Merlin libraries, retaining all 26 results, source runtime
 recurrences, branches and changing/empty/ragged domains in each memory profile.

@@ -49,6 +49,14 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Non-dense source-allocation packages keep owning flat tensors, including
+padding, with typed runtime origins, signed element strides and capacities.
+The guarded source-word profile executes those addresses without relabeling
+dense logical inputs as physical storage. Dense C/results retain their M×N
+shape; ABI v5 and receipt schemas stay unchanged. Caller descriptions survive
+the rebuilt function as `prov.intent` and still grant no semantics. See
+[strided memory](strided_memory.md) for exact scope and remaining view/alias work.
+
 Pure default-library math uses the explicit
 `logical-libdevice-standard-math-v1` profile, preserving checked symbol/library,
 prototype, purity and source IDs beside standard math operations. Compatibility

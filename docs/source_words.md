@@ -12,6 +12,12 @@ functional tensor/scalar ABI and standard MLIR vocabulary stay the same as
 reader/writer ownership and lane-conflict checks. Physical pointer observations
 and unsupported effects remain located refusals.
 
+[Strided source allocations](strided_memory.md) additionally qualify padded,
+signed/reversed, column-major and broadcast readonly addressing with runtime
+capacities/origins. Owning input spans retain their padding bytes; the tiled
+contraction and original K reuse remain inside the standard-memory payload.
+This does not supply a pure logical-view witness or cross-allocation alias proof.
+
 ```bash
 python -m t2m shared-demo --kernel indirect-store \
   --memory-profile guarded-buffer --address-policy source-words \

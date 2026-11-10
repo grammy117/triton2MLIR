@@ -91,6 +91,20 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+The existing guarded source-word path now has real runtime non-dense allocation
+qualification for f32/f16/BF16 tiled GEMM: padded, column-major, signed/reversed
+and repeated readonly addresses retain original masks, source K reuse and C.
+Three Merlin libraries replay changing/empty/ragged domains and reject active
+out-of-bounds observations. Owning source-allocation tensors and runtime
+origin/stride/capacity parameters use ABI v5; no dense logical repacking or new
+layout schema is implied. Common emission preserves caller intent on rebuilt
+standard-memory functions. See [the exact boundary](strided_memory.md).
+Continue B/C with strided writable output state and cross-allocation aliases,
+then learned model compositions, broader numeric/effect cases and applicable
+target materialization. This corrects an overly broad non-dense-stride gap:
+the pure dense witness remains narrower, while source-allocation execution
+already supplies a more general checked path.
+
 Pure default-library external math now reaches standard MLIR and Merlin for
 52 declarations: 26 function families in f32/f64. Actual shared conversions
 are reused with only the missing double tanh/atanh table entries completed.

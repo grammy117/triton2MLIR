@@ -89,9 +89,12 @@ independent exact-partition coverage for fresh results. Mixed unmasked rows and
 clipped column tiles retain their dense coordinates via exact uniform-origin
 recovery. See [the launch-domain proof and negative cases](logical_grid_bounds.md).
 
-Non-dense multidimensional runtime strides, general indexed writes, arbitrary shape
-expressions, model-call signature adaptation and aliasing still need their own
-proofs. Compiler staging establishes declared type/binding consistency; actual
+The guarded source-word path additionally qualifies non-dense runtime source
+allocations with explicit origins, signed strides and capacities, retaining
+tiled GEMM and its K loop; see [strided memory](strided_memory.md). The pure
+logical-tensor witness, strided output state, general shape expressions and
+cross-allocation aliasing still need their own proofs. Compiler staging
+establishes declared type/binding consistency; actual
 guard semantics, memory coverage, numeric and execution evidence remain separate.
 
 Source memory-loop bounds also admit signed truncated, floor and ceil division
