@@ -9,6 +9,8 @@ import ctypes
 
 
 def prepare_stdout():
+    import locale
+    locale.setlocale(locale.LC_NUMERIC,"C")
     libc = ctypes.CDLL(None)
     try:
         stdout = ctypes.c_void_p.in_dll(libc, "stdout")

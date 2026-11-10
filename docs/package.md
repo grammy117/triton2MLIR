@@ -24,6 +24,10 @@ signatures, declare the native diagnostic feature, and add a bound
 `native/compiler.log` independently of source outcome streams. Original v1
 effect packets remain readable. Compiler logs and references remain excluded
 from Merlin's compiler projection.
+[Logical source prints](logical_prints.md) add standard `vector.print` to the
+portable body and declare the logical event/formatting/software profile.
+Physical thread replicas are abstracted; public rosters and receipts are
+unchanged. Mixed successful tensor/output-stream reference packets remain open.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 

@@ -33,6 +33,9 @@ The other termination is `return`. Streams are compared as exact UTF-8 bytes.
 Expected assertion diagnostics must correspond to actual source assertions,
 including plain source `cf.assert`. Expected termination is an independent
 caller reference. Successful tensor results still require numeric references.
+When actual source prints precede a failure, the expected stdout must end in
+an actual source assertion diagnostic. The complete independent stream is
+still compared byte-for-byte; source print metadata never supplies its values.
 Initially failing tensor kernels retain their actual declared result ABI;
 they publish no fabricated values.
 
@@ -106,10 +109,16 @@ not universal opcode execution coverage.
 
 ## Remaining effects
 
+[Logical print events](logical_prints.md) now also execute through actual Merlin
+for readonly/void entries and initial tensor failures. `print-words` and
+`print-hex` are public demos. Physical print replicas and the selected numeric
+formatting/runtime are explicit differences. Mixed tensor results plus exact
+diagnostic references remain a required package extension.
+
 Assertions now retain embedded NUL and Unicode through the explicit
 [length-aware literal transport](literal_diagnostics.md). New packets bind
 `native/compiler.log` separately from source streams; original v1 packets
-remain readable. General `tt.print`, arbitrary binary diagnostic formats,
+remain readable. Broader `tt.print` forms, arbitrary binary diagnostic formats,
 external implementations, assembly and synchronization still need
 executable contracts. Accelerator materialization/diagnostic handling remains
 unqualified. The full goal also retains numeric, runtime/alias and maintained

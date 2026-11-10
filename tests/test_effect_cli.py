@@ -12,7 +12,9 @@ OPT,NATIVE = os.environ.get("TRITON_SHARED_OPT"),os.environ.get("T2M_NATIVE_PYTH
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE),reason="existing native toolchain required")
 
 
-@pytest.mark.parametrize("case", ["constant-fail","empty-return","fail-before-store","tensor-check"])
+@pytest.mark.parametrize("case", ["constant-fail","empty-return","fail-before-store","tensor-check",
+    pytest.param("print-words",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required")),
+    pytest.param("print-hex",marks=pytest.mark.skipif(not os.environ.get("T2M_MERLIN_ROOT"),reason="native diagnostic support required"))])
 def test_effect_examples_are_real_checked_packets(tmp_path,capsys,case):
     out = tmp_path / "capture"
     assert main(["effect-demo","--case",case,"--out",str(out),"--optimizer",OPT,"--python",NATIVE]) == 0

@@ -14,7 +14,11 @@ initially failing entries through real Merlin compilation/invocation, preserving
 actual signatures and exact independent outcome references.
 [Length-aware literal diagnostics](docs/literal_diagnostics.md) now retain
 embedded NUL and escaped UTF-8 through native and Merlin execution, including
-BF16/CAS compositions. General print formatting remains a separate effect gate.
+BF16/CAS compositions. Broader print forms and target handling remain effect gates.
+[Logical print events](docs/logical_prints.md) now retain numeric values,
+word/decimal formatting, source order and logical coordinates in standard
+MLIR, with physical thread replicas abstracted explicitly. Mixed returning
+tensor/diagnostic references and the broader effect/target gates remain open.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

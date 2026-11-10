@@ -605,3 +605,18 @@ source stdout. The combined frontend regression passes 75 cases. Merlin's
 gates pass. General print/formatting and broader external/synchronization
 contracts remain open, along with the original numeric/runtime/alias/corpus/
 target work.
+
+The next print portion now has a working
+[logical diagnostic profile](logical_prints.md). Registered `tt.print` stays
+through actual shared tensor/memory conversion, then expands into standard
+scalar/string printing and executable formatting arithmetic at the logical ABI
+boundary. Physical thread replicas/interleaving are abstracted explicitly,
+while values, source control positions, exact words and logical coordinates
+remain executable. All 53 focused cases, seven CLI cases, 68 existing frontend
+regressions and 84 Merlin native/binding/staging checks pass.
+
+The next required package gate is **returning tensor values and diagnostic
+streams together**, with independent numeric and observable-output references,
+compiler exclusion, one-call evaluation and reused-library verification.
+Pointer diagnostics need logical-address semantics; broader numeric, external/
+assembly/synchronization, corpus/runtime/alias and target work stays in scope.

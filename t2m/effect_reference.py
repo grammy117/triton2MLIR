@@ -20,7 +20,10 @@ def validate_reference(reference, trace=None):
     if trace is not None and reference["termination"] == "assertion_failure":
         assertions = [r["source_assertion"] for r in trace.get("normalized_operations",trace.get("source_operations",[])) if "source_assertion" in r]
         messages = {a.get("diagnostic_text","Assertion `"+a["message"]+"` failed\n") for a in assertions}
-        if reference["stdout"] not in messages or reference["stderr"]:
+        prints = any(r.get("opcode") == "tt.print" and "source_print" in r for r in
+            trace.get("normalized_operations",trace.get("source_operations",[])))
+        matches = any(reference["stdout"].endswith(message) for message in messages) if prints else reference["stdout"] in messages
+        if not matches or reference["stderr"]:
             raise ValueError("expected assertion diagnostic must correspond to an actual source assertion")
     return reference
 

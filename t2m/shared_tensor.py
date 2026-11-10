@@ -323,11 +323,14 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
         if name in ("tt.assert", "cf.assert"):
             from .source_assertions import contract as assertion_contract
             records[-1]["source_assertion"] = assertion_contract(op, source_id)
+        elif name == "tt.print":
+            from .source_prints import contract as print_contract
+            records[-1]["source_print"] = print_contract(op,source_id)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
             records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
-        elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise",
-                    "tt.print") or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
+        elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise"
+                    ) or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
                                   source_id=source_id, opcode=name)
         if name == "tt.load":
@@ -393,6 +396,12 @@ def _restore_accumulators(module, records):
 
 
 def _functionalize(module, abi):
+    if any(opcode(op) == "tt.print" for op in module.walk()):
+        # Keep the original registered TTIR intact for the independent memory
+        # continuation; only this tensor witness receives the late expansion.
+        module = module.clone()
+        from .source_prints import expand_prints
+        expand_prints(module,_source_ids,len(abi.grid))
     function = next(op for op in module.ops if opcode(op) == "tt.func")
     outer = Block(arg_types=[b.type for b in abi.inputs])
     writable = list(abi.outputs)
@@ -981,7 +990,7 @@ def _functionalize(module, abi):
             else:
                 for child in op.walk():
                     child_name = opcode(child)
-                    if child.name == "builtin.unregistered" or child_name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "scf", "cf") or child_name in ("cf.br", "cf.cond_br"):
+                    if child.name == "builtin.unregistered" or (child_name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "scf", "cf") and child_name != "vector.print") or child_name in ("cf.br", "cf.cond_br"):
                         raise ConversionError("upstream left an operation requiring a tensor/effect adapter",
                                               source_id=next(iter(_source_ids(child.location)), None), opcode=child_name)
                     if child_name == "builtin.unregistered" or any(v not in mapping and v in buffers for v in child.operands):
@@ -1085,7 +1094,7 @@ def _functionalize(module, abi):
     result.attributes.update({"prov.level": StringAttr("linalg-on-tensors"),
                               "prov.frontend": StringAttr("triton2mlir.shared")})
     for op in result.walk():
-        if op.name == "builtin.unregistered" or opcode(op).split(".")[0] not in ("builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf"):
+        if op.name == "builtin.unregistered" or (opcode(op).split(".")[0] not in ("builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf") and op.name != "vector.print"):
             raise ConversionError("nonstandard operation survived tensor functionalization", opcode=opcode(op))
     result.verify()
     return result
@@ -1223,7 +1232,18 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
+    from .source_prints import contract as print_contract
+    print_reports = []
+    for op in lowered.walk():
+        if opcode(op) == "tt.print":
+            ids = _source_ids(op.location)
+            report = print_contract(op,next(iter(ids),"ttir.print"))
+            report["source_ids"] = ids
+            print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
+    if print_reports:
+        transformations.append({"kind":"source-logical-print-events","prints":print_reports,
+            "scope":"one-event-per-logical-program-operand-element; physical replicas abstracted"})
     source_assertions = [record["source_assertion"] for record in records if "source_assertion" in record]
     if source_assertions:
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
@@ -1308,6 +1328,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []
+    if print_reports:
+        next(iter(result.ops)).attributes["prov.source_prints"] = StringAttr(json.dumps(print_reports,sort_keys=True))
     if source_assertions:
         next(iter(result.ops)).attributes["prov.source_assertions"] = StringAttr(json.dumps(source_assertions, sort_keys=True))
     source_names = {r["id"]: r["opcode"] for r in records}

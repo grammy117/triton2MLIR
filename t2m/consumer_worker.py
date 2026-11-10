@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, literal_diagnostics=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, literal_diagnostics=False, scalar_diagnostics=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -30,7 +30,10 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, l
             adapted += 1
         passes.append(entry)
     passes = edit_pipeline(passes)
-    if literal_diagnostics:
+    if scalar_diagnostics:
+        from merlin.llvmlower.scalar_diagnostics import edit_pipeline as edit_scalar_diagnostics
+        passes = edit_scalar_diagnostics(passes)
+    elif literal_diagnostics:
         from merlin.llvmlower.length_aware_diagnostics import edit_pipeline as edit_literal_diagnostics
         passes = edit_literal_diagnostics(passes)
     if bfloat:
@@ -79,7 +82,9 @@ def compile_model(staged, work):
     features = COMPILER_FEATURES
     if any("bf16" in str(value.type) for op in module.walk() for value in (*op.operands, *op.results)):
         features = features | {"preserve_bfloat_transport"}
-    if any(op.name == "cf.assert" and "\x00" in op.msg.data for op in module.walk()):
+    if any(op.name == "vector.print" for op in module.walk()):
+        features = features | {"lower_scalar_diagnostics"}
+    elif any(op.name == "cf.assert" and "\x00" in op.msg.data for op in module.walk()):
         features = features | {"lower_length_aware_diagnostics"}
     regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
     if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
@@ -87,7 +92,8 @@ def compile_model(staged, work):
     elif regions:
         features = features | {"lower_integer_compare_exchange"}
     pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features,
-        bfloat="preserve_bfloat_transport" in features, literal_diagnostics="lower_length_aware_diagnostics" in features)
+        bfloat="preserve_bfloat_transport" in features, literal_diagnostics="lower_length_aware_diagnostics" in features,
+        scalar_diagnostics="lower_scalar_diagnostics" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,
                             timeout=30, features=features, retain_llvm_dialect=True)
     ll = work / "model.ll"

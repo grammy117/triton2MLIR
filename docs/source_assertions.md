@@ -52,8 +52,10 @@ assertions and the public tensor/scalar/void ABI remain standard; native
 support selection and the additive bound compiler log are explicit.
 [Observable-outcome packages](effect_abi.md) now separately support void kernels
 and initial expected failures, retaining actual result types and independent
-termination/stream references without dummy results. Other print, external
-function, assembly and synchronization effects retain their existing gates.
+termination/stream references without dummy results.
+[Logical numeric/literal prints](logical_prints.md) now have a separate
+qualified software profile. Broader print, external function, assembly and
+synchronization effects retain their gates.
 
 ## Executed cases and visible demos
 

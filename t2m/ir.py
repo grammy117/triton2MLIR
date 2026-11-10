@@ -11,7 +11,6 @@ from xdsl.dialects.builtin import (AffineMapAttr, ArrayAttr, DYNAMIC_INDEX, Dens
                                    FloatAttr, IndexType, ModuleOp, StringAttr, TensorType, f32, i64)
 from xdsl.ir import Block, Dialect, Region
 from xdsl.ir.affine import AffineMap
-from xdsl.parser import Parser
 from xdsl.printer import Printer
 
 from .analysis import Float, PAYLOAD
@@ -31,11 +30,14 @@ def context():
         ctx.load_dialect(dialect)
     ctx.load_dialect(Dialect("scf", [*scf.Scf.operations, ForallOp, InParallelOp], list(scf.Scf.attributes)))
     ctx.load_dialect(Dialect("tensor", [*tensor.Tensor.operations, ParallelInsertSliceOp], list(tensor.Tensor.attributes)))
+    from .standard_vector import vector_dialect
+    ctx.load_dialect(vector_dialect())
     return ctx
 
 
 def parse(text_):
-    module = Parser(context(), text_).parse_module()
+    from .shared_tensor import SharedParser
+    module = SharedParser(context(), text_).parse_module()
     module.verify()
     return module
 

@@ -138,6 +138,10 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
     # An input attribute cannot authorize a synthetic runtime guard operation.
     for op in original:
         name = opcode(op)
+        if name == "tt.print":
+            from .source_prints import contract
+            contract(op,next(iter(source_ids(op.location)),"ttir.print"))
+            continue
         if name == "tt.bitcast" and (len(op.results) != 1 or op.results[0] not in word_views):
             refuse(op, "guarded memory requires a checked logical atomic pointer view")
         if name not in supported | controls and name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "cf"):

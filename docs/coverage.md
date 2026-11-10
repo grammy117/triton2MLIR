@@ -1,12 +1,26 @@
 # Measured coverage and remaining boundaries
 
+[Logical print events](logical_prints.md) now have 53 focused cases through
+actual native/Merlin execution, plus seven CLI cases. All three memory
+profiles retain signed/unsigned words, floating decimal/hex profiles, logical
+coordinates, masks/fills, source control positions and reused libraries.
+Physical thread replicas/interleaving and the original-word float-hex software
+profile are explicit differences. Another 68 frontend regressions and 84 Merlin
+checks pass. The saved hex demo passes 32/51 package/qualification artifact checks.
+The explicit 19-package observation report at
+`out/logical-print-coverage/coverage.json` retains all 50 pinned definitions:
+25 observed, with 21 present in captures of Merlin-qualified packages. These
+are selected composition observations, not universal opcode/type support.
+Mixed returning tensor/stream references, pointer/FP8 print forms and target
+materialization remain required work.
+
 [Length-aware literal assertions](literal_diagnostics.md) now pass 75 focused
 diagnostic/source/effect regression cases through the actual native/Merlin
 interface; Merlin's corresponding native/serialization/BF16 checks pass 70.
 NUL/UTF-8, rank-two/dynamic conditions, reused libraries, original CF messages,
 BF16 and CAS compositions retain exact outcomes and original public signatures.
 The saved literal-check package/qualification pass 29/49 artifact checks.
-General print formatting, external/synchronization effects and target handling
+Broader print formatting, external/synchronization effects and target handling
 remain open; this adds qualified assertion forms, not universal opcode coverage.
 The explicit 18-package report at `out/literal-diagnostic-coverage/coverage.json`
 retains all 50 definitions, with 24 observed and 20 present in captures of
@@ -27,7 +41,7 @@ zero trips and complete model2MLIR tuple/state captures in all three profiles.
 The focused suite has 24 cases; the diagnostic/guard/consumer regression passes
 41. The subsequent explicit 15-package observation report retains all 50
 definitions, with 24 observed and 20 present in captures of Merlin-qualified
-packages. General print diagnostics remain open alongside other external effects
+packages. Broader print diagnostics remain open alongside other external effects
 and target materialization; effect-only and initial expected-failure packaging
 uses the separate outcome profile above.
 

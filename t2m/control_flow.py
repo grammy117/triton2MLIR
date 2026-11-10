@@ -8,7 +8,7 @@ def value_only_region(operation):
 
     Standard tensor operations compute immutable values. In particular, an
     extract from a previously loaded tensor is not another source buffer read.
-    Assertions retain their executable semantics; this is not an effect-free
+    Assertions and scalar/string printing retain their executable semantics; this is not an effect-free
     classification. Source-memory regions still require the memory analysis.
     """
     def value_type(type_):
@@ -17,7 +17,7 @@ def value_only_region(operation):
         return isinstance(type_, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat))
 
     for op in operation.walk():
-        if op.name.split(".")[0] not in {"arith", "math", "tensor", "linalg", "scf", "cf"}:
+        if op.name.split(".")[0] not in {"arith", "math", "tensor", "linalg", "scf", "cf"} and op.name != "vector.print":
             return False
         if op.name in {"cf.br", "cf.cond_br"}:
             return False

@@ -89,6 +89,14 @@ def main(work):
             raise ValueError("native results exceed the 64MiB budget")
         outputs = [np.zeros(shape, dtype=dtype) for shape, dtype in zip(shapes, dtypes, strict=True)]
         name = ir.StringAttr(function.attributes["sym_name"]).value
+        if name in ("printf","putchar","abort"):
+            # A source entry spelling must not shadow the C diagnostic ABI.
+            # This worker has exactly one entry; use the registered symbol
+            # replacement API to retain all actual internal references.
+            native_name = "__t2m_kernel_entry"
+            ir.SymbolTable.replace_all_symbol_uses(name,native_name,module.operation)
+            function.attributes["sym_name"] = ir.StringAttr.get(native_name)
+            name = native_name
         function.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
         adapters = []
         def operations(op):
@@ -123,24 +131,27 @@ def main(work):
             "builtin.module(convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
+            needs_scalar_diagnostics = pipeline == pipelines[-1] and any(op.name == "vector.print" for op in operations(module.operation))
             needs_literal_diagnostics = pipeline == pipelines[-1] and any(
                 op.name == "cf.assert" and "\x00" in ir.StringAttr(op.attributes["msg"]).value
                 for op in operations(module.operation))
-            if needs_literal_diagnostics:
+            if needs_scalar_diagnostics or needs_literal_diagnostics:
                 root = os.environ.get("T2M_MERLIN_ROOT")
                 if not root:
-                    raise ValueError("length-aware native diagnostics require the explicit T2M_MERLIN_ROOT compiler support path")
+                    raise ValueError("native diagnostic materialization requires the explicit T2M_MERLIN_ROOT compiler support path")
                 sys.path.insert(0, str(Path(root).resolve() / "src"))
-                from merlin.llvmlower import length_aware_diagnostics
+                from merlin.llvmlower import scalar_diagnostics,length_aware_diagnostics
+                selected = scalar_diagnostics if needs_scalar_diagnostics else length_aware_diagnostics
                 scope = {"ir": ir, "print": compiler_diagnostic}
-                exec(length_aware_diagnostics.SUPPORT, scope)
+                exec(selected.SUPPORT, scope)
                 head, _, tail = pipeline.removeprefix("builtin.module(").removesuffix(")").partition("convert-cf-to-llvm")
                 passmanager.PassManager.parse("builtin.module("+head.rstrip(",")+")").run(module.operation)
-                count = scope["_diag_lower"](module)
+                count = scope["_scalar_diag_lower" if needs_scalar_diagnostics else "_diag_lower"](module)
                 passmanager.PassManager.parse("builtin.module(convert-cf-to-llvm"+tail+")").run(module.operation)
                 import hashlib
-                adapters.append({"name":"merlin-length-aware-literal-diagnostics", "assertions":count,
-                    "support_sha256":hashlib.sha256(length_aware_diagnostics.SUPPORT.encode()).hexdigest()})
+                adapters.append({"name":"merlin-scalar-diagnostics" if needs_scalar_diagnostics else "merlin-length-aware-literal-diagnostics",
+                    **({"lowered_operations":count} if needs_scalar_diagnostics else {"assertions":count}),
+                    "support_sha256":hashlib.sha256(selected.SUPPORT.encode()).hexdigest()})
             else:
                 passmanager.PassManager.parse(pipeline).run(module.operation)
             if adapters and pipeline == pipelines[0]:

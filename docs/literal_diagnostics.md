@@ -79,6 +79,8 @@ The explicit 18-package observation report retains the pinned 50-op denominator:
 packages. These remain composition observations, not per-op execution or
 universal type/attribute coverage.
 
-This closes literal UTF-8 assertion transport. General `tt.print` formatting
+This closes literal UTF-8 assertion transport. A separate
+[logical print profile](logical_prints.md) now covers ordinary numeric and
+literal source events. Broader `tt.print` formatting
 and stream ordering, arbitrary binary diagnostics, external/assembly effects,
 synchronization and accelerator materialization still need their own contracts.

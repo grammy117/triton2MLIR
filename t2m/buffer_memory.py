@@ -33,6 +33,10 @@ def parse_memory(source):
     from .arith_compat import normalize_truncation_defaults
     normalize_truncation_defaults(module, _source_ids)
     for op in module.walk():
+        if opcode(op) == "tt.print":
+            from .source_prints import contract
+            contract(op,next(iter(_source_ids(op.location)),"ttir.print"))
+            continue
         if op.name == "builtin.unregistered" or op.name.split(".")[0] not in {
                 "builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf", "memref", "bufferization"}:
             raise ConversionError("memory continuation retains an unresolved operation", opcode=opcode(op))
@@ -54,6 +58,8 @@ def functionalize_memory(module, abi, *, guards=None):
     if (original.sym_name.data != abi.entry or len(original.body.blocks) != 1
             or original.function_type.outputs or len(original.body.block.args) != len(abi.source_bindings) + len(internal) + 6):
         raise ConversionError("memory continuation differs from the declared source/launcher ABI")
+    from .source_prints import expand_prints
+    expand_prints(module,_source_ids,len(abi.grid),logical_pids=original.body.block.args[-3:])
     entry = Block(arg_types=[value.type for value in abi.inputs])
     inputs = {value.name: arg for value, arg in zip(abi.inputs, entry.args, strict=True)}
     for scalar in abi.runtime_scalars:

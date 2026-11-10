@@ -440,7 +440,8 @@ def main(argv=None):
     coverage.add_argument("--limit", type=int, default=1000)
     coverage.add_argument("--budget", type=float, default=120)
     effect = commands.add_parser("effect-demo",help="package real void/initial-failure kernels with observable outcome references")
-    effect.add_argument("--case",choices=("constant-fail","empty-return","scalar-check","tensor-check","fail-before-store","literal-check"),default="constant-fail")
+    effect.add_argument("--case",choices=("constant-fail","empty-return","scalar-check","tensor-check","fail-before-store","literal-check",
+                                        "print-words","print-hex"),default="constant-fail")
     effect.add_argument("--out",type=Path,required=True)
     effect.add_argument("--optimizer",type=Path)
     effect.add_argument("--python",type=Path)

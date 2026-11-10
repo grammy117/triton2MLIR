@@ -45,6 +45,9 @@ diagnostics and original loop/branch placement through Merlin.
 signatures through the same compiler and native library interface.
 `effect-demo --case literal-check` also exercises embedded NUL and Unicode
 messages through the [length-aware diagnostic path](docs/literal_diagnostics.md).
+`effect-demo --case print-words` and `print-hex` now also exercise
+[logical print events](docs/logical_prints.md), retaining values, source order
+and logical coordinates while explicitly abstracting physical print replicas.
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

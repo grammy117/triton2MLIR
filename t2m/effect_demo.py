@@ -18,6 +18,7 @@ def demo(out,*,case="constant-fail",optimizer=None,python=None,memory_profile="t
         raise FileExistsError(out)
     work = out.with_name(out.name+".work")
     work.mkdir(parents=True,exist_ok=False)
+    expected = None
     if case in ("constant-fail","empty-return"):
         fail = case == "constant-fail"
         kernel,signature,constants = constant_check,{"FAIL":"constexpr"},{"FAIL":fail}
@@ -44,13 +45,26 @@ def demo(out,*,case="constant-fail",optimizer=None,python=None,memory_profile="t
         kernel,signature,constants = fail_before_store,{"out":"*i32","B":"constexpr"},{"B":8}
         abi,arrays = TensorABI(kernel.__name__,(TensorBuffer("out",(8,),"write","i32"),)),[]
         fail,message = True,"failure precedes real output"
+    elif case in ("print-words","print-hex"):
+        from .examples.print_kernels import print_integer_words
+        from .examples.print_reference import word_reference
+        kernel = print_integer_words
+        signature = {"x":"*i64","n":"i32","steps":"i32","allow":"i1","B":"constexpr","HEX":"constexpr"}
+        constants = {"B":8,"HEX":case == "print-hex"}
+        abi = TensorABI(kernel.__name__,(TensorBuffer("x",("n",),dtype="i64"),),grid=(GridExtent("n",8),),
+            runtime_scalars=(RuntimeScalar("n","i32",1,bounds=(0,65)),RuntimeScalar("steps","i32",2,bounds=(0,3)),
+                            RuntimeScalar("allow","i1",3)),effect_only=True)
+        values = np.resize(np.asarray([-(2**63),-1,0,2**63-1,127,255,2**32+1,-7],np.int64),13)
+        arrays = [values,np.asarray(13,np.int32),np.asarray(1,np.int32),np.asarray(True)]
+        expected = word_reference(values,13,1,True,hex_=constants["HEX"])
     else:
         raise ValueError("unknown effect demonstration")
     source = work / "kernel.ttir"
     source.write_text(capture_ttir(kernel,signature,constants,debug=True))
     result = convert_shared(source,abi,work / "translation",optimizer=optimizer,memory_profile=memory_profile,address_policy=address_policy)
-    expected = {"schema":"t2m.effect-reference.v1","termination":"assertion_failure" if fail else "return",
-        "stdout":"Assertion `"+message+"` failed\n" if fail else "","stderr":""}
+    if expected is None:
+        expected = {"schema":"t2m.effect-reference.v1","termination":"assertion_failure" if fail else "return",
+            "stdout":"Assertion `"+message+"` failed\n" if fail else "","stderr":""}
     write_effect_bundle(result,out,arrays,expected,work=work / "native",python=python)
     return {"bundle":str(out),"reference_comparison":"passed","termination":expected["termination"],
         "declared_result_count":len(abi.outputs),"result_count":0,"consumer_execution":"not-performed"}
