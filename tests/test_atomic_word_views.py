@@ -146,6 +146,27 @@ def word_evidence():
     return admission, memory, records, buffers
 
 
+@pytest.mark.parametrize("change", [None, "caller-only", "unknown", "width"])
+def test_word_source_binding_retains_inlined_caller_context(change):
+    from t2m.atomic_word_views import bind_source
+    from t2m.diagnostics import ConversionError
+    records = [{"id": "caller", "opcode": "tt.call"},
+               {"id": "atomic", "opcode": "tt.atomic_rmw", "atomic": {"word_bits": 32}}]
+    report = {"kind": "logical-atomic-word-view", "source_ids": ["atomic", "caller"],
+              "storage_dtype": "f32", "value_dtype": "i32", "element_bits": 32,
+              "address_units": "equal-width-elements"}
+    if change == "caller-only": report["source_ids"] = ["caller"]
+    elif change == "unknown": report["source_ids"].append("unknown")
+    elif change == "width": records[1]["atomic"]["word_bits"] = 64
+    if change is None:
+        bind_source(records, [report])
+        assert records[1]["atomic"]["word_view"]["storage_dtype"] == "f32"
+        assert "atomic" not in records[0]
+    else:
+        with pytest.raises(ConversionError, match="typed source RMW"):
+            bind_source(records, [report])
+
+
 @pytest.mark.parametrize("change", [None, "profile", "dtype", "source", "lost-view", "storage", "value", "units", "bits", "kind", "old"])
 def test_word_evidence_rejects_rehashed_inconsistent_contracts(change):
     from t2m.atomic_memory import validate_evidence

@@ -230,3 +230,28 @@ def constant_word_atomic(state, old, B: tl.constexpr, WIDTH: tl.constexpr, OP: t
     else:
         previous = tl.atomic_add(pointer, value)
     tl.store(old + lane, previous.to(old.dtype.element_ty, bitcast=True))
+
+
+@triton.jit
+def region_word_atomic(a, b, out, n, steps, enabled, choice, shift,
+                       B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr,
+                       WHILE: tl.constexpr, SELECT: tl.constexpr):
+    word: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    region_atomic(a.to(tl.pointer_type(word), bitcast=True),
+                  b.to(tl.pointer_type(word), bitcast=True),
+                  out.to(tl.pointer_type(word), bitcast=True),
+                  n, steps, enabled, choice, shift, B=B, SCALAR=SCALAR, WHILE=WHILE, SELECT=SELECT)
+
+
+@triton.jit
+def repeated_region_word_atomic(a, b, out, n, steps, enabled, choice, shift,
+                                B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr,
+                                WHILE: tl.constexpr, SELECT: tl.constexpr):
+    word: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    first = a.to(tl.pointer_type(word), bitcast=True)
+    second = b.to(tl.pointer_type(word), bitcast=True)
+    output = out.to(tl.pointer_type(word), bitcast=True)
+    region_atomic(first, second, output, n, steps, enabled, choice, shift,
+                  B=B, SCALAR=SCALAR, WHILE=WHILE, SELECT=SELECT)
+    region_atomic(first, second, output + n, n, steps, enabled, ~choice, shift,
+                  B=B, SCALAR=SCALAR, WHILE=WHILE, SELECT=SELECT)

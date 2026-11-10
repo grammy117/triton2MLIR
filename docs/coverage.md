@@ -282,7 +282,7 @@ on the guarded source-word path. Native and actual Merlin execution retain
 f16/i16, f32/i32 and f64/i64 bits through masks/fills, selected roots and
 for/while recurrences. Exported MLIR retains original storage tensors and
 register bitcasts, with `prov.logical_word_views` annotations. Differing widths,
-address-space changes and atomic word views still need further contracts and
+address-space changes and atomic CAS word views still need further contracts and
 expansions; see [logical pointer views](pointer_views.md).
 
 ### Atomic logical word views
@@ -296,3 +296,10 @@ retains standard atomic regions and word-view provenance; checked native
 legalization emits one integer atomic per primitive without whole-buffer
 conversion. This does not qualify floating add, word CAS, external participants
 or accelerator execution. See [atomic memory](atomic_memory.md).
+
+Both widths also qualify inside branch/for/while regions with old-value and
+pointer recurrences, scalar/vector events and finite uniform/per-lane buffer
+selection. Repeated inlined helpers retain separate call contexts through the
+actual Merlin interface. Twelve native/Merlin region cases and two additional
+Merlin repeated-helper cases pass with independent raw-integer oracles; these
+are composition tests rather than an arbitrary-kernel coverage claim.

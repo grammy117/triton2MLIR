@@ -384,3 +384,23 @@ across their measured runs. The 131 pointer/view/exchange/CAS/region/schema
 regressions pass; 242 final Merlin compiler/staging/loop cases and the
 code-derived documentation/structure gates pass. None of these finite suites is
 universal TTIR or accelerator coverage.
+
+### Word updates inside source regions
+
+The word profile also composes with branches, for/while pointer recurrences,
+scalar/vector events and uniform/per-lane finite buffer selection. Source
+locations from inlining retain both the original atomic and its caller context.
+Memory accounting prefers complete event contexts, keeping two calls to the
+same helper distinct. Expansion still derives the operation from the actual
+typed RMW; source IDs supply correspondence rather than arithmetic permission.
+Ordinary stores sharing a caller ID are not classified as atomic word events.
+
+Twelve native/Merlin region cases and two additional Merlin repeated-helper
+cases cover both widths, zero trips, empty/tail grids, disabled invalid
+addresses and returned-old recurrences. Independent integer oracles compare
+all output bits. The repeated-call
+case also required Merlin to canonicalize ownership after deallocation
+simplification: invariant false loop flags must be removed before lowering
+them into opaque runtime deallocation checks. The allocation-lifetime gate
+remains enabled. Fifteen producer evidence tests and 147 consumer staging/
+deallocation regressions pass for this extension.

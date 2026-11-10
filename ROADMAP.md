@@ -450,8 +450,10 @@ retains v3 ownership/initialization costs and binds the floating bit contract.
 This is additional qualified coverage, not full arbitrary-kernel completion.
 Atomic updates on same-width logical word views now retain all nine i32/i64
 RMWs on floating storage and Triton min/max through native/Merlin execution,
-including real model2MLIR tuples. Next: control-flow/selection compositions,
-floating-add numeric contracts and the remaining universal intake gaps.
+including real model2MLIR tuples. Branches, for/while recurrences, scalar/vector
+events, lane/uniform buffer selection and repeated inlined helpers now also
+qualify for both word widths. Next: floating-add numeric contracts and the
+remaining universal intake gaps.
 See [atomic memory](docs/atomic_memory.md).
 
 The ordinary-memory foundation for same-width logical pointer views is also

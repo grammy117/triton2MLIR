@@ -136,6 +136,9 @@ def adapt_payload(module, abi, admission, source_ids):
         ids = source_ids(op.location)
         matches = [i for i, access in enumerate(accesses)
                    if access["buffer"] == buffer.name and set(ids) & set(access["source_ids"])]
+        contexts = [i for i in matches if set(ids) == set(accesses[i]["source_ids"])]
+        if contexts:
+            matches = contexts
         generic = op.parent_op()
         while generic is not None and not isinstance(generic, GenericOp):
             generic = generic.parent_op()

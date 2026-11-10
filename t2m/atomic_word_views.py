@@ -34,11 +34,19 @@ def bind_source(records, reports):
         if report.get("kind") != "logical-atomic-word-view":
             continue
         info = {key: report[key] for key in ("storage_dtype", "value_dtype", "element_bits", "address_units")}
+        found = False
         for source in report["source_ids"]:
             record = inventory.get(source)
-            if record is None or record["opcode"] != "tt.atomic_rmw" or record.get("atomic", {}).get("word_bits") != info["element_bits"]:
+            if record is None:
+                raise ConversionError("atomic word view differs from its typed source RMW inventory", source_id=source)
+            if record["opcode"] != "tt.atomic_rmw":
+                continue  # Inlined call-site locations also retain caller IDs.
+            if record.get("atomic", {}).get("word_bits") != info["element_bits"]:
                 raise ConversionError("atomic word view differs from its typed source RMW inventory", source_id=source)
             record["atomic"]["word_view"] = info
+            found = True
+        if not found:
+            raise ConversionError("atomic word view lacks an original typed source RMW", source_id=report["source_ids"][0])
 
 
 def match(op, value):
@@ -85,10 +93,11 @@ def expand(module, admission, source_ids):
         storage, value_type = element(base.type), op.operands[2].type.element_type
         view = view_info(storage, value_type)
         ids = source_ids(op.location)
-        candidates = [a for a in accesses if set(ids) & set(a["source_ids"]) and a["atomic"]["word_view"] == view]
-        if not candidates or any(a["atomic"] != candidates[0]["atomic"] for a in candidates):
+        from .atomic_memory import contract
+        info = {**contract(op, source_ids, typed=True), "word_view": view}
+        candidates = [a for a in accesses if set(ids) & set(a["source_ids"]) and a["atomic"] == info]
+        if not candidates:
             raise ConversionError("atomic word event lacks matching logical storage admission", source_id=next(iter(ids), None))
-        info = candidates[0]["atomic"]
         offset, value = op.operands[1:3]
         mask = op.operands[3] if len(op.operands) == 4 else None
         type_ = op.results[0].type
