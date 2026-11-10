@@ -22,6 +22,11 @@ MLIR, with physical thread replicas abstracted explicitly.
 single observed call, complete per-result references and reusable Merlin
 library. Numeric control retains original tensor widths and recurrence;
 functional inputs remain readonly. Broader effect/target gates remain open.
+[Clamp and precise scalar math](docs/scalar_math.md) now qualify f16/BF16/f32/f64
+typed TTIR and a real public f32 kernel through Merlin, retaining source
+operations and exact finite/signed-zero behavior. The BF16 native feature is
+explicit; the portable payload and storage types stay BF16. A real model2MLIR
+capture preserves learned bounds and all eight results.
 The [package observation registry](docs/package_coverage.md) now joins verified
 package evidence to the complete pinned 50-op inventory, preserving unmeasured
 definitions, exact typed forms and separate native/Merlin statuses.

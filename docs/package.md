@@ -33,6 +33,11 @@ and per-result word/value policies, retaining the outer effect receipt and
 actual tensor ABI. Both references and their individual digests remain outside
 compiler staging. This evaluator layout differs from model2MLIR's ordinary
 golden/extras layout; compatibility metadata records the extension.
+[Scalar math](scalar_math.md) additionally uses the explicit IEEE result policy
+for exact non-NaN words without imposing a NaN payload. Pure numeric cases have
+empty expected streams. Portable BF16 math stays typed BF16; selected native
+materialization records its separate scalar-emulation and word-transport
+features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 

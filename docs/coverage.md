@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Clamp and precise division/sqrt](scalar_math.md) now pass 95 focused
+numeric/reference/model/BF16 regression cases. Typed TTIR covers
+f16/BF16/f32/f64 in all memory profiles, with empty/single/ragged library reuse,
+both clamp NaN modes, exact rounding and signed-zero checks. BF16 recurrence
+retains per-iteration rounding and control; an exhaustive 65,536-word case
+also preserves adjacent uncomputed words exactly. A public f32 Triton kernel
+and a real model2MLIR capture with learned bounds and eight results reach
+the same Merlin interface. Its explicit BF16 native feature passes 23
+native/seam/transport cases; documentation and structure gates pass.
+The saved public and BF16 packages/qualifications each verify 26/45 artifacts;
+the bound model verifies 66. `out/precise-math-coverage/coverage.json` records
+23 selected packages: 28 of 50 definitions observed, with 24 present in
+captures of host-qualified packages. These are composition observations,
+not universal type/attribute support or accelerator coverage.
+
 [Mixed tensor results and diagnostic streams](mixed_effects.md) now reach
 the same Merlin interface with an explicit v2 reference, complete typed result
 archives and per-result word/value policies. The 92 new reference/integration

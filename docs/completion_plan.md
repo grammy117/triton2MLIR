@@ -85,7 +85,8 @@ These consumer gates require work alongside frontend coverage.
 
 Use existing pinned shared/Triton/torch-mlir tools. Keep CPU workers/native
 threads bounded and avoid implicit LLVM/Triton builds. Follow each repository's
-local contribution/identity rules; commits remain local. Update this plan with
+local contribution/identity rules; publish tested milestones on the user-authorized
+branches recorded in the README. Update this plan with
 verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
@@ -624,3 +625,14 @@ prepass selection; native functional inputs receive the upstream readonly
 argument contract. Both checks preserve the original memory/ownership gates.
 Pointer diagnostics need logical-address semantics; broader numeric, external/
 assembly/synchronization, corpus/runtime/alias and target work stays in scope.
+
+The next numeric-closure increment reuses the actual shared clamp/precise-math
+converters and independently qualifies f16/BF16/f32/f64 typed TTIR through
+Merlin. Public f32 builtins also bind into a real model2MLIR capture with learned
+bounds and eight preserved results. Exact-rational references and the explicit
+IEEE policy check rounding, subnormals, infinities, NaN modes and signed zeros.
+The selected BF16 scalar-math native feature retains source BF16 payload and
+storage, uses upstream f32 emulation/rounding casts, and leaves word transport
+and ownership/lifetime checks separate. See [the full contract](scalar_math.md).
+Packed low precision, scaled dot, external implementations, runtime/alias
+models, the maintained corpus and applicable target materialization remain open.

@@ -15,6 +15,12 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    scalar_math = [record for record in trace.get("normalized_operations",trace.get("source_operations",[]))
+        if record.get("opcode") in ("tt.clampf","tt.precise_divf","tt.precise_sqrt")]
+    if scalar_math:
+        differences.append("source clamp/precise-div/sqrt reuse upstream standard min/max, arith.divf and math.sqrt; source NaN mode, tensor types and dataflow remain in the payload and provenance; numeric qualification must distinguish defined values, signed-zero rules and unspecified computed NaN payloads; the normal nearest-even gradual-underflow host environment is explicit, with no alternate FP-environment or accelerator claim")
+        if any("bf16" in type_ for record in scalar_math for type_ in (*record.get("input_types",[]),*record.get("output_types",[]))):
+            differences.append("portable BF16 scalar math retains its source types; the selected host may require Merlin's explicit emulate_bfloat_elementwise feature, upstream scalar arithmetic emulation and BF16 rounding casts, followed by the unchanged word-transport feature; storage and public tensor ABI remain two-byte BF16")
     if any(t.get("kind") == "source-logical-print-events" for t in transformations):
         differences.append("source print events use standard vector.print and SCF value/control flow, once per logical program/operand/element in operand-row-major order; physical thread replicas/interleaving are abstracted; source prefixes are literal data; integer signedness, exact unsigned64 and raw floating/integer hex words remain executable; floating hex is an explicit original-typed-word software profile, without a GPU varargs byte-equivalence claim; the selected software profile uses six fixed decimal places, C numeric locale and Merlin's explicit lower_scalar_diagnostics feature; pointers need a separate logical-address contract and accelerator handling remains unqualified; public tensor/scalar/void ABI is unchanged")
     if any(t.get("kind") == "source-fail-stop-assertions" for t in transformations):
