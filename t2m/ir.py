@@ -25,6 +25,8 @@ def text(module):
 
 
 def context():
+    from .standard_floats import register_fp8_types,register_fp8_float_constraints
+    register_fp8_types();register_fp8_float_constraints()
     ctx = Context()
     for dialect in (builtin.Builtin, arith.Arith, func.Func, Linalg):
         ctx.load_dialect(dialect)

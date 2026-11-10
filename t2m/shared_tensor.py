@@ -68,7 +68,8 @@ class SharedParser(Parser):
                 import math as host_math
                 raw = int(self.span.text, 16).to_bytes(type_.compile_time_size, "little")
                 number = next(type_.iter_unpack(raw))
-                if host_math.isnan(number):
+                from .standard_floats import FP8_TYPE_NAMES
+                if host_math.isnan(number) and type_.name not in FP8_TYPE_NAMES:
                     parser.raise_error("NaN constant payload preservation is not qualified", at_position=self.span)
                 return number
             return super().to_type(parser, type_)

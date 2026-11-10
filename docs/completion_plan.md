@@ -636,3 +636,11 @@ storage, uses upstream f32 emulation/rounding casts, and leaves word transport
 and ownership/lifetime checks separate. See [the full contract](scalar_math.md).
 Packed low precision, scaled dot, external implementations, runtime/alias
 models, the maintained corpus and applicable target materialization remain open.
+
+The FP8 reader prerequisite now preserves all four pinned TTIR FP8 types and
+all 256 constant words in each format through frontend/Merlin serialization
+and the native MLIR reader. Decimal constants use an optional standard codec;
+raw NaN/zero encodings retain their source bytes. Type-only parsing requires
+no codec. This is reader evidence, not additional successful kernel/numeric
+coverage. Continue with the explicit FP8 storage ABI, numeric rounding and
+overflow, then contractions and targets in [the cast plan](float_casts.md).

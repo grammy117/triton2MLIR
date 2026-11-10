@@ -407,6 +407,13 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 
 ## Immediate next work
 
+Numeric closure now has four-format FP8 reader/constant support in both
+triton2MLIR and Merlin, including all 256 encodings per format, both import
+orders and native MLIR byte-preserving reparse. FP8 buffer execution, cast
+rounding/overflow and contractions remain implementation work; see
+[the delivery order and upstream cast gaps](docs/float_casts.md). This reader
+increment does not increase the qualified opcode/kernel totals.
+
 The explicit `guarded-buffer` profile now admits loaded-index stores through the
 full shared memory pipeline without requiring the tensor functionalizer as a
 witness. Executable active bounds, program ownership, per-store lane uniqueness
