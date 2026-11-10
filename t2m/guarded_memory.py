@@ -96,7 +96,7 @@ def normalize_scalars(module, source_ids):
     return reports
 
 
-def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
+def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
@@ -272,7 +272,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
         atomic_contract = None
         if atomic:
             from .atomic_memory import contract
-            atomic_contract = contract(op, source_ids, typed=typed_atomics)
+            atomic_contract = contract(op, source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
             if op.operands[0] in word_views:
                 atomic_contract["word_view"] = word_views[op.operands[0]]
         access = describe(op, write)
@@ -300,6 +300,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False):
             "ownership_protocol": protocol.name,
             "parallelism": "original-logical-grid-and-payload-retained",
             **({"effect_profile": TYPED_EFFECT_PROFILE if typed_atomics else EFFECT_PROFILE} if atomics else {}),
+            **({"f32_atomic_add": f32_atomic_add} if f32_atomic_add is not None else {}),
             **layout}
 
 

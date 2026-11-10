@@ -314,5 +314,18 @@ recurrences, finite buffer selection, collision histories without assumed lane
 order, and a genuine f64 model2MLIR tuple-result model reach the same Merlin
 interface. The portable payload is upstream standard `memref.atomic_rmw addf`,
 with the operation-specific numeric policy recorded in provenance and v4
-source/access/payload declarations. F32 flush-to-zero, f16/bf16 additions and
+source/access/payload declarations. F16/bf16 additions and
 accelerator qualification remain open; see [the numeric contract](atomic_memory.md#ieee-f64-atomic-addition).
+
+### F32 atomic addition policies
+
+The typed profile explicitly selects IEEE or sign-preserving input/result FTZ
+for f32 FADD. Both retain masks, returned-old words, source recurrences and
+finite buffer selection through actual Merlin execution. FTZ's portable atomic
+region contains actual bit arithmetic and NaN quieting; the native feature
+uses an atomic-load/CAS retry loop with checked borrowing and lifetime gates.
+IEEE retains subnormals and explicit NaN quieting in its standard atomic region.
+Missing policy is a located
+refusal rather than an inferred target choice. A real f32 model2MLIR model
+preserves weights and both tuple results. Constant ±0/subnormal/NaN tests retain
+canonicalized effects and exact old words. See [the f32 contract](atomic_memory.md#f32-addition-with-explicit-source-policy).

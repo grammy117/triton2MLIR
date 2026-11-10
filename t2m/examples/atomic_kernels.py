@@ -288,3 +288,11 @@ def region_fadd(a, b, out, n, steps, enabled, choice, shift,
         last = tl.atomic_add(pointer, total, lane < n, sem="release", scope="sys")
         total += last
     tl.store(out + lane, total, lane < n)
+
+
+@triton.jit
+def constant_fadd32(state, old, B: tl.constexpr, WORD: tl.constexpr):
+    lane = tl.arange(0, B)
+    value = tl.full((B,), WORD, tl.uint32).to(tl.float32, bitcast=True)
+    previous = tl.atomic_add(state + lane, value, sem="acq_rel", scope="gpu")
+    tl.store(old + lane, previous)

@@ -144,8 +144,17 @@ Standard `memref.atomic_rmw assign` preserves old and new representations;
 inactive undefined old values refine to typed zero. F64 `addf` binds
 `ieee-f64-rne-add`: round-to-nearest-even with subnormals preserved, exact old
 words and unspecified arithmetic NaN payload/sign. It retains the ordinary
-standard atomic operation, with no native helper or ABI/schema change. F32
-addition and other floating arithmetic need separate numeric policies.
+standard atomic operation, with no native helper or ABI/schema change.
+F32 addition requires explicit `f32_atomic_add="ieee"` or `"ftz"` (CLI:
+`--f32-atomic-add`). Its selected policy is bound in v4 admission and memory
+evidence as well as source/access/payload contracts. Both use standard generic
+atomic regions with addition and explicit result NaN quieting. FTZ also retains
+executable sign-preserving input/result flushing. Native f32 ownership additionally
+requires Merlin's checked atomic-word feature and default 64-bit descriptor/
+index ABI; each complete internal CAS retry helper is restored before lifetime
+checks. Portable MLIR has no native helper or LLVM operations. Core artifacts,
+receipt schemas and tensor/scalar ABI are unchanged. Other floating arithmetic
+needs separate numeric policies.
 Compatibility metadata names these
 differences for standalone and model packages. Word events additionally bind
 storage/value types and unchanged element address units in `word_view`. Their

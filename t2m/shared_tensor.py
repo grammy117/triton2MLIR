@@ -258,7 +258,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False):
+def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None):
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
     entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
@@ -299,7 +299,7 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
         op.location = NameLoc(StringAttr(source_id), op.location)
         if name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
-            records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics)
+            records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise",
                     "tt.print", "tt.assert") or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
@@ -1078,7 +1078,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary"):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1094,6 +1094,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         raise ValueError("effect profile must be explicitly ordinary, atomics or typed-atomics")
     atomics = effect_profile in ("atomics", "typed-atomics")
     typed_atomics = effect_profile == "typed-atomics"
+    if f32_atomic_add not in (None, "ieee", "ftz"):
+        raise ValueError("f32 atomic addition policy must be explicitly ieee or ftz")
+    if f32_atomic_add is not None and not typed_atomics:
+        raise ValueError("f32 atomic addition policy requires the typed-atomics effect profile")
     if atomics and (memory_profile != "guarded-buffer" or not source_words):
         raise ValueError("atomic effects require guarded-buffer memory and source-words addresses")
     if source_words and memory_profile != "guarded-buffer":
@@ -1119,7 +1123,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
-    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics)
+    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1207,7 +1211,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     admission = None
     if memory_profile == "guarded-buffer":
         from .guarded_memory import instrument
-        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics)
+        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
         result = witness = None
     else:
         result = witness = _functionalize(lowered, abi)
@@ -1373,6 +1377,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         trace["memory"].update(effect_profile=actual_effect_profile, atomic_payload=admission["atomic_adaptations"],
             grid="unmapped-logical-forall; shared-atomic-state; sticky-ordinary-memory-ownership",
             ordering="source-program-order; linearizable-RMW-with-standard-acq_rel; ordinary-races-refused")
+        if f32_atomic_add is not None:
+            trace["memory"]["f32_atomic_add"] = f32_atomic_add
         trace["abi_difference"] += "; private-invocation atomic payload; atomic collisions permitted; ordinary races still guarded"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)

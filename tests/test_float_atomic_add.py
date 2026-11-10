@@ -33,19 +33,20 @@ def domains():
         yield [inputs, index, incoming, np.asarray(n, np.int32), np.asarray(37, np.int32)], [updated, old]
 
 
-def check(actual, expected, arrays):
+def check(actual, expected, arrays, width=64):
+    uint = getattr(np, f"uint{width}")
     updated, old = actual
     state, previous = expected
     # Arithmetic NaN payload/sign is unspecified; finite values and zeros are exact.
     nan = np.isnan(state)
     np.testing.assert_array_equal(np.isnan(updated), nan)
-    np.testing.assert_array_equal(updated[~nan].view(np.uint64), state[~nan].view(np.uint64))
+    np.testing.assert_array_equal(updated[~nan].view(uint), state[~nan].view(uint))
     n, index = len(arrays[0]), arrays[1]
     written = np.zeros(state.shape, np.bool_)
     written[index[np.arange(n) % 3 != 1]] = True
-    assert np.all(updated[nan & written].view(np.uint64) & np.uint64(1 << 51))
-    np.testing.assert_array_equal(updated[~written].view(np.uint64), state[~written].view(np.uint64))
-    np.testing.assert_array_equal(old.view(np.uint64), previous.view(np.uint64))
+    assert np.all(updated[nan & written].view(uint) & uint(1 << (51 if width == 64 else 22)))
+    np.testing.assert_array_equal(updated[~written].view(uint), state[~written].view(uint))
+    np.testing.assert_array_equal(old.view(uint), previous.view(uint))
 
 
 @NATIVE_REQUIRED
@@ -117,7 +118,7 @@ def test_f64_add_evidence_cannot_erase_or_change_numeric_policy(change):
             validate_evidence(admission, memory, records, buffers)
 
 
-def region(root, scalar, while_, select):
+def region(root, scalar, while_, select, *, width=64, f32_atomic_add=None):
     from t2m.dynamic_abi import GridExtent
     from t2m.examples.atomic_kernels import region_fadd
     from t2m.frontend import capture_ttir
@@ -126,16 +127,16 @@ def region(root, scalar, while_, select):
     from test_float_atomics import OPT
     constants = {"B": 8, "SCALAR": scalar, "WHILE": while_, "SELECT": select}
     source = root / "source.ttir"
-    source.write_text(capture_ttir(region_fadd, {"a": "*fp64", "b": "*fp64", "out": "*fp64",
+    source.write_text(capture_ttir(region_fadd, {"a": f"*fp{width}", "b": f"*fp{width}", "out": f"*fp{width}",
         "n": "i32", "steps": "i32", "enabled": "i1", "choice": "i1", "shift": "i32",
         **{name: "constexpr" for name in constants}}, constants))
-    abi = TensorABI("region_fadd", (TensorBuffer("a", (4, "n"), "readwrite", dtype="f64"),
-        TensorBuffer("b", (4, "n"), "readwrite", dtype="f64"), TensorBuffer("out", ("n",), "write", dtype="f64")),
+    abi = TensorABI("region_fadd", (TensorBuffer("a", (4, "n"), "readwrite", dtype=f"f{width}"),
+        TensorBuffer("b", (4, "n"), "readwrite", dtype=f"f{width}"), TensorBuffer("out", ("n",), "write", dtype=f"f{width}")),
         grid=(GridExtent("n", 1 if scalar else 8),), runtime_scalars=(RuntimeScalar("n", "i32", 3, bounds=(0, 13)),
         RuntimeScalar("steps", "i32", 4, bounds=(0, 3)), RuntimeScalar("enabled", "i1", 5),
         RuntimeScalar("choice", "i1", 6), RuntimeScalar("shift", "i32", 7, bounds=(-1000, 1000))))
     return convert_shared(source, abi, root / "translation", optimizer=OPT, memory_profile="guarded-buffer",
-        address_policy="source-words", effect_profile="typed-atomics")
+        address_policy="source-words", effect_profile="typed-atomics", f32_atomic_add=f32_atomic_add)
 
 
 def region_domains(select):

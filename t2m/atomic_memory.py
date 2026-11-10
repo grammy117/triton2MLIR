@@ -12,6 +12,7 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
+from .atomic_f32_add import CONTRACT as F32_ADD_CONTRACT
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
@@ -21,11 +22,17 @@ RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1), 5: ("fadd", 
        6: ("max", 6), 7: ("min", 10), 8: ("umax", 7), 9: ("umin", 11), 10: ("exch", 3)}
 ORDERS = {1: "relaxed", 2: "acquire", 3: "release", 4: "acq_rel"}
 SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
-FLOAT_CONTRACTS = {("exch", "f32"): "bitwise-exchange", ("exch", "f64"): "bitwise-exchange",
-                   ("fadd", "f64"): "ieee-f64-rne-add"}
+FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bitwise-exchange",),
+                   ("fadd", "f64"): ("ieee-f64-rne-add",), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
 
 
 def payload(info):
+    if info.get("numeric_contract") == "ieee-f32-rne-add":
+        from .atomic_f32_add import IEEE_PAYLOAD
+        return IEEE_PAYLOAD
+    if info.get("numeric_contract") == F32_ADD_CONTRACT:
+        from .atomic_f32_add import PAYLOAD
+        return PAYLOAD
     if "word_view" in info:
         from .atomic_word_views import PAYLOAD
         return PAYLOAD
@@ -37,6 +44,8 @@ def validate_evidence(admission, memory, records, buffers):
     """Validate declared atomic custody; this does not prove source equivalence."""
     profile = TYPED_EFFECT_PROFILE if admission.get("schema") == ATOMIC_SCHEMAS[1] else EFFECT_PROFILE
     if (admission.get("effect_profile") != profile or memory.get("effect_profile") != profile
+            or admission.get("f32_atomic_add") not in (None, "ieee", "ftz")
+            or memory.get("f32_atomic_add") not in (None, "ieee", "ftz")
             or admission.get("address_policy") != "source-words-offset64"
             or not isinstance(admission.get("atomic_adaptations"), list)
             or admission["atomic_adaptations"] != memory.get("atomic_payload")):
@@ -64,8 +73,11 @@ def validate_evidence(admission, memory, records, buffers):
                 or floating and (profile != TYPED_EFFECT_PROFILE
                     or (info.get("operation"), dtype) not in FLOAT_CONTRACTS
                     or dtype != "f" + str(info.get("word_bits"))
-                    or info.get("numeric_contract") != FLOAT_CONTRACTS.get((info.get("operation"), dtype)))
+                    or info.get("numeric_contract") not in FLOAT_CONTRACTS.get((info.get("operation"), dtype), ()))
                 or not floating and info.get("operation") == "fadd"
+                or floating and info.get("operation") == "fadd" and dtype == "f32"
+                    and (admission.get("f32_atomic_add") != memory.get("f32_atomic_add")
+                         or info.get("numeric_contract") != {"ieee": "ieee-f32-rne-add", "ftz": F32_ADD_CONTRACT}.get(admission.get("f32_atomic_add")))
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
                 or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64))
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
@@ -87,7 +99,7 @@ def validate_evidence(admission, memory, records, buffers):
             raise ValueError("atomic memory payload differs from its typed source operation/order/scope inventory")
 
 
-def contract(op, source_ids, *, typed=False):
+def contract(op, source_ids, *, typed=False, f32_atomic_add=None):
     from .shared_tensor import opcode
     ids = source_ids(op.location)
     def refuse(message):
@@ -110,8 +122,15 @@ def contract(op, source_ids, *, typed=False):
     operation, standard_kind = ("cas", "compare-exchange") if cas else RMW[kind]
     if (not floating and operation == "fadd") or (floating and (operation, str(element)) not in FLOAT_CONTRACTS):
         refuse("floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract")
+    numeric = None
+    if floating:
+        numeric = FLOAT_CONTRACTS[operation, str(element)][0]
+        if operation == "fadd" and element == builtin.f32:
+            numeric = {"ieee": "ieee-f32-rne-add", "ftz": F32_ADD_CONTRACT}.get(f32_atomic_add)
+            if numeric is None:
+                refuse("f32 atomic addition needs an explicitly qualified ieee or ftz numeric policy")
     return {"operation": operation, "standard_kind": standard_kind, "word_bits": element.bitwidth,
-        **({"value_dtype": str(element), "numeric_contract": FLOAT_CONTRACTS[operation, str(element)]} if floating else {}),
+        **({"value_dtype": str(element), "numeric_contract": numeric} if floating else {}),
         "source_order": ORDERS[order], "source_scope": SCOPES[scope],
         "logical_scope": "one-logical-program" if scope == 2 else "all-logical-programs-in-private-invocation",
         "standard_order": "acq_rel", "external_participants": "excluded-by-private-buffer-ABI"}
@@ -170,6 +189,9 @@ def adapt_payload(module, abi, admission, source_ids):
         observed[index] += 1
         access = accesses[index]
         info = access["atomic"]
+        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add"):
+            from .atomic_f32_add import materialize
+            op = materialize(op, ftz=info["numeric_contract"] == F32_ADD_CONTRACT)
         ancestor = generic
         while ancestor is not None:
             if isinstance(ancestor, GenericOp) and ancestor not in generics:

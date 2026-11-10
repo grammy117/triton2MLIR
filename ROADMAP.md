@@ -454,7 +454,9 @@ including real model2MLIR tuples. Branches, for/while recurrences, scalar/vector
 events, lane/uniform buffer selection and repeated inlined helpers now also
 qualify for both word widths. IEEE f64 addition now uses upstream standard
 atomic conversion through native/Merlin execution, source regions, colliding
-old-value histories and actual model2MLIR tuples. Next: f32 flush-to-zero and
+old-value histories and actual model2MLIR tuples. F32 now explicitly selects
+IEEE or sign-preserving input/result FTZ, retaining executable numeric policy
+through standard MLIR, native/Merlin regions and real model binding. Next:
 other floating numeric contracts, word CAS and the remaining universal intake gaps.
 See [atomic memory](docs/atomic_memory.md).
 

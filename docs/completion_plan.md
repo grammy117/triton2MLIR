@@ -453,5 +453,13 @@ IEEE f64 addition also qualifies through standard upstream atomic conversion,
 native/Merlin region and collision tests, and a genuine f64 model2MLIR model.
 It records round-to-nearest-even, subnormal preservation and unspecified
 arithmetic NaN payload/sign without changing the package ABI. Next, implement
-f32 flush-to-zero and other floating policies, word CAS and the other universal
+other floating policies, word CAS and the other universal
 gaps. This remains bounded coverage rather than arbitrary-kernel completion.
+
+F32 addition now has explicit IEEE/FTZ policy selection. Both use the same
+package and Merlin interface; FTZ retains standard executable bit arithmetic,
+including NaN quieting after canonicalization. IEEE preserves subnormals and
+also retains explicit quieting in its standard atomic region.
+The native FTZ adapter reconstructs complete typed atomic bodies and exact
+internal atomic-load/CAS retry helpers through ownership/lifetime verification.
+No policy is inferred from kernel names, provenance or target capabilities.

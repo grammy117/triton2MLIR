@@ -3,7 +3,7 @@
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
 and the separately selected typed profile with bitwise f32/f64 exchange and
 integer-word RMWs on f32/f64 storage, including Triton floating min/max,
-and IEEE f64 addition.
+and IEEE f64 plus explicitly selected IEEE/FTZ f32 addition.
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
@@ -429,8 +429,8 @@ The ordinary native lowering emits LLVM `atomicrmw fadd`.
 
 [PTX's atomic contract](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-atom)
 distinguishes f64 addition from global f32 flush-to-zero addition. The f64
-profile therefore does not implicitly admit f32, f16 or bf16 addition. Those
-need their own executable numeric policies. CPU qualification is separate
+profile therefore does not implicitly admit f32, f16 or bf16 addition. F32 has
+the explicit policies below; f16/bf16 remain open. CPU qualification is separate
 from source GPU execution and does not promise a GPU-specific NaN payload.
 
 Scalar/vector native and actual Merlin tests cover halfway rounding, normal/
@@ -449,3 +449,66 @@ model binding/reference cases and 188 Merlin staging/loop cases pass. The
 documentation/structure gates pass. `out/atomic-fadd/` and
 `out/atomic-fadd-merlin/` retain separately verified portable/native products;
 accelerator execution is not performed and full TTIR coverage remains open.
+
+
+### F32 addition with explicit source policy
+
+F32 FADD now requires `f32_atomic_add="ieee"` or `"ftz"` on `convert_shared`
+(CLI: `--f32-atomic-add`). TTIR alone does not determine the backend's subnormal
+policy, so the frontend does not infer it from source names or provenance.
+Both policies use round-to-nearest-even, preserve exact returned-old words and
+untouched storage, and produce quiet arithmetic NaNs with unspecified payload/
+sign. IEEE preserves subnormals; FTZ flushes subnormal inputs/results to
+sign-preserving zero. The choice is bound in v4 admission and memory evidence,
+alongside operation-specific source/access/payload numeric contracts.
+
+Meta's existing unstructured FADD conversion retains the tile, indices, mask
+and old result. The adapter then materializes the selected arithmetic as a
+standard `memref.generic_atomic_rmw` region inside the same parallel tile and
+exactly-once boundary. Input/result flushing uses integer exponent/sign tests;
+result quieting uses explicit NaN classification and the quiet bit. Thus an
+annotation never substitutes for numeric behavior. The public tensor/scalar
+ABI, core artifacts and receipt schemas are unchanged. `compatibility.json`
+records the selected policy and native-toolchain requirement.
+
+The explicit quieting is necessary for the measured toolchain: canonicalization
+can remove addition by negative zero and otherwise leave a signaling NaN
+unchanged. The native matcher accepts the complete actual addition/quieting
+body or its proved quieting/FTZ identity, including inverse bitcasts. It refuses
+changed masks, fast-math assumptions, unrelated/unused arithmetic and unknown
+captures. Current-independent constant assignments retain an atomic exchange
+and the old result. No numeric permission comes from a source label.
+
+Merlin's existing explicit atomic-word feature now also legalizes these closed
+f32 regions. An internal typed borrowing helper performs an aligned atomic
+acquire load and acq_rel/acquire compare/exchange retry loop. Each attempt
+recomputes the exact selected arithmetic; successful completion returns the
+original old word. The complete helper is retained while ownership sees its
+typed declaration, restored before liveness checking, and reconstructed from
+its actual body to establish borrowing. Changed byte strides, linkage, orders,
+returns or captures grant no permission. Both native policies require the
+explicit `T2M_MERLIN_ROOT` support path and default 64-bit descriptor/index ABI.
+Portable MLIR contains neither LLVM instructions nor an opaque helper.
+
+The retry loop is the current host legalization. The portable atomic region,
+source tile/reuse/control flow and numeric intent remain available for a
+consumer to select a native floating atomic when its semantics satisfy the
+complete contract. The frontend introduces no warp mapping, physical address
+space or backend opcode.
+
+Try `shared-demo --kernel atomic-fadd32 --f32-atomic-add ftz` (or `ieee`) with
+guarded-buffer, source-words and typed-atomics. The real model capture additionally
+supports `scripts/capture_atomic_model.py --kind fadd32`; its binding selects FTZ
+and retains learned weights and both tuple results. Dedicated tests cover
+rounding ties, input/result subnormals, signed zeros, infinities, quiet/signaling
+NaNs, masked invalid addresses, empty/tail grids, source regions, finite buffer
+selection and constant normalization. F16/bf16 additions, word CAS and wider
+arbitrary-kernel/target coverage remain open.
+
+Measured f32 delivery: 117 producer/model regressions pass in the final
+nonconstant run, plus eight constant-normalization cases. These include all
+42 f32 cases and all 35 current atomic model cases. The 283 Merlin native/
+staging/loop tests and documentation/structure gates pass. Each visible
+`out/atomic-fadd32-{ieee,ftz}/` package verifies 20 artifacts; each corresponding
+`-merlin/` qualification verifies 45 with actual native host execution. These
+finite measurements do not establish universal TTIR or accelerator coverage.

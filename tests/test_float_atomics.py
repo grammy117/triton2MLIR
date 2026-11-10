@@ -17,7 +17,7 @@ MERLIN = all(os.environ.get(n) for n in ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYTHON",
 NATIVE_REQUIRED = pytest.mark.skipif(not (OPT and NATIVE), reason="existing shared/native environments required")
 
 
-def capture(root, width=32, scalar=False, *, operation="exch", effect_profile="typed-atomics", order="relaxed", scope="gpu"):
+def capture(root, width=32, scalar=False, *, operation="exch", effect_profile="typed-atomics", order="relaxed", scope="gpu", f32_atomic_add=None):
     from t2m.examples.atomic_kernels import indexed_atomic
     from t2m.frontend import capture_ttir
     dtype, pointer = f"f{width}", f"*fp{width}"
@@ -30,7 +30,7 @@ def capture(root, width=32, scalar=False, *, operation="exch", effect_profile="t
         grid=(GridExtent("n", 1 if scalar else 8),), runtime_scalars=(RuntimeScalar("n", "i32", 4, bounds=(0, 31)),
         RuntimeScalar("m", "i32", 5, bounds=(0, 37))))
     return convert_shared(source, abi, root / "translation", optimizer=OPT, memory_profile="guarded-buffer",
-        address_policy="source-words", effect_profile=effect_profile)
+        address_policy="source-words", effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
 
 
 def domain(n, width):
@@ -103,9 +103,10 @@ def test_legacy_profiles_do_not_implicitly_admit_float_exchange(tmp_path, effect
 
 
 @NATIVE_REQUIRED
-def test_float_add_stays_refused_without_numeric_contract(tmp_path):
+@pytest.mark.parametrize("profile", ["ordinary", "atomics", "typed-atomics"])
+def test_float_add_stays_refused_without_numeric_contract(tmp_path, profile):
     with pytest.raises(ConversionError, match="qualified"):
-        capture(tmp_path, operation="add")
+        capture(tmp_path, operation="add", effect_profile=profile)
 
 
 def test_float_contract_is_explicit_and_operation_specific():
@@ -119,9 +120,9 @@ def test_float_contract_is_explicit_and_operation_specific():
         info = contract(source(element), lambda _: ["source"], typed=True)
         assert info["numeric_contract"] == "bitwise-exchange" and info["value_dtype"] == str(element)
         for kind in (1, 2, 3, 4, 5, 6, 7, 8, 9):
-            if kind == 5 and element == builtin.f64:
-                addition = contract(source(element, kind), lambda _: ["source"], typed=True)
-                assert addition["numeric_contract"] == "ieee-f64-rne-add"
+            if kind == 5:
+                addition = contract(source(element, kind), lambda _: ["source"], typed=True, f32_atomic_add="ftz")
+                assert addition["numeric_contract"] == ("ieee-f64-rne-add" if element == builtin.f64 else "f32-rne-sign-preserving-ftz-add")
                 assert addition["standard_kind"] == 0
                 continue
             with pytest.raises(ConversionError, match="qualified"):

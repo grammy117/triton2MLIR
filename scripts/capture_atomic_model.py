@@ -14,9 +14,9 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 
 
 def capture(out, kind="add"):
-    if kind not in ("add", "cas", "exch", "min", "max", "fadd"):
-        raise ValueError("atomic model kind must be add, cas, exch, min, max or fadd")
-    dtype = torch.float64 if kind == "fadd" else torch.float32 if kind in ("exch", "min", "max") else torch.int32
+    if kind not in ("add", "cas", "exch", "min", "max", "fadd", "fadd32"):
+        raise ValueError("atomic model kind must be add, cas, exch, min, max, fadd or fadd32")
+    dtype = torch.float64 if kind == "fadd" else torch.float32 if kind in ("exch", "min", "max", "fadd32") else torch.int32
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -35,7 +35,7 @@ def capture(out, kind="add"):
                 SCALAR=False, SEM="relaxed", SCOPE="gpu")
         else:
             wrap_triton(kernels.indexed_atomic)[(2,)](x, index, updated, old, n=13, m=17, B=8,
-                OP="add" if kind == "fadd" else kind, SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
+                OP="add" if kind in ("fadd", "fadd32") else kind, SCALAR=False, MASK=True, FRESH=False, SEM="relaxed", SCOPE="gpu")
         return updated, old
 
     @atomic_update.register_kernel("cpu")
@@ -96,6 +96,6 @@ def capture(out, kind="add"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--kind", choices=("add", "cas", "exch", "min", "max", "fadd"), default="add")
+    parser.add_argument("--kind", choices=("add", "cas", "exch", "min", "max", "fadd", "fadd32"), default="add")
     arguments = parser.parse_args()
     print(capture(arguments.out, arguments.kind))
