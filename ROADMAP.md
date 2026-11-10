@@ -11,6 +11,9 @@ optional E8M0/E4M3FN scales, mixed operand types and original C through standard
 tiled MLIR and real Merlin packages. The internal-precision profile is explicit;
 runtime/ragged FP4 source loops also replay through all three memory profiles.
 Broader scaled compositions and applicable target materialization remain.
+[F32 BF16x3/x6 precision](docs/dot_precision.md) now reuses the actual Triton
+pass on layout-free TTIR, retaining ordered partial contractions, correction
+NaN clearing and original C through Merlin. TF32 and target numeric profiles remain.
 [Runtime model bindings](docs/runtime_model_arguments.md) now use captured
 typed scalar attributes and checked shape casts to retain the source kernel
 runtime ABI within model2MLIR's static public model interface. Merlin derives

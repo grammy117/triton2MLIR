@@ -284,7 +284,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None):
+def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False):
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
     entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
@@ -346,7 +346,7 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
                 raise ConversionError("NaN constant payload preservation is not qualified", source_id=source_id, opcode=name)
         if name == "tt.dot":
             from .contractions import dot_contract, zero_accumulator
-            records[-1]["dot_numeric"] = dot_contract(op, source_id)
+            records[-1]["dot_numeric"] = dot_contract(op, source_id, allow_composite=allow_composite_dots)
             zero = zero_accumulator(op.operands[2])
             records[-1]["dot_numeric"]["source_accumulator_zero"] = zero
             records[-1]["restore_matmul_accumulator"] = zero != "positive"
@@ -1193,6 +1193,18 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
+    from .contractions import needs_bf16_dot_expansion
+    if any(needs_bf16_dot_expansion(op) for op in parsed.walk()):
+        # Check original effects/contracts before a greedy upstream pass can
+        # fold them. Only selected composite precision is deferred to its pass.
+        _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
+                   typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True)
+        pointer_report = expand_tensor_pointers(source, work / "precision-intake")
+        original_inventory = json.loads((work / "precision-intake/inventory.json").read_text())
+        if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
+            raise ConversionError("original source changed during dot precision normalization")
+        intake = lower_with_shared(work / "precision-intake/lowered.mlir", work / "precision-source", optimizer=optimizer, stage="source")
+        parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
     records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1399,7 +1411,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         scaled_contracts = {source_id:scaled_contractions[source_id] for source_id in ids if source_id in scaled_contractions}
         if scaled_contracts:
             op.attributes["prov.scaled_dot_contracts"] = StringAttr(json.dumps(scaled_contracts,sort_keys=True))
-        if op.name in ("linalg.matmul", "linalg.batch_matmul"):
+        if opcode(op) in ("linalg.matmul", "linalg.batch_matmul"):
             contracts = {source_id:contractions[source_id] for source_id in ids if source_id in contractions}
             if contracts:
                 op.attributes["prov.contraction_contracts"] = StringAttr(json.dumps(contracts,sort_keys=True))
@@ -1423,6 +1435,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
     if original_inventory:
         # Expanded operations are a distinct graph, never the original TTIR.
+        original_precisions = {record["id"]: {**record["dot_precision"], "inputs": record["inputs"],
+            "input_types": record["input_types"], "intent": record.get("intent", {})}
+            for record in original_inventory["operations"] if "dot_precision" in record}
+        if original_precisions:
+            for op in result.walk():
+                if isinstance(op, func.FuncOp) or opcode(op) in ("linalg.matmul", "linalg.batch_matmul"):
+                    op.attributes["prov.kernel_original_dot_precisions"] = StringAttr(json.dumps(original_precisions, sort_keys=True))
         for op in result.walk():
             if "prov.source_ids" in op.attributes:
                 op.attributes["prov.normalized_ids"] = op.attributes.pop("prov.source_ids")

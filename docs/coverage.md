@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[F32 BF16x3/x6 precision](dot_precision.md) now reuses the official native
+Triton expansion before layout. Six runtime packages retain three/six partial
+contractions, residual reuse, NaN correction and original C through all three
+Merlin memory profiles and reused libraries. Nine focused cases include
+original-bound and pre-normalization effect refusals; the broader precision,
+block-pointer and FP8 regression passes 83 cases with 24 separately qualified
+FP8 shape cases deselected. The visible BF16x6 demo and qualification reopen
+26/45 artifacts. Its explicit 33-package observation report retains 30/50
+definitions observed and 26 in host-qualified captures. TF32, broader numeric/
+effect/alias compositions, corpus closure and targets remain open.
+
 [Runtime model arguments](runtime_model_arguments.md) now bind captured scalar
 attributes and compatible tensor/result shapes into dynamic kernel bodies.
 Six actual static/ragged scaled model packages qualify through native LLVM and

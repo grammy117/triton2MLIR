@@ -26,7 +26,8 @@ distribution; the survey revision does not identify its build source.
 Pinned Triton
 [`TritonOps.td`](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/include/triton/Dialect/Triton/IR/TritonOps.td)
 specifies that `inputPrecision` applies to f32 inputs and is ignored otherwise.
-Non-f32 dot now admits all five declared settings. F32 modes other than IEEE
+Non-f32 dot now admits all five declared settings. F32 BF16x3/x6 now reuse
+the [official pre-layout composite expansion](dot_precision.md). TF32 modes
 still require their actual arithmetic expansion and refuse. Source formats,
 precision applicability, imprecise-accumulation bound, zero kind and intake C
 value remain in `prov.contraction_contracts`, keyed by intake graph IDs.

@@ -34,6 +34,10 @@ def demo(out, *, size=1024, block=256, operation="add"):
 
 
 def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+    if kernel in ("bf16x3-dot", "bf16x6-dot"):
+        from .dot_precision_demo import demo
+        return demo(out,precision=kernel.removesuffix("-dot"),optimizer=optimizer,python=python,
+            memory_profile=memory_profile,address_policy=address_policy,effect_profile=effect_profile,f32_atomic_add=f32_atomic_add)
     if kernel in ("scaled-dot", "scaled-dot-dynamic"):
         from .scaled_dot_demo import demo, dynamic_demo
         return (dynamic_demo if kernel == "scaled-dot-dynamic" else demo)(out,optimizer=optimizer,python=python,memory_profile=memory_profile,address_policy=address_policy,
@@ -450,7 +454,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

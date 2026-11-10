@@ -17,7 +17,7 @@ BLOCK_POINTER_OPS = frozenset(("tt.make_tensor_ptr", "tt.advance"))
 TENSOR_DESCRIPTOR_OPS = frozenset(("tt.make_tensor_descriptor", "tt.descriptor_load", "tt.descriptor_store",
                                    "tt.descriptor_gather", "tt.descriptor_scatter", "tt.descriptor_reduce"))
 DESCRIPTOR_OPS = BLOCK_POINTER_OPS | TENSOR_DESCRIPTOR_OPS
-INTAKE_NORMALIZATION_OPS = DESCRIPTOR_OPS | frozenset(("tt.cat",))
+INTAKE_NORMALIZATION_OPS = DESCRIPTOR_OPS | frozenset(("tt.cat", "tt.dot"))
 
 
 def _expand_tensor_pointers(path, inventory_path):
@@ -33,7 +33,27 @@ def _expand_tensor_pointers(path, inventory_path):
     operations = []
     module.walk(operations.append)
     names = {op.get_name() for op in operations}
-    if not names & INTAKE_NORMALIZATION_OPS:
+    # Parse only the typed value's complete type syntax, never printed IR lines.
+    from xdsl.dialects.builtin import TensorType, f32
+    from xdsl.parser import Parser
+    from .ir import context as xdsl_context
+    type_context = xdsl_context()
+    precision_dots = []
+    for op in operations:
+        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") not in (3, 4):
+            continue
+        types = [Parser(type_context, str(op.get_operand(i).get_type())).parse_type() for i in range(3)]
+        if not all(isinstance(type_, TensorType) and type_.element_type == f32 for type_ in types[:2]):
+            continue  # The pinned pass ignores precision for other inputs.
+        if types[2].element_type != f32 or (op.get_int_attr("maxNumImpreciseAcc") or 0) < 0:
+            raise ConversionError("BF16 composite dot requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
+        precision_dots.append(op)
+    normalized_names = names & (DESCRIPTOR_OPS | {"tt.cat"})
+    if precision_dots:
+        if any(op.get_name() == "tt.load" and op.get_bool_attr("isVolatile") for op in operations):
+            raise ConversionError("volatile observations cannot become stable tensor reads", opcode="tt.load")
+        normalized_names.add("tt.dot")
+    if not normalized_names:
         raise ConversionError("input does not use a supported intake normalization")
     pipeline = []
     if "tt.cat" in names:
@@ -42,6 +62,8 @@ def _expand_tensor_pointers(path, inventory_path):
         pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
     if names & BLOCK_POINTER_OPS:
         pipeline.append("triton-rewrite-tensor-pointer")
+    if precision_dots:
+        pipeline.append("tritongpu-F32DotTC{emu-tf32=false}")
     values, blocks, records, regions = {}, {}, [], {}
 
     def value_id(value):
@@ -67,10 +89,30 @@ def _expand_tensor_pointers(path, inventory_path):
                         "inputs": [value_id(v) for v in inputs], "outputs": [value_id(v) for v in outputs],
                         "input_types": [str(v.get_type()) for v in inputs],
                         "output_types": [str(v.get_type()) for v in outputs]})
+        intent = {name: op.get_str_attr(name) for name in ("prov.family", "prov.op", "prov.region_id")}
+        if any(value is not None for value in intent.values()):
+            records[-1]["intent"] = {name: value for name, value in intent.items() if value is not None}
+        if op in precision_dots:
+            records[-1]["dot_precision"] = {"input_precision": {3: "bf16x3", 4: "bf16x6"}[op.get_int_attr("inputPrecision")],
+                "max_imprecise_accumulations": op.get_int_attr("maxNumImpreciseAcc") or 0,
+                "accumulator": "source-C-added-after-official-composite", "physical_mapping": "undecided"}
+    precision_implementation = None
+    if precision_dots:
+        from triton._C import libtriton
+        binary = Path(libtriton.__file__)
+        digest = hashlib.sha256()
+        with binary.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        precision_implementation = {"version": PINNED_TRITON, "binary_sha256": digest.hexdigest(),
+            "binary_bytes": binary.stat().st_size,
+            "source_reference_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "source_reference_is_build_receipt": False}
     Path(inventory_path).write_text(json.dumps({"operations": records, "blocks": list(blocks.values()),
         "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries",
         "normalization_passes": pipeline,
-        "normalized_opcodes": sorted(names & INTAKE_NORMALIZATION_OPS)}, indent=2) + "\n")
+        "normalized_opcodes": sorted(normalized_names),
+        **({"dot_precision_implementation": precision_implementation} if precision_implementation else {})}, indent=2) + "\n")
     if "tt.cat" in names:
         _expand_cats(ir, context, module, operations)
     manager = ir.pass_manager(context)
@@ -81,6 +123,8 @@ def _expand_tensor_pointers(path, inventory_path):
         passes.common.add_canonicalizer(manager)
     if names & BLOCK_POINTER_OPS:
         passes.ttir.add_rewrite_tensor_pointer(manager)
+    if precision_dots:
+        passes.ttgpuir.add_f32_dot_tc(manager, False)
     manager.run(module, "triton2mlir-expand-tensor-pointers")
     if not module.verify():
         raise ConversionError("official tensor-pointer rewrite produced invalid IR")
@@ -157,6 +201,8 @@ def expand_tensor_pointers(source, work):
               "normalized_opcodes": inventory["normalized_opcodes"],
               "source_sha256": hashlib.sha256(data).hexdigest(),
               "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
+    if "dot_precision_implementation" in inventory:
+        report["dot_precision_implementation"] = inventory["dot_precision_implementation"]
     (work / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
 

@@ -49,6 +49,14 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+F32 BF16x3/x6 normalization reuses the actual native Triton pass while keeping
+original and normalized typed graphs distinct. Kernel-level original precision
+inventory and caller tags accompany named contractions, with no per-operation
+bijection claim. The original C/post-composite order and NaN correction stay
+executable. Compatibility metadata states the selected host arithmetic and
+separates the native binary hash from its source reference. Public ABI and
+receipt schemas are unchanged; see [dot precision](dot_precision.md).
+
 Scaled dots use the explicit `logical-mx-f64-v1` internal-precision profile:
 packed tile unpacking and per-group scaling expand to standard parallel
 linalg, original C enters an f64 contraction, and explicit casts round the
