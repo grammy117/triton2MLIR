@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Scaled contractions](scaled_dot.md) now pass 65 checks across FP4 packing,
+five public operand formats, optional/mixed scale types, batched tiles,
+accumulator formats, exhaustive E8M0 codes, refusal and real consumer execution.
+Four source-captured packages and the visible M/N-packed demo compile and
+execute through Merlin. The internal-precision profile is explicit; reserved
+FP6 enums, runtime/ragged scaled compositions and applicable targets remain
+open. These are measured compositions, not universal scaled-dot coverage.
+The visible demo and Merlin qualification reopen and verify 25/45 artifacts.
+The explicit 29-package report at `out/scaled-dot-coverage/coverage.json`
+records 30/50 definitions observed and 26 in host-qualified captures. This
+extends observations without changing the definition/type/attribute denominator.
+
 [Mixed FP8 contractions](fp8_contractions.md) now retain named matmul,
 original C, runtime M/N/K, typed-zero padding and logical tiles through the
 Merlin interface. The 24 dynamic packages cover all sixteen FP8 input pairs
@@ -10,7 +22,7 @@ post-contraction addition. Precision/typed-zero and direct repair/refusal
 checks complete the 93-case slice. Nine source-width division checks support
 the actual `cdiv` loop form; 64 native narrowing/widening cases qualify named
 generalization, scalar fill transport, callbacks and complete-body refusal.
-F32 alternate precision, broader accumulators, scaled dot, model/alias/effect
+F32 alternate precision, broader scaled compositions, model/alias/effect
 closure and applicable targets remain open.
 The saved mixed-FP8 demo and qualification verify 26/45 artifacts. Its explicit
 28-package source report retains 29/50 definitions observed and 25 in

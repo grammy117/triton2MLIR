@@ -41,6 +41,15 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Scaled dots use the explicit `logical-mx-f64-v1` internal-precision profile:
+packed tile unpacking and per-group scaling expand to standard parallel
+linalg, original C enters an f64 contraction, and explicit casts round the
+declared result. `prov.scaled_dot_contracts` retains that source relationship.
+The selected precision differs from Triton's target-dependent software
+emulation and does not assert GPU instruction equivalence. ABI and receipt
+schemas are unchanged; compatibility metadata records the difference.
+See [the numeric and dataflow contract](scaled_dot.md).
+
 FP8 contractions retain their named matmul and original accumulator in the
 portable payload. Derived `prov.contraction_contracts` records source formats,
 precision applicability, accumulation bound and intake C identity without

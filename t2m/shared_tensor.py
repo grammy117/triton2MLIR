@@ -350,6 +350,9 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
             zero = zero_accumulator(op.operands[2])
             records[-1]["dot_numeric"]["source_accumulator_zero"] = zero
             records[-1]["restore_matmul_accumulator"] = zero != "positive"
+        if name == "tt.dot_scaled":
+            from .scaled_dot import contract
+            records[-1]["scaled_dot_numeric"] = contract(op, source_id)
     return records
 
 
@@ -1247,9 +1250,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .integer_products import expand_high_products
     product_reports = expand_high_products(middle_module, _source_ids)
     fp8_reports = expand_fp8_casts(middle_module, _source_ids, overflow=fp8_overflow)
+    from .scaled_dot import expand_scaled_dots
+    scaled_reports = expand_scaled_dots(middle_module, _source_ids)
     from .float_casts import expand_float_casts
     cast_reports = expand_float_casts(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports:
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1304,6 +1309,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(product_reports)
     transformations.extend(fp8_reports)
     transformations.extend(cast_reports)
+    transformations.extend(scaled_reports)
     if isolated_events:
         transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
             "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",
@@ -1382,11 +1388,16 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     source_names = {r["id"]: r["opcode"] for r in records}
     contractions = {record["id"]: {**record["dot_numeric"], "intake_accumulator_value":record["inputs"][2]}
         for record in records if "dot_numeric" in record}
+    scaled_contractions = {record["id"]: {**record["scaled_dot_numeric"], "intake_accumulator_value":record["inputs"][2]}
+        for record in records if "scaled_dot_numeric" in record}
     for op in result.walk():
         if memory_profile in ("buffer", "guarded-buffer"):
             op.attributes.setdefault("prov.family", StringAttr("triton"))
             op.attributes.setdefault("prov.op", StringAttr(op.name.split(".")[-1]))
         ids = _source_ids(op.location)
+        scaled_contracts = {source_id:scaled_contractions[source_id] for source_id in ids if source_id in scaled_contractions}
+        if scaled_contracts:
+            op.attributes["prov.scaled_dot_contracts"] = StringAttr(json.dumps(scaled_contracts,sort_keys=True))
         if op.name in ("linalg.matmul", "linalg.batch_matmul"):
             contracts = {source_id:contractions[source_id] for source_id in ids if source_id in contractions}
             if contracts:

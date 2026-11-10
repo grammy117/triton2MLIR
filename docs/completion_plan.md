@@ -91,6 +91,19 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Scaled contractions now have a working standard-MLIR/Merlin vertical slice.
+The 65-case suite covers the five public data formats, FP4 K/M/N packing,
+optional/mixed E8M0/E4M3FN scales, batched tiles, accumulator/result formats,
+all E8M0 codes, transactional refusals and four real packages. The visible
+M/N-packed demo also executes through Merlin. Numeric precision is the
+explicit `logical-mx-f64-v1` choice allowed by MX's implementation-defined
+boundary; target-dependent emulation and accelerator equivalence are separate
+profiles. See [the exact contract](scaled_dot.md).
+Continue with source runtime/ragged scaled recurrences and model bindings,
+then the remaining E numeric/external/RNG profiles, B/C irregular alias/stride
+cases and F/G effects/corpus/target gates above. Reserved FP6 source packing
+remains unresolved rather than being guessed. All A–G workstreams remain open.
+
 Merlin now accepts the derived tensor receipt through compiler-only staging,
 registers standard parallel tensor operations, and keeps original FX/TTIR
 lineage separate. The actual whole-body LLVM/codegen/HostModel path is wired

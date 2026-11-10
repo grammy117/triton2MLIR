@@ -9,6 +9,11 @@ and [plan.md](plan.md) for the architecture.
 Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will reuse
 [triton-shared's existing passes and analyses](docs/triton_shared.md).
 
+[Scaled contractions](docs/scaled_dot.md) now retain FP4 packing, FP8/half
+formats, optional per-group scales and original accumulation in standard
+tiled MLIR. `shared-demo --kernel scaled-dot` produces an independently
+checked Merlin package with its internal-precision choice explicit.
+
 TTIR integration development uses `ttir-experiment-grammy` in both
 [Merlin](https://github.com/ucb-bar/merlin/tree/ttir-experiment-grammy) and
 [model2MLIR](https://github.com/grammy117/model2MLIR/tree/ttir-experiment-grammy).

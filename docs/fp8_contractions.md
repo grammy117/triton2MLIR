@@ -88,22 +88,24 @@ The demo uses different FP8 formats, 16×16×32 tiles and runtime M/N/K of
 17/19/37. The existing v2 result/effect package excludes references and their
 digests from compilation. Public tensor/scalar ABI and byte storage are unchanged.
 
-## Next: scaled contractions
+## Scaled contractions
 
-`tt.dot_scaled` remains a required next implementation. The pinned definition
-admits five operand formats, optional scales, rank-two/batched geometry and
-K versus M/N packing. E8M0 integer scales use groups of 32; E4M3FN scales use
-groups of 16. RHS scale storage follows output column and K group. Preserve
-those relationships as tiled unpack/scale computation plus named contraction.
+`tt.dot_scaled` now has an executable standard expansion and real Merlin
+packages. The [scaled contraction contract](scaled_dot.md) covers the five
+public operand formats, optional/mixed scale types, batched geometry and
+K versus M/N packing, with its internal-precision choice explicit. The pinned
+enum additionally declares two reserved FP6 formats whose storage/packing
+contract remains unresolved. E8M0 and E4M3FN groups retain their distinct
+32/16-element layouts and RHS output-column/K-group relationship.
 
 The official
 [`DecomposeScaledBlocked`](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/lib/Dialect/TritonGPU/Transforms/DecomposeScaledBlocked.cpp)
 and [`test_matmul.py`](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/python/test/unit/language/test_matmul.py)
 are reuse references. That fallback depends on GPU layouts, refuses M/N
 packing and selects intermediate f16/BF16 arithmetic. It cannot silently
-define our portable contract. Establish executable scaling, rounding,
-scale-zero/NaN and `fastMath` behavior, then qualify every packing and
-optional-scale form. Retain scaled-dot intent for a capable consumer's fused
-implementation after its numeric proof. Broader accumulators, numeric/effect
+define our portable contract. The selected logical-MX profile instead retains
+executable scaling, rounding, scale-zero/NaN handling and source `fastMath`
+permission. Scaled-dot intent remains available for a consumer's qualified
+fused implementation. Runtime/ragged compositions, numeric/effect
 profiles, model bindings, corpus and applicable target work remain open under
 [the complete plan](completion_plan.md).
