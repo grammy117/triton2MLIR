@@ -123,8 +123,73 @@ verify 26 and 45 artifacts respectively. The explicit 25-package observation
 report at `out/fp8-widen-coverage/coverage.json` records 29/50 definitions
 observed and 25 present in host-qualified captures; these are composition
 observations rather than whole-opcode closure.
-RTZ, equal-width casts, FP8 narrowing/saturation, arithmetic, scaled dot,
+FP8 narrowing/saturation, equal-width FP8 formats, arithmetic, scaled dot,
 broader model bindings and target materialization remain required work.
+
+## Rounding and standard-format conversion
+
+The four standard formats f16/BF16/f32/f64 now additionally support RTNE/RTZ
+across these conversion pairs: f32→f16/BF16, f64→f16/BF16/f32 and
+f16↔BF16. Original source rounding stays in the native-verified TTIR inventory.
+Triton's pinned generic rounding attribute is an i32 enum (`0` for RTZ,
+`1` for RTNE), rather than a custom `#tt.rounding` attribute.
+
+The adapter leaves ordinary supported RTNE conversions to shared. Missing
+forms receive a deterministic standard MLIR expansion, within one elementwise
+`linalg.generic` for a tensor tile. Its composite annotations retain source
+and destination formats, rounding, locations and original source IDs. There
+is no GPU mapping, inline assembly, opaque helper or changed tensor ABI.
+
+RTZ first narrows with the standard nearest cast, extends the result exactly
+and compares magnitudes. An overshooting result moves one destination word
+toward zero. This handles ties, subnormals and finite overflow while retaining
+source infinities/zeros and computed NaN class. Equal-width f16/BF16 changes
+use an exact f32 bridge before the actual narrowing boundary.
+
+F64→16-bit conversions need more care. A plain f32 intermediate can double
+round, and the native JIT lacks a direct f64→f16 runtime helper. The RTZ route
+uses two exact toward-zero boundaries; RTNE first truncates to f32 toward zero,
+jams an inexact intermediate to odd and performs the final nearest conversion.
+The precision gap preserves the single source rounding decision, including
+values immediately beside a destination midpoint. No intermediate reference
+or evaluator values supply compiler behavior.
+
+This expands selected scalar cast internals below the granularity of a single
+cast operation. The source cast intent remains an explicit composite. A
+consumer with faithful native cast support may choose that implementation
+after proving the numeric contract; annotations alone grant no rewrite.
+Generated compatibility metadata records this representation difference.
+
+Fourteen native arithmetic cases cover every f16/BF16 word, all wider source
+exponents, both signs and adjacent midpoint/overflow/underflow values. All 42
+pair/rounding/memory-profile cases execute through actual Merlin libraries,
+including exact adjacent source words and reused libraries over empty/ragged
+runtime dimensions. Unknown rounding values/types, missing narrowing modes,
+unqualified properties and mixed invalid candidates refuse before edits.
+Six further real-source loop cases check per-iteration rounding with changing
+runtime trip counts and by-value f32 increments through one reused library.
+For example, repeatedly adding less than one destination ULP must round each
+iteration; accumulating in f32 until the final store gives a different result.
+
+```bash
+python -m t2m shared-demo --kernel rounded-cast \
+  --out out/rounded-cast --python /path/to/native-python
+python -m t2m qualify-merlin out/rounded-cast \
+  --out out/rounded-cast-merlin --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --python /path/to/native-python \
+  --merlin-clang /path/to/compatible-clang
+```
+
+The public demo captures a real f32→f16 RTZ Triton source kernel and uses an
+independent rational reference with the explicit IEEE comparison policy.
+Original uncomputed source words are checked separately in the typed fixtures.
+
+Caller `prov.family`, `prov.op` and `prov.region_id` StringAttrs are retained
+through shared rewriting and final emission. `prov.intake_intent` records the
+source-ID-to-tags mapping; agreed fields are projected back to their original
+names, while conflicting merged intents retain the complete mapping. The IDs
+belong to the explicitly named intake graph (original or normalized). This
+metadata supplies intent only; all executable memory/numeric checks still run.
 
 ## Upstream boundary
 

@@ -41,6 +41,18 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Selected floating conversions use a deterministic standard MLIR composite,
+with explicit source/target types, source IDs and rounding annotations.
+RTZ correction, equal-width format bridges and round-to-odd f64→16-bit
+bridges retain actual arithmetic rather than relying on tags. This expands
+scalar cast internals while retaining the source tile/loop structure; it
+changes no public tensor ABI or receipt schema. Compatibility metadata records
+the difference. See [numeric contracts and evidence](float_casts.md).
+Caller StringAttr intent fields survive rewriting. `prov.intake_intent`
+retains every source-ID-to-tags mapping when operations merge, and agreed
+`prov.family`, `prov.op`, `prov.region_id` values retain their original names.
+These metadata fields supply intent, never numeric or memory permission.
+
 The four pinned FP8 formats retain their distinct MLIR float types and use
 raw `uint8` archive carriers. This explicit model2MLIR archive difference is
 also written into compatibility metadata for ordinary and mixed-reference

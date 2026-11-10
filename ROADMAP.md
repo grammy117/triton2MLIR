@@ -413,7 +413,10 @@ both import orders, masked tails, runtime loops and reused libraries qualify
 in tensor/buffer/guarded profiles. Widening to f16/BF16/f32/f64 now also
 qualifies every encoding through 48 format/destination/profile combinations,
 with portable casts retained and a separately selected native implementation.
-Narrowing/RTZ/overflow, equal-width casts and contractions remain work; see
+Standard-format RTNE/RTZ narrowing, equal-width f16/BF16 changes and
+double-rounding-safe f64→16-bit conversions now also execute through 42
+pair/mode/profile combinations. FP8 narrowing/overflow, equal-width FP8
+formats and contractions remain work; see
 [the delivery order and upstream cast gaps](docs/float_casts.md). This work
 does not imply whole-opcode or all-target coverage.
 

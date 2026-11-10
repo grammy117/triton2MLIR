@@ -1162,6 +1162,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
     records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
+    intent_by_source = {}
+    for op in parsed.walk():
+        intent = {key: value for key, value in op.attributes.items()
+                  if key in ("prov.family", "prov.op", "prov.region_id") and isinstance(value, StringAttr)}
+        for source_id in _source_ids(op.location):
+            if intent:
+                intent_by_source[source_id] = intent
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1211,7 +1218,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     histogram_reports = expand_histograms(middle_module, _source_ids)
     from .integer_products import expand_high_products
     product_reports = expand_high_products(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports:
+    from .float_casts import expand_float_casts
+    cast_reports = expand_float_casts(middle_module, _source_ids)
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or cast_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1264,6 +1273,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(map_reports)
     transformations.extend(histogram_reports)
     transformations.extend(product_reports)
+    transformations.extend(cast_reports)
     if isolated_events:
         transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
             "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",
@@ -1352,7 +1362,15 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         if ids:
             op.attributes["prov.source_ids"] = ArrayAttr(StringAttr(s) for s in ids)
             op.attributes["prov.original_ops"] = ArrayAttr(StringAttr(source_names[s]) for s in ids)
-        op.attributes["prov.region_id"] = StringAttr(f"kernel:{abi.entry}")
+        intents = {source_id: intent_by_source[source_id] for source_id in ids if source_id in intent_by_source}
+        if intents:
+            op.attributes["prov.intake_intent"] = StringAttr(json.dumps(
+                {source_id: {key: value.data for key, value in intent.items()} for source_id, intent in intents.items()}, sort_keys=True))
+            for key in ("prov.family", "prov.op", "prov.region_id"):
+                values = [intent[key] for intent in intents.values() if key in intent]
+                if values and all(value == values[0] for value in values):
+                    op.attributes[key] = values[0]
+        op.attributes.setdefault("prov.region_id", StringAttr(f"kernel:{abi.entry}"))
         op.attributes["prov.emitted_id"] = StringAttr(f"mlir.op.{len(emitted):04d}")
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
     if original_inventory:

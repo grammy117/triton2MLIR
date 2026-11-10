@@ -18,6 +18,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(record.get("kind") == "source-floating-conversion" for record in transformations):
+        differences.append("explicit floating conversion composites retain source/target formats, rounding, original source IDs and caller intent; RTZ uses standard nearest casts with exact backward comparison and word correction, equal-width formats use an exact f32 bridge, and f64-to-16-bit RN uses a round-to-odd f32 bridge to avoid double rounding and missing direct runtime helpers; this is a standard MLIR expansion without GPU mapping, not permission for FP8 saturation or unsupported numeric policies")
     if any(record.get("opcode") == "tt.fp_to_fp" and
            any(name in type_ for name in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
                for type_ in record.get("input_types", []))

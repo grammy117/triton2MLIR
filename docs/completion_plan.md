@@ -666,3 +666,16 @@ native feature preserves every ownership callback and typed storage. Continue
 with rounding-aware narrowing, equal-width formats, source saturation policy,
 broader models/scaled contractions, external/effect closure and targets;
 the full workstreams and denominator above remain unchanged.
+
+Standard-format casts now additionally preserve source RTNE/RTZ through
+executable standard MLIR expansions. All seven narrowing/format pairs qualify
+both modes in tensor/buffer/guarded profiles (42 combinations), including
+exhaustive f16/BF16 source encodings, adjacent wider midpoints, exact raw source
+results and reused libraries over empty/ragged shapes. An f32 round-to-odd
+bridge avoids f64→16-bit double rounding without a missing native helper.
+The real public RTZ source demo uses independent rational references. Intake
+caller provenance fields survive upstream rewriting and emission, with complete
+source-ID intent mappings for merged operations; tags grant no semantics.
+Continue FP8 narrowing/saturation/equal-width formats, mixed/scaled dot,
+runtime/alias and external/effect closure, maintained corpus and applicable
+target materialization. Standard cast closure is not full TTIR closure.

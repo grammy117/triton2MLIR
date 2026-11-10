@@ -63,6 +63,8 @@ precise division/sqrt, with [independent IEEE references and BF16 consumer suppo
 [typed byte storage, runtime control and exact word references](docs/float_casts.md).
 `shared-demo --kernel fp8-widen` also retains portable casts and qualifies
 [exact widening to standard floating types](docs/float_casts.md#executable-widening).
+`shared-demo --kernel rounded-cast` preserves explicit RTZ with
+[standard-format conversion and caller-intent evidence](docs/float_casts.md#rounding-and-standard-format-conversion).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

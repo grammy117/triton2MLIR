@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Standard floating conversions](float_casts.md#rounding-and-standard-format-conversion)
+now qualify all seven standard narrowing/format pairs in RTNE and RTZ across
+three memory profiles (42 combinations), including every f16/BF16 source word,
+adjacent wider midpoints and reused libraries over empty/ragged shapes.
+Fourteen arithmetic cases use independent rational references. Six source-loop
+cases additionally retain every narrowing boundary while runtime counts,
+dimensions and scalar increments change through the same Merlin library.
+The public RTZ demo and 88 rounding/FP8 regressions pass; native source
+verification, reference exclusion and ordinary ownership/lifetime checks remain
+active. FP8 saturation/equal-width formats, scaled contractions, broader
+runtime/effect profiles and applicable target materialization remain open.
+The saved `out/rounded-cast` package and its Merlin qualification verify
+26/45 artifacts. `out/rounded-cast-coverage/coverage.json` selects 26 packages,
+with 29/50 definitions observed and 25 in host-qualified captures. These are
+composition/type/attribute observations, not universal opcode coverage.
+
 [FP8 widening](float_casts.md#executable-widening) now qualifies all four FP8
 formats to f16/BF16/f32/f64 through actual native and Merlin execution. All 48
 format/destination/memory-profile combinations check every source encoding,
