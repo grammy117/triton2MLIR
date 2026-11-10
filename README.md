@@ -121,6 +121,10 @@ nonrectangular per-lane writes, source loops and transposed matrix layouts;
 both have actual Merlin library checks over changing and empty shapes.
 [FP16 tensor storage](docs/half_precision.md) also executes through both profiles,
 with typed narrowing, mixed FP16/FP32 contractions and preserved masked state.
+[BF16 tensor storage](docs/bfloat_precision.md) now also qualifies exact word
+transport, RNE casts, runtime selects/loops and BF16/F32 contractions through
+Merlin. `shared-demo --kernel bfloat-matmul` emits a visible package; its raw
+uint16 archive encoding and remaining model-capture work are explicit.
 
 The current demo captures a **real Triton kernel without a GPU**, recovers exact-tile tensor
 accesses, emits standard `scf`/`tensor`/`linalg` operations, executes that serialized IR with a

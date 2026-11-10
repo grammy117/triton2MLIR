@@ -9,6 +9,7 @@ import numpy as np
 from .bundle import _json, _record
 from .consumer import invoke_merlin_host
 from .kernel_consumer import verify_kernel_qualification
+from .tensor_storage import comparison_values
 
 
 def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, python=None, rtol=0, atol=0):
@@ -32,6 +33,7 @@ def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, pyth
         shutil.copyfile(source, target)
     outputs, evaluation = invoke_merlin_host(qualification, out / "evaluator/inputs.npz", out / "evaluation",
                                             merlin_root=merlin_root, python=python)
+    types = json.loads((out / "source/compiler/signature.json").read_text())["outputs"]
     with np.load(out / "evaluator/reference.npz", allow_pickle=False) as expected:
         if set(expected.files) != {f"out{i}" for i in range(len(outputs))}:
             raise ValueError("invocation reference needs exactly the declared result keys")
@@ -39,7 +41,9 @@ def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, pyth
             golden = expected[f"out{i}"]
             if actual.shape != golden.shape or actual.dtype != golden.dtype:
                 raise ValueError("invocation reference shape/dtype differs from actual result")
-            np.testing.assert_allclose(actual, golden, rtol=rtol, atol=atol, equal_nan=True)
+            dtype = types[i]["dtype"]
+            np.testing.assert_allclose(comparison_values(actual, dtype), comparison_values(golden, dtype),
+                                       rtol=rtol, atol=atol, equal_nan=True)
     if verify_kernel_qualification(qualification) != verified or _record(qualification / "qualification.json") != _record(out / "source/qualification.json"):
         raise ValueError("compiled qualification changed during invocation")
     report = {"schema": "t2m.merlin-kernel-invocation.v1", "native_compilation": "reused-qualified-library",

@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline(*, compare_exchange=False, word_views=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -21,11 +21,18 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False):
 
     passes, adapted = ["scf-forall-to-for"], 0
     for entry in _UPSTREAM_PASSES:
+        if bfloat and entry == "convert-arith-to-llvm":
+            # Official bit expansion preserves BF16 subnormal casts even when
+            # a host BF16 conversion instruction would flush them to zero.
+            passes.append("arith-expand{include-bf16=true}")
         if entry.startswith("one-shot-bufferize{") and entry.endswith("}"):
             entry = entry[:-1] + " allow-return-allocs-from-loops}"
             adapted += 1
         passes.append(entry)
     passes = edit_pipeline(passes)
+    if bfloat:
+        from merlin.llvmlower.bfloat_transport import edit_pipeline as edit_bfloat_transport
+        passes = edit_bfloat_transport(passes)
     if word_views:
         from merlin.llvmlower.atomic_word_views import edit_pipeline as edit_word_views
         passes = edit_word_views(passes)
@@ -67,12 +74,15 @@ def compile_model(staged, work):
     prepared = text(module, generic=True)
     (work / "prepared.mlir").write_text(prepared)
     features = COMPILER_FEATURES
+    if any("bf16" in str(value.type) for op in module.walk() for value in (*op.operands, *op.results)):
+        features = features | {"preserve_bfloat_transport"}
     regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
     if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
         features = features | {"lower_atomic_word_views"}
     elif regions:
         features = features | {"lower_integer_compare_exchange"}
-    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features)
+    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features,
+        bfloat="preserve_bfloat_transport" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,
                             timeout=30, features=features, retain_llvm_dialect=True)
     ll = work / "model.ll"
@@ -95,11 +105,10 @@ def execute_model(staged, work, arguments, *, evaluation=None):
     import numpy as np
     from merlin.llvmlower.abi import HostModel, ScalarArg
     from runtime_shapes import resolve_shapes
+    from tensor_storage import DTYPES as dtypes
 
     signature = json.loads((staged / "signature.json").read_text())
     evaluation = Path(evaluation) if evaluation is not None else work
-    dtypes = {"f16": np.float16, "f32": np.float32, "f64": np.float64, "i8": np.int8, "i16": np.int16,
-              "i32": np.int32, "i64": np.int64, "i1": np.bool_}
     with np.load(arguments, allow_pickle=False) as values:
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
             raise ValueError("Merlin host evaluator needs exactly the declared argument keys")

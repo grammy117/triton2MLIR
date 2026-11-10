@@ -14,6 +14,7 @@ from .shared_tensor import TensorABI
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, WORD_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
+from .tensor_storage import DTYPES, comparison_values
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
@@ -49,10 +50,11 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
     actual, execution = execute_native(mlir, arrays, work, python=python, shape_abi=result.spec.runtime_shapes())
-    for computed, golden in zip(actual, references, strict=True):
+    for computed, golden, buffer in zip(actual, references, result.spec.outputs, strict=True):
         if computed.shape != golden.shape or computed.dtype != golden.dtype:
             raise ValueError("reference shapes/dtypes must exactly match results")
-        np.testing.assert_allclose(computed, golden, rtol=rtol, atol=atol, equal_nan=True)
+        np.testing.assert_allclose(comparison_values(computed, buffer.dtype), comparison_values(golden, buffer.dtype),
+                                   rtol=rtol, atol=atol, equal_nan=True)
     execution.update({"reference_comparison": "passed", "rtol": rtol, "atol": atol,
                       "comparison": "numeric-allclose-equal-nan; no NaN-payload/signed-zero-bit claim"})
     trace = deepcopy(result.trace)
@@ -76,6 +78,8 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     for name, payload in result.auxiliary_artifacts.items():
         (out / name).write_text(payload)
     differences = DIFFERENCES + kernel_representation_differences(trace, dynamic=result.spec.dynamic)
+    if any(buffer.dtype == "bf16" for buffer in result.spec.buffers):
+        differences.append("BF16 tensors retain logical bf16 MLIR types; NumPy inputs/references use raw uint16 storage words, unlike model2MLIR's legacy FP32 value archives; numeric comparisons decode BF16 before applying tolerances; selected host pipelines require upstream arith-expand include-bf16=true for RNE casts and Merlin's preserve_bfloat_transport feature for exact scalar LLVM word transport; no by-value BF16 calling convention is supplied")
     _json(out / "compatibility.json", {"schema": "t2m.compatibility.v2", "profile": profile,
           "baseline": "model2MLIR 035bb5a", "differences": differences,
           "same_core_filenames": True, "merlin_staged_execution": "not-certified"})
@@ -120,6 +124,8 @@ def verify_shared_bundle(out):
             raise ValueError("incomplete packaged inputs")
         result_shapes = resolve_shapes(spec.runtime_shapes(), [data[f"in{i}"] for i in range(len(spec.inputs))]) if spec.dynamic else tuple(b.shape for b in spec.outputs)
         for i, buffer in enumerate(spec.inputs):
+            if data[f"in{i}"].dtype != DTYPES[buffer.dtype]:
+                raise ValueError("packaged input storage dtype differs from the ABI")
             if not spec.dynamic and tuple(data[f"in{i}"].shape) != buffer.shape:
                 raise ValueError("packaged input shape differs from the ABI")
             if buffer in spec.runtime_scalars:
@@ -129,12 +135,16 @@ def verify_shared_bundle(out):
                     raise ValueError("packaged runtime scalar dtype differs from the ABI")
     results = spec.outputs
     primary = np.load(out / "golden.npy", allow_pickle=False)
+    if primary.dtype != DTYPES[results[0].dtype]:
+        raise ValueError("primary golden storage dtype differs from the ABI")
     if tuple(primary.shape) != result_shapes[0]:
         raise ValueError("primary golden shape differs from the ABI")
     with np.load(out / "extra.npz", allow_pickle=False) as extra:
         if set(extra.files) != {f"out{i}" for i in range(1, len(results))}:
             raise ValueError("incomplete additional references")
         for i, buffer in enumerate(results[1:], 1):
+            if extra[f"out{i}"].dtype != DTYPES[buffer.dtype]:
+                raise ValueError("additional reference storage dtype differs from the ABI")
             if tuple(extra[f"out{i}"].shape) != result_shapes[i]:
                 raise ValueError("additional reference shape differs from the ABI")
     if receipt["materialized_abi"] != {"complete": True, "inputs": len(spec.inputs), "outputs": len(results)}:

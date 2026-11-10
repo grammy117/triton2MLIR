@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[BF16 storage/casts](bfloat_precision.md) now have 20 focused native/Merlin cases
+covering complete 16-bit copy/widening domains, RNE boundaries, runtime select
+loops and original BF16/F32 contractions. The combined low-precision and floating
+atomic regression passes 97 cases. The explicit raw-word NumPy encoding differs
+from legacy model2MLIR BF16 archives; complete BF16 model capture, other numeric
+policies, scaled formats and target materialization remain open.
+
 [Integer RMW atomics](atomic_memory.md) now have an explicit private-invocation
 profile through actual Merlin execution: all nine integer operations, scalar/
 tiled i32/i64, collisions, original old values, initialization and race checks.

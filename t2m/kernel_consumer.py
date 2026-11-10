@@ -10,6 +10,7 @@ import numpy as np
 
 from .bundle import _json, _record, verify_bundle
 from .consumer import check_merlin_host
+from .tensor_storage import comparison_values
 
 
 STAGE = '''
@@ -49,10 +50,12 @@ def qualify_kernel(capture, out, *, merlin_root, python=None, compiler_python=No
         references.extend(extra[f"out{i}"].copy() for i in range(1, len(outputs)))
     if len(outputs) != len(references):
         raise ValueError("Merlin kernel result count differs from independent references")
-    for actual, golden in zip(outputs, references, strict=True):
+    types = json.loads((out / "compiler/signature.json").read_text())["outputs"]
+    for actual, golden, type_ in zip(outputs, references, types, strict=True):
         if actual.shape != golden.shape or actual.dtype != golden.dtype:
             raise ValueError("Merlin kernel result shape/dtype differs from independent reference")
-        np.testing.assert_allclose(actual, golden, rtol=rtol, atol=atol, equal_nan=True)
+        np.testing.assert_allclose(comparison_values(actual, type_["dtype"]), comparison_values(golden, type_["dtype"]),
+                                   rtol=rtol, atol=atol, equal_nan=True)
     # Detect a source-package change during staging or invocation. The compiler
     # never receives these evaluator values or the qualification report.
     if verify_bundle(capture) != receipt or _record(capture / "capture_receipt.json") != _record(out / "input-receipt.json"):

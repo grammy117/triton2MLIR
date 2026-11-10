@@ -503,3 +503,16 @@ execution cases, six profile refusals, 18 existing execution regressions and
 primitive checks, producer reconstruction and lifetime gates remain unchanged.
 This closes that typed composition; broader numeric/effect, descriptor,
 runtime/alias and accelerator-materialization requirements remain open.
+
+BF16 standalone tensors now additionally qualify through actual Merlin libraries
+in all three memory profiles. Twenty focused cases retain exact uncomputed
+words, IEEE RNE casts, runtime shapes/selection loops and BF16/F32 contractions
+with original nonzero accumulators. The combined low-precision/floating-atomic
+regression passes 97 cases; native seed and transport gates remain checked.
+The visible `out/bfloat-matmul` package retains `linalg.matmul`, and its separate
+Merlin qualification records host execution. See [BF16](bfloat_precision.md).
+Next numeric/package work must bind exact BF16 source input/result words and
+safetensors weights into real model2MLIR captures while preserving parent
+archives and receipts. Legacy widened archives cannot prove signaling-NaN bits.
+Direct BF16 arithmetic policies, FP8/scaled-dot, external effects, descriptors,
+alias/runtime closure and accelerator materialization remain completion gates.

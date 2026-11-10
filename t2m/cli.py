@@ -73,6 +73,9 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         fn, constants, shapes = kernels.matrix_add, {"M": 4, "N": 8}, [(4, 8)] * 3
     elif kernel == "matmul":
         fn, constants, shapes = kernels.block_matmul, {"M": 16, "N": 16, "K": 16}, [(16, 16)] * 3
+    elif kernel == "bfloat-matmul":
+        fn, constants, shapes = kernels.accumulated_matmul, {"M": 16, "N": 16, "K": 16}, [(16, 16)] * 4
+        buffer_dtypes, buffer_effects = {"x": "bf16", "y": "bf16"}, {"out": "write"}
     elif kernel == "scan":
         fn, constants, shapes, grid = kernels.scan_tiles, {"N": 53, "B": 16, "KIND": 0, "REVERSE": True}, [(53,)] * 2, (4,)
     elif kernel == "tuple-scan":
@@ -178,6 +181,8 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     names = ["x", "y", "out"] if len(shapes) == 3 else ["x", "out"]
     if kernel == "tuple-scan":
         names = ["a", "b", "out_a", "out_b"]
+    elif kernel == "bfloat-matmul":
+        names = ["x", "y", "initial", "out"]
     elif kernel == "online-attention":
         names = ["q", "k", "v", "out"]
     elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32"):
@@ -198,7 +203,12 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
     additional = []
-    if kernel.startswith("atomic-word-cas"):
+    if kernel == "bfloat-matmul":
+        x, y = (rng.integers(-2, 3, (16, 16)).astype(np.float32) for _ in range(2))
+        initial = rng.integers(-5, 6, (16, 16)).astype(np.float32)
+        arrays = [*((value.view(np.uint32) >> 16).astype(np.uint16) for value in (x, y)), initial]
+        golden = initial + x @ y
+    elif kernel.startswith("atomic-word-cas"):
         width = int(kernel.removeprefix("atomic-word-cas"))
         floating, integer = getattr(np, f"float{width}"), getattr(np, f"int{width}")
         state = (np.arange(16, dtype=floating) + floating(50)).view(integer)
@@ -385,7 +395,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "bfloat-matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

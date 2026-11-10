@@ -12,9 +12,8 @@ import sys
 import numpy as np
 from torch_mlir import execution_engine, ir, passmanager, runtime
 from runtime_shapes import resolve_shapes
+from tensor_storage import DTYPES
 
-DTYPES = {"f16": np.float16, "f32": np.float32, "f64": np.float64, "i8": np.int8,
-          "i16": np.int16, "i32": np.int32, "i64": np.int64, "i1": np.bool_}
 SCALAR_CTYPES = {"f32": ctypes.c_float, "f64": ctypes.c_double, "i8": ctypes.c_int8,
                  "i16": ctypes.c_int16, "i32": ctypes.c_int32, "i64": ctypes.c_int64, "i1": ctypes.c_bool}
 
@@ -107,14 +106,30 @@ def main(work):
                 "support_sha256": hashlib.sha256(atomic_compare_exchange.SUPPORT.encode()).hexdigest(),
                 "prepared_sha256": hashlib.sha256(prepared.read_bytes()).hexdigest()})
             namespace["_cas_suspend"](module)
+        has_bfloat = any("bf16" in str(value.type) for op in operations(module.operation) for value in (*op.operands, *op.results))
         pipelines = (
             "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
-            "builtin.module(func.func(convert-linalg-to-loops),expand-strided-metadata,lower-affine,convert-scf-to-cf,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
+            "builtin.module(func.func(convert-linalg-to-loops)," + ("arith-expand{include-bf16=true}," if has_bfloat else "") + "expand-strided-metadata,lower-affine,convert-scf-to-cf)",
+            "builtin.module(convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
             passmanager.PassManager.parse(pipeline).run(module.operation)
             if adapters and pipeline == pipelines[0]:
                 namespace["_cas_restore"](module)
+            if pipeline == pipelines[-1] and any(str(value.type) == "bf16" for op in operations(module.operation)
+                    for value in (*op.operands, *op.results)):
+                root = os.environ.get("T2M_MERLIN_ROOT")
+                if not root:
+                    raise ValueError("BF16 native transport requires the explicit T2M_MERLIN_ROOT compiler support path")
+                sys.path.insert(0, str(Path(root).resolve() / "src"))
+                from merlin.llvmlower import bfloat_transport
+                scope = {"ir": ir}
+                exec(bfloat_transport.SUPPORT, scope)
+                count = scope["_bf_transport"](module)
+                import hashlib
+                adapters.append({"name": "merlin-exact-bfloat-transport", "scalar_values": count,
+                    "arithmetic_casts": "upstream-arith-expand-include-bf16=true",
+                    "support_sha256": hashlib.sha256(bfloat_transport.SUPPORT.encode()).hexdigest()})
         (work / "lowered-llvm.mlir").write_text(str(module))
 
         def check(operation):

@@ -67,6 +67,13 @@ their functional tensor/scalar ABI and receipt schemas are unchanged.
 The existing `f16` tensor element type now has native and Merlin host execution
 support using actual NumPy float16 storage. No hidden widening or by-value half
 scalar convention is introduced; see [the half profile](half_precision.md).
+The existing `bf16` type now additionally uses **raw uint16 words** in standalone
+NumPy inputs/references and the unchanged two-byte host descriptors. Numeric
+comparisons decode BF16 before applying tolerances. This explicitly differs
+from model2MLIR's legacy widened F32 archives. Host qualification requires the
+upstream BF16 cast expansion and Merlin's checked scalar LLVM transport feature;
+complete BF16 parent model archives and weights remain unqualified. See
+[the BF16 contract](bfloat_precision.md).
 The actual tensor/result allocation extents are dynamic; they are distinct from
 ABI v4's static capacities and changing prefixes. Native execution receives an
 explicit shape-allocation contract derived from `spec.json`. Static packages
