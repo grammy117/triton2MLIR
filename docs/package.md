@@ -135,6 +135,14 @@ representations are explicit in transformation/provenance and compatibility
 metadata; artifact names, stage versions and public ABI are unchanged.
 See [mixed storage](mixed_storage.md).
 
+Selected integer atomic events additionally retain actual integer or equal-width
+floating storage captures under the typed profile. Complete source context and
+actual capture dtype distinguish each event's view declaration; an isolated CAS
+template's integer pointer formal is checked separately. Primitive contracts and
+complete producer replay remain required. Compatibility metadata records this
+composition with unchanged public ABI and stage/artifact schemas. Real models
+qualify three differently typed tensor results and every original tuple reference.
+
 `--effect-profile atomics` additionally requires guarded-buffer/source-words and
 selects the explicit private-invocation integer RMW/CAS contract. Public arguments
 and results retain their tensor/scalar ABI. `memory-admission.v3` binds thirty-bit

@@ -372,3 +372,17 @@ def mixed_storage_cas(integer_state, floating_state, comparison, value, old_inte
     indexed_cas(integer_state, comparison, value, old_integer, B=B, SCALAR=False, SEM="acq_rel", SCOPE="gpu")
     indexed_cas(floating_state.to(tl.pointer_type(word), bitcast=True), comparison, value,
                 old_word.to(tl.pointer_type(word), bitcast=True), B=B, SCALAR=False, SEM="acq_rel", SCOPE="gpu")
+
+
+@triton.jit
+def selected_word_rmw(a, b, value, index, old, n, choice,
+                       B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr, OP: tl.constexpr):
+    signed: tl.constexpr = tl.int32 if WIDTH == 32 else tl.int64
+    unsigned: tl.constexpr = tl.uint32 if WIDTH == 32 else tl.uint64
+    word: tl.constexpr = unsigned if OP == "umax" or OP == "umin" else signed
+    lane = tl.program_id(0) if SCALAR else tl.program_id(0) * B + tl.arange(0, B)
+    pointer = tl.where((lane % 2 == 0) == choice,
+        a.to(tl.pointer_type(word), bitcast=True), b.to(tl.pointer_type(word), bitcast=True))
+    indexed_atomic(value.to(tl.pointer_type(word), bitcast=True), index, pointer,
+        old.to(tl.pointer_type(word), bitcast=True), n=n, m=37, B=B, OP=OP,
+        SCALAR=SCALAR, MASK=True, FRESH=False, SEM="acq_rel", SCOPE="gpu")

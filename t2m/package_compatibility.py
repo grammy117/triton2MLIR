@@ -24,6 +24,11 @@ def kernel_representation_differences(trace, *, dynamic=False):
     selected = [t for t in transformations if t.get("kind") == "selected-pointer-memory"]
     if selected:
         differences.append("finite mixed-base pointers use internal logical-buffer selectors paired with source-word offsets; predicated accesses stay at the original memory event; the public tensor/scalar ABI is unchanged")
+        payload = trace.get("memory", {}).get("atomic_payload", [])
+        viewed = {tuple(sorted(p["source_ids"])) for p in payload if p.get("word_view")}
+        ordinary = {tuple(sorted(p["source_ids"])) for p in payload if not p.get("word_view")}
+        if viewed & ordinary:
+            differences.append("selected integer atomics retain each root's actual integer or equal-width floating storage type; one complete source context can bind both plain and word-view events; compiler staging matches their actual storage captures independently of logical CAS template formals, while primitive contracts and complete producer event reconstruction remain mandatory; stage/artifact schemas and public tensor/scalar ABI are unchanged")
         if any(t.get("expansion") == "per-root-original-storage-memory-event-with-register-bitcasts" for t in transformations):
             differences.append("selected ordinary memory retains each root's own equal-width storage dtype; predicated loads/stores perform register bitcasts at the original event and preserve source fills after loading; shared element offsets do not imply a shared storage representation; artifact and public tensor/scalar ABI schemas are unchanged")
         if any(t["missing_other_zero_refinement"] for t in selected):

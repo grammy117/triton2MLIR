@@ -479,7 +479,7 @@ half floating ABI conversions. Source region/selection/rank-two compositions,
 constants and actual model2MLIR tuple captures are qualified. The stage-v2
 typed-template variant is an explicit package difference, with complete producer
 replay and consumer custody checks. This closes word CAS within the private
-typed profile; mixed-storage atomic selectors, other numeric formats, descriptors,
+typed profile; other numeric formats, descriptors,
 external effects/synchronization, maintained coverage and staged accelerator
 materialization remain completion requirements.
 
@@ -491,3 +491,15 @@ carry scalar table indices through original loops. The 52 focused cases,
 the actual Merlin interface. Native ownership/lifetime rules are unchanged.
 See [mixed storage](mixed_storage.md); general computed selector recurrences,
 aliases/layouts and the remaining workstreams above are still completion gates.
+
+Selected integer atomic events now additionally retain each root's integer or
+equal-width floating storage. The consumer uses complete source context plus
+actual storage captures, with separate logical CAS template types. All nine
+i32/i64 RMWs and i16/i32/i64 CAS qualify through native/Merlin execution,
+including collisions, source regions and repeated helpers. Five real model2MLIR
+captures preserve learned weights and all three tuple references. The 76
+execution cases, six profile refusals, 18 existing execution regressions and
+290 consumer declaration/staging cases pass. Public ABI and artifact schemas,
+primitive checks, producer reconstruction and lifetime gates remain unchanged.
+This closes that typed composition; broader numeric/effect, descriptor,
+runtime/alias and accelerator-materialization requirements remain open.

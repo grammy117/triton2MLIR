@@ -372,7 +372,7 @@ Run `shared-demo --kernel atomic-min` or `atomic-max` with guarded-buffer,
 source-words and typed-atomics. Native qualification additionally requires the
 explicit `T2M_MERLIN_ROOT` compiler-support path.
 `scripts/capture_atomic_model.py --kind min` / `--kind max` captures the model
-source for binding. Differently typed selected roots and broader
+source for binding. Broader
 address/alias contracts remain further work; f64 addition has the distinct
 rounding/subnormal/NaN contract below. Accelerator execution remains separate.
 
@@ -609,5 +609,28 @@ Try `shared-demo --kernel atomic-word-cas16` (`32` or `64` also works), with
 `--effect-profile typed-atomics`. Set `T2M_MERLIN_ROOT` to the matching Merlin
 checkout for native support. `scripts/capture_atomic_model.py --kind word-cas16`
 (or `word-cas32`/`word-cas64`) supplies real model captures. Changed-width views,
-differently typed selected roots, external participants, f16 numeric RMWs and
+external participants, f16 numeric RMWs and
 accelerator execution remain separate contracts and implementations.
+
+## Selected atomic roots with different storage types
+
+The typed profile now qualifies a source integer atomic selecting ordinary
+integer storage or an equal-width floating word view. All nine RMW primitives
+qualify for i32/f32 and i64/f64; CAS qualifies for i16/f16, i32/f32 and i64/f64.
+The actual root dtype stays in the public tensor interface and executable
+standard atomic expansion. Uniform/lane selections preserve original masks,
+old words, source recurrence/order/scope and final pointers.
+
+Stage bindings retain actual storage captures independently of logical CAS
+template formals. The consumer matches complete source context plus storage
+dtype, allowing a viewed and an unviewed event from the same original primitive.
+Original source contracts remain unchanged, and full producer replay is still
+required. Compatibility metadata records this representation with unchanged
+stage/artifact schemas and private-invocation ownership/initialization rules.
+
+The 76 native/Merlin execution cases, six profile refusals and five real
+model2MLIR captures qualify this composition. Independent raw-word histories
+check collisions without fixing lane order; every model retains weights and
+all three tuple references. Existing f32 IEEE/FTZ, f64 and integer profiles pass
+18 execution regressions. See [mixed storage](mixed_storage.md#selected-integer-atomics)
+for the consumer pin, exact evidence scope and remaining numeric/effect gates.

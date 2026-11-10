@@ -103,6 +103,9 @@ bitcasts on the original tensor storage types.
 through f16/i16, f32/i32 and f64/i64 roots. Closed per-lane selector permutations
 carry scalar table indices in the original loops, preserving tiling and reuse
 through actual Merlin execution and genuine model2MLIR captures.
+The typed atomic profile also preserves integer RMW/CAS through mixed-storage
+selectors, with actual root dtypes, original old words and complete three-result
+model captures; see [the qualified combinations](docs/mixed_storage.md#selected-integer-atomics).
 `shared-demo --kernel runtime-memory-loop` additionally preserves guarded buffer
 reads and exact row tails inside a runtime loop.
 `shared-demo --kernel runtime-memory-store` retains a read/modify/write recurrence

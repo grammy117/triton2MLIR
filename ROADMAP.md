@@ -480,5 +480,10 @@ Ordinary [mixed storage selectors](docs/mixed_storage.md) now qualify all three
 word widths through actual Merlin execution and genuine model2MLIR captures.
 Closed selector permutations carry scalar indices into immutable selector tiles,
 preserving source loops and offset recurrences without native lifetime exemptions.
-Mixed-storage atomics and broader numeric/effect contracts remain open.
+Selected integer atomics now also retain mixed integer/floating storage: all
+nine i32/i64 RMWs and i16/i32/i64 CAS, with complete source context/storage
+bindings, old values and original regions. The 76 execution compositions,
+six profile refusals and five three-result model captures pass. Broader numeric
+formats, floating operations through integer views, external effects and target
+materialization remain open. See [mixed storage](docs/mixed_storage.md#selected-integer-atomics).
 See [logical views](docs/pointer_views.md).

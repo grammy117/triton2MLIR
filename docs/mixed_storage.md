@@ -66,8 +66,8 @@ initialized output state and raw results through native and Merlin execution.
 Run `scripts/capture_mixed_view_model.py --width 16` (32/64 also work) with
 `--out` to capture one; `tests/test_mixed_view_model.py` shows the checked binding.
 Source references use independent PyTorch integer operations, without a Triton
-CPU backend. These cases do not establish universal alias/layout, mixed-storage
-atomic or accelerator coverage.
+CPU backend. These ordinary-memory cases do not establish universal alias/layout
+or accelerator coverage. Integer atomics have the additional qualification below.
 
 Visible evidence: `out/mixed-storage/` verifies all 20 package artifacts;
 `out/mixed-storage-merlin/` verifies all 45 qualification artifacts and actual
@@ -75,3 +75,54 @@ host execution. All five results also pass explicit raw-word comparisons.
 `out/mixed-view-model32/model/` verifies all 79 model artifacts, including
 unchanged weights and native/Merlin raw outputs. Generated artifacts are ignored
 by Git; compiler sources, tests and contracts are versioned.
+
+## Selected integer atomics
+
+The explicit `typed-atomics` profile now also admits integer primitives whose
+logical pointer selects ordinary integer storage or an equal-width floating
+word view. All nine RMW operations qualify for i32/f32 and i64/f64; CAS qualifies
+for i16/f16, i32/f32 and i64/f64. Each root retains its public storage dtype.
+The existing standard integer atomic or floating-storage atomic region executes
+the source operation, including original old words. Floating representations
+are bit data here; no floating arithmetic or rounding policy is inferred.
+
+Selected roots share the original source event and complete inlined call
+context. Their stage bindings retain different actual storage captures.
+Merlin now matches both context and captured storage dtype before checking
+word-view agreement. A CAS template's integer pointer formal remains distinct
+from its floating storage capture. This fixes the previous refusal caused by
+comparing both roots' view declarations as if they described one storage type.
+Primitive operation/order/scope checks and complete producer reconstruction
+remain mandatory; this custody check is not a source-equivalence proof.
+
+Artifact/stage schemas, public tensors/scalars and the private-invocation
+contract remain unchanged. Compatibility metadata explicitly records the
+mixed-storage atomic representation. Native legalization still uses checked
+typed helpers under the default 64-bit descriptor/index ABI; portable MLIR
+contains standard executable regions. Bounds, initialization, masks, original
+source regions and native lifetime checks remain intact.
+
+The focused suite passes 76 execution compositions plus six explicit-profile
+refusals. It covers all nine RMW operations, loaded indices, uniform/per-lane
+selection, scalar/vector events, for/while recurrences, final pointers and
+repeated helpers. Four collision cases check independent complete word histories
+for both roots, including signaling NaNs and wraparound, without assuming lane
+order. Five real model2MLIR captures preserve integer/floating learned weights
+and all three tuple results with exact native/Merlin word comparisons. Eighteen
+existing numeric/profile executions also pass. The consumer fix at
+`83da7091b7b0fbbabb513f8cd9943076ed11b987` passes 90 new declaration checks,
+200 existing staging checks and documentation/structure gates.
+
+Use `scripts/capture_mixed_atomic_model.py --kind cas --width 16 --out ...`
+or `--kind rmw --width 32`; CAS also supports 32/64 and RMW supports 64. The
+checked three-result binding is in `tests/test_mixed_atomic_model.py`.
+Numeric floating operations through integer storage, wider formats, external
+participants, synchronization and accelerator materialization remain separate
+implementation and qualification requirements.
+
+Visible mixed-atomic evidence: `out/mixed-atomic-cas16/` and
+`out/mixed-atomic-rmw64/` each verify 20 artifacts, with separate `-merlin/`
+qualifications verifying 45 artifacts and exact host results. The corresponding
+`-model/model/` packages each verify 80 artifacts, unchanged weights and all
+three exact native/Merlin results. The RMW kernel example retains unsigned
+maximum with loaded indices; the model example retains integer XOR.

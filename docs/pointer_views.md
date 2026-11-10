@@ -72,8 +72,10 @@ native legalization. [Word CAS](atomic_memory.md#integer-word-compareexchange-on
 additionally qualifies i16/i32/i64 comparisons on f16/f32/f64 storage, preserving
 old bits through standard regions and integer native helper results.
 Ordinary [mixed storage selectors](mixed_storage.md) now retain each root's
-actual equal-width dtype. Changed-width views and mixed-storage atomic selectors
-remain further extensions; provenance alone grants none of them.
+actual equal-width dtype. [Selected integer atomics](mixed_storage.md#selected-integer-atomics)
+now also retain integer/floating roots under the typed profile. Changed-width
+views and broader numeric/effect contracts remain further extensions;
+provenance alone grants none of them.
 
 Measured delivery: 59 new/existing pointer cases passed in
 `.scratch/logical-word-views-final.log`; the final standalone view suite passes

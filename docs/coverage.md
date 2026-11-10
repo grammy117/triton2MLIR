@@ -313,8 +313,8 @@ checks pass. Three demos and 15 real model2MLIR cases preserve public storage
 types, weights and tuple results. Native helpers return integer words, avoiding half
 floating ABI conversions. The stage-v2 typed-template addition is explicit in
 [the package contract](package.md); no physical alias or opaque portable call
-is introduced. This does not qualify differently typed selected roots or
-arbitrary synchronization/accelerator behavior.
+is introduced. Differently typed selected roots now have the additional typed
+qualification below; arbitrary synchronization/accelerator behavior remains open.
 
 ### Selected ordinary storage representations
 
@@ -325,8 +325,18 @@ observations and final pointers. Closed two-/three-way selector permutations
 carry scalar indices into immutable tiles through original for/while loops.
 Actual Merlin libraries vary counts, choices and shapes; three genuine model2MLIR
 captures preserve weights and raw results. Another 75 pointer/event regressions
-pass. General computed selector recurrences, aliases/layouts, mixed-storage
-atomics and accelerator materialization remain separate qualification gates.
+pass. General computed selector recurrences, aliases/layouts and accelerator
+materialization remain separate qualification gates.
+
+Selected integer atomics additionally qualify mixed integer/floating roots:
+all nine i32/i64 RMW operations and i16/i32/i64 CAS retain actual storage types,
+source context and old values. The 76 execution cases, six profile refusals and
+five real three-result model captures pass, including independent collision
+histories and repeated helpers. The consumer matches actual captured storage
+independently of logical CAS formals; 90 new and 200 existing declaration/staging
+cases pass. Eighteen existing numeric/profile executions also pass. See
+[the precise scope](mixed_storage.md#selected-integer-atomics); numeric floating
+views of integer storage and broader effects/target coverage remain open.
 
 ### F64 atomic addition
 
