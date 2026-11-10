@@ -93,3 +93,13 @@ Non-dense multidimensional runtime strides, general indexed writes, arbitrary sh
 expressions, model-call signature adaptation and aliasing still need their own
 proofs. Compiler staging establishes declared type/binding consistency; actual
 guard semantics, memory coverage, numeric and execution evidence remain separate.
+
+Source memory-loop bounds also admit signed truncated, floor and ceil division
+when the complete operand intervals exclude zero divisors and signed overflow.
+The quotient proof follows the pinned LLVM integer-range endpoint/sign analysis.
+Every intermediate retains its source width; cancellation cannot hide overflow
+before a divide. A rounded expression such as `(k+BK-1)/BK` receives a checked
+interval for the iteration-domain proof, while its original SSA remains the
+executable loop bound. It does not become an affine layout/alignment fact.
+`tests/test_integer_intervals.py` checks every four-bit signed interval for all
+three modes, wider poison/overflow boundaries and actual nonlinear scalar SSA.

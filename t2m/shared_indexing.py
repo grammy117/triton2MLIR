@@ -122,6 +122,58 @@ def independent_tile(offsets, sizes, grid):
         used.add(match)
 
 
+def scalar_bounds(value, facts, grid, *, _cache=None):
+    """Bound loop-control SSA without pretending rounded quotients are affine.
+
+    The original value remains the executable bound. Only its checked interval
+    reaches the iteration-domain proof; layout/alignment still requires Linear.
+    """
+    if _cache is None:
+        _cache = {}
+    if value in _cache:
+        return _cache[value]
+    op = value.owner
+    name = getattr(op,"name","")
+    if name in ("arith.divsi","arith.ceildivsi","arith.floordivsi","arith.addi","arith.subi",
+                "arith.muli","arith.minsi","arith.maxsi","arith.index_cast","arith.extsi",
+                "arith.extui","arith.trunci"):
+        # Check every source-width intermediate before an affine cancellation
+        # can hide overflow preceding a rounded quotient.
+        for operand in op.operands:
+            scalar_bounds(operand,facts,grid,_cache=_cache)
+    try:
+        result = linear(value,facts,grid).bounds(grid)
+    except ConversionError:
+        op = value.owner
+        name = getattr(op,"name","")
+        if name in ("arith.divsi","arith.ceildivsi","arith.floordivsi"):
+            from .integer_intervals import division_bounds
+            width = getattr(getattr(value.type,"width",None),"data",64)
+            result = division_bounds(*(scalar_bounds(v,facts,grid,_cache=_cache) for v in op.operands),width=width,opcode=name)
+        elif name in ("arith.index_cast","arith.extsi","arith.trunci"):
+            result = scalar_bounds(op.operands[0],facts,grid,_cache=_cache)
+        elif name in ("arith.addi","arith.subi","arith.muli","arith.minsi","arith.maxsi"):
+            a,b = (scalar_bounds(v,facts,grid,_cache=_cache) for v in op.operands)
+            if name == "arith.addi":
+                result = a[0]+b[0],a[1]+b[1]
+            elif name == "arith.subi":
+                result = a[0]-b[1],a[1]-b[0]
+            elif name == "arith.minsi":
+                result = min(a[0],b[0]),min(a[1],b[1])
+            elif name == "arith.maxsi":
+                result = max(a[0],b[0]),max(a[1],b[1])
+            else:
+                corners = [left*right for left in a for right in b]
+                result = min(corners),max(corners)
+        else:
+            raise
+    width = getattr(getattr(value.type,"width",None),"data",64)
+    if not -(1 << (width-1)) <= result[0] <= result[1] < (1 << (width-1)):
+        raise ConversionError("source loop-control arithmetic may overflow",opcode=getattr(value.owner,"name",None))
+    _cache[value] = result
+    return result
+
+
 def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer, *, exact_iterations=True):
     """Reuse upstream's pointer-to-index recurrences, retaining source loop SSA.
 
@@ -289,6 +341,11 @@ def check_source_addresses(module, abi):
         elif kind == "arith.select":
             a, b = (bounds(v) for v in op.operands[1:])
             low, high = min(a[0], b[0]), max(a[1], b[1])
+        elif kind in ("arith.divsi", "arith.ceildivsi", "arith.floordivsi"):
+            from .integer_intervals import division_bounds
+            type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+            width = getattr(getattr(type_, "width", None), "data", 64)
+            low, high = division_bounds(*(bounds(v) for v in op.operands),width=width,opcode=kind)
         elif kind in ("arith.addi", "arith.subi", "arith.muli", "arith.minsi", "arith.maxsi"):
             a, b = (bounds(v) for v in op.operands)
             if kind == "arith.addi":

@@ -778,7 +778,8 @@ def _functionalize(module, abi):
                 kept = [i for i in range(len(arguments) - 1) if i not in pointer_slots]
                 require_signed_loop(op)
                 limits = [mapping[v] for v in op.operands[:3]]
-                domain = bounded_loop([linear(v, facts, grid).bounds(grid) for v in limits],
+                from .shared_indexing import scalar_bounds
+                domain = bounded_loop([scalar_bounds(v, facts, grid) for v in limits],
                                       width=getattr(getattr(arguments[0].type, "width", None), "data", 64))
                 lb, ub, step = domain.lower, domain.upper[1], domain.step
                 if not domain.exact and pointer_slots:
