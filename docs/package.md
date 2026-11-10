@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+Bound models can select `t2m.captured-runtime-arguments.v1`: original typed
+custom-call attributes supply runtime kernel constants and proved tensor/result
+shape casts. The public model2MLIR signature and all parent data bytes remain
+unchanged. Per-call evidence and compatibility metadata state the extension;
+Merlin independently reopens parent calls for shape/scalar/scratch custody.
+Evaluator values and their digests remain excluded. See
+[the exact binding contract](runtime_model_arguments.md).
+
 Baseline inspected: model2MLIR `feat/triton-integration` at `035bb5a`, particularly
 `m2m/capture/bundle.py`, `m2m/capture/provenance.py` and `m2m/transforms/externalize.py`.
 This document specifies the implemented R0/R1 package, not every future roadmap profile.

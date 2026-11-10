@@ -562,7 +562,8 @@ def main(argv=None):
                                                 effect_profile=item.get("effect_profile", args.effect_profile),
                                                 fp8_overflow=item.get("fp8_overflow", args.fp8_overflow))
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
-                                               results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {})))
+                                               results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {}),
+                                               runtime_arguments=item.get("runtime_arguments", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
                                merlin_root=args.merlin_root, merlin_python=args.merlin_python,
                                merlin_host=args.merlin_host, merlin_clang=args.merlin_clang,

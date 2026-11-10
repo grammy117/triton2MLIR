@@ -212,6 +212,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
+                          *(["t2m.captured-runtime-arguments.v1 materializes captured kernel scalar attributes as typed constants, with explicit RTNE f64-to-f32 rounding when declared; checked tensor/result shape casts preserve the original static model ABI and parent bytes; guarded scratch is derived independently for every original typed call; no evaluator archive supplies compiler values"]
+                            if bound.trace.get("argument_binding_profile") == "t2m.captured-runtime-arguments.v1" else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
                             if parent.get("compiler_constants") else []),
                           *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),

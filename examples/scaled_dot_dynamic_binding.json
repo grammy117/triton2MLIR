@@ -1,0 +1,31 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [{
+    "kernel": "t2m_demo::scaled_dot_dynamic",
+    "ttir": "../out/scaled-dot-dynamic/source.ttir",
+    "memory_profile": "guarded-buffer",
+    "address_policy": "source-words",
+    "abi": {
+      "schema": "t2m.shared-tensor-abi.v5",
+      "entry": "scaled_dot_dynamic",
+      "buffers": [
+        {"name": "a", "shape": ["m", "packed_k"], "dtype": "i8", "effect": "read"},
+        {"name": "b", "shape": ["packed_k", "n"], "dtype": "i8", "effect": "read"},
+        {"name": "sa", "shape": ["m", "groups"], "dtype": "i8", "effect": "read"},
+        {"name": "sb", "shape": ["n", "groups"], "dtype": "i8", "effect": "read"},
+        {"name": "initial", "shape": ["m", "n"], "effect": "read"},
+        {"name": "out", "shape": ["m", "n"], "effect": "write"}
+      ],
+      "grid": [{"dimension": "m", "divisor": 16}, {"dimension": "n", "divisor": 16}],
+      "runtime_scalars": [
+        {"name": "m", "dtype": "i32", "source_arg": 6, "bounds": [0, 35]},
+        {"name": "n", "dtype": "i32", "source_arg": 7, "bounds": [0, 21]},
+        {"name": "k", "dtype": "i32", "source_arg": 8, "bounds": [0, 65]},
+        {"name": "packed_k", "dtype": "i32", "source_arg": 9, "bounds": [0, 33]},
+        {"name": "groups", "dtype": "i32", "source_arg": 10, "bounds": [0, 3]}
+      ]
+    },
+    "scalar_arguments": {"m": 17, "n": 19, "k": 37, "packed_k": 19, "groups": 2},
+    "runtime_arguments": {"m": "m", "n": "n", "k": "k", "packed_k": "packed_k", "groups": "groups"}
+  }]
+}

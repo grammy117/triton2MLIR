@@ -94,6 +94,10 @@ def test_scaled_kernel_binds_actual_model_weights_and_complete_outputs(
         result,
         scalar_arguments={"lhs_k_pack": False, "rhs_k_pack": False},
     )
+    qualify_model(tmp_path, model_capture, binding)
+
+
+def qualify_model(tmp_path, model_capture, binding):
     out = tmp_path / "bound"
     write_model_bundle(
         model_capture,
@@ -132,6 +136,15 @@ def test_scaled_kernel_binds_actual_model_weights_and_complete_outputs(
         ]["kernels/0"]["differences"]
     )
     assert "parent/model.mlir" in receipt["artifacts"]
+    if binding.runtime_arguments:
+        calls = json.loads((out / "kernel-bindings.json").read_text())["calls"]
+        assert set(calls[0]["runtime_scalar_bindings"]) == set(
+            binding.runtime_arguments
+        )
+        assert any(
+            item["kind"] == "result-shape-cast"
+            for item in calls[0]["argument_adaptations"]
+        )
     if MERLIN and CLANG:
         host = json.loads((out / "consumer/host/execution.json").read_text())
         assert host["host_execution"] == host["whole_body_lowering"] == "passed"
@@ -146,3 +159,74 @@ def test_scaled_kernel_binds_actual_model_weights_and_complete_outputs(
                     actual[f"out{index}"].view(np.uint32),
                     reference[f"out{index}"].view(np.uint32),
                 )
+
+
+@pytest.fixture(scope="module")
+def dynamic_capture(tmp_path_factory):
+    root = tmp_path_factory.mktemp("scaled-model-dynamic")
+    script = Path(__file__).resolve().parents[1] / "scripts/capture_scaled_dot_model.py"
+    process = subprocess.run(
+        [M2M, str(script), "--dynamic", "--out", str(root / "capture")],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=dict(
+            os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(root)
+        ),
+    )
+    assert process.returncode == 0, process.stderr
+    return root / "capture"
+
+
+@pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
+def test_ragged_runtime_kernel_binds_captured_scalars_and_preserves_model_abi(
+    tmp_path, dynamic_capture, profile
+):
+    from test_scaled_dot_dynamic import convert
+
+    result = convert(tmp_path, profile)
+    arguments = {"m": 17, "n": 19, "k": 37, "packed_k": 19, "groups": 2}
+    binding = KernelBinding(
+        "t2m_demo::scaled_dot_dynamic",
+        result,
+        scalar_arguments=arguments,
+        runtime_arguments={name: name for name in arguments},
+    )
+    qualify_model(tmp_path, dynamic_capture, binding)
+
+
+@pytest.mark.parametrize("dynamic", [False, True])
+def test_model_signed_word_carriers_capture_native_verified_packed_ttir(dynamic):
+    from t2m.examples.scaled_dot_kernels import scaled_dot_dynamic, scaled_dot_tile
+
+    kernel = scaled_dot_dynamic if dynamic else scaled_dot_tile
+    constants = (
+        {"BM": 16, "BN": 16}
+        if dynamic
+        else dict(
+            M=16,
+            N=16,
+            K=64,
+            A_FORMAT="e2m1",
+            B_FORMAT="e2m1",
+            LHS_K_PACK=False,
+            RHS_K_PACK=False,
+            HAS_A_SCALE=True,
+            HAS_B_SCALE=True,
+            GROUP=32,
+        )
+    )
+    signature = {
+        name: "*i8"
+        if i < 4
+        else "*fp32"
+        if i < 6
+        else "constexpr"
+        if name in constants
+        else "i32"
+        for i, name in enumerate(kernel.arg_names)
+    }
+    source = capture_ttir(
+        kernel, signature, constants, source_target=("hip", "gfx942", 64)
+    )
+    assert "tt.dot_scaled" in source and "!tt.ptr<i8>" in source

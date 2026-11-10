@@ -38,6 +38,10 @@ RHS parameter bytes, surrounding model additions and two complete outputs.
 Its independent PyTorch CPU implementation decodes nibbles and E8M0 scales,
 then performs the declared f64 multiply/add recurrence and final f32 rounding.
 It imports neither the frontend compiler nor its rational reference.
+The `--dynamic` capture additionally keeps the source K loop, odd packed tails
+and runtime kernel scalar/shape ABI. The [checked runtime binding profile](runtime_model_arguments.md)
+specializes it from the captured call's original typed attributes, with no
+change to the public model signature or data artifacts.
 The [binding configuration](../examples/scaled_dot_binding.json) reuses the
 visible `scaled-dot` source. Three tensor/buffer/guarded model packages retain
 all original weight/input/reference bytes and execute the complete model

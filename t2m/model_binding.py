@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-from xdsl.dialects import func
+from xdsl.dialects import func, tensor
 from xdsl.dialects.builtin import (ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr,
                                   StringAttr, UnitAttr, f64, i1, i64)
 
@@ -18,6 +18,8 @@ from .diagnostics import ConversionError
 from .ir import text
 from .shared_tensor import SharedTensorResult, parse_shared
 from .memory_contract import GUARDED_PROFILES, validate_memory_evidence
+from .model_arguments import materialize_arguments, plan_arguments, runtime_constants
+from .scalar_abi import RuntimeScalar
 
 
 def scalar_attribute(value):
@@ -46,6 +48,8 @@ class KernelBinding:
     # Source output-buffer names in model-call result order; empty = source order.
     results: tuple[str, ...] = ()
     scalar_arguments: dict = field(default_factory=dict)
+    # Source runtime-scalar name -> captured prov.kernel_args schema name.
+    runtime_arguments: dict[str, str] = field(default_factory=dict)
 
     def validate(self):
         if len(self.qualname.split("::")) != 2 or not all(self.qualname.split("::")):
@@ -62,7 +66,10 @@ class KernelBinding:
         function = functions[0]
         if len(function.body.blocks) != 1 or not isinstance(function.body.block.last_op, func.ReturnOp):
             raise ConversionError("kernel body requires one entry block and a tensor return")
-        inputs = [b.name for b in result.spec.inputs]
+        if (list(function.function_type.inputs) != [value.type for value in result.spec.inputs]
+                or list(function.function_type.outputs) != [value.type for value in result.spec.outputs]):
+            raise ConversionError("kernel function signature differs from its declared tensor/scalar ABI")
+        inputs = [b.name for b in result.spec.inputs if not isinstance(b, RuntimeScalar)]
         names = self.operands or {n: n for n in inputs}
         if set(names) != set(inputs) or len(set(names.values())) != len(names):
             raise ConversionError("bind every source tensor input to a distinct schema operand name")
@@ -71,6 +78,7 @@ class KernelBinding:
         if len(outputs) != len(output_names) or set(outputs) != set(output_names):
             raise ConversionError("bind every source result exactly once")
         scalar = DictionaryAttr({n: scalar_attribute(v) for n, v in self.scalar_arguments.items()})
+        runtime_constants(result.spec, self.runtime_arguments, scalar)
         return function, names, outputs, scalar
 
 
@@ -98,7 +106,7 @@ def bind_model(model_mlir, bindings):
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}
     calls = [op for op in module.walk() if isinstance(op, func.CallOp)]
     used, records, guard_storage = set(), [], 0
-    for call in calls:
+    for parent_call_ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
         declaration = functions.get(symbol)
         identity = call.attributes.get("prov.kernel")
@@ -121,28 +129,39 @@ def bind_model(model_mlir, bindings):
         for binding, function, operand_names, output_names, scalars in prepared:
             if binding.qualname != identity.data or scalars != arguments or set(operand_names.values()) != set(by_name):
                 continue
-            operands = [by_name[operand_names[b.name]] for b in binding.implementation.spec.inputs]
-            outputs = dict(zip((b.name for b in binding.implementation.spec.outputs),
-                               function.function_type.outputs, strict=True))
-            if ([v.type for v in operands] == list(function.function_type.inputs)
-                and [outputs[n] for n in output_names] == [v.type for v in call.results]):
-                candidates.append((binding, function, operands, output_names))
+            plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
+                                  [value.type for value in call.results])
+            if plan is not None:
+                candidates.append((binding, function, plan, output_names))
         if len(candidates) != 1:
             raise ConversionError(f"{identity.data}: expected one matching typed/scalar specialization, found {len(candidates)}",
                                   opcode="func.call")
-        binding, function, operands, output_names = candidates[0]
+        binding, function, plan, output_names = candidates[0]
         if binding.implementation.trace.get("profile") in GUARDED_PROFILES:
             outputs = binding.implementation.spec.outputs
-            if any(type(n) is not int for b in outputs for n in b.shape):
-                raise ConversionError("guarded model binding needs static kernel scratch dimensions", opcode="func.call")
             contract = function.attributes.get("prov.memory_guard_bytes_per_result_element")
             cost = json.loads(binding.implementation.auxiliary_artifacts["memory-admission.json"])["guard_storage_bytes_per_output_element"]
             if not isinstance(contract, IntegerAttr) or contract.value.data != cost:
                 raise ConversionError("guarded kernel lacks its scratch storage contract", opcode="func.call")
-            guard_storage += cost * sum(math.prod(b.shape) for b in outputs)
+            guard_storage += cost * sum(math.prod(plan.outputs[b.name].get_shape()) for b in outputs)
+            if not 0 <= guard_storage < 2**63:
+                raise ConversionError("guarded model scratch exceeds its i64 domain", opcode="func.call")
         callsite = f"kernel_call.{len(records):04d}"
-        mapper = dict(zip(function.body.block.args, operands, strict=True))
         emitted = []
+        adaptations = list(plan.adaptations)
+
+        def append_adapter(op, kind):
+            op.location = call.location
+            op.attributes.update({"prov.family": StringAttr("binding"), "prov.op": StringAttr(kind),
+                "prov.kernel_origin": identity, "prov.kernel_callsite": StringAttr(callsite),
+                "prov.region_id": StringAttr(callsite + "/abi"),
+                "prov.emitted_id": StringAttr(f"{callsite}/abi.{len(emitted):04d}"),
+                "prov.kernel_source_sha256": StringAttr(binding.implementation.trace["source_sha256"])})
+            emitted.append(op)
+            return op.results[0]
+
+        operands = materialize_arguments(plan, append_adapter)
+        mapper = dict(zip(function.body.block.args, operands, strict=True))
         for source in function.body.block.ops:
             if isinstance(source, func.ReturnOp):
                 returned = [mapper[v] for v in source.arguments]
@@ -157,6 +176,10 @@ def bind_model(model_mlir, bindings):
                         op.attributes[attribute] = StringAttr(f"{callsite}/{value.data}")
             emitted.append(cloned)
         result_map = dict(zip((b.name for b in binding.implementation.spec.outputs), returned, strict=True))
+        for old, name in zip(call.results, output_names, strict=True):
+            if result_map[name].type != old.type:
+                result_map[name] = append_adapter(tensor.CastOp(result_map[name], old.type), "kernel-to-caller-shape")
+                adaptations.append({"kind": "result-shape-cast", "name": name, "caller_type": str(old.type)})
         block = call.parent
         block.insert_ops_before(emitted, call)
         for old, name in zip(call.results, output_names, strict=True):
@@ -164,8 +187,10 @@ def bind_model(model_mlir, bindings):
         block.erase_op(call)
         used.add(symbol)
         records.append({"id": callsite, "kernel": identity.data, "callee": symbol,
+                        "parent_call_ordinal": parent_call_ordinal, "source_operand_bindings": operand_names,
                         "model_call_attributes": {n: str(v) for n, v in call.attributes.items()},
                         "schema_operands": [n.data for n in names], "source_result_order": list(output_names),
+                        "argument_adaptations": adaptations, "runtime_scalar_bindings": plan.scalar_bindings,
                         "implementation_sha256": binding.implementation.trace["mlir_sha256"],
                         "source_sha256": binding.implementation.trace["source_sha256"]})
     remaining_calls = {op.callee.root_reference.data for op in module.walk() if isinstance(op, func.CallOp)}
@@ -191,4 +216,6 @@ def bind_model(model_mlir, bindings):
               "native_execution": "not-performed", "merlin_execution": "not-performed"}
     if guard_storage:
         report["guard_storage_bytes"] = guard_storage
+    if any(record["runtime_scalar_bindings"] for record in records):
+        report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
     return BoundModel(module, report)

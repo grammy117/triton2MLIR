@@ -117,9 +117,11 @@ host-qualified captures; an unobserved definition is not an unsupported-op verdi
 Three real model2MLIR bindings now retain packed parameters, scale buffers,
 learned C/bias and complete tuple references through Merlin host execution;
 see [model integration](model_integration.md). Runtime model scalar/shape
-adaptation remains separate work.
+adaptation is now qualified under the explicit
+[captured-argument profile](runtime_model_arguments.md), including guarded
+per-call scratch derived independently from original model calls.
 Remaining qualification includes broader runtime format/packing compositions,
-runtime model bindings, reserved FP6 storage, target numeric profiles and applicable
+broader model signatures/aliases, reserved FP6 storage, target numeric profiles and applicable
 accelerator materialization. These remain in the full
 [completion plan](completion_plan.md). This slice establishes no universal
 opcode/type/attribute/kernel coverage.

@@ -11,6 +11,10 @@ optional E8M0/E4M3FN scales, mixed operand types and original C through standard
 tiled MLIR and real Merlin packages. The internal-precision profile is explicit;
 runtime/ragged FP4 source loops also replay through all three memory profiles.
 Broader scaled compositions and applicable target materialization remain.
+[Runtime model bindings](docs/runtime_model_arguments.md) now use captured
+typed scalar attributes and checked shape casts to retain the source kernel
+runtime ABI within model2MLIR's static public model interface. Merlin derives
+per-call guarded scratch from the original typed parent call independently.
 [Source assertions](docs/source_assertions.md) now retain scalar/tensor checks,
 messages and failure effects through upstream standard lowering and real Merlin
 execution, including a complete model2MLIR state/tuple capture.

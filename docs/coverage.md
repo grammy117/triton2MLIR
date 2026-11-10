@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Runtime model arguments](runtime_model_arguments.md) now bind captured scalar
+attributes and compatible tensor/result shapes into dynamic kernel bodies.
+Six actual static/ragged scaled model packages qualify through native LLVM and
+Merlin across tensor/buffer/guarded profiles, retaining learned state and tuple
+results. The final producer regression passes 120 cases; 255 Merlin compiler
+staging cases independently check original parent calls, scratch declarations
+and evaluator exclusion. Static/dynamic visible model receipts verify 66/80
+artifacts. The explicit 32-package report retains 30/50 observed definitions
+and 26 in host-qualified captures. Broader numeric/effect/alias and target
+closure remain separate requirements; observation counts do not certify them.
+
 [Uniform conditional reads](conditional_reads.md) add a read-bound-only
 subset proof for upstream scalar-gated rectangles. Sixteen tail-proof cases
 and three real Merlin libraries cover both gate values, explicit fills and

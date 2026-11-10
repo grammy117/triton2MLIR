@@ -29,6 +29,10 @@ def scaled_dot_tile(
     BN: tl.constexpr = N // 2 if B_FORMAT == "e2m1" and not RHS_K_PACK else N
     a = tl.load(a_ptr + tl.arange(0, AM)[:, None] * AK + tl.arange(0, AK)[None, :])
     b = tl.load(b_ptr + tl.arange(0, BK)[:, None] * BN + tl.arange(0, BN)[None, :])
+    if A_FORMAT == "e2m1":
+        a = a.to(tl.uint8, bitcast=True)
+    if B_FORMAT == "e2m1":
+        b = b.to(tl.uint8, bitcast=True)
     sa = None
     sb = None
     if HAS_A_SCALE:
@@ -37,12 +41,16 @@ def scaled_dot_tile(
             + tl.arange(0, M)[:, None] * (K // GROUP)
             + tl.arange(0, K // GROUP)[None, :]
         )
+        if sa.dtype.is_int():
+            sa = sa.to(tl.uint8, bitcast=True)
     if HAS_B_SCALE:
         sb = tl.load(
             sb_ptr
             + tl.arange(0, N)[:, None] * (K // GROUP)
             + tl.arange(0, K // GROUP)[None, :]
         )
+        if sb.dtype.is_int():
+            sb = sb.to(tl.uint8, bitcast=True)
     indices = tl.arange(0, M)[:, None] * N + tl.arange(0, N)[None, :]
     c = tl.load(c_ptr + indices)
     result = tl.dot_scaled(
@@ -102,8 +110,8 @@ def scaled_dot_dynamic(
         # An odd logical tail leaves an inactive high nibble in a live byte.
         # Keep arbitrary caller bits there from entering the contraction.
         word_mask = tl.where(indices * 2 + 1 < k, 255, 15).to(tl.uint8)
-        a = a & word_mask[None, :]
-        b = b & word_mask[:, None]
+        a = a.to(tl.uint8, bitcast=True) & word_mask[None, :]
+        b = b.to(tl.uint8, bitcast=True) & word_mask[:, None]
         sa = tl.load(
             sa_ptr + rows[:, None] * groups + step,
             (rows[:, None] < m) & (step < groups),
@@ -114,7 +122,15 @@ def scaled_dot_dynamic(
             (cols[:, None] < n) & (step < groups),
             other=127,
         )
-        c = tl.dot_scaled(a, sa, "e2m1", b, sb, "e2m1", acc=c)
+        c = tl.dot_scaled(
+            a,
+            sa.to(tl.uint8, bitcast=True),
+            "e2m1",
+            b,
+            sb.to(tl.uint8, bitcast=True),
+            "e2m1",
+            acc=c,
+        )
     tl.store(
         out_ptr + rows[:, None] * n + cols[None, :],
         c,

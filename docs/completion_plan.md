@@ -114,7 +114,12 @@ loop state; 160 destination/ownership cases pass without relaxing lifetime check
 Three actual scaled model packages now preserve learned weights, scale buffers,
 packed parameters and complete tuple references through native and Merlin host
 execution in tensor/buffer/guarded profiles. See [model integration](model_integration.md).
-Continue with runtime scalar/shape model bindings and broader format/packing compositions,
+Runtime scalar/shape binding now also materializes only captured typed call
+attributes, checks every tensor/result extent, and preserves the static model
+ABI. Three actual ragged scaled model packages qualify through Merlin; its
+compiler stager independently derives each call's guarded scratch from parent
+IR without evaluator data. See [runtime model arguments](runtime_model_arguments.md).
+Continue with broader numeric/format/packing compositions,
 then the remaining E numeric/external/RNG profiles, B/C irregular alias/stride
 cases and F/G effects/corpus/target gates above. Reserved FP6 source packing
 remains unresolved rather than being guessed. All A–G workstreams remain open.
