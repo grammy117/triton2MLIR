@@ -1,11 +1,23 @@
 # Measured coverage and remaining boundaries
 
+[Readonly input aliases](readonly_aliases.md) now qualify both typed package
+writers, including f32/f16/BF16 tiled operands alongside independent writable
+output state. By-value scalar carriers can also share writable tensor storage.
+Twenty preparation checks and nine actual native/Merlin integration cases pass,
+with 33 additional invocations of those compiled libraries; 100 relevant
+regressions pass. Writable tensor overlap still refuses before any copies or
+serialization. This extends measured memory composition without granting a
+mutable alias or target interface.
+The visible BF16 package and qualification verify 33/52 artifacts. Its explicit
+39-package report at `out/readonly-alias-coverage/coverage.json` retains 31/50
+observed definitions and 27 in host-qualified captures.
+
 [Strided writable output state](strided_outputs.md) now qualifies three added
 f32/f16/BF16 GEMM packages through Merlin, with the whole returned allocation
 checked word for word. Twenty-seven replayed layouts/domains retain all padding
 and original K/C dataflow; nine lane/grid/bounds conflicts remain refused
 invocations. The combined six-case read/output integration matrix passes.
-Aliasing between declared allocations, output-C reads, model compositions and
+Writable tensor aliases, output-C reads, model compositions and
 applicable targets remain separate requirements.
 The visible BF16 output package verifies 33 producer and 52 qualification
 artifacts. The explicit 38-package report remains at 31/50 observed definitions

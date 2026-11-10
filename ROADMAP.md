@@ -10,8 +10,10 @@ compiler-staging, payload-materialization and coverage work with explicit eviden
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;
 [strided writable output state](docs/strided_outputs.md) also preserves every
-untouched output word and rejects conflicting stores. Cross-allocation aliases,
-strided output-C reads, model compositions and target handling remain open.
+untouched output word and rejects conflicting stores. [Readonly aliases](docs/readonly_aliases.md)
+now prepare independent logical input values, and aliased scalar carriers retain
+their by-value semantics through Merlin. Writable tensor aliases, strided
+output-C reads, model compositions and target handling remain open.
 [Pure external math](docs/external_math.md) now reuses shared conversions for
 52 f32/f64 default-library declarations, with typed/purity/library checks and
 standard math through Merlin. Arbitrary libraries and effects remain separate.

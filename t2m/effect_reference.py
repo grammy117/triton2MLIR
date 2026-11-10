@@ -47,7 +47,8 @@ def validate_inputs(spec, arrays):
             raise ValueError("effect scalar is outside its declared ABI bounds")
         if value.dtype == "i1" and np.any(array.view(np.uint8) > 1):
             raise ValueError("noncanonical Boolean storage requires a byte-aware input ABI")
-    return arrays
+    from .input_storage import snapshot_readonly_aliases
+    return snapshot_readonly_aliases(spec,arrays)
 
 
 def compare_outcome(directory, reference, *, backend, program, arguments, implementation, result_count,

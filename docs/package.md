@@ -49,6 +49,14 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Typed input preparation accepts overlapping readonly tensors by copying their
+exact logical values before serialization. Runtime scalar carriers are captured
+by value even when their backing bytes overlap tensor storage. The trace names
+`readonly-input-value-snapshots-v1`; compiled tensor inputs remain independent.
+Writable tensor overlaps refuse before copying and require an actual alias/state
+interface. This changes neither the ABI nor receipt schema; compatibility
+metadata records the rule. See [readonly aliases](readonly_aliases.md).
+
 Non-dense source-allocation packages keep owning flat tensors, including
 padding, with typed runtime origins, signed element strides and capacities.
 The guarded source-word profile executes those addresses without relabeling

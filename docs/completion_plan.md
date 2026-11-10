@@ -91,13 +91,23 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Readonly tensor aliases now pass both typed package writers as exact independent
+logical values. Runtime scalar carriers sharing tensor storage are captured by
+value before invocation. Nine actual Merlin libraries preserve original inputs
+and complete results through 33 additional invocations; writable tensor overlap
+still refuses before any copies or native work. Twenty preparation checks and
+all nine integration cases pass, alongside 100 relevant regressions. See
+[the input and state boundary](readonly_aliases.md). Continue B/C with writable
+tensor aliases/shared root state, strided output-C read/modify/write and model
+view adapters; broader E/F and applicable target gates remain open.
+
 Strided writable output allocations now additionally qualify f32/f16/BF16
 tiled GEMM through actual Merlin libraries. The public functional result
 retains all incoming prefix/suffix/padding words, while active signed-stride
 stores retain original C and the source K loop. Three added typed packages
 replay 27 valid layouts/domains and reject nine lane/grid/bounds conflicts;
 the combined six-case read/output matrix passes. See [strided output state](strided_outputs.md).
-Continue B/C with cross-allocation aliases, output-C read/modify/write and
+Continue B/C with writable tensor aliases, output-C read/modify/write and
 logical-view model compositions, then the broader E/F and applicable target
 gates below. The functional allocation result is an explicit interface choice,
 not an implicit dense logical view or an accelerator performance claim.

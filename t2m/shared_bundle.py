@@ -11,10 +11,11 @@ import numpy as np
 from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
-from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, WORD_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
+from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
 from .tensor_storage import DTYPES, assert_tensor_close
+from .effect_reference import validate_inputs
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
@@ -48,7 +49,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     if hashlib.sha256(source.encode()).hexdigest() != result.trace["source_sha256"]:
         raise ValueError("source changed after conversion")
     profile = validate_memory_evidence(result.trace, result.auxiliary_artifacts)
-    arrays, references = tuple(np.asarray(a) for a in inputs), tuple(np.asarray(a) for a in references)
+    arrays, references = validate_inputs(result.spec,inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
     actual, execution = execute_native(mlir, arrays, work, python=python, shape_abi=result.spec.runtime_shapes())

@@ -1,11 +1,14 @@
 """Explicit kernel representation differences shared by both package writers."""
 
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, TENSOR_PROFILE, WORD_PROFILE
+from .input_storage import READONLY_SNAPSHOTS
 
 
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if trace.get("memory", {}).get("input_preparation") == READONLY_SNAPSHOTS:
+        differences.append("overlapping readonly tensor arguments are snapshotted as independent logical values before serialization, preserving dtype and every input word; aliased scalar carriers are loaded by value without changing tensor storage; physical pointer identity and volatile observations remain outside this profile; overlap between tensor arguments involving writable storage still requires an explicit alias/state interface and refuses before copying; serialized/compiler inputs gain no alias dependency or permission to discard guards, and the generic raw-MLIR executor keeps its independent-input requirement")
     if any(buffer.get("dtype") in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
            for buffer in trace.get("spec", {}).get("buffers", [])):
         differences.append("FP8 tensors retain their exact logical MLIR format; NumPy inputs/references carry raw uint8 words, decoded only for numeric comparisons through the optional ml-dtypes codec; one-byte storage supplies no numeric cast/overflow policy or by-value FP8 calling convention; exact byte claims require explicit word comparisons")

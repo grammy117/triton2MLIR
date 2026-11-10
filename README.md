@@ -20,6 +20,11 @@ TTIR integration development uses `ttir-experiment-grammy` in both
 This standalone triton2MLIR repository uses `main`. Publish tested changes to
 these branches; retain existing branch names and published history.
 
+[Readonly aliases](docs/readonly_aliases.md) now pass through typed package
+preparation as exact independent input values; by-value scalar carriers retain
+their initial values even when backed by writable tensor storage. Writable
+tensor overlaps still require an explicit shared-state interface.
+
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts

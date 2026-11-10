@@ -42,6 +42,7 @@ from .tail_masks import TailExtent, describe, maximum, recover_extent
 from .upstream import inspect_optimizer, lower_with_shared
 from .views import axis_permutation, inverse_permutation
 from .standard_floats import _FP8_BY_NAME
+from .input_storage import READONLY_SNAPSHOTS
 
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
@@ -1480,6 +1481,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
              "memory": {"bounds": "checked-affine-domain-clipped-rectangular-accesses", "ordering": "functional-buffer-versions",
                         "index_overflow": "checked-source-address-widths-before-index-promotion",
                         "aliasing": "independent-storage-ABI-precondition",
+                        "input_preparation": READONLY_SNAPSHOTS,
                         "grid": "unmapped-logical-forall-with-owned-tiles" if host_math.prod(abi.grid_bounds) > 1 or any(isinstance(g, GridExtent) for g in abi.grid) else "single-logical-program"},
              "numeric_equivalence": "requires-qualification-against-source",
              "native_verification": "not-performed", "consumer_execution": "not-performed",

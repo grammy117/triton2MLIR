@@ -34,6 +34,11 @@ def demo(out, *, size=1024, block=256, operation="add"):
 
 
 def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+    if kernel in ("readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot"):
+        from .readonly_alias_demo import demo
+        return demo(out,optimizer=optimizer,python=python,
+                    dtype={"readonly-alias-dot":"f32","readonly-alias-half-dot":"f16","readonly-alias-bfloat-dot":"bf16"}[kernel],
+                    memory_profile=memory_profile,address_policy=address_policy)
     if kernel in ("strided-dot", "strided-half-dot", "strided-bfloat-dot",
                   "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot"):
         from .strided_memory_demo import demo
@@ -465,7 +470,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
