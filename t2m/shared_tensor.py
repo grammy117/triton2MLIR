@@ -329,10 +329,13 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
         elif name == "tt.print":
             from .source_prints import contract as print_contract
             records[-1]["source_print"] = print_contract(op,source_id)
+        elif name == "tt.extern_elementwise":
+            from .external_math import contract as external_math_contract
+            records[-1]["external_math"] = external_math_contract(op, source_id)
         elif name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
             records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
-        elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm", "tt.extern_elementwise"
+        elif name in ("tt.atomic_rmw", "tt.atomic_cas", "tt.inline_asm", "tt.elementwise_inline_asm"
                     ) or name.startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
                                   source_id=source_id, opcode=name)
@@ -1267,7 +1270,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     scaled_reports = expand_scaled_dots(middle_module, _source_ids)
     from .float_casts import expand_float_casts
     cast_reports = expand_float_casts(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports:
+    from .external_math import expand_missing
+    external_reports = expand_missing(middle_module, _source_ids)
+    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1323,6 +1328,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(fp8_reports)
     transformations.extend(cast_reports)
     transformations.extend(scaled_reports)
+    transformations.extend(external_reports)
+    external_contracts = {record["id"]: record["external_math"] for record in records if "external_math" in record}
+    if external_contracts:
+        transformations.append({"kind": "source-external-standard-math", "contracts": external_contracts,
+                               "implementation": "upstream-conversions-with-two-typed-table-completions"})
     if isolated_events:
         transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
             "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",
@@ -1415,6 +1425,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             contracts = {source_id:contractions[source_id] for source_id in ids if source_id in contractions}
             if contracts:
                 op.attributes["prov.contraction_contracts"] = StringAttr(json.dumps(contracts,sort_keys=True))
+        contracts = {source_id: external_contracts[source_id] for source_id in ids if source_id in external_contracts}
+        if contracts:
+            op.attributes["prov.external_math_contracts"] = StringAttr(json.dumps(contracts, sort_keys=True))
         if op.name == "arith.bitcast" and word_views:
             views = [r for r in word_views if set(ids) & set(r["source_ids"])]
             if views:

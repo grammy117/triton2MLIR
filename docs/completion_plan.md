@@ -91,6 +91,18 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Pure default-library external math now reaches standard MLIR and Merlin for
+52 declarations: 26 function families in f32/f64. Actual shared conversions
+are reused with only the missing double tanh/atanh table entries completed.
+Original library/purity/prototype/source contracts remain explicit; runtime
+recurrence, branches and all 26 returning values stay executable. Upstream's
+targeted reciprocal-root expansion and libm conversion resolve actual native
+materialization dependencies. The exact extra source-word pass has independent
+producer/consumer custody checks while retaining legacy evidence. See
+[the numeric and dependency boundary](external_math.md). Continue with broader
+external implementations/rounding/RNG, B/C alias/stride and applicable target
+materialization; the selected library mapping does not close those requirements.
+
 F32 BF16x3/x6 now reuse the installed pinned-version Triton F32DotTC pass on
 pre-layout TTIR. Six actual runtime packages preserve three/six partial
 contractions, residual reuse, NaN correction and source C through all three

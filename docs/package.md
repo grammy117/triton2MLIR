@@ -49,6 +49,14 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Pure default-library math uses the explicit
+`logical-libdevice-standard-math-v1` profile, preserving checked symbol/library,
+prototype, purity and source IDs beside standard math operations. Compatibility
+metadata distinguishes host libm/intrinsic semantics from GPU approximations.
+Native evidence records its actual pass list. Source-word custody admits the
+exact added reciprocal-root expansion and retained legacy pipelines; it grants
+no numeric permission. See [external math](external_math.md).
+
 F32 BF16x3/x6 normalization reuses the actual native Triton pass while keeping
 original and normalized typed graphs distinct. Kernel-level original precision
 inventory and caller tags accompany named contractions, with no per-operation

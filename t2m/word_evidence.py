@@ -5,6 +5,7 @@ import hashlib
 POINTER_FLAGS = ["--triton-to-unstructured=offset-bit-width=64"]
 COMPUTE_FLAGS = ["--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
                  "--remove-dead-values", "--canonicalize"]
+RSQRT_COMPUTE_FLAGS = [COMPUTE_FLAGS[0], "--math-expand-ops=ops=rsqrt", *COMPUTE_FLAGS[1:]]
 TRANSPORT = {"--mlir-disable-threading", "--verify-each", "--mlir-print-op-generic",
              "--mlir-print-debuginfo", "--mlir-print-local-scope"}
 
@@ -14,7 +15,7 @@ def record(raw):
     return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
 
 
-def check_native(stage, name, flags, source, output):
+def check_native(stage, name, flags, source, output, *, alternative_flags=()):
     if not isinstance(stage, dict):
         raise ValueError("source-word native stage must be an object")
     command = stage.get("command", [])
@@ -22,7 +23,8 @@ def check_native(stage, name, flags, source, output):
                 if isinstance(flag, str) and flag.startswith("--") and flag not in TRANSPORT]
     if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != name
             or stage.get("stage_completed") is not True
-            or not isinstance(command, list) or any(type(flag) is not str for flag in command) or pipeline != flags
+            or not isinstance(command, list) or any(type(flag) is not str for flag in command)
+            or pipeline != flags and pipeline not in alternative_flags
             or stage.get("artifacts", {}).get("source.ttir") != record(source)
             or stage.get("artifacts", {}).get("lowered.mlir") != record(output)):
         raise ValueError("source-word native stage does not bind its declared pipeline/input/output")
@@ -32,7 +34,8 @@ def check_word_stage(stage, source, output):
     if not isinstance(stage, dict):
         raise ValueError("source-word evidence must be an object")
     if stage.get("schema") == "t2m.triton-shared-stage.v1":
-        check_native(stage, "source-word-tensor", POINTER_FLAGS + COMPUTE_FLAGS, source, output)
+        check_native(stage, "source-word-tensor", POINTER_FLAGS + COMPUTE_FLAGS, source, output,
+                     alternative_flags=(POINTER_FLAGS + RSQRT_COMPUTE_FLAGS,))
         return
     if (stage.get("schema") != "t2m.source-word-stages.v2" or stage.get("stage_completed") is not True
             or stage.get("input") != record(source) or stage.get("output") != record(output)
@@ -46,7 +49,8 @@ def check_word_stage(stage, source, output):
             or not events["bindings"]):
         raise ValueError("source-word event conversion lacks its actual intermediate bytes")
     check_native(events["native_stage"], "source-word-events", POINTER_FLAGS, events["input"], events["output"])
-    check_native(compute["native_stage"], "source-word-compute", COMPUTE_FLAGS, compute["input"], output)
+    check_native(compute["native_stage"], "source-word-compute", COMPUTE_FLAGS, compute["input"], output,
+                 alternative_flags=(RSQRT_COMPUTE_FLAGS,))
     event_tool = events["native_stage"].get("optimizer", {}).get("sha256")
     if not isinstance(event_tool, str) or len(event_tool) != 64 or event_tool != compute["native_stage"].get("optimizer", {}).get("sha256"):
         raise ValueError("source-word event and computation stages used different optimizers")

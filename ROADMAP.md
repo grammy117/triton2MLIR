@@ -6,6 +6,9 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+[Pure external math](docs/external_math.md) now reuses shared conversions for
+52 f32/f64 default-library declarations, with typed/purity/library checks and
+standard math through Merlin. Arbitrary libraries and effects remain separate.
 [Scaled contractions](docs/scaled_dot.md) now preserve FP4 K/M/N packing,
 optional E8M0/E4M3FN scales, mixed operand types and original C through standard
 tiled MLIR and real Merlin packages. The internal-precision profile is explicit;

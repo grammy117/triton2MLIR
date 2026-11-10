@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Pure external math](external_math.md) now qualifies 52 f32/f64 declarations
+through six actual Merlin libraries, retaining all 26 results, source runtime
+recurrences, branches and changing/empty/ragged domains in each memory profile.
+The selected standard-math profile checks library identity, purity and exact
+prototypes before reusing shared conversions. The 123 focused producer cases,
+69 transport/native/math/source-word regressions, two direct native reciprocal
+root checks and 206 Merlin staging cases pass. The visible f64 guarded package
+verifies 33 producer and 52 qualification artifacts. Its explicit 36-package
+report observes 31/50 TTIR definitions, with 27 in host-qualified captures.
+This adds measured external-math compositions; alternate libraries, explicit
+rounding/approximation variants, unknown dependencies/effects and accelerator
+materialization remain in the full completion denominator.
+
 [F32 BF16x3/x6 precision](dot_precision.md) now reuses the official native
 Triton expansion before layout. Six runtime packages retain three/six partial
 contractions, residual reuse, NaN correction and original C through all three

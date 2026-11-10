@@ -191,7 +191,7 @@ def main(work):
         pipelines = (
             "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
             "builtin.module(func.func(convert-linalg-to-loops)," + ("arith-expand{include-bf16=true}," if has_bfloat else "") + "expand-strided-metadata,lower-affine,convert-scf-to-cf)",
-            "builtin.module(convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
+            "builtin.module(math-expand-ops{ops=rsqrt},convert-math-to-libm,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )
         for pipeline in pipelines:
             needs_scalar_diagnostics = pipeline == pipelines[-1] and any(op.name == "vector.print" for op in operations(module.operation))
@@ -300,6 +300,7 @@ def main(work):
         "native_mlir_verified": True, "llvm_lowering_verified": True,
         "execution": "native-host-LLVM-JIT", "provider": "torch-mlir",
         "provider_version": version("torch-mlir"), "runtime": "bounded-generic-strided-copy",
+        "lowering_pipelines": list(pipelines),
         "source_triton_executed": False, "consumer_execution": "not-performed",
         **({"invocations":1,"functional_inputs_preserved":True,"outputs":record(work / "outputs.npz"),
             "arguments":record(work / "inputs.npz"),"source_program":record(work / "model.mlir")} if observed else {}),
