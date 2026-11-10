@@ -9,7 +9,7 @@ import numpy as np
 from .bundle import _json, _record
 from .consumer import invoke_merlin_host
 from .kernel_consumer import verify_kernel_qualification
-from .tensor_storage import comparison_values
+from .tensor_storage import assert_tensor_close
 
 
 def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, python=None, rtol=0, atol=0):
@@ -42,8 +42,7 @@ def invoke_kernel(qualification, arguments, reference, out, *, merlin_root, pyth
             if actual.shape != golden.shape or actual.dtype != golden.dtype:
                 raise ValueError("invocation reference shape/dtype differs from actual result")
             dtype = types[i]["dtype"]
-            np.testing.assert_allclose(comparison_values(actual, dtype), comparison_values(golden, dtype),
-                                       rtol=rtol, atol=atol, equal_nan=True)
+            assert_tensor_close(actual, golden, dtype, rtol=rtol, atol=atol)
     if verify_kernel_qualification(qualification) != verified or _record(qualification / "qualification.json") != _record(out / "source/qualification.json"):
         raise ValueError("compiled qualification changed during invocation")
     report = {"schema": "t2m.merlin-kernel-invocation.v1", "native_compilation": "reused-qualified-library",

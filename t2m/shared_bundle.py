@@ -14,7 +14,7 @@ from .shared_tensor import TensorABI
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, WORD_PROFILE, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
-from .tensor_storage import DTYPES, comparison_values
+from .tensor_storage import DTYPES, assert_tensor_close
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
             "inputs.npz", "golden.npy", "extra.npz", "input_order.json", "source.ttir",
@@ -53,10 +53,9 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     for computed, golden, buffer in zip(actual, references, result.spec.outputs, strict=True):
         if computed.shape != golden.shape or computed.dtype != golden.dtype:
             raise ValueError("reference shapes/dtypes must exactly match results")
-        np.testing.assert_allclose(comparison_values(computed, buffer.dtype), comparison_values(golden, buffer.dtype),
-                                   rtol=rtol, atol=atol, equal_nan=True)
+        assert_tensor_close(computed, golden, buffer.dtype, rtol=rtol, atol=atol)
     execution.update({"reference_comparison": "passed", "rtol": rtol, "atol": atol,
-                      "comparison": "numeric-allclose-equal-nan; no NaN-payload/signed-zero-bit claim"})
+                      "comparison": "exact-integer-values-at-zero-tolerance; otherwise numeric-allclose-equal-nan; no NaN-payload/signed-zero-bit claim"})
     trace = deepcopy(result.trace)
     trace["native_verification"] = "passed"
     trace["example_numeric_validation"] = execution

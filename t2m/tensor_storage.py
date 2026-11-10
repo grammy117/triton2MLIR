@@ -18,3 +18,12 @@ def comparison_values(array, dtype):
     if array.dtype != np.uint16:
         raise ValueError("BF16 archive storage requires raw uint16 words")
     return (array.astype(np.uint32) << 16).view(np.float32)
+
+
+def assert_tensor_close(actual, expected, dtype, *, rtol=0, atol=0):
+    """Compare exact integer values without NumPy's lossy floating promotion."""
+    left, right = comparison_values(actual, dtype), comparison_values(expected, dtype)
+    if dtype.startswith("i") and rtol == 0 and atol == 0:
+        np.testing.assert_array_equal(left, right)
+    else:
+        np.testing.assert_allclose(left, right, rtol=rtol, atol=atol, equal_nan=True)

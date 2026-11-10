@@ -19,6 +19,9 @@ That use of `extra.npz` is an explicit convention difference, not implied m2m co
 
 Before writing any bundle, the writer executes the serialized MLIR through the native host LLVM
 path and compares every result with the supplied independent references at explicit tolerances.
+At zero relative and absolute tolerance, integer results use exact integer comparisons,
+including individual i64 bits beyond binary64 precision. Floating results retain the
+declared numeric comparison policy; Boolean comparisons concern logical values.
 `execution.json` binds those checks to the exact IR hash. It makes no NaN-payload/signed-zero-bit,
 universal source-equivalence, original Triton-execution or consumer/device-execution claim.
 `verify-bundle` dispatches both receipt versions and verifies all artifact/source/ABI bindings.

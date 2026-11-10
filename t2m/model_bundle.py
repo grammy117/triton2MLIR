@@ -21,7 +21,7 @@ from .model_binding import bind_model
 from .native import execute_native
 from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .package_compatibility import kernel_representation_differences
-from .tensor_storage import DTYPES, comparison_values
+from .tensor_storage import DTYPES, assert_tensor_close
 from .model_tensor_words import FILENAME as WORD_ARCHIVE, TensorWords
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
@@ -142,7 +142,7 @@ def _compare_results(actual, expected, rtol, atol, result_types):
         if value.shape != golden.shape or value.dtype != golden.dtype:
             raise ValueError("captured golden differs from the complete model result ABI")
         dtype = str(type_.element_type)
-        np.testing.assert_allclose(comparison_values(value, dtype), comparison_values(golden, dtype), rtol=rtol, atol=atol, equal_nan=True)
+        assert_tensor_close(value, golden, dtype, rtol=rtol, atol=atol)
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
