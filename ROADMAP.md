@@ -410,8 +410,10 @@ retain earlier kernels' algorithmic structure, source attribution and refusal gu
 Numeric closure now has four-format FP8 reader/constants and actual buffer
 transport through native and Merlin execution. All 256 encodings per format,
 both import orders, masked tails, runtime loops and reused libraries qualify
-in tensor/buffer/guarded profiles. Cast rounding/overflow and contractions
-remain implementation work; see
+in tensor/buffer/guarded profiles. Widening to f16/BF16/f32/f64 now also
+qualifies every encoding through 48 format/destination/profile combinations,
+with portable casts retained and a separately selected native implementation.
+Narrowing/RTZ/overflow, equal-width casts and contractions remain work; see
 [the delivery order and upstream cast gaps](docs/float_casts.md). This work
 does not imply whole-opcode or all-target coverage.
 

@@ -1,5 +1,19 @@
 # Measured coverage and remaining boundaries
 
+[FP8 widening](float_casts.md#executable-widening) now qualifies all four FP8
+formats to f16/BF16/f32/f64 through actual native and Merlin execution. All 48
+format/destination/memory-profile combinations check every source encoding,
+retain portable casts and adjacent exact words, and reuse compiled libraries
+over changing/empty domains and source loop counts. Sixteen independent codec
+cross-checks validate the rational reference. The 48 native feature/BF16
+regressions and visible widening/transport demos pass. Narrowing, RTZ,
+equal-width formats, scaled contractions and applicable targets remain open.
+The saved widening package and Merlin qualification verify 26/45 artifacts.
+`out/fp8-widen-coverage/coverage.json` selects 25 packages: 29 of the 50
+definitions are observed and 25 occur in captures of host-qualified packages.
+These are source-composition observations; no universal opcode/type/attribute
+or accelerator coverage is inferred.
+
 [Four-format FP8 transport](float_casts.md) now executes through the actual
 Merlin compiler interface in tensor, buffer and guarded-buffer profiles.
 Twenty transport/comparison cases cover all 256 words per format, scalar/tiled

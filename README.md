@@ -61,6 +61,8 @@ recurrence and exact i64 words. See [the explicit mixed reference profile](docs/
 precise division/sqrt, with [independent IEEE references and BF16 consumer support](docs/scalar_math.md).
 `shared-demo --kernel fp8-transport` preserves all four FP8 formats through
 [typed byte storage, runtime control and exact word references](docs/float_casts.md).
+`shared-demo --kernel fp8-widen` also retains portable casts and qualifies
+[exact widening to standard floating types](docs/float_casts.md#executable-widening).
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.

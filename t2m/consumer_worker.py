@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, bfloat_elementwise=False, literal_diagnostics=False, scalar_diagnostics=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, literal_diagnostics=False, scalar_diagnostics=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -48,6 +48,9 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, b
     if bfloat_elementwise:
         from merlin.llvmlower.bfloat_elementwise import edit_pipeline as edit_bfloat_elementwise
         passes = edit_bfloat_elementwise(passes)
+    if fp8_widening:
+        from merlin.llvmlower.fp8_widening import edit_pipeline as edit_fp8_widening
+        passes = edit_fp8_widening(passes)
     result = _splice(passes)
     if adapted != 1 or "ownership-based-buffer-deallocation" not in result:
         raise ValueError("Merlin scalar pipeline lacks the qualified loop/ownership boundary")
@@ -89,6 +92,9 @@ def compile_model(staged, work):
     from bfloat_math import requires_emulation
     if requires_emulation(module.walk()):
         features = features | {bfloat_math}
+    from fp8_math import requires_widening
+    if requires_widening(module.walk()):
+        features = features | {"lower_fp8_widening"}
     if any(op.name == "vector.print" for op in module.walk()):
         features = features | {"lower_scalar_diagnostics"}
     elif any(op.name == "cf.assert" and "\x00" in op.msg.data for op in module.walk()):
@@ -100,6 +106,7 @@ def compile_model(staged, work):
         features = features | {"lower_integer_compare_exchange"}
     pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features,
         bfloat="preserve_bfloat_transport" in features, bfloat_elementwise=bfloat_math in features,
+        fp8_widening="lower_fp8_widening" in features,
         literal_diagnostics="lower_length_aware_diagnostics" in features,
         scalar_diagnostics="lower_scalar_diagnostics" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,

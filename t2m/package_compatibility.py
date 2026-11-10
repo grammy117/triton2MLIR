@@ -18,6 +18,11 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(record.get("opcode") == "tt.fp_to_fp" and
+           any(name in type_ for name in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
+               for type_ in record.get("input_types", []))
+           for record in trace.get("normalized_operations", trace.get("source_operations", []))):
+        differences.append("portable FP8 widening retains standard arith.extf and original source correspondence; the selected native host uses Merlin's explicit lower_fp8_widening feature to decode exact finite values, infinities and signed zeros through standard operations, preserving computed NaN class without selecting its payload; byte transport and ownership/lifetime checks remain separate; this supplies no FP8 narrowing/saturation, equal-width conversion or accelerator implementation")
     scalar_math = [record for record in trace.get("normalized_operations",trace.get("source_operations",[]))
         if record.get("opcode") in ("tt.clampf","tt.precise_divf","tt.precise_sqrt")]
     if scalar_math:

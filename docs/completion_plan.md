@@ -655,3 +655,14 @@ accounting recognize FP8 without relaxing alias, release or lifetime rules.
 Numeric casts still need explicit executable lowering: direct extension probes
 leave unresolved conversion casts. Continue numeric closure, not a transport-only
 definition of success.
+
+FP8 widening now additionally retains portable `arith.extf` and executes its
+scalar native expansion through the Merlin interface. All 48
+format/destination/memory-profile combinations preserve exact finite values,
+nonfinite classes, source control and adjacent original word results over
+every input encoding and reused libraries. Independent rational references
+and codec cross-checks support the explicit IEEE/word policies. The selected
+native feature preserves every ownership callback and typed storage. Continue
+with rounding-aware narrowing, equal-width formats, source saturation policy,
+broader models/scaled contractions, external/effect closure and targets;
+the full workstreams and denominator above remain unchanged.
