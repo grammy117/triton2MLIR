@@ -15,6 +15,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(t.get("kind") == "logical-boolean-byte-memory" for t in transformations):
+        differences.append("exclusive Triton Boolean byte loads observed by nonzero tests and stores of zero-extended i1 values become logical i1 tensor memory; masks, fills and original source IDs remain explicit; raw byte observations and changed byte addressing require a separate storage ABI")
     if any(t.get("kind") == "logical-pointer-word-view" for t in transformations):
         differences.append("equal-width logical pointer views retain original storage tensor types and source-word offsets; loads/stores use register bitcasts rather than physical aliases or whole-buffer representation copies; source integer fill bits are selected after a masked zero-filled storage load; word-view provenance is retained")
     if any(t.get("kind") == "logical-atomic-word-view" for t in transformations):

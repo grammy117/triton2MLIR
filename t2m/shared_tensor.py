@@ -1141,6 +1141,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         middle_source = work / "expanded-source/lowered.mlir"
     middle_module = parse_shared(middle_source.read_text())
+    from .boolean_memory import normalize_boolean_memory
+    boolean_reports = normalize_boolean_memory(middle_module, _source_ids)
+    if boolean_reports:
+        stream = StringIO()
+        Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
+        middle_source = work / "boolean-intake.ttir"
+        middle_source.write_text(stream.getvalue() + "\n")
     if source_words:
         for op in middle_module.walk():
             if opcode(op) in ("tt.ptr_to_int", "tt.int_to_ptr"):
@@ -1191,6 +1198,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     transformations = _restore_accumulators(lowered, records)
+    transformations.extend(boolean_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
     transformations.extend(scan_reports)
