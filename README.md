@@ -36,6 +36,9 @@ See [the package differences](docs/package.md) and [native execution scope](docs
 
 The [model2MLIR binder](docs/model_integration.md) now replaces registered kernel calls with
 translated tensor bodies while preserving the real model ABI, weights and input bindings.
+[Lifted source constants](docs/lifted_constants.md) also retain original typed
+bytes through Merlin, with explicit compiler-only bindings and evaluator
+archive exclusion. Boolean byte slots use checked logical tensor memory.
 Complete models pass native comparison against their unchanged PyTorch goldens; optional
 checks invoke Merlin's interface/runtime generator and compiler-only staging. The
 optional [native Merlin compiler path](docs/merlin_consumer.md) builds and executes

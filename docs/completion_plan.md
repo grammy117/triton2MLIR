@@ -518,16 +518,31 @@ model cases cover all three memory profiles and unique non-NaN legacy embeddings
 The 62 existing model/atomic/half regressions, 30 model2MLIR capture checks and
 50 Merlin staging/constant-reader checks pass. The visible observation/matmul
 models pass 81/80 artifact checks including actual Merlin host execution.
-Legacy widened NaNs still require original words. General lifted-constant
-compiler admission, dynamic/alias model contracts, direct BF16 arithmetic
+Legacy widened NaNs still require original words. Dynamic/alias model contracts, direct BF16 arithmetic
 policies, FP8/scaled-dot, external effects, descriptors and accelerator
 materialization remain completion gates; no numeric or ownership check is waived.
 
-The next package gate is general lifted-constant compiler admission. Evaluator
-argument transport already reads exact BF16 extra members, but Merlin still
-rejects a parent receipt with lifted constants. Their immutable source bytes
-must reach the compiler through a separately bound constant/weight member,
-with exact source argument/type/shape correspondence and unchanged public ABI.
-Reading evaluator extra/golden archives during compilation is not an acceptable
-shortcut. Qualify real literal-constant model calls, stale/mistyped bindings and
-complete native/Merlin results before declaring this gate closed.
+The subsequent [lifted-constant gate](lifted_constants.md) now reaches actual
+Merlin execution. New model2MLIR captures bind exact source constants in
+safetensors with a complete typed argument profile. Compiler staging checks
+the original prepared graph and complete parent ABI, excluding evaluator
+archives and their value digests. Real copy models cover nine tensor carriers;
+lifted BF16 observation/matmul models retain all results, tiling, original
+contractions and nonzero accumulators in all three memory profiles. Checked
+[Boolean byte-slot normalization](boolean_memory.md) retains logical masks,
+fills and source IDs. Zero-tolerance integer validation now detects individual
+i64 bits. Rehashed source/type/shape/payload failures remain refusals.
+Merlin's combined constant/staging/runtime regression passes 153 checks, with
+two existing optional cross-toolchain cases skipped; docs/structure gates pass.
+Visible lifted observation and matmul packages execute through Merlin.
+The final 33-case model run and 13-case Boolean suite pass, alongside 36
+integer/reference regressions and 48 model2MLIR source capture checks. Saved
+final packages pass 82/81 artifact checks; accelerator execution is unperformed.
+
+The next package/coverage work must retain this same compiler/evaluator
+boundary while covering dynamic/alias model contracts and joining the pinned
+50-op denominator to receipt-bound package/native/Merlin outcomes. Unknown
+operations, unmeasured type/attribute compositions and target materialization
+remain in that registry. Noncanonical Boolean storage, broader low-precision
+arithmetic, FP8/scaled dot and external effects still require executable
+contracts; these transport results do not close them.

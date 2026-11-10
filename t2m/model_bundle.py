@@ -212,6 +212,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
+                          *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
+                            if parent.get("compiler_constants") else []),
                           *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),
                           *(["BF16 arguments/results use exact tensor_words.npz witnesses or checked unique legacy binary32 embeddings without NaNs, preserving parent archives; BF16 weights use Merlin's pinned byte-preserving safetensors reader; evaluator words are excluded from compiler staging"]
                             if any(str(type_.element_type) == "bf16" for type_ in (*entry.function_type.inputs, *entry.function_type.outputs)) else [])],

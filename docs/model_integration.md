@@ -214,5 +214,7 @@ model2MLIR `tensor_words.npz` remains evaluator data and is excluded from compil
 staging with its digests. Parent value archives remain unchanged; uniquely
 embedded non-NaN legacy BF16 values may also be recovered with explicit evidence.
 Visible observation and matmul captures retain six tuple results and the
-original BF16/F32 contraction respectively. General lifted-constant compiler
-admission and dynamic/alias model contracts remain separate completion gates.
+original BF16/F32 contraction respectively. Source-bound
+[lifted constants](lifted_constants.md) now additionally reach Merlin through
+exact safetensors storage and a checked compiler-only profile. Dynamic/alias
+model contracts remain separate completion gates.

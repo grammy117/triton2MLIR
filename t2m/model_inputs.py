@@ -48,7 +48,7 @@ def main(capture, work):
             evidence, witness = None, None
             meta = manifest[str(i)]
             kind, name = meta.get("kind"), meta.get("weight", meta.get("name"))
-            if kind in ("param", "buffer") and name in weights.keys():
+            if kind in ("param", "buffer", "constant") and name in weights.keys():
                 storage = f"weights:{name}"
                 if abi["dtype"] == "bf16":
                     array, evidence = bfloat_weight(capture, i, abi)

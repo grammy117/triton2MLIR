@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Lifted source constants](lifted_constants.md) now bind exact safetensors bytes
+into the actual Merlin interface for f16/bf16/f32/f64, logical Boolean and
+signed i8/i16/i32/i64 models in all three memory profiles. Observation and
+matmul literals retain source calls, tuple results, original contractions and
+nonzero accumulators. [Logical Boolean memory](boolean_memory.md) abstracts
+the checked byte-slot convention while retaining masks, fills and source IDs.
+Transport qualification does not imply arbitrary arithmetic or noncanonical
+Boolean byte support; FP8, scaled-dot, external effects, dynamic/alias model
+contracts and accelerator materialization remain open.
+
 [BF16 storage/casts](bfloat_precision.md) now have 20 focused native/Merlin cases
 covering complete 16-bit copy/widening domains, RNE boundaries, runtime select
 loops and original BF16/F32 contractions. The combined low-precision and floating

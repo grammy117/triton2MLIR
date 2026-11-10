@@ -13,7 +13,7 @@ from m2m.capture.bundle import write_bundle
 from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 
 
-def capture(out, mode="observe", *, finite=False):
+def capture(out, mode="observe", *, finite=False, lifted=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -47,8 +47,11 @@ def capture(out, mode="observe", *, finite=False):
         class Model(torch.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.weight = torch.nn.Parameter(raw(np.roll(patterns, 3)), requires_grad=False)
-                self.register_buffer("cache", raw(patterns[::-1]))
+                if lifted:
+                    self.weight, self.cache = raw(np.roll(patterns, 3)), raw(patterns[::-1])
+                else:
+                    self.weight = torch.nn.Parameter(raw(np.roll(patterns, 3)), requires_grad=False)
+                    self.register_buffer("cache", raw(patterns[::-1]))
 
             def forward(self, x):
                 first = implementation(x, self.weight)
@@ -70,8 +73,10 @@ def capture(out, mode="observe", *, finite=False):
         class Model(torch.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.weight = torch.nn.Parameter((torch.arange(256).reshape(16, 16) % 5 - 2).to(torch.bfloat16), requires_grad=False)
-                self.initial = torch.nn.Parameter((torch.arange(256).reshape(16, 16) % 11 - 5).to(torch.float32), requires_grad=False)
+                weight = (torch.arange(256).reshape(16, 16) % 5 - 2).to(torch.bfloat16)
+                initial = (torch.arange(256).reshape(16, 16) % 11 - 5).to(torch.float32)
+                self.weight = weight if lifted else torch.nn.Parameter(weight, requires_grad=False)
+                self.initial = initial if lifted else torch.nn.Parameter(initial, requires_grad=False)
 
             def forward(self, x):
                 return implementation(x, self.weight, self.initial)
@@ -101,5 +106,6 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--mode", choices=("observe", "matmul"), default="observe")
     parser.add_argument("--finite", action="store_true", help="finite observation data for legacy archive qualification")
+    parser.add_argument("--lifted", action="store_true", help="capture source literals instead of registered state")
     args = parser.parse_args()
-    print(capture(args.out, args.mode, finite=args.finite))
+    print(capture(args.out, args.mode, finite=args.finite, lifted=args.lifted))

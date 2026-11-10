@@ -4,6 +4,13 @@ Baseline inspected: model2MLIR `feat/triton-integration` at `035bb5a`, particula
 `m2m/capture/bundle.py`, `m2m/capture/provenance.py` and `m2m/transforms/externalize.py`.
 This document specifies the implemented R0/R1 package, not every future roadmap profile.
 
+New model captures additionally support source-bound
+[lifted compiler constants](lifted_constants.md). The original source bytes
+live in `weights.safetensors` with explicit constant manifest entries and an
+additive `m2m.compiler-constants.v1` receipt profile. Derived packages retain
+parent bytes and public ABI; Merlin's checked compiler-only projection is a
+separate member. Evaluator extra/golden archives never supply compiler values.
+
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
 The [upstream-based frontend](shared_tensor.md) uses the same core filenames with an explicitly

@@ -12,6 +12,11 @@ F32 accumulators and exact uncomputed words. [BF16 model captures](docs/bfloat_m
 now additionally bind original source words, weights and all tuple results,
 with legacy archive recovery limited to proved unique non-NaN embeddings.
 Archive differences, native transport and remaining model/target gates are explicit.
+[Lifted source constants](docs/lifted_constants.md) now also reach Merlin with
+exact safetensors bytes and complete source/argument/type bindings. Real models
+qualify nine tensor carriers and original BF16 contractions in all three memory
+profiles. [Logical Boolean memory](docs/boolean_memory.md) retains masks, fills
+and source correspondence while abstracting the checked byte-slot convention.
 Recent additions retain finite selected-buffer pointer state, cat/split/tile
 gather, and [mapped scalar regions](docs/elementwise_map.md) through actual Merlin
 execution. The selected-memory model demo binds two real model2MLIR kernel calls
