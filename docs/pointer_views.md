@@ -68,8 +68,11 @@ i32/i64 operations and Triton's floating min/max retain the current word, exact
 integer update, masks and returned old values through native and Merlin execution.
 Ordinary and atomic uses keep event-specific types even when they share a source
 pointer. Atomic views use the explicitly selected typed v4 profile and checked
-native legalization. Word CAS, changed-width views and mixed storage element
-selectors remain further extensions; provenance alone grants none of them.
+native legalization. [Word CAS](atomic_memory.md#integer-word-compareexchange-on-floating-storage)
+additionally qualifies i16/i32/i64 comparisons on f16/f32/f64 storage, preserving
+old bits through standard regions and integer native helper results.
+Changed-width views and mixed storage element selectors remain further
+extensions; provenance alone grants none of them.
 
 Measured delivery: 59 new/existing pointer cases passed in
 `.scratch/logical-word-views-final.log`; the final standalone view suite passes

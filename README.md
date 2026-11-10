@@ -83,6 +83,11 @@ with guarded-buffer/source-words memory and the unchanged public tensor ABI.
 That profile also retains integer RMWs on floating word views and source floating
 min/max; `shared-demo --kernel atomic-min` / `atomic-max` emits examples. Native
 word-region qualification uses the explicit `T2M_MERLIN_ROOT` support path.
+`shared-demo --kernel atomic-word-cas16` (`32` or `64` also works) retains
+integer-word CAS on original floating storage, including exact old bits and
+standard atomic regions. Three real model2MLIR captures reach the same Merlin
+interface; [the package extension](docs/package.md) records the typed native
+template boundary explicitly.
 `shared-demo --kernel atomic-fadd` adds IEEE f64 atomic addition with explicit
 rounding/subnormal/NaN policy through the same package and actual Merlin path.
 New f64 captures retain explicit result NaN quieting in standard atomic regions

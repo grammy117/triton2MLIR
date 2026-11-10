@@ -63,8 +63,10 @@ def normalize(state, source_ids, *, typed_atomics=False):
             refuse(op, "pointer views require equal byte-aligned element widths without address-space changes")
         view, storage = element(scalar), element(root.type)
         if opcode(op) not in ("tt.load", "tt.store"):
-            if (not typed_atomics or opcode(op) != "tt.atomic_rmw" or view not in (builtin.i32, builtin.i64)
-                    or storage not in (builtin.f32, builtin.f64)):
+            cas = opcode(op) == "tt.atomic_cas"
+            if (not typed_atomics or opcode(op) not in ("tt.atomic_rmw", "tt.atomic_cas")
+                    or view not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64))
+                    or storage not in ((builtin.f16, builtin.f32, builtin.f64) if cas else (builtin.f32, builtin.f64))):
                 refuse(op, "atomic word views require a separately qualified typed atomic region expansion")
             reports.append({"kind": "logical-atomic-word-view", "source_ids": source_ids(op.location),
                 "storage_dtype": str(storage), "value_dtype": str(view), "element_bits": storage.bitwidth,

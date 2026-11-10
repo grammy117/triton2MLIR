@@ -2,8 +2,10 @@
 
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
 and the separately selected typed profile with bitwise f32/f64 exchange and
-integer-word RMWs on f32/f64 storage, including Triton floating min/max,
-and IEEE f64 plus explicitly selected IEEE/FTZ f32 addition.
+integer-word RMWs on f32/f64 storage (including Triton floating min/max),
+integer-word CAS on f16/f32/f64 storage, IEEE f64 addition and explicitly
+selected IEEE/FTZ f32 addition.
+
 `--memory-profile guarded-buffer --address-policy source-words --effect-profile atomics`
 selects it; the default ordinary-memory profile continues to refuse atomics.
 The public tensor/scalar ABI is retained with explicit v3 memory admission.
@@ -312,9 +314,8 @@ actual Merlin evidence are separately verified in `out/atomic-exchange/`
 `out/exchange-model-native/` (80). The model's weights and both result references
 are preserved. No accelerator execution is claimed.
 
-[Ordinary logical word views](pointer_views.md) now supply the load/store
-foundation described above; atomic view admission and region/native legalization
-remain additional work.
+[Ordinary logical word views](pointer_views.md) supply the load/store foundation;
+atomic views use the separate typed region/native expansions described here.
 
 ## Integer word updates and floating min/max
 
@@ -371,7 +372,7 @@ Run `shared-demo --kernel atomic-min` or `atomic-max` with guarded-buffer,
 source-words and typed-atomics. Native qualification additionally requires the
 explicit `T2M_MERLIN_ROOT` compiler-support path.
 `scripts/capture_atomic_model.py --kind min` / `--kind max` captures the model
-source for binding. Word CAS views, differently typed selected roots and broader
+source for binding. Differently typed selected roots and broader
 address/alias contracts remain further work; f64 addition has the distinct
 rounding/subnormal/NaN contract below. Accelerator execution remains separate.
 
@@ -531,7 +532,7 @@ supports `scripts/capture_atomic_model.py --kind fadd32`; its binding selects FT
 and retains learned weights and both tuple results. Dedicated tests cover
 rounding ties, input/result subnormals, signed zeros, infinities, quiet/signaling
 NaNs, masked invalid addresses, empty/tail grids, source regions, finite buffer
-selection and constant normalization. F16/bf16 additions, word CAS and wider
+selection and constant normalization. F16/bf16 additions and wider
 arbitrary-kernel/target coverage remain open.
 
 Measured f32 delivery: 117 producer/model regressions pass in the final
@@ -541,3 +542,72 @@ staging/loop tests and documentation/structure gates pass. Each visible
 `out/atomic-fadd32-{ieee,ftz}/` package verifies 20 artifacts; each corresponding
 `-merlin/` qualification verifies 45 with actual native host execution. These
 finite measurements do not establish universal TTIR or accelerator coverage.
+
+## Integer-word compare/exchange on floating storage
+
+The typed profile admits i16/i32/i64 CAS through equal-width f16/f32/f64
+pointer views. Floating tensors remain floating tensors in the public interface.
+Inside each standard `memref.generic_atomic_rmw`, bitcast the current word to
+the source integer type, compare it to the original comparison word, select
+the original desired word on equality or the unchanged current word otherwise,
+then bitcast back to storage. Bitcast the returned old value to the source
+integer result. NaN payloads, signaling bits, signed zeros and subnormals are
+word data: no floating comparison, arithmetic or rounding is introduced.
+
+This reuses the Meta structured CAS event pattern from
+`lib/AnalysisStructured/PtrAnalysis.cpp` and its `TritonToStructured/atomics.mlir`
+tests at `17f0c234ce474bee334af36e351c62eca7852836`. As with ordinary integer
+CAS, the pinned binary's missing structured-CAS registration requires the local
+standard-region expansion. The native pointer stage needs a logical integer
+pointer formal rather than a pointer bitcast on an already structured
+descriptor. Its additive [stage-v2 typed-template declaration](package.md)
+separately binds that formal and the actual floating storage capture. Complete
+producer replay and consumer checks retain this boundary; native pointer
+analysis is not rerun on reconstructed events.
+
+The actual storage buffer supplies bounds, initialization and ownership checks;
+equal widths retain element address units. CAS has no mask: a masked output
+store cannot legalize an invalid atomic lane. Uniform/per-lane finite selectors
+branch inside the original parallel tile. Branch/for/while events retain
+old-value accumulation, pointer recurrences, final pointers and zero trips.
+Original source primitives stay shared; view facts remain per event and call.
+
+Merlin's explicit `lower_atomic_word_views` feature emits one integer LLVM
+cmpxchg with acq_rel/acquire ordering through a typed floating-memref borrowing
+boundary. The helper returns an integer old word, including for f16, so scalar
+half floating ABI conversions cannot quiet signaling NaNs. Canonical current
+identities remain real atomic RMWs. Exact local comparison/value constants are
+hoisted as integer operations after full-body validation. Complete current-body
+reconstruction grants borrowing; changed order, stride, linkage, returned value,
+comparison or suspended declaration refuses. Native ownership and lifetime
+checks remain enabled under the existing default 64-bit descriptor/index ABI.
+Portable MLIR contains no LLVM operations, physical alias or opaque helper.
+
+Measured cases: 42 compositions pass native comparison and raw-word Merlin
+checks across all three widths, scalar/vector/rank-two events, uniform/lane
+selections, constants/identities and
+source-region recurrences. One original helper also acts on integer and floating
+storage in different call contexts. Another 36 producer evidence/template checks
+and three visible-demo checks pass. Merlin passes 65 focused native-body/lifetime
+checks, 184 existing atomic/loop regressions and 200 staging/evidence checks.
+Three real model2MLIR captures pass 15 model/result-reference cases with
+unchanged weights and both tuple results;
+native and Merlin model outputs are additionally compared as raw words.
+All 152 existing integer-CAS, word-RMW, region and mixed-storage regressions
+and all 35 existing atomic model cases also pass. The native consumer implementation is at
+`cdf443f3558183c085c5848cc1fd42f29c16302f`; documentation/structure gates pass.
+These are qualified compositions, not arbitrary-kernel or accelerator coverage.
+
+The visible `out/atomic-word-cas16/`, `out/atomic-word-cas32/` and
+`out/atomic-word-cas64/` packages each verify all 20 artifacts. Their separate
+`-merlin/` qualifications verify all 45 artifacts and actual host execution;
+both outputs also pass explicit raw-word comparison. Accelerator execution is
+not performed.
+
+Try `shared-demo --kernel atomic-word-cas16` (`32` or `64` also works), with
+`--memory-profile guarded-buffer`, `--address-policy source-words` and
+`--effect-profile typed-atomics`. Set `T2M_MERLIN_ROOT` to the matching Merlin
+checkout for native support. `scripts/capture_atomic_model.py --kind word-cas16`
+(or `word-cas32`/`word-cas64`) supplies real model captures. Changed-width views,
+differently typed selected roots, external participants, f16 numeric RMWs and
+accelerator execution remain separate contracts and implementations.

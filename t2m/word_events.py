@@ -102,17 +102,25 @@ def templates(module, source_ids):
                 if mask is None:
                     refuse("isolated load fill requires its source mask")
             captures = [base, offset, *([mask] if mask is not None else [])]
-        body = Block(arg_types=[v.type for v in captures])
+        template_types = [v.type for v in captures]
+        cas_view = view_type is not None and opcode(op) == "tt.atomic_cas"
+        if cas_view:
+            # CAS already has its official descriptor. Present the logical
+            # word base to the pointer pass and restore the storage cast at
+            # substitution, so that pass does not rewrite a descriptor base
+            # into an integer offset.
+            template_types[0] = view_type
+        body = Block(arg_types=template_types)
         local_base, local_offset = body.args[:2]
         def emit(name, **kwargs):
             generated = builtin.UnregisteredOp.with_name(name).create(location=op.location, **kwargs)
             body.add_op(generated)
             return generated
-        if view_type is not None:
+        if view_type is not None and not cas_view:
             local_base = emit("tt.bitcast", operands=[local_base], result_types=[view_type]).results[0]
         if opcode(op) == "tt.atomic_cas":
             from .compare_exchange import template
-            returned = [template(body, op, body.args)]
+            returned = [template(body, op, [local_base, *body.args[1:]])]
         else:
             if isinstance(pointer.type, builtin.TensorType):
                 local_base = emit("tt.splat", operands=[local_base], result_types=[pointer.type]).results[0]
@@ -136,13 +144,14 @@ def templates(module, source_ids):
         emit("tt.return", operands=returned)
         name = f"__t2m_memory_event_{index}"
         functions.append(builtin.UnregisteredOp.with_name("tt.func").create(
-            properties={"function_type": builtin.FunctionType.from_lists([v.type for v in captures], [v.type for v in op.results]),
+            properties={"function_type": builtin.FunctionType.from_lists(template_types, [v.type for v in op.results]),
                         "sym_name": builtin.StringAttr(name), "sym_visibility": builtin.StringAttr("public")},
             attributes={"noinline": builtin.IntegerAttr(0, builtin.i1)}, regions=[Region(body)], location=op.location))
         bindings.append({"symbol": name, "opcode": opcode(op), "source_ids": source_ids(op.location),
                          "input_types": [str(v.type) for v in captures], "result_types": [str(v.type) for v in op.results],
                          "fill": "source-mask-select-after-zero-filled-load" if other is not None else "unchanged",
-                         **({"word_view": view} if view else {})})
+                         **({"word_view": view} if view else {}),
+                         **({"template_input_types": [str(t) for t in template_types]} if cas_view else {})})
         calls.append((op, captures, mask, other))
     if not events:
         raise ConversionError("isolated memory conversion requires source memory events")
@@ -162,7 +171,25 @@ def substitute(module, converted, bindings, calls):
         if function is None or len(function.regions[0].blocks) != 1:
             raise ConversionError("isolated event conversion lost its typed template")
         body = function.regions[0].block
-        if len(body.args) != len(captures) or any(not same_type(a.type, b.type) for a, b in zip(body.args, captures)):
+        prefix = []
+        arguments = list(captures)
+        if "template_input_types" in record:
+            from .pointer_views import compatible, element
+            from .atomic_word_views import view_info
+            pointer_type = original.operands[0].type
+            viewed_type = pointer_type.element_type if isinstance(pointer_type, builtin.TensorType) else pointer_type
+            if (record["opcode"] != "tt.atomic_cas" or len(body.args) != len(captures)
+                    or record["input_types"] != [str(v.type) for v in captures]
+                    or record["template_input_types"] != [str(v.type) for v in body.args]
+                    or not same_type(body.args[0].type, viewed_type)
+                    or not compatible(captures[0].type, viewed_type)
+                    or record.get("word_view") != view_info(element(captures[0].type), element(viewed_type))):
+                raise ConversionError("isolated word CAS changed its typed storage/view boundary")
+            cast = builtin.UnregisteredOp.with_name("tt.bitcast").create(operands=[captures[0]],
+                result_types=[viewed_type], location=original.location)
+            prefix.append(cast)
+            arguments[0] = cast.results[0]
+        if len(body.args) != len(arguments) or any(not same_type(a.type, b.type) for a, b in zip(body.args, arguments)):
             raise ConversionError("isolated event conversion changed its typed capture bindings")
         operations = list(body.ops)
         expected = MEMORY_EVENTS[record["opcode"]]
@@ -176,8 +203,8 @@ def substitute(module, converted, bindings, calls):
             keys = ("sem", "scope") + (("atomic_rmw_op",) if record["opcode"] == "tt.atomic_rmw" else ())
             if any(attribute(memories[0], key) != attribute(original, key) for key in keys):
                 raise ConversionError("isolated atomic event changed its source operation/order/scope")
-        mapping = dict(zip(body.args, captures, strict=True))
-        emitted = [op.clone(value_mapper=mapping) for op in operations[:-1]]
+        mapping = dict(zip(body.args, arguments, strict=True))
+        emitted = [*prefix, *[op.clone(value_mapper=mapping) for op in operations[:-1]]]
         values = [mapping.get(v, v) for v in operations[-1].operands]
         if len(values) != len(original.results) or any(not same_type(a.type, b.type) for a, b in zip(values, original.results)):
             raise ConversionError("isolated event conversion changed its typed result bindings")

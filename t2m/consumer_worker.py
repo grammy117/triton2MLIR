@@ -68,7 +68,7 @@ def compile_model(staged, work):
     (work / "prepared.mlir").write_text(prepared)
     features = COMPILER_FEATURES
     regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
-    if any(str(op.results[0].type) in ("f32", "f64") for op in regions):
+    if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
         features = features | {"lower_atomic_word_views"}
     elif regions:
         features = features | {"lower_integer_compare_exchange"}

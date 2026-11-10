@@ -107,6 +107,16 @@ custody. `memory.word_conversion` and package differences explicitly identify
 this version. The tensor/scalar ABI and guarded memory protocol are unchanged.
 The provenance pipeline records the two ordered native stages explicitly.
 
+Word CAS adds a typed-template variant within stage v2. `input_types` binds the
+actual floating storage capture; `template_input_types` binds an equal-width
+integer pointer formal in the isolated native pointer template. All remaining
+formals agree. After that native stage, reconstruction restores the original
+floating root and its logical integer view at the original event. This avoids
+feeding an already structured descriptor through a pointer-bitcast rewrite.
+Producer replay reconstructs the complete pair; Merlin refuses a missing or
+inconsistent declaration. This adds no public/dummy argument, receipt schema,
+artifact name, physical alias or final opaque call.
+
 Merlin checks/copies these compiler-only members for standalone and static derived
 models. Function/grid annotations retain original access intent through model
 inlining. Pointer branches/loops normalize region state to i64 offsets before
@@ -136,7 +146,7 @@ source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
 
 `--effect-profile typed-atomics` selects the separate
 `private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
-bitwise f32/f64 exchange, IEEE f64 atomic addition and integer word RMWs on equal-width f32/f64 storage
+bitwise f32/f64 exchange, IEEE f64 atomic addition, integer word RMWs on equal-width f32/f64 storage and integer word CAS on f16/f32/f64 storage
 to integer RMW/CAS while retaining the same public
 tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
 value dtype and an operation-specific numeric contract in source/access/payload declarations.
@@ -171,6 +181,10 @@ Merlin's explicit native word legalization supplies a checked internal helper
 through ownership/lifetime conversion. This is a native-toolchain compatibility
 requirement, with no helper in the portable package. Source floating min/max
 retains its two sign-conditioned integer atomics, including NaN/zero behavior.
+Word CAS compares integer representations, including NaN payloads and signed
+zeros, with executable bitcasts/comparison/select. Native helpers return integer
+old words to avoid half floating ABI conversions; portable tensor types and
+the standard atomic region remain unchanged.
 
 Equal-width ordinary pointer views retain the storage tensor type and insert
 register bitcasts at each load/store. `prov.logical_word_views` and source

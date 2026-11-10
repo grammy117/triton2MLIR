@@ -42,7 +42,7 @@ from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
 
 
-def dispatch(op, roots, offset, selector):
+def dispatch(op, roots, offset, selector, *, pointer_type=None):
     """Select logical bases with scalar branches inside the original parallel tile."""
     type_ = op.results[0].type
     tiled = isinstance(type_, builtin.TensorType)
@@ -65,21 +65,28 @@ def dispatch(op, roots, offset, selector):
     else:
         body = Block()
         local_offset, local_selector, comparison, value = offset, selector, *op.operands[1:]
+    def atomic_on(block, ordinal):
+        base = roots[ordinal]
+        scalar = pointer_type.element_type if isinstance(pointer_type, builtin.TensorType) else pointer_type
+        viewed = base
+        if scalar is not None and scalar != base.type:
+            cast = raw("tt.bitcast", [base], [scalar])
+            block.add_op(cast)
+            viewed = cast.results[0]
+        pointer = raw("tt.addptr", [viewed, local_offset], [viewed.type])
+        atomic = raw("tt.atomic_cas", [pointer.results[0], comparison, value], [element],
+                     {"prov.pointer_base_ordinal": builtin.IntegerAttr(base.index, builtin.i32)})
+        block.add_ops([pointer, atomic])
+        return atomic.results[0]
     def select(block, ordinal):
         base = roots[ordinal]
         if ordinal == len(roots) - 1:
-            pointer = raw("tt.addptr", [base, local_offset], [base.type])
-            atomic = raw("tt.atomic_cas", [pointer.results[0], comparison, value], [element],
-                         {"prov.pointer_base_ordinal": builtin.IntegerAttr(base.index, builtin.i32)})
-            block.add_ops([pointer, atomic])
-            return atomic.results[0]
+            return atomic_on(block, ordinal)
         constant = arith.ConstantOp.from_int_and_width(base.index, builtin.i32)
         equal = arith.CmpiOp(local_selector, constant.result, "eq")
         yes, no = Block(), Block()
-        pointer = raw("tt.addptr", [base, local_offset], [base.type])
-        atomic = raw("tt.atomic_cas", [pointer.results[0], comparison, value], [element],
-                     {"prov.pointer_base_ordinal": builtin.IntegerAttr(base.index, builtin.i32)})
-        yes.add_ops([pointer, atomic, scf.YieldOp(atomic.results[0])])
+        previous = atomic_on(yes, ordinal)
+        yes.add_op(scf.YieldOp(previous))
         no.add_op(scf.YieldOp(select(no, ordinal + 1)))
         branch = scf.IfOp(equal.result, [element], Region(yes), Region(no))
         block.add_ops([constant, equal, branch])
@@ -161,18 +168,42 @@ def expand(module, source_ids):
         comparison, value = op.operands[1:]
         type_ = op.results[0].type
         element = type_.element_type
-        cast = builtin.UnrealizedConversionCastOp.get([base], [builtin.UnrankedMemRefType.from_type(element)])
-        ranked = memref.CastOp.get(cast.results[0], builtin.MemRefType(element, [builtin.DYNAMIC_INDEX]))
+        storage, word_view = element, None
+        viewed_base = base.owner
+        if hasattr(viewed_base, "operands") and opcode(viewed_base) == "tt.bitcast":
+            from .pointer_views import element as pointer_element
+            from .atomic_word_views import view_info
+            base, = viewed_base.operands
+            storage = pointer_element(base.type)
+            word_view = view_info(storage, element)
+        cast = builtin.UnrealizedConversionCastOp.get([base], [builtin.UnrankedMemRefType.from_type(storage)])
+        ranked = memref.CastOp.get(cast.results[0], builtin.MemRefType(storage, [builtin.DYNAMIC_INDEX]))
         empty = tensor.EmptyOp([], type_)
         block = Block(arg_types=[offset.type.element_type, element, element, element])
         index = arith.IndexCastOp(block.args[0], builtin.IndexType())
-        atomic_body = Block(arg_types=[element])
+        atomic_body = Block(arg_types=[storage])
         current, = atomic_body.args
+        if word_view:
+            viewed = arith.BitcastOp(current, element)
+            atomic_body.add_op(viewed)
+            current = viewed.result
         equal = arith.CmpiOp(current, block.args[1], "eq")
         selected = arith.SelectOp(equal.result, block.args[2], current)
-        atomic_body.add_ops([equal, selected, AtomicYieldOp.create(operands=[selected.result])])
-        atomic = GenericAtomicRMWOp.create(operands=[ranked.dest, index.result], result_types=[element], regions=[Region(atomic_body)])
-        block.add_ops([index, atomic, YieldOp(atomic.result)])
+        atomic_body.add_ops([equal, selected])
+        updated = selected.result
+        if word_view:
+            stored = arith.BitcastOp(updated, storage)
+            atomic_body.add_op(stored)
+            updated = stored.result
+        atomic_body.add_op(AtomicYieldOp.create(operands=[updated]))
+        atomic = GenericAtomicRMWOp.create(operands=[ranked.dest, index.result], result_types=[storage], regions=[Region(atomic_body)])
+        block.add_ops([index, atomic])
+        returned = atomic.result
+        if word_view:
+            old_word = arith.BitcastOp(returned, element)
+            block.add_op(old_word)
+            returned = old_word.result
+        block.add_op(YieldOp(returned))
         identity = builtin.AffineMapAttr(AffineMap.identity(1))
         generic = GenericOp([offset, comparison, value], [empty.tensor], Region(block), [identity] * 4,
                             [IteratorTypeAttr.parallel()], [type_])
@@ -182,7 +213,8 @@ def expand(module, source_ids):
                 nested.location = op.location
         reports.append({"kind": "standard-compare-exchange-region", "source_ids": source_ids(op.location),
             "comparison": "integer-equality", "success_value": "original-source-value", "failure_value": "unchanged-current-word",
-            "result": "original-atomic-old-value", "iteration": "parallel-logical-tile"})
+            "result": "original-atomic-old-value", "iteration": "parallel-logical-tile",
+            **({"word_view": word_view} if word_view else {})})
         Rewriter.replace_op(op, generated, generic.results)
         if not descriptor.results[0].uses:
             descriptor.parent.erase_op(descriptor)

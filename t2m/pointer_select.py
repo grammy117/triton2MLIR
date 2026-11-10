@@ -184,7 +184,7 @@ def normalize_selected(state, source_ids):
         if name == "tt.atomic_cas":
             from .compare_exchange import dispatch
             ids = source_ids(op.location)
-            dispatch(op, roots, offset, tag(pointer))
+            dispatch(op, roots, offset, tag(pointer), pointer_type=type_)
             memory_reports.append({"kind": "selected-pointer-memory", "source_ids": ids, "opcode": name,
                 "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
                 "memory_position": "original-event; conditional-CAS-in-parallel-logical-tile",

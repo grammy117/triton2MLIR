@@ -163,7 +163,7 @@ def test_word_source_binding_retains_inlined_caller_context(change):
         assert records[1]["atomic"] == {"word_bits": 32}
         assert "atomic" not in records[0]
     else:
-        with pytest.raises(ConversionError, match="typed source RMW"):
+        with pytest.raises(ConversionError, match="typed source atomic"):
             bind_source(records, [report])
 
 

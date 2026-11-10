@@ -20,11 +20,12 @@ MERLIN, CLANG = os.environ.get("T2M_MERLIN_ROOT"), os.environ.get("T2M_MERLIN_CL
 pytestmark = pytest.mark.skipif(not (OPT and NATIVE and M2M), reason="existing shared/native/model2MLIR environments required")
 
 
-@pytest.fixture(scope="module", params=["add", "cas", "exch", "min", "max", "fadd", "fadd32"])
+@pytest.fixture(scope="module", params=["add", "cas", "exch", "min", "max", "fadd", "fadd32", "word-cas16", "word-cas32", "word-cas64"])
 def atomic_model_inputs(tmp_path_factory, request):
     kind = request.param
     tmp_path = tmp_path_factory.mktemp("actual-atomic-model")
-    from t2m.examples.atomic_kernels import indexed_atomic, indexed_cas
+    from t2m.examples.atomic_kernels import indexed_atomic, indexed_cas, word_cas
+    word_width = int(kind.removeprefix("word-cas")) if kind.startswith("word-cas") else None
     capture = tmp_path / "capture"
     script = Path(__file__).resolve().parents[1] / "scripts/capture_atomic_model.py"
     process = subprocess.run([M2M, str(script), "--out", str(capture), "--kind", kind], capture_output=True, text=True, timeout=60,
@@ -33,7 +34,14 @@ def atomic_model_inputs(tmp_path_factory, request):
     constants = {"n": 13, "m": 17, "B": 8, "OP": "add" if kind in ("fadd", "fadd32") else kind, "SCALAR": False, "MASK": True, "FRESH": False,
                  "SEM": "relaxed", "SCOPE": "gpu"}
     source = tmp_path / "source.ttir"
-    if kind == "cas":
+    if word_width:
+        constants = {"B": 8, "WIDTH": word_width, "SCALAR": False}
+        source.write_text(capture_ttir(word_cas, {"state": f"*fp{word_width}", "comparison": f"*i{word_width}",
+            "value": f"*i{word_width}", "old": f"*fp{word_width}", **{name: "constexpr" for name in constants}}, constants))
+        abi = TensorABI("word_cas", (TensorBuffer("state", (17,), "readwrite", dtype=f"f{word_width}"),
+            TensorBuffer("comparison", (16,), dtype=f"i{word_width}"), TensorBuffer("value", (16,), dtype=f"i{word_width}"),
+            TensorBuffer("old", (16,), "write", dtype=f"f{word_width}")), grid=(2,))
+    elif kind == "cas":
         constants = {"B": 8, "SCALAR": False, "SEM": "relaxed", "SCOPE": "gpu"}
         source.write_text(capture_ttir(indexed_cas, {**{n: "*i32" for n in ("state", "comparison", "value", "old")},
             **{name: "constexpr" for name in constants}}, constants))
@@ -47,28 +55,29 @@ def atomic_model_inputs(tmp_path_factory, request):
         abi = TensorABI("indexed_atomic", (TensorBuffer("x", (13,), dtype=dtype), TensorBuffer("index", (13,), dtype="i32"),
             TensorBuffer("state", (17,), "readwrite", dtype=dtype), TensorBuffer("old", (13,), "write", dtype=dtype)), grid=(2,))
     result = convert_shared(source, abi, tmp_path / "translation", optimizer=OPT, memory_profile="guarded-buffer",
-                            address_policy="source-words", effect_profile="typed-atomics" if kind in ("exch", "min", "max", "fadd", "fadd32") else "atomics",
+                            address_policy="source-words", effect_profile="typed-atomics" if word_width or kind in ("exch", "min", "max", "fadd", "fadd32") else "atomics",
                             f32_atomic_add="ftz" if kind == "fadd32" else None)
     return capture, KernelBinding("t2m_demo::atomic_update", result,
-        operands={"state": "state", "comparison": "index", "value": "x"} if kind == "cas" else {}), kind
+        operands={"state": "state", "comparison": "index", "value": "x"} if kind == "cas" or word_width else {}), kind
 
 
 def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_path, atomic_model_inputs):
     capture, binding, kind = atomic_model_inputs
+    word_cas = kind.startswith("word-cas")
     out = tmp_path / "bound"
     write_model_bundle(capture, [binding], out, work=tmp_path / "qualification", python=NATIVE,
         merlin_root=MERLIN, merlin_python=os.environ.get("T2M_MERLIN_PYTHON"), merlin_host=bool(MERLIN and CLANG), merlin_clang=CLANG)
     receipt = verify_bundle(out)
     assert "kernels/0/memory-admission.json" in receipt["artifacts"]
     admission = json.loads((out / "kernels/0/memory-admission.json").read_text())
-    assert admission["schema"] == ("t2m.memory-admission.v4" if kind in ("exch", "min", "max", "fadd", "fadd32") else "t2m.memory-admission.v3")
-    assert admission["atomic_adaptations"][0]["operation"] == ("fadd" if kind == "fadd32" else kind)
+    assert admission["schema"] == ("t2m.memory-admission.v4" if word_cas or kind in ("exch", "min", "max", "fadd", "fadd32") else "t2m.memory-admission.v3")
+    assert admission["atomic_adaptations"][0]["operation"] == ("cas" if word_cas else "fadd" if kind == "fadd32" else kind)
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "golden.npy", "goldens.npz", "extra.npz"):
         assert (out / name).read_bytes() == (capture / name).read_bytes()
     execution = json.loads((out / "execution.json").read_text())
     assert execution["result_count"] == 2 and set(execution["result_reference_members"]) == {"golden.npy", "goldens.npz"}
     differences = json.loads((out / "compatibility.json").read_text())["kernel_profiles"]["kernels/0"]["differences"]
-    assert any(("integer word atomics" if kind in ("min", "max") else "f32 atomic addition policy" if kind == "fadd32" else "IEEE f64" if kind == "fadd" else "bitwise f32/f64 exchange" if kind == "exch" else "private-invocation integer atomics") in item for item in differences)
+    assert any(("integer word atomics" if word_cas or kind in ("min", "max") else "f32 atomic addition policy" if kind == "fadd32" else "IEEE f64" if kind == "fadd" else "bitwise f32/f64 exchange" if kind == "exch" else "private-invocation integer atomics") in item for item in differences)
     if MERLIN:
         assert (out / "consumer/compiler/source/kernels/0/memory-admission.json").read_bytes() == (out / "kernels/0/memory-admission.json").read_bytes()
         if CLANG:
@@ -76,6 +85,16 @@ def test_real_atomic_model_keeps_source_effects_weights_and_tuple_results(tmp_pa
             assert execution["host_execution"] == execution["reference_comparison"] == "passed"
             assert execution["evaluation"]["functional_inputs_preserved"]
             assert execution["result_count"] == 2
+    if word_cas:
+        uint = getattr(np, "uint" + kind.removeprefix("word-cas"))
+        results = [tmp_path / "qualification/native/outputs.npz"]
+        if MERLIN and CLANG:
+            results.append(out / "consumer/host/outputs.npz")
+        with np.load(capture / "goldens.npz", allow_pickle=False) as references:
+            for path in results:
+                with np.load(path, allow_pickle=False) as actual:
+                    for index in range(2):
+                        np.testing.assert_array_equal(actual[f"out{index}"].view(uint), references[f"out{index}"].view(uint))
     tampered = tmp_path / "tampered"
     shutil.copytree(out, tampered)
     execution = json.loads((tampered / "execution.json").read_text())

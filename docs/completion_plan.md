@@ -453,7 +453,7 @@ IEEE f64 addition also qualifies through standard upstream atomic conversion,
 native/Merlin region and collision tests, and a genuine f64 model2MLIR model.
 It records round-to-nearest-even, subnormal preservation and unspecified
 arithmetic NaN payload/sign without changing the package ABI. Next, implement
-other floating policies, word CAS and the other universal
+other floating policies and the other universal
 gaps. This remains bounded coverage rather than arbitrary-kernel completion.
 
 F32 addition now has explicit IEEE/FTZ policy selection. Both use the same
@@ -471,3 +471,14 @@ standard-addf profile remains readable with its original weaker NaN contract.
 Artifact/receipt names and the tensor/scalar ABI are unchanged. Tests construct
 source constant words explicitly, so a Python constexpr zero-sign conversion
 cannot make the test exercise a different TTIR operation.
+
+Integer-word CAS now additionally retains f16/i16, f32/i32 and f64/i64 storage
+views through the working Merlin interface. Closed standard atomic regions
+preserve exact comparisons and old values; integer native helper results avoid
+half floating ABI conversions. Source region/selection/rank-two compositions,
+constants and actual model2MLIR tuple captures are qualified. The stage-v2
+typed-template variant is an explicit package difference, with complete producer
+replay and consumer custody checks. This closes word CAS within the private
+typed profile; differing storage selectors, other numeric formats, descriptors,
+external effects/synchronization, maintained coverage and staged accelerator
+materialization remain completion requirements.

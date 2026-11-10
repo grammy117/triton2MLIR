@@ -459,7 +459,7 @@ atomic conversion through native/Merlin execution, source regions, colliding
 old-value histories and actual model2MLIR tuples. F32 now explicitly selects
 IEEE or sign-preserving input/result FTZ, retaining executable numeric policy
 through standard MLIR, native/Merlin regions and real model binding. Next:
-other floating numeric contracts, word CAS and the remaining universal intake gaps.
+other floating numeric contracts and the remaining universal intake gaps.
 F64 now also retains executable NaN quieting through constant normalization,
 under the versioned `ieee-f64-rne-add-quiet-nans` contract. Legacy packages keep
 their original standard-addf contract and remain readable.
@@ -470,4 +470,11 @@ implemented: loads/stores retain actual storage types and reinterpret values,
 including exact integer fill bits, finite root selection and pointer recurrences.
 Native/Merlin tests cover f16/i16, f32/i32 and f64/i64 with explicit provenance.
 Atomic RMW views now have a separate region/legalization extension preserving
-the source integer min/max algorithm. Word CAS and mixed storage selectors remain open. See [logical views](docs/pointer_views.md).
+the source integer min/max algorithm. Integer-word CAS now additionally retains
+i16/i32/i64 semantics on f16/f32/f64 storage through standard atomic regions,
+native/Merlin execution and three genuine model2MLIR tuple-result captures.
+The 42 semantic compositions, 36 producer evidence checks, three demos and 15
+model cases pass. Public storage types are unchanged; the additive stage-v2
+typed-template boundary is explicit in [package differences](docs/package.md).
+Mixed storage selectors and broader numeric/effect contracts remain open.
+See [logical views](docs/pointer_views.md).

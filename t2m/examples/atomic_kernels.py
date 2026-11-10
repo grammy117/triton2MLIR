@@ -321,3 +321,54 @@ def mixed_storage_atomic(integer_state, floating_state, old_integer, old_word,
     atomic_word_update(integer_state, old_integer, B=B)
     atomic_word_update(floating_state.to(tl.pointer_type(word), bitcast=True),
                        old_word.to(tl.pointer_type(word), bitcast=True), B=B)
+
+
+@triton.jit
+def word_cas(state, comparison, value, old, B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    indexed_cas(state.to(tl.pointer_type(word), bitcast=True), comparison, value,
+                old.to(tl.pointer_type(word), bitcast=True), B=B, SCALAR=SCALAR, SEM="acq_rel", SCOPE="gpu")
+
+
+@triton.jit
+def selected_word_cas(a, b, comparison, value, old, choice,
+                      B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr, LANE: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    selected_cas(a.to(tl.pointer_type(word), bitcast=True), b.to(tl.pointer_type(word), bitcast=True),
+                 comparison, value, old.to(tl.pointer_type(word), bitcast=True), choice,
+                 B=B, SCALAR=SCALAR, LANE=LANE)
+
+
+@triton.jit
+def matrix_word_cas(state, comparison, value, old, WIDTH: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    matrix_cas(state.to(tl.pointer_type(word), bitcast=True), comparison, value,
+               old.to(tl.pointer_type(word), bitcast=True))
+
+
+@triton.jit
+def constant_word_cas(state, old, B: tl.constexpr, WIDTH: tl.constexpr, COMPARISON: tl.constexpr, VALUE: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    lane = tl.arange(0, B)
+    pointer = state.to(tl.pointer_type(word), bitcast=True) + lane
+    comparison = tl.full((B,), COMPARISON, word)
+    value = tl.full((B,), VALUE, word)
+    previous = tl.atomic_cas(pointer, comparison, value, sem="acq_rel", scope="gpu")
+    tl.store(old.to(tl.pointer_type(word), bitcast=True) + lane, previous)
+
+
+@triton.jit
+def region_word_cas(state, out, n, steps, enabled, shift,
+                    B: tl.constexpr, WIDTH: tl.constexpr, SCALAR: tl.constexpr, WHILE: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    region_cas(state.to(tl.pointer_type(word), bitcast=True), out.to(tl.pointer_type(word), bitcast=True),
+               n, steps, enabled, shift, B=B, SCALAR=SCALAR, WHILE=WHILE)
+
+
+@triton.jit
+def mixed_storage_cas(integer_state, floating_state, comparison, value, old_integer, old_word,
+                       B: tl.constexpr, WIDTH: tl.constexpr):
+    word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
+    indexed_cas(integer_state, comparison, value, old_integer, B=B, SCALAR=False, SEM="acq_rel", SCOPE="gpu")
+    indexed_cas(floating_state.to(tl.pointer_type(word), bitcast=True), comparison, value,
+                old_word.to(tl.pointer_type(word), bitcast=True), B=B, SCALAR=False, SEM="acq_rel", SCOPE="gpu")

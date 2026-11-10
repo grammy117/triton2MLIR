@@ -283,8 +283,8 @@ on the guarded source-word path. Native and actual Merlin execution retain
 f16/i16, f32/i32 and f64/i64 bits through masks/fills, selected roots and
 for/while recurrences. Exported MLIR retains original storage tensors and
 register bitcasts, with `prov.logical_word_views` annotations. Differing widths,
-address-space changes and atomic CAS word views still need further contracts and
-expansions; see [logical pointer views](pointer_views.md).
+address-space changes still need further contracts and expansions; atomic CAS
+word views now have the explicit typed expansion below. See [logical pointer views](pointer_views.md).
 
 ### Atomic logical word views
 
@@ -295,7 +295,7 @@ and dynamic empty/tail grids; scalar min/max is included. Real model2MLIR
 min/max models preserve weights and both tuple results. The portable interface
 retains standard atomic regions and word-view provenance; checked native
 legalization emits one integer atomic per primitive without whole-buffer
-conversion. This does not qualify every floating numeric policy, word CAS, external participants
+conversion. This does not qualify every floating numeric policy, external participants
 or accelerator execution. See [atomic memory](atomic_memory.md).
 
 Both widths also qualify inside branch/for/while regions with old-value and
@@ -304,6 +304,17 @@ selection. Repeated inlined helpers retain separate call contexts through the
 actual Merlin interface. Twelve native/Merlin region cases and two additional
 Merlin repeated-helper cases pass with independent raw-integer oracles; these
 are composition tests rather than an arbitrary-kernel coverage claim.
+
+Integer-word CAS additionally qualifies f16/i16, f32/i32 and f64/i64 views,
+including rank-two tiles, scalar/vector events, uniform/lane-selected buffers,
+constants and source-region pointer/old-value recurrences. The 42 compositions
+pass native comparison and raw-word Merlin checks; 36 producer evidence/template
+checks pass. Three demos and 15 real model2MLIR cases preserve public storage
+types, weights and tuple results. Native helpers return integer words, avoiding half
+floating ABI conversions. The stage-v2 typed-template addition is explicit in
+[the package contract](package.md); no physical alias or opaque portable call
+is introduced. This does not qualify differently typed selected roots or
+arbitrary synchronization/accelerator behavior.
 
 ### F64 atomic addition
 

@@ -192,7 +192,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             if op.operands[0] in word_views:
                 if name != "tts.unstructured_atomic_rmw":
                     refuse(op, "raw atomic word views cannot authorize ordinary memory observations")
-                element_type = {"i32": builtin.i32, "i64": builtin.i64}[word_views[op.operands[0]]["value_dtype"]]
+                element_type = {"i16": builtin.i16, "i32": builtin.i32, "i64": builtin.i64}[word_views[op.operands[0]]["value_dtype"]]
             if (not isinstance(type_, TensorType) or type_.get_shape() != index.type.get_shape()
                     or type_.element_type != element_type
                     or mask is not None and mask.type != TensorType(builtin.i1, index.type.get_shape())):
@@ -224,7 +224,12 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
         if prefixes and len(prefixes) != len(sizes):
             refuse(op, "structured prefix mask rank differs from its tile")
         type_ = op.operands[1].type if write else op.results[0].type
-        if not isinstance(type_, TensorType) or type_.get_shape() != sizes or type_.element_type != buffer.type.element_type:
+        element_type = buffer.type.element_type
+        if op.operands[0] in descriptor_word_views:
+            if name != "tt.atomic_cas":
+                refuse(op, "atomic descriptor word views cannot authorize ordinary memory observations")
+            element_type = {"i16": builtin.i16, "i32": builtin.i32, "i64": builtin.i64}[descriptor_word_views[op.operands[0]]["value_dtype"]]
+        if not isinstance(type_, TensorType) or type_.get_shape() != sizes or type_.element_type != element_type:
             refuse(op, "structured memory value differs from its declared pointer tile")
         return Access(buffer, sizes, index=gather, offsets=offsets, strides=strides, prefixes=prefixes)
 
@@ -259,11 +264,13 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             refuse(op, "structured address axes differ from the pointer tile")
         return base, sizes, offsets, strides, None
 
-    accesses = []
+    accesses, descriptor_word_views = [], {}
     for op in original:
         name = opcode(op)
         if name in ("tts.make_tptr", "tts.make_gather_scatter_tptr"):
             descriptors[op.results[0]] = pointer(op)
+            if op.operands[0] in word_views:
+                descriptor_word_views[op.results[0]] = word_views[op.operands[0]]
             continue
         if name not in ("tts.load", "tts.store", "tts.gather", "tts.scatter", "tts.unstructured_atomic_rmw", "tt.atomic_cas"):
             continue
@@ -275,6 +282,8 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             atomic_contract = contract(op, source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
             if op.operands[0] in word_views:
                 atomic_contract["word_view"] = word_views[op.operands[0]]
+            elif op.operands[0] in descriptor_word_views:
+                atomic_contract["word_view"] = descriptor_word_views[op.operands[0]]
         access = describe(op, write)
         if not access.sizes or any(n <= 0 for n in access.sizes):
             refuse(op, "memory guards require a positive static tile shape")

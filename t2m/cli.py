@@ -121,6 +121,13 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         runtime_scalars = (RuntimeScalar("n", "i32", 2, bounds=(0, 31)), RuntimeScalar("tiles", "i32", 3, bounds=(0, 3)))
         example_dimensions = {"n": 23, "tiles": 2}
         buffer_effects, buffer_dtypes = {"out": "write"}, {"x": "i32", "out": "i32"}
+    elif kernel.startswith("atomic-word-cas"):
+        from .examples.atomic_kernels import word_cas
+        width = int(kernel.removeprefix("atomic-word-cas"))
+        fn, constants = word_cas, {"B": 8, "WIDTH": width, "SCALAR": False}
+        shapes, grid = [(16,)] * 4, (2,)
+        buffer_effects = {"state": "readwrite", "old": "write"}
+        buffer_dtypes = {"state": f"f{width}", "comparison": f"i{width}", "value": f"i{width}", "old": f"f{width}"}
     elif kernel == "atomic-cas":
         from .examples.atomic_kernels import indexed_cas
         fn, constants = indexed_cas, {"B": 8, "SCALAR": False, "SEM": "relaxed", "SCOPE": "gpu"}
@@ -175,7 +182,7 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
         names = ["q", "k", "v", "out"]
     elif kernel in ("atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32"):
         names = ["x", "index", "state", "old"]
-    elif kernel == "atomic-cas":
+    elif kernel == "atomic-cas" or kernel.startswith("atomic-word-cas"):
         names = ["state", "comparison", "value", "old"]
     elif kernel in ("indexed-gather", "dynamic-gather", "indirect-store"):
         names = ["x", "indices", "out"]
@@ -184,14 +191,22 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
                     dtype=buffer_dtypes.get(n, "i32" if n == "indices" else "f32"))
                     for n, s in zip(names, shapes, strict=True)), grid=grid, intent=f"Source {kernel} example", runtime_scalars=runtime_scalars)
     source = work / "kernel.ttir"
-    source.write_text(capture_ttir(fn, {**{b.name: "*fp" + b.dtype[1:] if b.dtype in ("f32", "f64") else "*" + b.dtype for b in abi.buffers},
+    source.write_text(capture_ttir(fn, {**{b.name: "*fp" + b.dtype[1:] if b.dtype in ("f16", "f32", "f64") else "*" + b.dtype for b in abi.buffers},
                                       **{s.name: "fp32" if s.dtype == "f32" else s.dtype for s in abi.runtime_scalars},
                                       **{n: "constexpr" for n in constants}}, constants))
     result = convert_shared(source, abi, work / "translation", optimizer=optimizer, memory_profile=memory_profile, address_policy=address_policy, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
     rng = np.random.default_rng(7)
     arrays = [rng.normal(size=tuple(example_dimensions.get(n, n) for n in b.shape)).astype("float32") for b in abi.inputs]
     additional = []
-    if kernel == "atomic-cas":
+    if kernel.startswith("atomic-word-cas"):
+        width = int(kernel.removeprefix("atomic-word-cas"))
+        floating, integer = getattr(np, f"float{width}"), getattr(np, f"int{width}")
+        state = (np.arange(16, dtype=floating) + floating(50)).view(integer)
+        comparison, value = state.copy(), np.arange(16, dtype=integer) - integer(5)
+        comparison[1::3] += integer(1)
+        arrays = [state.view(floating), comparison, value]
+        golden, additional = np.where(state == comparison, value, state).view(floating), [state.view(floating).copy()]
+    elif kernel == "atomic-cas":
         state = np.arange(16, dtype=np.int32) + 50
         comparison, value = state.copy(), np.arange(16, dtype=np.int32) - 5
         comparison[1::3] += 1
@@ -370,7 +385,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("matrix-add", "softmax", "matmul", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

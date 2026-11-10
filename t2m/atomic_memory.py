@@ -37,8 +37,8 @@ def payload(info):
         from .atomic_float_add import PAYLOAD
         return PAYLOAD
     if "word_view" in info:
-        from .atomic_word_views import PAYLOAD
-        return PAYLOAD
+        from .atomic_word_views import PAYLOAD, CAS_PAYLOAD
+        return CAS_PAYLOAD if info["operation"] == "cas" else PAYLOAD
     return ("standard-memref-generic-compare-exchange-with-original-returned-old-value" if info["operation"] == "cas"
             else "standard-memref-atomic-rmw-with-original-returned-old-value")
 
@@ -73,8 +73,8 @@ def validate_evidence(admission, memory, records, buffers):
             dtype = expected_view["storage_dtype"]
         if (not isinstance(info, dict) or not candidates or any(c != info and c != primitive for c in candidates)
                 or buffer.get("dtype") != dtype
-                or word and (profile != TYPED_EFFECT_PROFILE or floating or info.get("operation") == "cas"
-                    or info.get("word_bits") not in (32, 64) or info["word_view"] != expected_view)
+                or word and (profile != TYPED_EFFECT_PROFILE or floating
+                    or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64)) or info["word_view"] != expected_view)
                 or floating and (profile != TYPED_EFFECT_PROFILE
                     or (info.get("operation"), dtype) not in FLOAT_CONTRACTS
                     or dtype != "f" + str(info.get("word_bits"))
@@ -158,7 +158,7 @@ def adapt_payload(module, abi, admission, source_ids):
     reports, generics = [], []
     for op in list(function.walk()):
         region = isinstance(op, GenericAtomicRMWOp)
-        word = region and op.result.type in (builtin.f32, builtin.f64)
+        word = region and op.result.type in (builtin.f16, builtin.f32, builtin.f64)
         cas = region and not word
         if not isinstance(op, (memref.AtomicRMWOp, GenericAtomicRMWOp)) or (buffer := root(op.operands[0 if region else 1])) is None:
             continue  # Compiler-owned guard atomics use separate arguments.
@@ -178,8 +178,9 @@ def adapt_payload(module, abi, admission, source_ids):
         word_info = None
         if word:
             from .atomic_word_views import match
-            word_kind, word_info = match(op, generic.body.block.args[1])
-            standard_kind = dict(RMW.values())[word_kind]
+            word_kind, word_info = match(op, generic.body.block.args[1],
+                generic.body.block.args[2] if len(generic.body.block.args) >= 4 else None)
+            standard_kind = "compare-exchange" if word_kind == "cas" else dict(RMW.values())[word_kind]
             uses = tuple(op.result.uses)
             if (len(uses) != 1 or not isinstance(uses[0].operation, arith.BitcastOp)
                     or uses[0].operation.parent is not op.parent

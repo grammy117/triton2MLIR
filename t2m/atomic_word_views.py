@@ -19,11 +19,12 @@ from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
 UPDATES = {"and": arith.AndIOp, "or": arith.OrIOp, "xor": arith.XOrIOp, "add": arith.AddiOp,
     "max": arith.MaxSIOp, "min": arith.MinSIOp, "umax": arith.MaxUIOp, "umin": arith.MinUIOp}
 PAYLOAD = "standard-memref-generic-integer-word-update-with-original-returned-old-value"
+CAS_PAYLOAD = "standard-memref-generic-integer-word-compare-exchange-with-original-returned-old-value"
 
 
 def view_info(storage, value):
-    if storage not in (builtin.f32, builtin.f64) or value not in (builtin.i32, builtin.i64) or storage.bitwidth != value.bitwidth:
-        raise ValueError("atomic word views require equal-width f32/i32 or f64/i64 elements")
+    if storage not in (builtin.f16, builtin.f32, builtin.f64) or value not in (builtin.i16, builtin.i32, builtin.i64) or storage.bitwidth != value.bitwidth:
+        raise ValueError("atomic word views require equal-width f16/i16, f32/i32 or f64/i64 elements")
     return {"storage_dtype": str(storage), "value_dtype": str(value), "element_bits": storage.bitwidth,
             "address_units": "equal-width-elements"}
 
@@ -38,19 +39,19 @@ def bind_source(records, reports):
         for source in report["source_ids"]:
             record = inventory.get(source)
             if record is None:
-                raise ConversionError("atomic word view differs from its typed source RMW inventory", source_id=source)
-            if record["opcode"] != "tt.atomic_rmw":
+                raise ConversionError("atomic word view differs from its typed source atomic inventory", source_id=source)
+            if record["opcode"] not in ("tt.atomic_rmw", "tt.atomic_cas"):
                 continue  # Inlined call-site locations also retain caller IDs.
             if record.get("atomic", {}).get("word_bits") != info["element_bits"]:
-                raise ConversionError("atomic word view differs from its typed source RMW inventory", source_id=source)
+                raise ConversionError("atomic word view differs from its typed source atomic inventory", source_id=source)
             # Storage is a fact of this event/call context. The original
             # primitive may also be called with ordinary integer storage.
             found = True
         if not found:
-            raise ConversionError("atomic word view lacks an original typed source RMW", source_id=report["source_ids"][0])
+            raise ConversionError("atomic word view lacks an original typed source atomic", source_id=report["source_ids"][0])
 
 
-def match(op, value):
+def match(op, value, desired=None):
     """Check the exact scalar region against its source outside integer value."""
     if not isinstance(op, GenericAtomicRMWOp):
         raise ConversionError("integer word updates require a standard generic atomic region")
@@ -58,7 +59,18 @@ def match(op, value):
     ops = list(block.ops)
     storage = op.result.type
     info = view_info(storage, value.type)
-    if len(ops) == 4:
+    if len(ops) == 5 and desired is not None:
+        viewed, equal, selected, stored, terminal = ops
+        if (not isinstance(viewed, arith.BitcastOp) or tuple(viewed.operands) != (block.args[0],)
+                or viewed.result.type != value.type or desired.type != value.type
+                or not isinstance(equal, arith.CmpiOp) or equal.predicate.value.data != 0
+                or tuple(equal.operands) != (viewed.result, value)
+                or not isinstance(selected, arith.SelectOp)
+                or tuple(selected.operands) != (equal.result, desired, viewed.result)
+                or not isinstance(stored, arith.BitcastOp) or tuple(stored.operands) != tuple(selected.results)):
+            raise ConversionError("atomic word CAS differs from original integer comparison/select semantics")
+        kind = "cas"
+    elif len(ops) == 4:
         viewed, updated, stored, terminal = ops
         kind = next((name for name, cls in UPDATES.items() if isinstance(updated, cls)), None)
         if (not isinstance(viewed, arith.BitcastOp) or tuple(viewed.operands) != (block.args[0],)
