@@ -98,9 +98,13 @@ Merlin memory profiles and reused libraries. Original contracts/effects are
 checked before normalization; source intent and normalized graphs stay distinct.
 The normalizer binary and output bytes are hash-bound separately from the
 source reference revision. See [the numeric boundary](dot_precision.md).
-Continue with explicit TF32 conversion/partial-dot arithmetic and its numeric
-profile, then broader E/F external/effect cases and B/C alias/stride/corpus/target
-work below. No hardware-specific operation is discarded to pass admission.
+TF32/TF32x3 additionally retain explicit E8M10 dot-input quantization,
+pass-generated RNA high parts, ordered cross terms and source C placement.
+Six additional runtime packages cover the three memory profiles through
+reused Merlin libraries. The logical numeric profile and accelerator
+limitations are explicit. Continue with broader E/F external/effect cases,
+batched/numeric compositions and B/C alias/stride/corpus/target work below.
+No hardware-specific operation is discarded to pass admission.
 
 Uniform conditional reads now retain shared's selected rectangular extents
 through the pure tensor proof as read-only subsets. Bounds do not become

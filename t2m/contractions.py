@@ -108,10 +108,12 @@ def dot_contract(op, source_id, *, allow_composite=False):
     else:
         mode = precision.value.data
     applies = "f32" in elements[:2]
-    if applies and mode != 2 and not (allow_composite and mode in (3, 4)):
+    if applies and mode != 2 and not allow_composite:
         refuse(
             "f32 dot precision must explicitly be IEEE until its selected precision is expanded"
         )
+    if applies and mode != 2 and (elements[:2] != ["f32", "f32"] or elements[2:] != ["f32", "f32"]):
+        refuse("selected f32 dot precision requires f32 inputs, accumulator and result")
     bound = op.properties.get(
         "maxNumImpreciseAcc", op.attributes.get("maxNumImpreciseAcc")
     )
@@ -128,18 +130,18 @@ def dot_contract(op, source_id, *, allow_composite=False):
         "input_precision": PRECISIONS[mode],
         "input_precision_applies": applies,
         "max_imprecise_accumulations": 0 if bound is None else bound.value.data,
-        "portable_accumulator": ("source-C-added-after-official-composite" if applies and mode in (3, 4)
+        "portable_accumulator": ("source-C-added-after-official-composite" if applies and mode in (1, 3, 4)
                                  else "original-source-C"),
         "physical_mapping": "undecided",
     }
 
 
-def needs_bf16_dot_expansion(op):
+def needs_dot_precision_expansion(op):
     from .shared_tensor import opcode
     if opcode(op) != "tt.dot" or len(op.operands) != 3:
         return False
     precision = op.properties.get("inputPrecision", op.attributes.get("inputPrecision"))
     return (isinstance(precision, builtin.IntegerAttr) and precision.type == builtin.i32
-            and precision.value.data in (3, 4)
+            and precision.value.data in (0, 1, 3, 4)
             and all(isinstance(value.type, builtin.TensorType) and value.type.element_type == builtin.f32
                     for value in op.operands[:2]))

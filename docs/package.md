@@ -56,6 +56,13 @@ bijection claim. The original C/post-composite order and NaN correction stay
 executable. Compatibility metadata states the selected host arithmetic and
 separates the native binary hash from its source reference. Public ABI and
 receipt schemas are unchanged; see [dot precision](dot_precision.md).
+TF32 adds the explicit `logical-tf32-e8m10-rtz-v1` profile to source intent,
+normalization reports and compatibility metadata. Integer operations retain
+input quantization, gradual underflow and computed NaN class. TF32x3 uses the
+actual upstream decomposition and expands only its generated RNA conversion;
+original source assembly remains a separate gate. Direct TF32 keeps C inside
+the contraction, while composites add it afterward. Physical TF32 encoding,
+GPU accumulation behavior and accelerator equivalence remain unqualified.
 
 Scaled dots use the explicit `logical-mx-f64-v1` internal-precision profile:
 packed tile unpacking and per-group scaling expand to standard parallel

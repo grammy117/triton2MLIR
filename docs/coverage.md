@@ -7,9 +7,20 @@ Merlin memory profiles and reused libraries. Nine focused cases include
 original-bound and pre-normalization effect refusals; the broader precision,
 block-pointer and FP8 regression passes 83 cases with 24 separately qualified
 FP8 shape cases deselected. The visible BF16x6 demo and qualification reopen
-26/45 artifacts. Its explicit 33-package observation report retains 30/50
-definitions observed and 26 in host-qualified captures. TF32, broader numeric/
-effect/alias compositions, corpus closure and targets remain open.
+26/45 artifacts.
+
+TF32/TF32x3 now additionally qualify six runtime packages across the three
+memory profiles with an explicit logical E8M10 numeric boundary. Actual
+upstream TF32x3 expansion retains high/residual reuse, ordered corrections and
+source C; standard arithmetic implements its generated RNA conversion and
+dot-input truncation. Thirty-six focused cases pass across the precision,
+rational-boundary and mixed-rank normalization checks. The final reuse change
+passes twelve relevant cases; 75 block-pointer/FP8 regressions also pass, with
+24 separately qualified FP8 shape cases deselected. The visible TF32x3 demo
+reopens 26/45 producer/qualification artifacts. The explicit 34-package report
+still retains 30/50 definitions observed and 26 in host-qualified captures:
+generated conversion assembly does not qualify original source assembly.
+Broader numeric/effect/alias compositions, corpus closure and targets remain open.
 
 [Runtime model arguments](runtime_model_arguments.md) now bind captured scalar
 attributes and compatible tensor/result shapes into dynamic kernel bodies.

@@ -1193,8 +1193,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
-    from .contractions import needs_bf16_dot_expansion
-    if any(needs_bf16_dot_expansion(op) for op in parsed.walk()):
+    from .contractions import needs_dot_precision_expansion
+    if any(needs_dot_precision_expansion(op) for op in parsed.walk()):
         # Check original effects/contracts before a greedy upstream pass can
         # fold them. Only selected composite precision is deferred to its pass.
         _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,

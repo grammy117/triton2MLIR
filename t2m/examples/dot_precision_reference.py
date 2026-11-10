@@ -1,9 +1,41 @@
-"""Independent rational reference for Triton's BF16 composite dot algorithm."""
+"""Independent rational references for ordered BF16/TF32 dot algorithms."""
 
+from fractions import Fraction
 import numpy as np
 
 from .float_cast_reference import add_word, convert_word
-from .scalar_math_reference import decode, rounded
+from .scalar_math_reference import decode, log2_floor, rounded
+
+
+def tf32_word(word, mode="rtz"):
+    """Quantize exact rational values to E8M10, independent of bit lowering."""
+    if mode not in ("rtz", "rna"):
+        raise ValueError("TF32 reference rounding must be RTZ or RNA")
+    kind, value = decode(word, "f32")
+    negative = bool(word & (1 << 31))
+    if kind == "nan":
+        return 0x7FC00000
+    if kind == "inf" or not value:
+        return word
+    magnitude = abs(value)
+    quantum = Fraction(2) ** (max(log2_floor(magnitude), -126) - 10)
+    scaled = magnitude / quantum
+    significand, remainder = divmod(scaled.numerator, scaled.denominator)
+    if mode == "rna" and 2 * remainder >= scaled.denominator:
+        significand += 1
+    exact = significand * quantum * (-1 if negative else 1)
+    return rounded(exact, "f32", negative_zero=negative)
+
+
+def tf32_array(words, mode="rtz"):
+    return np.asarray([tf32_word(int(word), mode) for word in words.flat], np.uint32).reshape(words.shape)
+
+
+def tf32_split(words):
+    high = tf32_array(words, "rna")
+    residual = np.asarray([add_word(int(a), int(b) ^ (1 << 31))
+                           for a, b in zip(words.flat, high.flat, strict=True)], np.uint32).reshape(words.shape)
+    return [high, tf32_array(residual)]
 
 
 def split(words, count):
@@ -51,6 +83,8 @@ def product(left, right):
 
 
 def reference(a, b, initial, precision, *, block=32):
+    if precision not in ("tf32", "tf32x3", "bf16x3", "bf16x6"):
+        raise ValueError("unqualified precision reference")
     count = 2 if precision == "bf16x3" else 3
     terms = ([(1, 1), (2, 0), (0, 2)] if count == 3 else []) + [(1, 0), (0, 1)]
     m, k = a.shape
@@ -60,11 +94,13 @@ def reference(a, b, initial, precision, *, block=32):
         left, right = np.zeros((m, block), np.float32), np.zeros((block, n), np.float32)
         stop = min(k, start + block)
         left[:, : stop - start], right[: stop - start] = a[:, start:stop], b[start:stop]
-        lhs, rhs = (
-            split(left.view(np.uint32), count),
-            split(right.view(np.uint32), count),
-        )
-        state = np.zeros((m, n), np.uint32)
+        if precision == "tf32":
+            lhs, rhs = [tf32_array(left.view(np.uint32))], [tf32_array(right.view(np.uint32))]
+        elif precision == "tf32x3":
+            lhs, rhs = tf32_split(left.view(np.uint32)), tf32_split(right.view(np.uint32))
+        else:
+            lhs, rhs = split(left.view(np.uint32), count), split(right.view(np.uint32), count)
+        state = output.copy() if precision == "tf32" else np.zeros((m, n), np.uint32)
 
         def dot(ai, bi):
             for row in range(m):
@@ -77,7 +113,11 @@ def reference(a, b, initial, precision, *, block=32):
                         )
                     state[row, col] = value
 
-        for ai, bi in terms:
+        if precision == "tf32":
+            dot(0, 0)
+            output = state
+            continue
+        for ai, bi in ([(1, 0), (0, 1)] if precision == "tf32x3" else terms):
             dot(ai, bi)
         for index in np.ndindex(*state.shape):
             if decode(int(state[index]), "f32")[0] == "nan":
@@ -112,6 +152,11 @@ def inputs(m, n, k):
             0x7FC01234,
             0x1F800001,
             0x5F7FFFFF,
+            0x3F801000,  # RNA tie rounds away; direct TF32 truncates.
+            0xBF801000,
+            0x00001000,  # Half of the minimum E8M10 subnormal.
+            0x80001000,
+            0x7F800001,  # Truncation must preserve NaN class.
         ],
         np.uint32,
     )

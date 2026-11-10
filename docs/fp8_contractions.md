@@ -28,7 +28,9 @@ Pinned Triton
 specifies that `inputPrecision` applies to f32 inputs and is ignored otherwise.
 Non-f32 dot now admits all five declared settings. F32 BF16x3/x6 now reuse
 the [official pre-layout composite expansion](dot_precision.md). TF32 modes
-still require their actual arithmetic expansion and refuse. Source formats,
+now use the explicit logical E8M10/RTZ profile, including actual upstream
+TF32x3 decomposition and standard expansion of its RNA high conversion.
+Source formats,
 precision applicability, imprecise-accumulation bound, zero kind and intake C
 value remain in `prov.contraction_contracts`, keyed by intake graph IDs.
 Those annotations grant no new approximation, reassociation or hardware policy.

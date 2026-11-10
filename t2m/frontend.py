@@ -40,18 +40,20 @@ def _expand_tensor_pointers(path, inventory_path):
     type_context = xdsl_context()
     precision_dots = []
     for op in operations:
-        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") not in (3, 4):
+        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") not in (0, 1, 3, 4):
             continue
         types = [Parser(type_context, str(op.get_operand(i).get_type())).parse_type() for i in range(3)]
         if not all(isinstance(type_, TensorType) and type_.element_type == f32 for type_ in types[:2]):
             continue  # The pinned pass ignores precision for other inputs.
         if types[2].element_type != f32 or (op.get_int_attr("maxNumImpreciseAcc") or 0) < 0:
-            raise ConversionError("BF16 composite dot requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
+            raise ConversionError("selected f32 dot precision requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
         precision_dots.append(op)
     normalized_names = names & (DESCRIPTOR_OPS | {"tt.cat"})
     if precision_dots:
         if any(op.get_name() == "tt.load" and op.get_bool_attr("isVolatile") for op in operations):
             raise ConversionError("volatile observations cannot become stable tensor reads", opcode="tt.load")
+        if names & {"tt.inline_asm", "tt.elementwise_inline_asm"}:
+            raise ConversionError("source assembly needs a separately qualified numeric/effect profile", opcode="tt.elementwise_inline_asm")
         normalized_names.add("tt.dot")
     if not normalized_names:
         raise ConversionError("input does not use a supported intake normalization")
@@ -62,8 +64,11 @@ def _expand_tensor_pointers(path, inventory_path):
         pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
     if names & BLOCK_POINTER_OPS:
         pipeline.append("triton-rewrite-tensor-pointer")
-    if precision_dots:
-        pipeline.append("tritongpu-F32DotTC{emu-tf32=false}")
+    precision_modes = {op.get_int_attr("inputPrecision") for op in precision_dots}
+    if precision_modes & {1, 3, 4}:
+        pipeline.append("tritongpu-F32DotTC{emu-tf32=" + ("true" if 1 in precision_modes else "false") + "}")
+    if precision_modes & {0, 1}:
+        pipeline.extend(("t2m-expand-tf32-e8m10-rtz-v1", "canonicalize"))
     values, blocks, records, regions = {}, {}, [], {}
 
     def value_id(value):
@@ -93,9 +98,12 @@ def _expand_tensor_pointers(path, inventory_path):
         if any(value is not None for value in intent.values()):
             records[-1]["intent"] = {name: value for name, value in intent.items() if value is not None}
         if op in precision_dots:
-            records[-1]["dot_precision"] = {"input_precision": {3: "bf16x3", 4: "bf16x6"}[op.get_int_attr("inputPrecision")],
+            records[-1]["dot_precision"] = {"input_precision": {0: "tf32", 1: "tf32x3", 3: "bf16x3", 4: "bf16x6"}[op.get_int_attr("inputPrecision")],
                 "max_imprecise_accumulations": op.get_int_attr("maxNumImpreciseAcc") or 0,
-                "accumulator": "source-C-added-after-official-composite", "physical_mapping": "undecided"}
+                "accumulator": ("original-source-C" if op.get_int_attr("inputPrecision") == 0
+                                else "source-C-added-after-official-composite"), "physical_mapping": "undecided"}
+            if op.get_int_attr("inputPrecision") in (0, 1):
+                records[-1]["dot_precision"]["logical_numeric_profile"] = "logical-tf32-e8m10-rtz-v1"
     precision_implementation = None
     if precision_dots:
         from triton._C import libtriton
@@ -123,12 +131,101 @@ def _expand_tensor_pointers(path, inventory_path):
         passes.common.add_canonicalizer(manager)
     if names & BLOCK_POINTER_OPS:
         passes.ttir.add_rewrite_tensor_pointer(manager)
-    if precision_dots:
-        passes.ttgpuir.add_f32_dot_tc(manager, False)
+    if precision_modes & {1, 3, 4}:
+        passes.ttgpuir.add_f32_dot_tc(manager, 1 in precision_modes)
     manager.run(module, "triton2mlir-expand-tensor-pointers")
+    if precision_modes & {0, 1}:
+        _expand_tf32(ir, context, module)
     if not module.verify():
         raise ConversionError("official tensor-pointer rewrite produced invalid IR")
     return str(module)  # Keep source NameLocs; str_nodebug discards provenance.
+
+
+def _expand_tf32(ir, native_context, module):
+    """Standard arithmetic for the explicit logical TF32 E8M10/RTZ profile.
+
+    Only the official F32DotTC pass may introduce the RNA assembly below;
+    source assembly was rejected before invoking it. Preserve all partial dots
+    and their accumulators. Physical instruction selection remains downstream.
+    """
+    from xdsl.dialects.builtin import TensorType, f32
+    from xdsl.parser import Parser
+    from .ir import context
+
+    type_context = context()
+    builder = ir.builder(native_context)
+    operations = []
+    module.walk(operations.append)
+    # Reuse within a single block only: the first generated conversion then
+    # dominates later uses, without hoisting across branches or loop scopes.
+    converted = {}
+
+    def tf32_dot(op):
+        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") != 0:
+            return False
+        types = [Parser(type_context, str(op.get_operand(i).get_type())).parse_type() for i in range(2)]
+        return all(isinstance(type_, TensorType) and type_.element_type == f32 for type_ in types)
+
+    def quantize(value, block, *, rna=False):
+        key = (block.id(), value.id(), rna)
+        if key in converted:
+            return converted[key]
+        type_ = Parser(type_context, str(value.get_type())).parse_type()
+        if not isinstance(type_, TensorType) or type_.element_type != f32:
+            raise ConversionError("TF32 conversion requires a ranked f32 tensor")
+        integer = builder.get_block_ty(builder.get_int32_ty(), list(type_.get_shape()))
+
+        def constant(word):
+            return builder.create_splat(integer, builder.get_uint32(word))
+
+        bits = builder.create_bitcast(value, integer)
+        magnitude = builder.create_and(bits, constant(0x7FFFFFFF))
+        nan = builder.create_icmpUGT(magnitude, constant(0x7F800000))
+        if rna:
+            magnitude = builder.create_add(magnitude, constant(0x1000))
+        magnitude = builder.create_and(magnitude, constant(0x7FFFE000))
+        sign = builder.create_and(bits, constant(0x80000000))
+        rounded = builder.create_or(magnitude, sign)
+        # A low NaN payload must not turn into infinity after truncation.
+        rounded = builder.create_select(nan, constant(0x7FC00000), rounded)
+        result = builder.create_bitcast(rounded, value.get_type())
+        converted[key] = result
+        if rna:
+            # The generated RNA result is already E8M10 aligned, including
+            # canonical NaN. Its later RTZ conversion is an exact identity.
+            converted[(block.id(), result.id(), False)] = result
+        return result
+
+    for op in operations:
+        name = op.get_name()
+        if name == "tt.elementwise_inline_asm":
+            if (op.get_str_attr("asm_string") != "cvt.rna.tf32.f32 $0, $1;"
+                    or op.get_str_attr("constraints") != "=r,r"
+                    or op.get_bool_attr("pure") is not True
+                    or op.get_int_attr("packed_element") != 1
+                    or op.get_num_operands() != 1 or op.get_num_results() != 1
+                    or op.get_operand(0).get_type() != op.get_result(0).get_type()):
+                raise ConversionError("official TF32 expansion emitted an unqualified assembly form", opcode=name)
+            result = op.get_result(0)
+            builder.set_loc(result.get_loc())
+            builder.set_insertion_point_after(op)
+            result.replace_all_uses_with(quantize(op.get_operand(0), op.get_block(), rna=True))
+        elif tf32_dot(op):
+            result = op.get_result(0)
+            builder.set_loc(result.get_loc())
+            builder.set_insertion_point_after(op)
+            a, b = (quantize(op.get_operand(i), op.get_block()) for i in range(2))
+            replacement = builder.create_dot(a, b, op.get_operand(2), ir.INPUT_PRECISION.IEEE,
+                                             op.get_int_attr("maxNumImpreciseAcc") or 0)
+            result.replace_all_uses_with(replacement)
+    from triton._C.libtriton import passes
+    manager = ir.pass_manager(native_context)
+    passes.common.add_canonicalizer(manager)
+    manager.run(module, "triton2mlir-expand-logical-tf32")
+    remaining = []
+    module.walk(remaining.append)
+    if any(op.get_name() == "tt.elementwise_inline_asm" or tf32_dot(op) for op in remaining):
+        raise ConversionError("TF32 expansion left unexpanded precision or assembly")
 
 
 def _expand_cats(ir, native_context, module, operations):
@@ -203,6 +300,12 @@ def expand_tensor_pointers(source, work):
               "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
     if "dot_precision_implementation" in inventory:
         report["dot_precision_implementation"] = inventory["dot_precision_implementation"]
+    if "t2m-expand-tf32-e8m10-rtz-v1" in pipeline:
+        report["tf32_numeric_profile"] = {"name": "logical-tf32-e8m10-rtz-v1",
+            "dot_inputs": "E8M10-toward-zero; gradual-underflow; computed-NaN-class",
+            "composite_high_parts": "nearest-ties-away-from-zero",
+            "accumulation": "standard-f32-products-ascending-K-adds",
+            "physical_mapping": "undecided", "accelerator_equivalence": "not-established"}
     (work / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
 

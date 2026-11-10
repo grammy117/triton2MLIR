@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import pytest
+from xdsl.dialects import builtin
 from xdsl.dialects.builtin import StringAttr
 
 from t2m.dynamic_abi import GridExtent
@@ -36,7 +37,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def convert(root, precision, profile, *, negative_bound=False, volatile=False):
+def convert(root, precision, profile, *, negative_bound=False, volatile=False, assembly=False):
     from t2m.examples.dot_precision_kernels import precision_tiled_dot
 
     source = root / "capture.ttir"
@@ -54,6 +55,17 @@ def convert(root, precision, profile, *, negative_bound=False, volatile=False):
     lower_with_shared(source, root / "generic-source", optimizer=OPT, stage="source")
     module = parse_shared((root / "generic-source/lowered.mlir").read_text())
     dot = next(op for op in module.walk() if opcode(op) == "tt.dot")
+    if assembly:
+        original = dot.operands[0]
+        asm = builtin.UnregisteredOp.with_name("tt.elementwise_inline_asm").create(
+            operands=[original], result_types=[original.type], attributes={
+                "asm_string": StringAttr("cvt.rna.tf32.f32 $0, $1;"),
+                "constraints": StringAttr("=r,r"),
+                "pure": builtin.IntegerAttr(1, builtin.i1),
+                "packed_element": builtin.IntegerAttr(1, builtin.i32),
+            })
+        dot.parent.insert_op_before(asm, dot)
+        dot.operands = (asm.results[0], *dot.operands[1:])
     if negative_bound:
         from xdsl.dialects.builtin import IntegerAttr, i32
         dot.properties["maxNumImpreciseAcc"] = IntegerAttr(-1, i32)
@@ -105,7 +117,7 @@ def arguments(m, n, k, *, ones=False):
 
 
 @pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
-@pytest.mark.parametrize("precision,count", [("bf16x3", 3), ("bf16x6", 6)])
+@pytest.mark.parametrize("precision,count", [("bf16x3", 3), ("bf16x6", 6), ("tf32", 1), ("tf32x3", 3)])
 def test_official_composite_reuses_merlin_library_and_retains_source_intent(
     tmp_path, precision, count, profile
 ):
@@ -127,14 +139,18 @@ def test_official_composite_reuses_merlin_library_and_retains_source_intent(
             "source-algorithm"
             in op.attributes["prov.kernel_original_dot_precisions"].data
         )
-    assert any(
-        "tritongpu-F32DotTC{emu-tf32=false}" in item.get("pipeline", [])
-        for item in result.trace["transformations"]
-    )
+    pipeline = [stage for item in result.trace["transformations"] for stage in item.get("pipeline", [])]
+    if precision != "tf32":
+        assert "tritongpu-F32DotTC{emu-tf32=" + ("true" if precision == "tf32x3" else "false") + "}" in pipeline
+    if precision.startswith("tf32"):
+        assert "t2m-expand-tf32-e8m10-rtz-v1" in pipeline
+        assert original[0]["dot_precision"]["logical_numeric_profile"] == "logical-tf32-e8m10-rtz-v1"
     implementation = next(item["dot_precision_implementation"] for item in result.trace["transformations"] if "dot_precision_implementation" in item)
     assert len(implementation["binary_sha256"]) == 64 and implementation["binary_bytes"] > 0
     assert not implementation["source_reference_is_build_receipt"]
-    assert "scf.for" in result.mlir_text and "bf16" in result.mlir_text
+    assert "scf.for" in result.mlir_text
+    assert ("bf16" if precision.startswith("bf16") else "arith.andi") in result.mlir_text
+    assert "tt.elementwise_inline_asm" not in result.mlir_text
     policy = {
         "schema": "t2m.effect-reference.v2",
         "termination": "return",
@@ -147,13 +163,23 @@ def test_official_composite_reuses_merlin_library_and_retains_source_intent(
         result, tmp_path, first, policy, [reference(*first[:3], precision)]
     )
     for index, (m, n, k, ones) in enumerate(
-        [(0, 7, 65, False), (5, 7, 0, False), (1, 1, 32, True), (3, 5, 65, False)]
+        [(0, 7, 65, False), (5, 7, 0, False), (1, 1, 32, True), (3, 5, 65, False),
+         (2, 3, 37, False), (17, 16, 32, False)]
     ):
         values = arguments(m, n, k, ones=ones)
+        if index == 4:
+            # Finite ties/residuals must not be hidden by exceptional columns.
+            finite = np.asarray([0x3F801000, 0xBF801000, 0x00001000, 0x80001000,
+                                 0x3F802001, 0x3F7FFFFF, 0x00800000, 0x00002000], np.uint32)
+            values[0] = np.resize(finite, (m, k)).view(np.float32)
+            values[1] = np.resize(finite[::-1], (k, n)).view(np.float32)
+        elif index == 5:
+            values[1] = np.eye(k, n, dtype=np.float32)
+            values[2].fill(0.0)
         expected = reference(*values[:3], precision)
         if ones:
             np.testing.assert_array_equal(
-                expected, np.full((m, n), 2**24 + 32, np.float32)
+                expected, np.full((m, n), 2**24 + (0 if precision == "tf32" else 32), np.float32)
             )
         caller = tmp_path / f"caller-{index}"
         caller.mkdir()
@@ -175,17 +201,58 @@ def test_official_composite_reuses_merlin_library_and_retains_source_intent(
         assert report["native_compilation"] == "reused-qualified-library"
 
 
-@pytest.mark.parametrize("precision", ["bf16x3", "bf16x6"])
+@pytest.mark.parametrize("precision", ["bf16x3", "bf16x6", "tf32", "tf32x3"])
 def test_negative_original_accumulation_bound_cannot_disappear_in_expansion(tmp_path, precision):
     with pytest.raises(ConversionError, match="nonnegative i32"):
         convert(tmp_path, precision, "tensor", negative_bound=True)
 
 
-def test_original_effect_gate_runs_before_greedy_precision_normalization(tmp_path):
+@pytest.mark.parametrize("precision", ["bf16x3", "tf32x3"])
+def test_original_effect_gate_runs_before_greedy_precision_normalization(tmp_path, precision):
     with pytest.raises(ConversionError, match="volatile observations"):
-        convert(tmp_path, "bf16x3", "tensor", volatile=True)
+        convert(tmp_path, precision, "tensor", volatile=True)
     assert not (tmp_path / "convert/precision-intake").exists()
     from t2m.frontend import expand_tensor_pointers
     with pytest.raises(ConversionError, match="rewrite failed"):
         expand_tensor_pointers(tmp_path / "source.ttir", tmp_path / "native-refusal")
     assert "volatile observations" in (tmp_path / "native-refusal/stderr.log").read_text()
+
+
+def test_original_assembly_is_not_granted_generated_tf32_conversion_semantics(tmp_path):
+    with pytest.raises(ConversionError, match="separately qualified"):
+        convert(tmp_path, "tf32x3", "tensor", assembly=True)
+    assert not (tmp_path / "convert/precision-intake").exists()
+    from t2m.frontend import expand_tensor_pointers
+    with pytest.raises(ConversionError, match="rewrite failed"):
+        expand_tensor_pointers(tmp_path / "source.ttir", tmp_path / "native-refusal")
+    assert "source assembly needs" in (tmp_path / "native-refusal/stderr.log").read_text()
+
+
+@pytest.mark.parametrize("batch", [False, True])
+def test_native_normalization_composes_modes_and_ignores_non_f32_flags(tmp_path, batch):
+    from t2m.frontend import expand_tensor_pointers
+
+    prefix = "2x" if batch else ""
+    a, b, c = (f"tensor<{prefix}{shape}xf32>" for shape in ("16x32", "32x16", "16x16"))
+    x, y = (f"tensor<{prefix}{shape}xf16>" for shape in ("16x32", "32x16"))
+    source = tmp_path / "composed.ttir"
+    source.write_text(f'''module {{
+      tt.func @composed(%a:{a},%b:{b},%c:{c},%x:{x},%y:{y})->{c} {{
+        %bf=tt.dot %a,%b,%c,inputPrecision=bf16x3:{a}*{b}->{c}
+        %tf=tt.dot %a,%b,%bf,inputPrecision=tf32x3:{a}*{b}->{c}
+        %ignored=tt.dot %x,%y,%tf,inputPrecision=tf32:{x}*{y}->{c}
+        tt.return %ignored:{c}
+      }}
+    }}''')
+    report = expand_tensor_pointers(source, tmp_path / "native")
+    assert report["tf32_numeric_profile"]["name"] == "logical-tf32-e8m10-rtz-v1"
+    lower_with_shared(tmp_path / "native/lowered.mlir", tmp_path / "generic", optimizer=OPT, stage="source")
+    module = parse_shared((tmp_path / "generic/lowered.mlir").read_text())
+    dots = [op for op in module.walk() if opcode(op) == "tt.dot"]
+    assert len(dots) == 7
+    ignored = [op for op in dots if op.operands[0].type.element_type == builtin.f16]
+    assert len(ignored) == 1 and ignored[0].properties["inputPrecision"].value.data == 0
+    assert all(op.properties["inputPrecision"].value.data == 2 for op in dots if op not in ignored)
+    partials = [op for op in dots if op.operands[0].type.element_type == builtin.f32]
+    assert partials[0].operands[1] is partials[2].operands[1]
+    assert partials[1].operands[0] is partials[2].operands[0]

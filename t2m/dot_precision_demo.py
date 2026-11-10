@@ -1,4 +1,4 @@
-"""A real f32 precision kernel through upstream BF16 composite expansion."""
+"""A real f32 precision kernel through ordered BF16/TF32 expansion."""
 
 from pathlib import Path
 
@@ -24,8 +24,8 @@ def demo(
     effect_profile="ordinary",
     f32_atomic_add=None,
 ):
-    if precision not in ("bf16x3", "bf16x6"):
-        raise ValueError("qualified composite precision must be bf16x3 or bf16x6")
+    if precision not in ("tf32", "tf32x3", "bf16x3", "bf16x6"):
+        raise ValueError("qualified precision must be tf32, tf32x3, bf16x3 or bf16x6")
     out = Path(out)
     if out.exists():
         raise FileExistsError(out)
@@ -90,7 +90,8 @@ def demo(
         "bundle": str(out),
         "kernel": abi.entry,
         "input_precision": precision,
-        "normalization": "official pre-layout F32DotTC; no target compilation",
+        "normalization": ("logical TF32 standard expansion; no target compilation" if precision == "tf32"
+                          else "official pre-layout F32DotTC; no target compilation"),
         "tiles": [16, 16, 32],
         "runtime_dimensions": [m, n, k],
         "native_execution": "passed",
