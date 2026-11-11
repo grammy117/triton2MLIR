@@ -166,11 +166,28 @@ def expand_prints(module, source_ids, grid_rank, *, logical_pids=None):
             if report["hex"]:
                 hex_word(where,value,value.type.bitwidth)
             elif isinstance(value.type,builtin.AnyFloat):
+                # Diagnostic NaN spelling observes the original sign. Native
+                # widening may canonicalize that sign, so classify source
+                # words before extending finite/infinite values for printf.
+                width = value.type.bitwidth
+                integer_type = builtin.IntegerType(width)
+                bits = add(where,arith.BitcastOp(value,integer_type))
+                magnitude = add(where,arith.AndIOp(bits,number(where,(1 << (width-1))-1,integer_type)))
+                exponent = {builtin.f16:0x7c00,builtin.bf16:0x7f80,builtin.f32:0x7f800000,
+                            builtin.f64:0x7ff0000000000000}[value.type]
+                is_nan = add(where,arith.CmpiOp(magnitude,number(where,exponent,integer_type),"ugt"))
+                nan,finite = Block(),Block()
+                negative = add(nan,arith.CmpiOp(bits,number(nan,0,integer_type),"slt"))
+                branch(nan,negative,lambda nested:string(nested,"-"))
+                string(nan,"nan")
+                add(nan,scf.YieldOp())
                 if value.type in (builtin.f16,builtin.bf16):
-                    value = add(where,arith.ExtFOp(value,builtin.f32))
+                    value = add(finite,arith.ExtFOp(value,builtin.f32))
                 if value.type != builtin.f64:
-                    value = add(where,arith.ExtFOp(value,builtin.f64))
-                show(where,value)
+                    value = add(finite,arith.ExtFOp(value,builtin.f64))
+                show(finite,value)
+                add(finite,scf.YieldOp())
+                add(where,scf.IfOp(is_nan,[],Region(nan),Region(finite)))
             elif value.type == builtin.i64 and not report["is_signed"][operand]:
                 unsigned64(where,value)
             else:
