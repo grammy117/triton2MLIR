@@ -1,5 +1,19 @@
 # Measured coverage and remaining boundaries
 
+[Packed source reads and pointers](grouped_memory.md) now retain original
+cross-slot read/control regions once per logical group. Six actual native/Merlin
+libraries run five runtime domains each, including selected roots, pointer
+results, per-slot masks, intervening writes and retained snapshots. Existing
+bounds/ownership/lifetime gates remain enabled; invalid active reads and missing
+source grouping refuse. Complete-model and target evidence for these new memory
+compositions remain unestablished.
+
+The current `out/grouped-read-inventory/coverage.json` reopens **104 packages,
+74 standalone qualifications and fourteen product cases**. All 50 pinned
+definition names remain observed under selected native/Merlin-host profiles.
+This adds qualified compositions, not per-operation execution measurement or
+universal typed/attribute/kernel/target coverage.
+
 [Source-specialized packed groups](source_grouping.md) now preserve coupled and
 asymmetric scalar computation through standard MLIR and actual Merlin host
 libraries. Seven libraries cover i64/f32, pack two/four, source geometries,
@@ -12,7 +26,7 @@ results through native/Merlin host and actual Spike execution. All target
 results match exact reference words. The separate target selection is
 `out/spike-source-grouped-models/summary.json`.
 
-The current `out/source-grouped-model-inventory/coverage.json` reopens
+The prior `out/source-grouped-model-inventory/coverage.json` reopens
 **98 packages, 68 standalone qualifications and fourteen product cases**. All
 50 pinned definition names remain observed under selected native/host profiles.
 The default corpus still retains its unselected assembly/grouping refusals.

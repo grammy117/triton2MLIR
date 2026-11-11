@@ -139,13 +139,14 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
         pack = op.properties.get("pack")
         body = block(op, 0)
         end = terminator(op, 0, "tt.map_elementwise.return")
-        if (not isinstance(pack, builtin.IntegerAttr) or pack.value.data != 1
-                or len(body.args) != len(op.operands) or len(end.operands) != len(op.results)
+        width = pack.value.data if isinstance(pack, builtin.IntegerAttr) else 0
+        if (width < 1 or width & (width - 1)
+                or len(body.args) != len(op.operands) * width or len(end.operands) != len(op.results) * width
                 or any(not isinstance(v.type, TensorType) or not same_type(v.type.element_type, a.type)
-                       for v, a in zip(op.operands, body.args, strict=True))
+                       for v, a in zip((v for v in op.operands for _ in range(width)), body.args, strict=True))
                 or any(not isinstance(v.type, TensorType) or not same_type(v.type.element_type, a.type)
-                       for v, a in zip(op.results, end.operands, strict=True))):
-            refuse(op, "mapped pointers require the exact pack-one scalar/tensor region interface")
+                       for v, a in zip((v for v in op.results for _ in range(width)), end.operands, strict=True))):
+            refuse(op, "mapped pointers require the exact packed scalar/tensor region interface")
 
     for value in values:
         if isinstance(value, BlockArgument):
@@ -162,7 +163,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
                 else:
                     inputs = (terminator(op, 0, "scf.condition").operands[value.index + 1],)
             elif op in maps:
-                inputs = (op.operands[value.index],)
+                inputs = (op.operands[value.index // op.properties["pack"].value.data],)
             else:
                 refuse(op, "pointer block arguments need a qualified structured control edge")
         else:
@@ -179,7 +180,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
             elif name == "scf.while":
                 inputs = (terminator(op, 0, "scf.condition").operands[index + 1],)
             elif op in maps:
-                inputs = (terminator(op, 0, "tt.map_elementwise.return").operands[index],)
+                width = op.properties["pack"].value.data
+                inputs = tuple(terminator(op, 0, "tt.map_elementwise.return").operands[index * width:(index + 1) * width])
             else:
                 refuse(op, "pointer control has an unqualified pointer producer")
         if not inputs or any(v not in bases for v in inputs):

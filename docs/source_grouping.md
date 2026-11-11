@@ -5,6 +5,11 @@ source-layout path to standard MLIR and actual Merlin host libraries. This is
 separate from the default [slot-independent proof](packed_maps.md): the source
 layout is part of the computation's specialization, not a placement hint.
 
+[Packed source reads and pointers](grouped_memory.md) additionally use that
+contract with the existing guarded/source-word memory path. One parallel scalar
+region computes all slots before coordinate restoration; read snapshots and
+per-slot root selectors remain executable.
+
 ## Meaning and upstream boundary
 
 The pinned Triton LLVM map conversion groups consecutive per-thread register
@@ -154,6 +159,6 @@ the public binding/target CLI example is `out/source-grouped-model-demo/`.
 Missing/mismatched selections and changed binding witnesses refuse; Merlin's
 81-case derived-model suite includes typed-call and rehashed-profile refusals.
 
-Broader kernel/type/attribute coverage, packed source memory, replicated layouts,
+Broader kernel/type/attribute coverage, wider packed-memory profiles, replicated layouts,
 final optimized-layout correspondence and broader target execution remain open.
 Functional CPU qualification supplies no accelerator or performance evidence.

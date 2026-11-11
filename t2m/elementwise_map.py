@@ -228,10 +228,11 @@ def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=
             key = op.attributes.get(KEY)
             if not isinstance(key, StringAttr) or key.data not in layouts:
                 refuse("packed map lacks its source-derived logical grouping")
-            proof = expand(op, source, end, pack, layouts[key.data], refuse)
+            proof = expand(op, source, end, pack, layouts[key.data], refuse, memory_events=memory_events)
             reports.append({"kind": "ttir-elementwise-map", "source_ids": ids, "pack": pack,
                 "shape": list(shape), "inputs": len(inputs), "results": len(outputs),
                 "expansion": "parallel-logical-groups-with-original-scalar-region-and-coordinate-restoration",
+                **({"memory": "isolated-source-word-events-in-original-scalar-region"} if has_memory else {}),
                 "physical_mapping": "undecided", "packing_proof": proof})
             continue
         children, returned, locations, packing_proof = list(source.ops)[:-1], list(end.operands), {}, None

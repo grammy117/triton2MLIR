@@ -31,20 +31,26 @@ def _linear(plan, values, add):
     return dict(zip((name for name, _ in plan["out_dims"]), result, strict=True))
 
 
-def expand(op, source, end, pack, row, refuse):
+def expand(op, source, end, pack, row, refuse, *, memory_events=False):
     from .shared_tensor import opcode
     sizes = validate(row)
     shape = list(op.operands[0].type.get_shape())
     if row["shape"] != shape or row["pack"] != pack:
         refuse("source map grouping differs from the current operation")
+    has_memory = any(opcode(child) == "tt.load" for child in source.walk())
     for child in source.walk():
         if child is end:
             continue
         control = isinstance(child, (scf.IfOp, scf.ForOp, scf.WhileOp))
         terminal = isinstance(child, (scf.YieldOp, scf.ConditionOp))
+        if memory_events and opcode(child) in ("tt.load", "tt.addptr", "tt.bitcast"):
+            continue
         if not control and (child.regions or not (is_side_effect_free(child) or isinstance(child, arith.ExtSIOp))
                             or opcode(child).split(".")[0] not in ("arith", "math") and not terminal):
             refuse("source-grouped maps require pure numeric scalar computation; mapped effects need their own contract", child)
+    if has_memory:
+        from .grouped_reads import expand_reads
+        return expand_reads(op, source, end, pack, row)
     groups = math.prod(shape) // pack
     grouped_types = [TensorType(value.type.element_type, [groups, pack]) for value in op.results]
     empty = [tensor.EmptyOp([], type_) for type_ in grouped_types]

@@ -190,16 +190,18 @@ def normalize_selected(state, source_ids):
         elif name == "tt.map_elementwise":
             body = op.regions[0].block
             terminal = body.last_op
-            # Parent tensor selectors supply one scalar tag per invocation.
+            pack = op.properties["pack"].value.data
+            # Each parent selector tensor supplies one scalar tag per SLOT.
             # Append fields after the original interface without moving reads.
             incoming = []
-            for position in mixed(args[body]):
+            for position in dict.fromkeys(position // pack for position in mixed(args[body])):
                 source_pointer = operands[op][position]
                 type_ = TensorType(builtin.i32, state.types[source_pointer].get_shape())
                 incoming.append(broadcast(logical_tag(source_pointer, op), type_, op))
             op.operands = [*op.operands, *incoming]
             terminal.operands = [*terminal.operands,
-                *(logical_tag(operands[terminal][position], terminal) for position in mixed(results[op]))]
+                *(logical_tag(operands[terminal][position * pack + slot], terminal)
+                  for position in mixed(results[op]) for slot in range(pack))]
 
     memory_reports = []
     for op in original:

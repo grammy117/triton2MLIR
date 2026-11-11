@@ -67,6 +67,15 @@ kernel provenance must equal its binding copy. This adds custody requirements
 without changing model ABI/data or receipt schemas. Older readers do not supply
 these additional checks. See [model source grouping](source_grouping.md).
 
+[Packed reads](grouped_memory.md) extend the same specialization to the existing
+guarded/source-word memory profile. Parallel Linalg computes each original
+scalar region once per logical group, with one vector per returned slot before
+coordinate restoration. Per-slot root selectors, offsets, predicates and read
+positions remain executable; original snapshots survive intervening ordinary
+writes. Compatibility metadata names this extension. Public tensor/scalar ABI
+and receipt schemas stay unchanged. No map-write, physical-address or additional
+target permission follows from this profile.
+
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The
 argument configuration schemas remain v1/v2; `typed-root-byte-view-v1` records

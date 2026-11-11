@@ -1,5 +1,10 @@
 # Mapped source reads through the Merlin interface
 
+[Source-specialized packed reads](grouped_memory.md) now additionally preserve
+cross-slot state, selected roots, pointer-valued results and original snapshots.
+The pack-one profile below needs no source register grouping; packed dependent
+computation requires an explicit semantic source specialization.
+
 Pack-one maps now admit logical pointer inputs and source reads under the
 explicit guarded-buffer/source-words profile. The source map edge connects each
 tensor pointer operand to its scalar block argument; pointer results have the

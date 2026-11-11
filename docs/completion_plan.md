@@ -45,8 +45,8 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/source-grouped-model-inventory/coverage.json` selection reopens
-**98 packages, 68 standalone qualifications and fourteen maintained product
+The current `out/grouped-read-inventory/coverage.json` selection reopens
+**104 packages, 74 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -170,6 +170,13 @@ native/Merlin host and actual Spike execution. All target results match exact
 words; bundle verification and consumer staging independently reopen the
 original typed source-option attributes. Broader targets stay open. See
 [the source contract](source_grouping.md).
+
+[Packed source reads and pointer results](grouped_memory.md) now additionally
+retain original scalar regions once per logical group, selected-root tags per
+slot, for/while observations and mutation snapshots. Six actual libraries run
+five domains each; invalid active bounds and unselected source grouping refuse.
+This qualifies finite source-specialized memory compositions, not complete
+models, broader target execution or the remaining physical/effect families.
 
 ## Required evidence for every supported form
 
