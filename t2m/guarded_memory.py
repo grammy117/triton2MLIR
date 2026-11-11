@@ -97,6 +97,26 @@ def normalize_scalars(module, source_ids):
     return reports
 
 
+def check_tensor_allocation(op):
+    """Retain upstream's fresh allocation; grant no source memory borrowing.
+
+    MLIR BufferizationOps.td/AllocTensorOp and one-shot-bufferize.mlir at
+    a47bddccec30255619bb8c37fa59700e661d4e66 distinguish allocation from copy,
+    sparse hints and physical memory spaces. No tensor.empty replacement is
+    made: its explicit fresh-buffer semantics remain for native bufferization.
+    """
+    from .shared_tensor import DTYPES, _array
+    if (op.operands or op.regions or len(op.results) != 1
+            or not isinstance(op.results[0].type, TensorType)
+            or op.results[0].type.element_type not in DTYPES.values()
+            or not isinstance(op.results[0].type.encoding, builtin.NoneAttr)
+            or any(n < 0 for n in op.results[0].type.get_shape())
+            or set(op.properties) != {"operandSegmentSizes"}
+            or _array(op, "operandSegmentSizes") != (0, 0, 0)
+            or any(key != "op_name" and not key.startswith("prov.") for key in op.attributes)):
+        raise ValueError("guarded tensor allocation requires a static dense copy-free default-space allocation")
+
+
 def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None, byte_order=None):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
@@ -147,6 +167,12 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
         if name == "tt.print":
             from .source_prints import contract
             contract(op,next(iter(source_ids(op.location)),"ttir.print"))
+            continue
+        if name == "bufferization.alloc_tensor":
+            try:
+                check_tensor_allocation(op)
+            except (ValueError, KeyError) as exc:
+                refuse(op, str(exc))
             continue
         if name == "tt.bitcast" and (len(op.results) != 1 or op.results[0] not in word_views):
             refuse(op, "guarded memory requires a checked logical atomic pointer view")
