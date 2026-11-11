@@ -54,9 +54,12 @@ descriptive `t2m.source-allocation-bindings.v1` table with
 `grants_semantics=false`. Arithmetic, sharing and effects come from executable
 TTIR; the table grants no rewrite permission or independent source proof.
 
-Pointers sharing a root must have the same element type. Byte reinterpretation,
-mixed-type alias groups and automatic recovery of arbitrary NumPy view ownership
-remain open. The source entry must be void, contain one block and be accepted
+Pointers sharing a root may also use equal-width byte-aligned scalar views.
+The wrapper applies offsets to the declared root and emits real pointer
+bitcasts before native inlining; existing [word-view normalization](pointer_views.md)
+then preserves one state version with register casts at each source event.
+Different-width byte aliases, sub-byte representations and automatic recovery
+of arbitrary NumPy view ownership remain open. The source entry must be void, contain one block and be accepted
 by the installed shared source reader. Original helpers remain subject to complete inlining and
 operation/effect checks. Kernel/model view adapters and applicable target
 materialization remain separate completion gates.

@@ -52,6 +52,32 @@ def test_binding_constructs_real_pointer_sharing_without_mutating_source():
     assert report["grants_semantics"] is False
 
 
+def test_equal_width_source_views_use_one_root_before_offset_and_bitcast():
+    module, abi, bindings = case()
+    abi = replace(abi, buffers=(replace(abi.buffers[0], dtype="f64"),))
+    result, report = bind_module(module, "source", abi, bindings)
+    wrapper = next(iter(result.ops))
+    assert str(wrapper.regions[0].block.args[0].type) == "!tt.ptr<f64>"
+    call = next(op for op in wrapper.walk() if opcode(op) == "tt.call")
+    first, second = call.operands[:2]
+    assert opcode(first.owner) == opcode(second.owner) == "tt.bitcast"
+    assert first.owner.operands[0] is wrapper.regions[0].block.args[0]
+    offset = second.owner.operands[0]
+    assert opcode(offset.owner) == "tt.addptr" and str(offset.type) == "!tt.ptr<f64>"
+    assert report["bindings"][0]["source_type"] == "!tt.ptr<i64>"
+    assert report["bindings"][0]["representation"] == "equal-width-word-view-v1"
+
+
+@pytest.mark.parametrize("source_type", ("tensor<2x!tt.ptr<i64>>", "!tt.ptr<i64, 3>", "!tt.ptr<i1>"))
+def test_alias_binding_does_not_grant_tensor_pointer_address_space_or_padding_views(source_type):
+    from t2m.shared_tensor import parse_shared
+    module = parse_shared(f'''builtin.module {{ "tt.func"() <{{sym_name="source", function_type=({source_type})->()}}> ({{
+      ^bb0(%p:{source_type}): "tt.return"():()->() }}) : ()->() }}''')
+    abi = TensorABI("bound", (TensorBuffer("state", (48,), "readwrite", "i64"),))
+    with pytest.raises(ConversionError, match="equal byte-aligned"):
+        bind_module(module, "source", abi, (PointerArgument("state"),))
+
+
 @pytest.mark.parametrize("binding,message",[
     (PointerArgument("missing"),"declared allocation"),
     (PointerArgument("state","missing"),"declared i32/i64"),

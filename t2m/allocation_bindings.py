@@ -17,7 +17,7 @@ from xdsl.printer import Printer
 
 from .diagnostics import ConversionError
 from .descriptor_bindings import DescriptorArgument, ExtendScalar
-from .shared_tensor import convert_shared, opcode, parse_shared
+from .shared_tensor import SharedParser, convert_shared, opcode, parse_shared
 from .upstream import inspect_optimizer, lower_with_shared
 
 PROFILE = "t2m.source-allocation-bindings.v1"
@@ -106,21 +106,33 @@ def bind_module(module, source_entry, abi, bindings):
         raise ConversionError("use explicit source constant bindings instead of unnamed wrapper constants")
     roots = {buffer.name:buffer for buffer in abi.buffers}
     scalars = {scalar.name:scalar for scalar in abi.runtime_scalars}
-    pointer_types, records = {}, []
+    from .ir import context
+    from .pointer_views import compatible
+    ctx = context()
+    ctx.allow_unregistered = True
+    pointer_types = {name: SharedParser(ctx, f"!tt.ptr<{root.dtype}>").parse_type()
+                     for name, root in roots.items()}
+    used_roots, records = set(), []
     arguments = source.regions[0].block.args
     for arg,binding in zip(arguments,bindings,strict=True):
         if isinstance(binding,PointerArgument):
             root = roots.get(binding.allocation)
-            if root is None or str(arg.type) != f"!tt.ptr<{root.dtype}>":
-                raise ConversionError("source pointer binding requires a declared allocation of the same element type")
+            if root is None:
+                raise ConversionError("source pointer binding requires a declared allocation")
+            storage_type = pointer_types[root.name]
+            viewed = str(arg.type) != str(storage_type)
+            if viewed and (isinstance(arg.type, builtin.TensorType) or not compatible(arg.type, storage_type)):
+                raise ConversionError("source pointer binding requires the same element type or an equal byte-aligned word view")
             if type(binding.offset) is int:
                 if not -(2**63) <= binding.offset < 2**63:
                     raise ConversionError("source allocation origin must fit signed i64")
             elif (type(binding.offset) is not str or binding.offset not in scalars
                   or scalars[binding.offset].dtype not in ("i32","i64")):
                 raise ConversionError("source allocation origin requires an integer or declared i32/i64 scalar")
-            pointer_types[root.name] = arg.type
-            records.append({"kind":"pointer",**asdict(binding)})
+            used_roots.add(root.name)
+            records.append({"kind":"pointer",**asdict(binding), **({
+                "source_type": str(arg.type), "storage_type": str(storage_type),
+                "representation": "equal-width-word-view-v1"} if viewed else {})})
         elif isinstance(binding,ScalarArgument):
             scalar = scalars.get(binding.name)
             if scalar is None or arg.type != scalar.type:
@@ -138,7 +150,7 @@ def bind_module(module, source_entry, abi, bindings):
             records.append({"kind":"constant","value":binding,"type":str(arg.type)})
         else:
             raise ConversionError("source argument needs an explicit typed allocation/scalar binding")
-    if set(pointer_types) != set(roots):
+    if used_roots != set(roots):
         raise ConversionError("every declared allocation must bind at least one source pointer")
     types = [pointer_types[value.name] if kind == "buffer" else value.type for kind,value in abi.source_bindings]
     block = Block(arg_types=types)
@@ -155,9 +167,14 @@ def bind_module(module, source_entry, abi, bindings):
                 else:
                     offset = values[binding.offset]
                 address = builtin.UnregisteredOp.with_name("tt.addptr").create(
-                    operands=[value,offset],result_types=[arg.type])
+                    operands=[value,offset],result_types=[value.type])
                 block.add_op(address)
                 value = address.results[0]
+            if str(value.type) != str(arg.type):
+                cast = builtin.UnregisteredOp.with_name("tt.bitcast").create(
+                    operands=[value], result_types=[arg.type])
+                block.add_op(cast)
+                value = cast.results[0]
             operands.append(value)
         elif isinstance(binding,ScalarArgument):
             operands.append(values[binding.name])
