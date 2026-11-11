@@ -59,6 +59,13 @@ coordinate maps. The standard payload computes each logical group once and
 restores tensor coordinates. This source choice may change math and is not a
 consumer placement hint. Final GPU-binary equivalence and accelerator execution
 remain unestablished.
+Bound models additionally require `t2m.captured-source-layout.v1` and explicit
+`source_layout_arguments` for all source options. Each maps to an original
+captured typed scalar with the exact selected value. Bundle verification and
+Merlin staging reopen the parent call and reject missing/mismatched claims;
+kernel provenance must equal its binding copy. This adds custody requirements
+without changing model ABI/data or receipt schemas. Older readers do not supply
+these additional checks. See [model source grouping](source_grouping.md).
 
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The

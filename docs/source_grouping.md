@@ -81,6 +81,58 @@ metadata names the specialization. The emitted payload contains standard
 tensor/SCF/Linalg/arithmetic; the TTGIR appears only in provenance. Consumer
 placement, storage and target legality remain downstream decisions.
 
+## Captured model contract
+
+A source specialization can change the mathematical function. A bound model
+therefore requires `source_layout_arguments`, mapping all four source options
+to distinct original `prov.kernel_args` scalar names. The selected values must
+equal those original typed attributes: target is a string; geometry is i64.
+Missing, changed or mistyped selections refuse. This is semantic specialization,
+not a way to choose consumer hardware.
+
+The additive `t2m.captured-source-layout.v1` profile records the complete mapping
+in `kernel-bindings.json`. Bundle verification and Merlin compiler staging
+independently reopen the original parent call. Kernel provenance must match its
+binding copy. Public model ABI/data and existing receipt schemas stay unchanged;
+the new profile and its custody requirements are explicit package differences.
+Readers predating this profile do not provide this additional validation.
+
+`scripts/capture_grouped_map_model.py` creates real model2MLIR captures with
+learned weights, two dependent calls and four results. Its independent PyTorch
+reference defines the declared initial-stage grouping directly; it reads no
+frontend witness or emitted IR. These captures qualify that semantic profile,
+not the final GPU launch suggested by the recorded Triton body.
+
+For the i64/two-warp arithmetic example, capture the shipped kernel first:
+
+```python
+from pathlib import Path
+from t2m.examples.grouped_map_kernels import grouped_map
+from t2m.frontend import capture_ttir
+out = Path("out/source-grouped-map-kernel")
+out.mkdir(parents=True, exist_ok=False)
+names = ("x", "y", "out_mix", "out_asymmetric")
+(out / "source.ttir").write_text(capture_ttir(grouped_map,
+    {**{name: "*i64" for name in names}, "n": "i32", "B": "constexpr",
+     "PACK": "constexpr", "MATRIX": "constexpr"},
+    {"B": 256, "PACK": 2, "MATRIX": False}))
+```
+
+Then use the explicit [binding configuration](../examples/source_grouped_map_binding.json)
+and existing independent Python environments:
+
+```bash
+/path/to/m2m-python scripts/capture_grouped_map_model.py \
+  --out out/source-grouped-parent --dtype i64 --warps 2
+python -m t2m bind-model out/source-grouped-parent \
+  --bindings examples/source_grouped_map_binding.json --out out/source-grouped-bound \
+  --python /path/to/native-python --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --merlin-clang /path/to/clang --merlin-host
+```
+
+Use the ordinary [target qualifier](target_execution.md) for functional RISC-V
+execution. It does not feed source geometry into consumer placement.
+
 ## Measured qualification and remaining work
 
 Seven actual native/Merlin libraries qualify i64/f32, pack two/four, rank-one/two
@@ -92,6 +144,16 @@ words and all results; functional input preservation is checked.
 Twenty-three direct matrix/witness/parallel-row checks and the existing
 59 packed/unpacked/memory-map regressions pass. A concrete public CLI bundle
 and its Merlin qualification are retained at `out/source-grouped-map-demo/`.
+Three complete i64/f32 captures additionally qualify two/four source warps,
+cross-slot/asymmetric arithmetic and coupled branch/while state. Their 300-element
+domains exercise complete packs, multiple programs and ragged tails. All twelve
+results match exact independent reference words through native LLVM, Merlin host
+and actual RISC-V/Spike execution. Original weights, inputs and references remain
+unchanged. The target selection is `out/spike-source-grouped-models/summary.json`;
+the public binding/target CLI example is `out/source-grouped-model-demo/`.
+Missing/mismatched selections and changed binding witnesses refuse; Merlin's
+81-case derived-model suite includes typed-call and rehashed-profile refusals.
+
 Broader kernel/type/attribute coverage, packed source memory, replicated layouts,
-final optimized-layout correspondence and applicable target execution remain
-open. CPU host qualification supplies no accelerator or performance evidence.
+final optimized-layout correspondence and broader target execution remain open.
+Functional CPU qualification supplies no accelerator or performance evidence.

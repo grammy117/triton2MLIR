@@ -53,6 +53,8 @@ class KernelBinding:
     runtime_arguments: dict[str, str] = field(default_factory=dict)
     # Explicit logical row-major reshapes, never physical view/alias inference.
     tensor_views: str | None = None
+    # Semantic source-layout option -> original captured scalar argument.
+    source_layout_arguments: dict[str, str] = field(default_factory=dict)
 
     def validate(self):
         if self.tensor_views not in (None,VIEW_POLICY):
@@ -84,6 +86,8 @@ class KernelBinding:
             raise ConversionError("bind every source result exactly once")
         scalar = DictionaryAttr({n: scalar_attribute(v) for n, v in self.scalar_arguments.items()})
         runtime_constants(result.spec, self.runtime_arguments, scalar)
+        from .model_source_layout import bind_arguments
+        bind_arguments(result.trace, self.source_layout_arguments, scalar)
         return function, names, outputs, scalar
 
 
@@ -203,6 +207,10 @@ def bind_model(model_mlir, bindings):
                         "source_sha256": binding.implementation.trace["source_sha256"]})
         if binding.tensor_views is not None:
             records[-1]["tensor_views"] = binding.tensor_views
+        if "source_layout_specialization" in binding.implementation.trace:
+            from .model_source_layout import bind_arguments
+            records[-1]["source_layout_bindings"] = bind_arguments(
+                binding.implementation.trace, binding.source_layout_arguments, arguments)
     remaining_calls = {op.callee.root_reference.data for op in module.walk() if isinstance(op, func.CallOp)}
     for symbol, function in functions.items():
         if "prov.kernel" in function.attributes:
@@ -232,4 +240,7 @@ def bind_model(model_mlir, bindings):
         report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
     if view_binding:
         report["tensor_view_binding_profile"] = VIEW_PROFILE
+    if any("source_layout_bindings" in record for record in records):
+        from .model_source_layout import PROFILE
+        report["source_layout_binding_profile"] = PROFILE
     return BoundModel(module, report)

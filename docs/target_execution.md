@@ -96,6 +96,16 @@ no projection retain their original input-file binding.
 
 ## Reproduce with existing tools
 
+Source-specialized coupled/asymmetric maps also reach this ordinary target path.
+Three complete models retain two/four-warp initial source grouping, learned
+weights, two dependent calls, 300-element ragged domains and coupled branch/while
+state. All twelve results pass exact-word comparison on actual Spike execution.
+The checked selection is `out/spike-source-grouped-models/summary.json`; the
+public CLI example is `out/source-grouped-model-demo/`. Each source selection is
+bound to original typed model-call scalars before staging. This qualifies the
+explicit initial-stage semantics, not final optimized GPU layout correspondence.
+See [the source/model contract](source_grouping.md).
+
 Packed scalar control also reaches this unchanged target driver. Two real
 i64/f32 model captures preserve learned weights, two dependent calls and
 per-element for/while trip counts. All four results of each model match exact

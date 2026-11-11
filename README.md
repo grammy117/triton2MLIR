@@ -20,7 +20,7 @@ The [maintained product corpus](docs/product_corpus.md) now records real
 conversion refusals and Merlin execution alongside successful packages. The
 combined explicit report observes all 50 pinned TTIR definition names in source
 and native/Merlin-host-qualified captures under selected profiles. Broader source
-assembly, coupled packed maps, mapped reads and numeric/runtime/target closure remain
+assembly, packed/effectful map compositions and numeric/runtime/target closure remain
 open; these counts measure compositions, not universal operation support.
 
 [Mapped source reads](docs/memory_maps.md) now retain logical pointers,
@@ -42,9 +42,13 @@ through Merlin host and actual Spike execution with exact-word comparison.
 Coupled/asymmetric slots
 now have an explicit [source-specialized grouping path](docs/source_grouping.md)
 through seven additional Merlin libraries. The current
-[coverage selection](docs/coverage.md) reopens 95 packages and 68 standalone
+[coverage selection](docs/coverage.md) reopens 98 packages and 68 standalone
 qualifications. The frontend never infers
 adjacency from tensor shape or assigns consumer hardware placement.
+Three complete source-specialized model captures additionally preserve learned
+weights, dependent calls and all twelve results through native/Merlin host and
+actual RISC-V/Spike execution. Semantic source geometry is bound to original
+typed model-call scalars; final optimized GPU correspondence remains open.
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.

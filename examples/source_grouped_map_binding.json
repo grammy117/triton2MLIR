@@ -1,0 +1,92 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::source_grouped_map",
+      "ttir": "../out/source-grouped-map-kernel/source.ttir",
+      "abi": {
+        "buffers": [
+          {
+            "dtype": "i64",
+            "effect": "read",
+            "name": "x",
+            "shape": [
+              "n"
+            ]
+          },
+          {
+            "dtype": "i64",
+            "effect": "read",
+            "name": "y",
+            "shape": [
+              "n"
+            ]
+          },
+          {
+            "dtype": "i64",
+            "effect": "write",
+            "name": "out_mix",
+            "shape": [
+              "n"
+            ]
+          },
+          {
+            "dtype": "i64",
+            "effect": "write",
+            "name": "out_asymmetric",
+            "shape": [
+              "n"
+            ]
+          }
+        ],
+        "entry": "grouped_map",
+        "grid": [
+          {
+            "dimension": "n",
+            "divisor": 256
+          }
+        ],
+        "intent": "",
+        "runtime_scalars": [
+          {
+            "bounds": [
+              0,
+              531
+            ],
+            "dtype": "i32",
+            "name": "n",
+            "source_arg": 4
+          }
+        ],
+        "scalar_constants": [],
+        "schema": "t2m.shared-tensor-abi.v5"
+      },
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "tensor_views": "dense-row-major-v1",
+      "source_layout": {
+        "num_ctas": 1,
+        "num_warps": 2,
+        "target": "cuda:80",
+        "threads_per_warp": 32
+      },
+      "scalar_arguments": {
+        "n": 300,
+        "source_target": "cuda:80",
+        "source_warps": 2,
+        "source_threads": 32,
+        "source_ctas": 1,
+        "control": false
+      },
+      "runtime_arguments": {
+        "n": "n"
+      },
+      "source_layout_arguments": {
+        "target": "source_target",
+        "num_warps": "source_warps",
+        "threads_per_warp": "source_threads",
+        "num_ctas": "source_ctas"
+      }
+    }
+  ]
+}

@@ -216,6 +216,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
+                          *(["t2m.captured-source-layout.v1 binds every semantic source layout option to the original call's typed scalar attributes; both bundle verification and Merlin compiler staging reopen that call; this does not establish final GPU correspondence or grant consumer placement"]
+                            if bound.trace.get("source_layout_binding_profile") == "t2m.captured-source-layout.v1" else []),
                           *(["t2m.model-kernel-binding.v2 explicitly selects dense row-major tensor value reshapes with standard collapse/expand operations; source roots retain their exact element type/count and independent compiler shape/scratch checks; this grants no physical layout, alias, mutation or numerical permission; older binding readers refuse v2"]
                             if bound.trace.get("tensor_view_binding_profile") == "t2m.captured-dense-tensor-views.v1" else []),
                           *(["t2m.captured-runtime-arguments.v1 materializes captured kernel scalar attributes as typed constants, with explicit RTNE f64-to-f32 rounding when declared; checked tensor/result shape casts preserve the original static model ABI and parent bytes; guarded scratch is derived independently for every original typed call; no evaluator archive supplies compiler values"]
@@ -285,6 +287,12 @@ def verify_model_bundle(out):
     trace = json.loads((out / "kernel-bindings.json").read_text())
     from .model_tensor_views import validate_profile
     validate_profile(trace)
+    if ("source_layout_binding_profile" in trace
+            or any("source_layout_specialization" in k for k in trace.get("kernels", {}).values())
+            or any("source_layout_bindings" in c for c in trace["calls"])):
+        from .model_source_layout import validate_model
+        from .shared_tensor import parse_shared
+        validate_model(trace, parse_shared((out / "parent/model.mlir").read_text()))
     execution = json.loads((out / "execution.json").read_text())
     model_hash = _record(out / "model.mlir")["sha256"]
     if trace["mlir_sha256"] != model_hash or execution["input_sha256"] != model_hash or execution["reference_comparison"] != "passed":
@@ -350,6 +358,8 @@ def verify_model_bundle(out):
         if _record(out / directory / "model.mlir")["sha256"] != digest:
             raise ValueError("kernel implementation relation failed")
         provenance = json.loads((out / directory / "provenance.json").read_text())
+        if provenance != trace["kernels"].get(digest):
+            raise ValueError("kernel provenance differs from its model binding")
         profile = provenance.get("profile", TENSOR_PROFILE)
         if profile not in PROFILE_FILES or any(directory + "/" + name not in receipt["artifacts"] for name in PROFILE_FILES[profile]):
             raise ValueError("kernel memory profile evidence is outside the bound inventory")

@@ -6,9 +6,14 @@ libraries. Seven libraries cover i64/f32, pack two/four, source geometries,
 rank-one/two tiles, all memory profiles and coupled branch/while state; six
 libraries replay 24 more domains. The source choice is explicit initial layout
 specialization, not final GPU-binary or accelerator evidence.
+Three real model captures now also preserve learned weights, dependent calls,
+source geometry bound to original typed scalar attributes and all twelve
+results through native/Merlin host and actual Spike execution. All target
+results match exact reference words. The separate target selection is
+`out/spike-source-grouped-models/summary.json`.
 
-The current `out/source-grouped-map-inventory/coverage.json` reopens
-**95 packages, 68 standalone qualifications and fourteen product cases**. All
+The current `out/source-grouped-model-inventory/coverage.json` reopens
+**98 packages, 68 standalone qualifications and fourteen product cases**. All
 50 pinned definition names remain observed under selected native/host profiles.
 The default corpus still retains its unselected assembly/grouping refusals.
 Per-operation execution, universal types/attributes/compositions and broader
