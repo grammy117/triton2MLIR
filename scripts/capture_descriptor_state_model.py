@@ -13,12 +13,12 @@ from torch.library import triton_op, wrap_triton
 from triton.tools.tensor_descriptor import TensorDescriptor
 
 
-def capture(out):
+def capture(out, *, typed_views=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
     source = (
-        Path(__file__).resolve().parents[1] / "t2m/examples/descriptor_state_kernels.py"
+        Path(__file__).resolve().parents[1] / ("t2m/examples/allocation_word_kernels.py" if typed_views else "t2m/examples/descriptor_state_kernels.py")
     )
     spec = importlib.util.spec_from_file_location("descriptor_model_kernels", source)
     kernels = importlib.util.module_from_spec(spec)
@@ -43,12 +43,13 @@ def capture(out):
         if m and n and steps:
             flat = updated.view(-1)
             first = TensorDescriptor(
-                flat[read_origin:], [m, n], [read_row, read_col], [2, 16]
+                flat[read_origin:].view(torch.float32) if typed_views else flat[read_origin:], [m, n], [read_row, read_col], [2, 16]
             )
             second = TensorDescriptor(
-                flat[write_origin:], [m, n], [write_row, write_col], [2, 16]
+                flat[write_origin:].view(torch.int32) if typed_views else flat[write_origin:], [m, n], [write_row, write_col], [2, 16]
             )
-            wrap_triton(kernels.descriptor_state_updates)[
+            kernel = kernels.descriptor_word_updates if typed_views else kernels.descriptor_state_updates
+            wrap_triton(kernel)[
                 ((m + 1) // 2, (n + 15) // 16)
             ](first, second, m, n, steps, capacity)
         return updated
@@ -70,7 +71,9 @@ def capture(out):
         if state.numel() != capacity:
             raise ValueError("descriptor model value differs from source capacity")
         updated = state.contiguous().clone()
-        flat = updated.view(-1)
+        flat = updated.view(-1).view(torch.int32) if typed_views else updated.view(-1)
+        read_base = read_origin * 2 if typed_views else read_origin
+        write_base = write_origin * 2 if typed_views else write_origin
         for row in range(0, m, 2):
             for col in range(0, n, 16):
                 coordinates = [
@@ -79,14 +82,19 @@ def capture(out):
                     for j in range(col, min(n, col + 16))
                 ]
                 reads = [
-                    read_origin + i * read_row + j * read_col for i, j in coordinates
+                    read_base + i * read_row + j * read_col for i, j in coordinates
                 ]
                 writes = [
-                    write_origin + i * write_row + j * write_col for i, j in coordinates
+                    write_base + i * write_row + j * write_col for i, j in coordinates
                 ]
                 for _ in range(steps):
-                    snapshot = flat[reads].clone()
-                    flat[writes] = snapshot + 1
+                    if typed_views:
+                        for toggle in (1, 2):
+                            snapshot = flat[reads].clone()
+                            flat[writes] = snapshot ^ toggle
+                    else:
+                        snapshot = flat[reads].clone()
+                        flat[writes] = snapshot + 1
         return updated
 
     class Model(torch.nn.Module):
@@ -145,4 +153,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--typed-views", action="store_true", help="bind original f32/i32 descriptors to public i64 roots")
+    args = parser.parse_args()
+    print(capture(args.out, typed_views=args.typed_views))

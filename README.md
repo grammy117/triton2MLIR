@@ -4,7 +4,8 @@
 public dtype and shape while selected roots use executable internal byte planes.
 Exact word transport, byte-level guards and independently derived per-result
 scratch costs reach native and Merlin execution, including complete model captures.
-Changed-width allocation-parameter bindings, byte-backed atomics and target work remain.
+[Original changed-width pointer/descriptor parameters](docs/typed_parameters.md)
+also share typed roots. Byte-backed atomics and target work remain.
 
 Translate Triton TTIR into portable tensor MLIR while retaining the kernel's original dataflow
 and intent in annotations and provenance. Examples now include ragged tiled GEMM,

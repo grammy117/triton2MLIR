@@ -15,7 +15,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_real_word_model_preserves_weights_alias_recurrence_and_all_results(tmp_path):
+@pytest.mark.parametrize("typed_root", (False, True))
+def test_real_word_model_preserves_weights_alias_recurrence_and_all_results(tmp_path, typed_root):
     from t2m.allocation_word_demo import convert
     from t2m.bundle import verify_bundle
     from t2m.model_binding import KernelBinding
@@ -27,7 +28,7 @@ def test_real_word_model_preserves_weights_alias_recurrence_and_all_results(tmp_
         Path(__file__).resolve().parents[1] / "scripts/capture_allocation_word_model.py"
     )
     process = subprocess.run(
-        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture)],
+        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture), *(["--typed-root"] if typed_root else [])],
         capture_output=True,
         text=True,
         timeout=60,
@@ -40,7 +41,7 @@ def test_real_word_model_preserves_weights_alias_recurrence_and_all_results(tmp_
         ),
     )
     assert process.returncode == 0, process.stdout + process.stderr
-    result = convert(tmp_path / "source")
+    result = convert(tmp_path / "source", root_dtype="i64", byte_order="little") if typed_root else convert(tmp_path / "source")
     names = [scalar.name for scalar in result.spec.runtime_scalars]
     bindings = [
         KernelBinding(
@@ -100,3 +101,6 @@ def test_real_word_model_preserves_weights_alias_recurrence_and_all_results(tmp_
         == host["reference_comparison"]
         == "passed"
     )
+    if typed_root:
+        from test_typed_parameter_cli import qualify_model_cli
+        qualify_model_cli(tmp_path, capture, bindings, result)

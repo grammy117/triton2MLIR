@@ -12,7 +12,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out):
+def capture(out, *, typed_root=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -39,7 +39,7 @@ def capture(out):
         flat = updated.view(-1)
         wrap_triton(kernels.allocation_word_updates)[((n + 7) // 8,)](
             flat[read_origin:].view(torch.float32),
-            flat[write_origin:],
+            flat[write_origin:].view(torch.int32),
             n,
             steps,
             capacity,
@@ -54,14 +54,16 @@ def capture(out):
         if state.numel() != capacity:
             raise ValueError("word model allocation capacity differs from source")
         updated = state.contiguous().clone()
-        flat = updated.view(-1)
+        flat = updated.view(-1).view(torch.int32)
+        source_origin = read_origin * (state.element_size() // 4)
+        target_origin = write_origin * (state.element_size() // 4)
         for start in range(0, n, 8):
             end = min(n, start + 8)
             for _ in range(steps):
-                value = flat[read_origin + start : read_origin + end].clone()
-                flat[write_origin + start : write_origin + end] = value ^ 1
-                forwarded = flat[read_origin + start : read_origin + end].clone()
-                flat[write_origin + start : write_origin + end] = forwarded ^ 2
+                value = flat[source_origin + start : source_origin + end].clone()
+                flat[target_origin + start : target_origin + end] = value ^ 1
+                forwarded = flat[source_origin + start : source_origin + end].clone()
+                flat[target_origin + start : target_origin + end] = forwarded ^ 2
         return updated
 
     class Model(torch.nn.Module):
@@ -78,13 +80,15 @@ def capture(out):
                     -4194250,
                     0x7F7FFFFF,
                 ],
-                dtype=torch.int32,
+                dtype=torch.int64 if typed_root else torch.int32,
             )
+            if typed_root:
+                words += 2**54
             self.weight = torch.nn.Parameter(
                 words.repeat(12).reshape(8, 12), requires_grad=False
             )
             self.bias = torch.nn.Parameter(
-                torch.arange(96, dtype=torch.int32).reshape(8, 12) % 7 - 3,
+                torch.arange(96, dtype=torch.int64 if typed_root else torch.int32).reshape(8, 12) % 7 - 3,
                 requires_grad=False,
             )
 
@@ -100,7 +104,7 @@ def capture(out):
         torch.set_num_threads(1)
         model, values = (
             Model().eval(),
-            (torch.arange(96, dtype=torch.int32).reshape(8, 12) % 5,),
+            (torch.arange(96, dtype=torch.int64 if typed_root else torch.int32).reshape(8, 12) % 5,),
         )
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(
@@ -132,4 +136,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--typed-root", action="store_true", help="keep i64 owning values around original f32/i32 parameters")
+    args = parser.parse_args()
+    print(capture(args.out, typed_root=args.typed_root))

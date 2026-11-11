@@ -41,9 +41,15 @@ def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_pr
                     byte_order="big" if kernel.endswith("-big") else "little",
                     root_dtype="f32" if kernel.startswith("typed-root-") else "i8",
                     memory_profile=memory_profile, address_policy=address_policy)
-    if kernel == "allocation-word-state":
+    if kernel in ("allocation-word-state", "typed-parameter-state"):
         from .allocation_word_demo import demo
         return demo(out, optimizer=optimizer, python=python,
+                    root_dtype="f64" if kernel == "typed-parameter-state" else None,
+                    byte_order="big" if kernel == "typed-parameter-state" else None,
+                    memory_profile=memory_profile, address_policy=address_policy)
+    if kernel == "typed-descriptor-state":
+        from .descriptor_state_demo import demo
+        return demo(out, optimizer=optimizer, python=python, root_dtype="bf16", byte_order="little",
                     memory_profile=memory_profile, address_policy=address_policy)
     if kernel in ("descriptor-state", "descriptor-state-f32", "descriptor-state-bfloat"):
         from .descriptor_state_demo import demo
@@ -503,7 +509,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("typed-root-byte-buffer", "typed-root-byte-buffer-big", "byte-buffer", "byte-buffer-big", "allocation-word-state", "descriptor-state", "descriptor-state-f32", "descriptor-state-bfloat", "external-descriptor-gather", "external-descriptor-scatter", "external-descriptor-reduce", "external-descriptor-load", "external-descriptor-store", "external-descriptor-matmul", "descriptor-gather", "descriptor-scatter", "descriptor-reduce", "allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot", "readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("typed-parameter-state", "typed-descriptor-state", "typed-root-byte-buffer", "typed-root-byte-buffer-big", "byte-buffer", "byte-buffer-big", "allocation-word-state", "descriptor-state", "descriptor-state-f32", "descriptor-state-bfloat", "external-descriptor-gather", "external-descriptor-scatter", "external-descriptor-reduce", "external-descriptor-load", "external-descriptor-store", "external-descriptor-matmul", "descriptor-gather", "descriptor-scatter", "descriptor-reduce", "allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot", "readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")

@@ -5,15 +5,14 @@ Merlin. `convert_shared(..., memory_profile="guarded-buffer",
 address_policy="source-words", byte_order="little")` selects the explicit
 logical byte representation; `big` is also supported. Equal-width typed-root
 aliases retain [their existing contract](allocation_word_views.md). The full
-TTIR-to-Merlin goal remains open for changed-width typed-root parameter bindings,
-byte-backed atomic effects, physical views and applicable target materialization.
+TTIR-to-Merlin goal remains open for byte-backed atomic effects, physical views and applicable target materialization.
 
 ## Implemented byte-buffer path
 
 [Typed owning tensors](typed_storage.md) additionally preserve their original
 public dtype/shape through executable word/byte transport. The original i8-root
-profile below remains unchanged; changed-width typed-root parameter bindings
-and indivisible byte-backed effects retain their separate gates.
+profile below remains unchanged. [Changed-width pointer/descriptor parameters](typed_parameters.md)
+also bind typed roots; indivisible byte-backed effects retain their own gate.
 
 Each source addptr keeps its own pointee size after the original integer
 computation is sign-extended to i64. Pointer casts preserve the byte address.
@@ -83,8 +82,7 @@ BF16, f32 and f64 signaling-NaN and signed-zero fills in both byte orders.
 Together the qualified libraries replay 132 additional valid invocations;
 48 actual guard failures cover byte bounds and overlapping source events.
 Sixty focused checks and 54 existing pointer/alias/descriptor regressions pass.
-Typed-root parameter adaptation, byte-backed atomic effects and target execution
-still require the remaining work below.
+Byte-backed atomic effects and target execution still require the remaining work below.
 
 ## Public workflows and complete model capture
 

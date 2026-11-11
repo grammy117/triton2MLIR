@@ -91,6 +91,16 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+[Different-width source parameter bindings](typed_parameters.md) now retain
+original pointer/descriptor types on typed owning roots, with root origins
+applied before source casts and original element strides afterward. Wider and
+narrower roots, byte parameters, exact source words and shared recurrence reach
+native/Merlin execution. Real pointer and descriptor model captures retain
+learned i64 state and every result through API and CLI. Original source capsules
+and the existing independent storage/scratch reader remain in force. Byte-backed
+indivisible atomics, physical/mutating model views, numerical/effect closure,
+maintained corpus evidence and applicable targets remain the next gates.
+
 [Typed-root storage transport](typed_storage.md) now preserves public shapes
 and all seven supported 16/32/64-bit dtypes around width-changing source views.
 Only connected roots needing byte storage receive an appended static byte axis;
@@ -100,8 +110,7 @@ runtime matrix axes and disjoint cross-program bytes in one public word.
 A real model capture retains all five results through API/CLI and Merlin host
 execution. Merlin independently checks the actual storage spec and per-public-
 result guard costs; 280 staging regressions and 35 producer/binding contract
-checks pass. Changed-width allocation-parameter bindings from typed roots,
-byte-backed atomic effects, physical model views and the full numeric/effect/
+checks pass. Byte-backed atomic effects, physical model views and the full numeric/effect/
 corpus/target goal remain open.
 
 Public typed-root demo, separate Merlin qualification, generic saved-source
@@ -119,7 +128,7 @@ bound to bytes. A real model2MLIR capture retains three calls, learned byte
 storage and all five results through both API and CLI. Sixty focused checks,
 132 additional runtime replays, 48 real guard refusals and 54 existing
 pointer/alias/descriptor regressions pass. See [byte aliases](byte_aliases.md).
-Typed-root parameter adaptation, byte-backed indivisible atomics, broader numerical/effect
+Byte-backed indivisible atomics, broader numerical/effect
 closure, complete corpus evidence and applicable target materialization remain.
 
 Equal-width typed source arguments now bind one owning allocation before
@@ -180,7 +189,7 @@ Continue toward the full objective in this order, completing each vertical
 slice through the actual consumer rather than accepting opaque coverage:
 
 1. Extend the now-executable descriptor/root/model path to physical model
-   views/state, typed-root byte packing, byte-backed atomics and independently strided contraction
+   views/state, byte-backed indivisible atomics and independently strided contraction
    accumulators. Preserve source custody, original recurrences and guard gates.
 2. Close remaining numeric/effect combinations against the pinned TTIR types
    and attributes, retaining source recurrences, rounding and synchronization.

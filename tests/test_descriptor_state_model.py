@@ -15,7 +15,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_descriptor_views_bind_real_model_values_weights_and_complete_results(tmp_path):
+@pytest.mark.parametrize("typed_views", (False, True))
+def test_descriptor_views_bind_real_model_values_weights_and_complete_results(tmp_path, typed_views):
     from t2m.bundle import verify_bundle
     from t2m.descriptor_state_demo import convert
     from t2m.model_binding import KernelBinding
@@ -29,7 +30,7 @@ def test_descriptor_views_bind_real_model_values_weights_and_complete_results(tm
         / "scripts/capture_descriptor_state_model.py"
     )
     process = subprocess.run(
-        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture)],
+        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture), *(["--typed-views"] if typed_views else [])],
         capture_output=True,
         text=True,
         timeout=60,
@@ -42,7 +43,7 @@ def test_descriptor_views_bind_real_model_values_weights_and_complete_results(tm
         ),
     )
     assert process.returncode == 0, process.stdout + process.stderr
-    result = convert(tmp_path / "source", dtype="i64")
+    result = convert(tmp_path / "source", dtype="i32", word_views=True, root_dtype="i64", byte_order="little") if typed_views else convert(tmp_path / "source", dtype="i64")
     scalars = [scalar.name for scalar in result.spec.runtime_scalars]
     bindings = [
         KernelBinding(
@@ -119,3 +120,6 @@ def test_descriptor_views_bind_real_model_values_weights_and_complete_results(tm
         report["kernel_cases"][0]["source_graph"]
         == "pre-wrapper-original-source-operations"
     )
+    if typed_views:
+        from test_typed_parameter_cli import qualify_model_cli
+        qualify_model_cli(tmp_path, capture, bindings, result)

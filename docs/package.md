@@ -1,12 +1,20 @@
 # Package contract and explicit model2MLIR differences
 
+[Changed-width source parameter bindings](typed_parameters.md) additionally
+retain original pointer/descriptor types on typed owning allocations. The
+argument configuration schemas remain v1/v2; `typed-root-byte-view-v1` records
+both pointer types and byte order. Root origins precede real source casts;
+source strides keep their original units. Existing source capsules and typed
+storage/cost checks remain mandatory. Both standalone and real-model compiler
+staging exclude evaluator values and grant no source-equivalence/target proof.
+
 [Typed storage transport](typed_storage.md) now keeps public i16/i32/i64,
 f16/BF16/f32/f64 owning tensors around width-changing source views. Standard
 word/byte transport and the actual internal memory ABI are explicit; Merlin
 independently checks per-result byte-guard costs. Eighteen native/Merlin cases
 cover both byte orders, runtime matrix axes and disjoint bytes within one word.
 A real model2MLIR capture retains every result through API and CLI binding.
-Remaining root-parameter/effect/target requirements stay open.
+Remaining effect, physical model-view and target requirements stay open.
 
 Bound models can select `t2m.captured-runtime-arguments.v1`: original typed
 custom-call attributes supply runtime kernel constants and proved tensor/result
@@ -113,6 +121,8 @@ overlap checks and untouched storage. Original word/tile intent remains in
 provenance. Existing public ABI/receipt schemas stay unchanged; this supplies
 no typed-root byte packing, indivisible byte-backed atomic or physical target
 permission. See [the byte-buffer contract](byte_aliases.md).
+Typed owning roots and changed-width source parameters use the separately
+declared [typed parameter/transport contract](typed_parameters.md).
 External descriptors use source-argument configuration v2 to bind shared roots,
 runtime origins and actual native logical fields before helper inlining.
 This adds an explicit compiler artifact roster, with independent Merlin validation,

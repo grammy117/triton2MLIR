@@ -1,14 +1,29 @@
 # Measured coverage and remaining boundaries
 
+[Changed-width source parameters](typed_parameters.md) now qualify ordinary
+pointers and external descriptors over typed owning tensors. Root origins and
+source strides keep their different element units, including partial sharing,
+signed/independent descriptor layouts and exact returned state. Public and
+original-source CLI routes plus complete pointer/descriptor models reach the
+actual Merlin host compiler. Universal effect/numeric and target coverage
+remain unestablished.
+
+The current explicit report at `out/typed-parameter-coverage/coverage.json`
+verifies 66 packages and 45 standalone qualifications. It still observes 34/50
+pinned definitions, with 30 represented in host-qualified captures. Twenty-eight
+typed-parameter cases, both real model API/CLI paths, 80 runtime replays and five
+actual guard refusals deepen storage/composition coverage; per-operation
+execution, universal type/attribute coverage and accelerator handling remain open.
+
 [Typed storage transport](typed_storage.md) now keeps public i16/i32/i64,
 f16/BF16/f32/f64 owning tensors around width-changing source views. Standard
 word/byte transport and the actual internal memory ABI are explicit; Merlin
 independently checks per-result byte-guard costs. Eighteen native/Merlin cases
 cover both byte orders, runtime matrix axes and disjoint bytes within one word.
 A real model2MLIR capture retains every result through API and CLI binding.
-Remaining root-parameter/effect/target requirements stay open.
+Remaining effect, physical model-view and target requirements stay open.
 
-The refreshed explicit package selection at
+The earlier explicit package selection at
 `out/typed-storage-coverage/coverage.json` verifies 60 packages and 41 standalone
 Merlin qualifications. It observes 34/50 pinned TTIR definitions, with 30
 represented in host-qualified captures. The unchanged opcode counts reflect
@@ -22,8 +37,8 @@ guards through native and Merlin execution. Sixty focused checks include
 original typed pointer/descriptor parameter bindings, both public CLI routes
 and a real model2MLIR capture with every one of its five results. The same
 libraries replay 132 additional valid domains and refuse 48 actual byte-bound
-or overlap violations. Fifty-four existing regressions also pass. Typed-root
-parameter adaptation, indivisible byte-backed atomics, broader effects and targets remain open.
+or overlap violations. Fifty-four existing regressions also pass. Indivisible
+byte-backed atomics, broader effects and targets remain open.
 
 [Typed allocation aliases](allocation_word_views.md) now qualify distinct
 integer/floating source arguments over one owning root: eight actual libraries

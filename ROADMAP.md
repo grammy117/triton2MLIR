@@ -17,18 +17,22 @@ runtime strides/flags, block/indexed state and two-descriptor tiled f32/BF16 GEM
 [Descriptor allocation state](docs/descriptor_state.md) now retains nonzero
 runtime origins and shared writable roots, including a complete model2MLIR
 capture and independently checked portable original-source custody. Physical
-descriptor bytes, typed-root byte packing and applicable target handling remain open.
+descriptor bytes and applicable target handling remain open.
 [Typed allocation aliases](docs/allocation_word_views.md) now retain equal-width
 integer/floating source arguments, descriptors and model calls on one owning
-root through Merlin. [Typed-root storage transport](docs/typed_storage.md) now retains public owning
+root through Merlin. [Different-width source parameters](docs/typed_parameters.md) now bind original
+pointer and logical descriptor arguments to typed owning roots. Both source
+and root element units, independent signed strides and shared word state reach
+Merlin; real model captures retain all results through API and CLI binding.
+[Typed-root storage transport](docs/typed_storage.md) now retains public owning
 shapes/dtypes through standard byte packing, with per-result guard costs checked
 independently by Merlin. Both byte orders, dynamic matrix roots, disjoint byte
 updates and complete typed model captures qualify through actual host execution.
-Changed-width typed-root parameter bindings, byte-backed atomics and targets remain.
+Byte-backed atomics, broader effects and targets remain.
 [Different-width byte-buffer views](docs/byte_aliases.md)
 now preserve pointee-scaled addresses, word events and byte-level guards,
 including selected roots, source fills, typed descriptor parameters and complete
-model calls. Typed-root parameter adaptation, byte-backed atomics and target work remain open.
+model calls. Byte-backed atomics and target work remain open.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;

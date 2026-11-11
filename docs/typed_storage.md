@@ -82,8 +82,9 @@ qualifications. It still observes 34/50 TTIR definitions, with 30 represented
 in host-qualified captures. This is deeper storage/composition coverage, not
 new universal opcode or accelerator coverage.
 
-Byte-backed indivisible atomics, changed-width allocation-parameter bindings
-from typed roots, physical/mutating model views, independent numerical/effect
-closure and applicable target materialization remain separate requirements.
+Changed-width [pointer and descriptor parameter bindings](typed_parameters.md)
+now use the same executable transport. Byte-backed indivisible atomics,
+physical/mutating model views, independent numerical/effect closure and
+applicable target materialization remain separate requirements.
 Default conversion still requires the existing width contract unless explicit
 byte order is supplied. The full arbitrary-TTIR goal remains open.
