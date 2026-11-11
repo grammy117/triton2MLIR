@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Typed storage transport](typed_storage.md) now keeps public i16/i32/i64,
+f16/BF16/f32/f64 owning tensors around width-changing source views. Standard
+word/byte transport and the actual internal memory ABI are explicit; Merlin
+independently checks per-result byte-guard costs. Eighteen native/Merlin cases
+cover both byte orders, runtime matrix axes and disjoint bytes within one word.
+A real model2MLIR capture retains every result through API and CLI binding.
+Remaining root-parameter/effect/target requirements stay open.
+
 Bound models can select `t2m.captured-runtime-arguments.v1`: original typed
 custom-call attributes supply runtime kernel constants and proved tensor/result
 shape casts. The public model2MLIR signature and all parent data bytes remain

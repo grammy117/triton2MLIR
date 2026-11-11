@@ -12,7 +12,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out):
+def capture(out, *, typed_root=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -55,14 +55,15 @@ def capture(out):
     def reference(state, n, steps, capacity, origin, stride, advance):
         if state.numel() != capacity:
             raise ValueError("source byte capacity differs from its model value")
-        memory = [int(v) & 255 for v in state.contiguous().view(-1).tolist()]
+        memory = [int(v) & 255 for v in state.contiguous().view(torch.uint8).view(-1).tolist()]
+        root_bytes = state.element_size()
         words = torch.empty((steps, n), dtype=torch.int32)
         for first in range(0, n, 4):
             for iteration in range(steps):
                 snapshots = []
                 for lane in range(first, min(n, first + 4)):
-                    address = origin + lane * stride + iteration * advance * 4
-                    if address < 0 or address + 4 > capacity:
+                    address = (origin + lane * stride) * root_bytes + iteration * advance * 4
+                    if address < 0 or address + 4 > len(memory):
                         raise ValueError("source byte view escapes model storage")
                     value = (
                         int.from_bytes(bytes(memory[address : address + 4]), "little")
@@ -81,14 +82,14 @@ def capture(out):
         updated = torch.tensor(
             [v if v < 128 else v - 256 for v in memory], dtype=torch.int8
         )
-        return updated.reshape(state.shape), words
+        return updated.view(state.dtype).reshape(state.shape), words
 
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
             cache = (
                 ((torch.arange(256, dtype=torch.int64) * 73 + 211) & 255)
-                .to(torch.int8)
+                .to(torch.int32 if typed_root else torch.int8)
                 .reshape(16, 16)
             )
             self.cache = torch.nn.Parameter(cache, requires_grad=False)
@@ -103,7 +104,7 @@ def capture(out):
     KERNEL_REGISTRY[qualname] = KernelSpec(qualname)
     try:
         torch.set_num_threads(1)
-        model, values = Model().eval(), (torch.zeros((16, 16), dtype=torch.int8),)
+        model, values = Model().eval(), (torch.zeros((16, 16), dtype=torch.int32 if typed_root else torch.int8),)
         out.mkdir(parents=True, exist_ok=False)
         result = m2m.convert(
             model,
@@ -134,4 +135,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--typed-root", action="store_true", help="retain public i32 storage around byte views")
+    args = parser.parse_args()
+    print(capture(args.out, typed_root=args.typed_root))

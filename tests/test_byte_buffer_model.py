@@ -15,7 +15,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_real_byte_cache_model_keeps_five_results_weights_and_state(tmp_path):
+@pytest.mark.parametrize("typed_root", (False, True))
+def test_real_byte_cache_model_keeps_five_results_weights_and_state(tmp_path, typed_root):
     from t2m.bundle import verify_bundle
     from t2m.byte_buffer_demo import convert
     from t2m.model_binding import KernelBinding
@@ -27,7 +28,7 @@ def test_real_byte_cache_model_keeps_five_results_weights_and_state(tmp_path):
         Path(__file__).resolve().parents[1] / "scripts/capture_byte_buffer_model.py"
     )
     process = subprocess.run(
-        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture)],
+        [os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture), *(["--typed-root"] if typed_root else [])],
         capture_output=True,
         text=True,
         timeout=60,
@@ -40,7 +41,7 @@ def test_real_byte_cache_model_keeps_five_results_weights_and_state(tmp_path):
         ),
     )
     assert process.returncode == 0, process.stdout + process.stderr
-    result = convert(tmp_path / "source", dtype="f32")
+    result = convert(tmp_path / "source", dtype="f32", root_dtype="i32" if typed_root else "i8")
     names = [scalar.name for scalar in result.spec.runtime_scalars]
     bindings = [
         KernelBinding(

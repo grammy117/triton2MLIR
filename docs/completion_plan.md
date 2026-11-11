@@ -91,6 +91,19 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+[Typed-root storage transport](typed_storage.md) now preserves public shapes
+and all seven supported 16/32/64-bit dtypes around width-changing source views.
+Only connected roots needing byte storage receive an appended static byte axis;
+standard bitwise pack/unpack retains exact untouched words. Fourteen libraries
+in both byte orders replay 70 additional domains; four further cases qualify
+runtime matrix axes and disjoint cross-program bytes in one public word.
+A real model capture retains all five results through API/CLI and Merlin host
+execution. Merlin independently checks the actual storage spec and per-public-
+result guard costs; 280 staging regressions and 35 producer/binding contract
+checks pass. Changed-width allocation-parameter bindings from typed roots,
+byte-backed atomic effects, physical model views and the full numeric/effect/
+corpus/target goal remain open.
+
 Different-width ordinary views of declared i8 roots now retain source-pointee
 units, explicit byte order, one byte-plane event per original word and standard
 pack/unpack with source intent. Native/Merlin evidence covers all seven supported
@@ -100,7 +113,7 @@ bound to bytes. A real model2MLIR capture retains three calls, learned byte
 storage and all five results through both API and CLI. Sixty focused checks,
 132 additional runtime replays, 48 real guard refusals and 54 existing
 pointer/alias/descriptor regressions pass. See [byte aliases](byte_aliases.md).
-Typed-root packing, byte-backed indivisible atomics, broader numerical/effect
+Typed-root parameter adaptation, byte-backed indivisible atomics, broader numerical/effect
 closure, complete corpus evidence and applicable target materialization remain.
 
 Equal-width typed source arguments now bind one owning allocation before

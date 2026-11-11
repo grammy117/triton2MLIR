@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Typed storage transport](typed_storage.md) now keeps public i16/i32/i64,
+f16/BF16/f32/f64 owning tensors around width-changing source views. Standard
+word/byte transport and the actual internal memory ABI are explicit; Merlin
+independently checks per-result byte-guard costs. Eighteen native/Merlin cases
+cover both byte orders, runtime matrix axes and disjoint bytes within one word.
+A real model2MLIR capture retains every result through API and CLI binding.
+Remaining root-parameter/effect/target requirements stay open.
+
 [Different-width byte-buffer views](byte_aliases.md) now preserve complete
 word events, explicit byte order, source-pointee offset units and byte-level
 guards through native and Merlin execution. Sixty focused checks include
@@ -8,7 +16,7 @@ original typed pointer/descriptor parameter bindings, both public CLI routes
 and a real model2MLIR capture with every one of its five results. The same
 libraries replay 132 additional valid domains and refuse 48 actual byte-bound
 or overlap violations. Fifty-four existing regressions also pass. Typed-root
-packing, indivisible byte-backed atomics, broader effects and targets remain open.
+parameter adaptation, indivisible byte-backed atomics, broader effects and targets remain open.
 
 [Typed allocation aliases](allocation_word_views.md) now qualify distinct
 integer/floating source arguments over one owning root: eight actual libraries

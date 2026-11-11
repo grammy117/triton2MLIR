@@ -65,7 +65,8 @@ def validate_memory_evidence(trace, artifacts):
             or stage.get("artifacts", {}).get("lowered.mlir") != record(artifacts["memory-stage.mlir"])):
         raise ValueError("memory continuation report does not bind its actual input/output")
     if profile in GUARDED_PROFILES:
-        spec = json.loads(json.dumps(trace.get("spec")))
+        from .typed_storage_contract import storage_spec
+        spec = json.loads(json.dumps(storage_spec(trace)))
         if not isinstance(spec, dict) or not isinstance(spec.get("buffers"), list):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
         layout = guard_layout(spec, atomics=version3) if version2 else {"guard_storage_bytes_per_output_element": 16}

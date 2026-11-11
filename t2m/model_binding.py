@@ -144,11 +144,10 @@ def bind_model(model_mlir, bindings):
         binding, function, plan, output_names = candidates[0]
         if binding.implementation.trace.get("profile") in GUARDED_PROFILES:
             outputs = binding.implementation.spec.outputs
-            contract = function.attributes.get("prov.memory_guard_bytes_per_result_element")
             cost = json.loads(binding.implementation.auxiliary_artifacts["memory-admission.json"])["guard_storage_bytes_per_output_element"]
-            if not isinstance(contract, IntegerAttr) or contract.value.data != cost:
-                raise ConversionError("guarded kernel lacks its scratch storage contract", opcode="func.call")
-            guard_storage += cost * sum(math.prod(plan.outputs[b.name].get_shape()) for b in outputs)
+            from .typed_storage_contract import checked_guard_costs
+            costs = checked_guard_costs(function, binding.implementation.trace, cost)
+            guard_storage += sum(cost * math.prod(plan.outputs[b.name].get_shape()) for cost, b in zip(costs, outputs, strict=True))
             if not 0 <= guard_storage < 2**63:
                 raise ConversionError("guarded model scratch exceeds its i64 domain", opcode="func.call")
         callsite = f"kernel_call.{len(records):04d}"

@@ -5,6 +5,15 @@ import triton.language as tl
 
 
 @triton.jit
+def typed_byte_lanes(raw, out, n, capacity, origin, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    pointer = raw.to(tl.pointer_type(tl.int8), bitcast=True) + origin + lane
+    tl.store(pointer, lane.to(tl.int8) ^ 0x5A, lane < n)
+    value = tl.load(pointer, lane < n, other=0)
+    tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
 def byte_buffer_selected(
     a, b, out, n, steps, capacity, origin, stride, advance, choice, B: tl.constexpr
 ):

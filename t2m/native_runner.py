@@ -81,9 +81,16 @@ def main(work):
                 raise ValueError("invalid native model guard storage contract")
         if "prov.memory_guard_bytes_per_result_element" in function.attributes:
             guard_size = ir.IntegerAttr(function.attributes["prov.memory_guard_bytes_per_result_element"]).value
-            if guard_size not in (16, 24, 32):
+            costs = [guard_size] * len(shapes)
+            if "prov.memory_guard_bytes_by_result_element" in function.attributes:
+                costs = list(ir.DenseI64ArrayAttr(function.attributes["prov.memory_guard_bytes_by_result_element"]))
+                if len(costs) != len(shapes) or max(costs, default=guard_size) != guard_size:
+                    raise ValueError("native per-result guard storage differs from its maximum")
+            elif guard_size not in (16, 24, 32):
                 raise ValueError("unknown native memory guard storage contract")
-            if sum(math.prod(shape) * (np.dtype(dtype).itemsize + guard_size) for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
+            if any(type(cost) is not int or cost not in {base * width for base in (16, 24, 32) for width in (1, 2, 4, 8)} for cost in costs):
+                raise ValueError("unknown native per-result guard storage contract")
+            if sum(math.prod(shape) * (np.dtype(dtype).itemsize + cost) for shape, dtype, cost in zip(shapes, dtypes, costs, strict=True)) > 64 * 1024 * 1024:
                 raise ValueError("native result/guard storage exceeds the 64MiB budget")
         if guard_storage + sum(math.prod(shape) * np.dtype(dtype).itemsize for shape, dtype in zip(shapes, dtypes, strict=True)) > 64 * 1024 * 1024:
             raise ValueError("native results exceed the 64MiB budget")

@@ -83,7 +83,7 @@ def lower_offsets(state):
         Rewriter.replace_op(op, added)
 
 
-def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None):
+def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None, _inspect_roots=False):
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS
     from .pointer_views import compatible, element as pointer_element, normalize as normalize_word_views
@@ -186,7 +186,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
         if not bases[value]:
             refuse(owner, "pointer control has no established source-entry base")
         element = value.type.element_type if isinstance(value.type, TensorType) else value.type
-        if any(element != base.type and not compatible(element, base.type) for base in bases[value]):
+        if not _inspect_roots and any(element != base.type and not compatible(element, base.type) for base in bases[value]):
             if byte_order is None:
                 refuse(owner, "pointer views require equal byte-aligned element widths without address-space changes")
             try:
@@ -220,6 +220,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
                 refuse(op, "pointer control requires integer element offsets no wider than i64")
 
     state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges, {}, frozenset(byte_roots))
+    if _inspect_roots:
+        return state
     if byte_roots:
         from .byte_memory import expand_byte_events
         expanded = expand_byte_events(state, source_ids, byte_order)

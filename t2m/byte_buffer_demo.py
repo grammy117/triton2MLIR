@@ -8,7 +8,7 @@ from .shared_tensor import TensorABI, TensorBuffer
 
 
 def convert(
-    work, *, dtype="i32", byte_order="little", scalar=False, narrow=True, optimizer=None
+    work, *, dtype="i32", byte_order="little", scalar=False, narrow=True, optimizer=None, root_dtype="i8", root_shape=None
 ):
     from .examples.byte_buffer_kernels import byte_buffer_updates
     from .frontend import capture_ttir
@@ -33,7 +33,7 @@ def convert(
         capture_ttir(
             byte_buffer_updates,
             {
-                "raw": "*i8",
+                "raw": "*" + {"f16": "fp16", "f32": "fp32", "f64": "fp64"}.get(root_dtype, root_dtype),
                 "out": f"*i{width}",
                 **{
                     name: "i32"
@@ -54,7 +54,7 @@ def convert(
     abi = TensorABI(
         "byte_buffer_updates",
         (
-            TensorBuffer("raw", ("capacity",), "readwrite", "i8"),
+            TensorBuffer("raw", root_shape or ("capacity",), "readwrite", root_dtype),
             TensorBuffer("out", ("steps", "n"), "write", f"i{width}"),
         ),
         grid=(GridExtent("n", 1 if scalar else 4),),
@@ -201,6 +201,7 @@ def demo(
     out,
     *,
     byte_order="little",
+    root_dtype="i8",
     optimizer=None,
     python=None,
     memory_profile="guarded-buffer",
@@ -215,8 +216,12 @@ def demo(
     if out.exists():
         raise FileExistsError(out)
     work = out.with_name(out.name + ".work")
-    result = convert(work, byte_order=byte_order, optimizer=optimizer)
-    values, expected = arguments(order=byte_order)
+    result = convert(work, byte_order=byte_order, optimizer=optimizer, root_dtype=root_dtype)
+    if root_dtype == "i8":
+        values, expected = arguments(order=byte_order)
+    else:
+        from .examples.typed_storage_reference import typed_arguments
+        values, expected = typed_arguments(root_dtype, byte_order)
     write_effect_bundle(
         result,
         out,
@@ -230,6 +235,7 @@ def demo(
         "bundle": str(out),
         "kernel": result.spec.entry,
         "byte_order": byte_order,
+        "root_dtype": root_dtype,
         "native_execution": "passed",
         "hardware_mapping": "undecided",
         "merlin_execution": "requires separate qualify-merlin invocation",

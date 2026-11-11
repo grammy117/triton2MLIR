@@ -165,10 +165,13 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     guard_storage = signature.get("guard_storage_bytes", 0)
     if type(guard_storage) is not int or guard_storage < 0:
         raise ValueError("invalid Merlin model guard storage contract")
-    if guard_size not in (0, 16, 24, 32):
+    costs = signature.get("guard_storage_bytes_by_result_element", [guard_size] * len(shapes))
+    if (not isinstance(costs, list) or len(costs) != len(shapes)
+            or any(type(cost) is not int or cost not in {0, *(base * width for base in (16, 24, 32) for width in (1, 2, 4, 8))} for cost in costs)
+            or max(costs, default=guard_size) != guard_size):
         raise ValueError("unknown Merlin memory guard storage contract")
-    if guard_storage + sum(a.nbytes for a in arrays) + sum(math.prod(shape) * (np.dtype(dtypes[value["dtype"]]).itemsize + guard_size)
-                                         for shape, value in zip(shapes, signature["outputs"], strict=True)) > 128 * 1024 * 1024:
+    if guard_storage + sum(a.nbytes for a in arrays) + sum(math.prod(shape) * (np.dtype(dtypes[value["dtype"]]).itemsize + cost)
+                                         for shape, value, cost in zip(shapes, signature["outputs"], costs, strict=True)) > 128 * 1024 * 1024:
         raise ValueError("Merlin host invocation exceeds its 128MiB array budget")
     outputs = [np.zeros(shape, dtype=dtypes[value["dtype"]]) for shape, value in zip(shapes, signature["outputs"], strict=True)]
     compiled = json.loads((work / "compilation.json").read_text())

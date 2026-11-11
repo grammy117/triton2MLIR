@@ -1256,6 +1256,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     middle_module = parse_shared(middle_source.read_text())
     from .boolean_memory import normalize_boolean_memory
     boolean_reports = normalize_boolean_memory(middle_module, _source_ids)
+    public_abi, storage_transport = abi, None
+    if byte_order is not None:
+        from .typed_storage import prepare
+        abi, storage_transport = prepare(middle_module, abi, _source_ids, byte_order)
     if boolean_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
@@ -1294,7 +1298,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports = expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
+    if storage_transport or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1422,6 +1426,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind": "functional-standard-memory-boundary",
                                "semantic_gate": "executable-guarded-memory-admission" if admission is not None else "existing-source-tensor-initialization-bounds-and-ownership-analysis",
                                "launcher": "internal-counts-xyz-then-ids-xyz; public-tensor-scalar-ABI"})
+    if storage_transport:
+        from .typed_storage import restore
+        result = restore(result, public_abi, abi, storage_transport,
+            admission["guard_storage_bytes_per_output_element"])
+        abi = public_abi
+        transformations.append({"kind": "typed-root-byte-storage-transport", **storage_transport})
     word_views = [r for r in transformations if r.get("kind") in ("logical-pointer-word-view", "logical-atomic-word-view")]
     byte_views = [r for r in transformations if r.get("kind") == "logical-byte-buffer-word-event"]
     if byte_views:
@@ -1526,6 +1536,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                      source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
                      original_attributes=original_inventory["attributes"],
                      correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
+    if storage_transport:
+        trace["typed_storage_transport"] = storage_transport
+        trace["abi_difference"] += "; typed owning tensors use explicit bit-preserving internal byte planes for width-changing views"
     if descriptor_binding:
         trace["descriptor_argument_binding"] = descriptor_binding
         trace["abi_difference"] += "; external descriptors expand to typed logical allocation/shape/stride/padding/rounding fields before ABI binding"
