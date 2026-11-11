@@ -115,3 +115,47 @@ def memory_map_state(x, out_initial, out_sum, out_final, out_final_sum, n, capac
     tl.store(out_sum + lane, first, lane < n)
     tl.store(out_final + lane, changed, lane < n)
     tl.store(out_final_sum + lane, second, lane < n)
+
+
+@triton.jit
+def _map_masked_read(pointer, active):
+    return tl.load(pointer, active, other=-7)
+
+
+@triton.jit
+def _map_pick_read(first, second, choice, active):
+    pointer = tl.where(choice, first, second)
+    return tl.load(pointer, active, other=-7)
+
+
+@triton.jit
+def _map_pick_pointer(first, second, choice):
+    return tl.where(choice, first, second)
+
+
+@triton.jit
+def _map_pick_mixed(first, second, choice, active):
+    pointer = tl.where(choice, first, second)
+    return pointer, tl.load(pointer, active, other=-7)
+
+
+@triton.jit
+def selected_map_reads(x, y, out, observed, n, capacity_x, capacity_y, choice, B: tl.constexpr, STAGE: tl.constexpr):
+    lane = tl.arange(0, B)
+    choose = (lane % 2 == 0) == choice
+    if STAGE == 0:
+        pointer = tl.where(choose, x + lane, y + lane)
+        value = tl.map_elementwise(_map_masked_read, pointer, lane < n)
+        old = value
+    elif STAGE == 1:
+        value = tl.map_elementwise(_map_pick_read, x + lane, y + lane, choose, lane < n)
+        old = value
+    elif STAGE == 2:
+        pointer = tl.map_elementwise(_map_pick_pointer, x + lane, y + lane, choose)
+        value = tl.load(pointer, lane < n, other=-7)
+        old = value
+    else:
+        pointer, old = tl.map_elementwise(_map_pick_mixed, x + lane, y + lane, choose, lane < n)
+        value = tl.load(pointer, lane < n, other=-7)
+    tl.store(out + lane, value, lane < n)
+    tl.store(observed + lane, old, lane < n)

@@ -55,7 +55,9 @@ def needs_isolation(module):
         return True
     word_atomics = (any(opcode(op) == "tt.atomic_rmw" for op in module.walk())
         and any(opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.results) for op in module.walk()))
-    return word_atomics or any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while", "tt.map_elementwise")
+    mapped_pointers = any(opcode(op) == "tt.map_elementwise"
+        and any(_pointer_type(value.type) for value in (*op.operands, *op.results)) for op in module.walk())
+    return word_atomics or mapped_pointers or any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while", "tt.map_elementwise")
                and any(opcode(nested) in MEMORY_EVENTS for nested in op.walk()) for op in module.walk())
 
 

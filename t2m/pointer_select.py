@@ -41,6 +41,8 @@ def normalize_selected(state, source_ids):
             varying[value] = operands[op][1] != operands[op][2]
         elif opcode(op) in ("tt.cat", "tt.join"):
             varying[value] = len(set(incoming)) > 1
+        elif opcode(op) == "tt.map_elementwise":
+            varying[value] = True  # A map result's scalar root tags form a tensor.
     pending = deque(v for v in state.values if varying[v])
     while pending:
         value = pending.popleft()
@@ -118,7 +120,7 @@ def normalize_selected(state, source_ids):
     # Preallocate selector phis before traversing their cyclic definitions.
     for op in original:
         name = opcode(op)
-        if name not in ("scf.for", "scf.while", "scf.if"):
+        if name not in ("scf.for", "scf.while", "scf.if", "tt.map_elementwise"):
             continue
         for value in results[op]:
             if value in state.bases and len(state.bases[value]) > 1:
@@ -131,7 +133,7 @@ def normalize_selected(state, source_ids):
 
     for op in original:
         pointer_results = [v for v in results[op] if v in state.bases and len(state.bases[v]) > 1]
-        if not pointer_results or opcode(op) in ("scf.for", "scf.while", "scf.if"):
+        if not pointer_results or opcode(op) in ("scf.for", "scf.while", "scf.if", "tt.map_elementwise"):
             continue
         name = opcode(op)
         if name == "tt.addptr" or name == "tt.bitcast" and pointer_results[0] in encoded:
@@ -185,6 +187,19 @@ def normalize_selected(state, source_ids):
             for region in op.regions:
                 terminal = region.block.last_op
                 terminal.operands = [*terminal.operands, *(edge_tag(operands[terminal][i], results[op][i], terminal) for i in mixed(results[op]))]
+        elif name == "tt.map_elementwise":
+            body = op.regions[0].block
+            terminal = body.last_op
+            # Parent tensor selectors supply one scalar tag per invocation.
+            # Append fields after the original interface without moving reads.
+            incoming = []
+            for position in mixed(args[body]):
+                source_pointer = operands[op][position]
+                type_ = TensorType(builtin.i32, state.types[source_pointer].get_shape())
+                incoming.append(broadcast(logical_tag(source_pointer, op), type_, op))
+            op.operands = [*op.operands, *incoming]
+            terminal.operands = [*terminal.operands,
+                *(logical_tag(operands[terminal][position], terminal) for position in mixed(results[op]))]
 
     memory_reports = []
     for op in original:
