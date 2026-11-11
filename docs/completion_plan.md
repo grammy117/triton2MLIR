@@ -91,6 +91,14 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Byte-word root selection and source for/while pointer state now additionally
+qualify with intervening ordinary byte stores. Forty cases include twenty real
+Merlin libraries replayed across five domains each, retaining every old-word
+snapshot, empty/zero-trip cases, root flips and source-pointee pointer advances.
+See [the exact composition scope](byte_atomic_words.md). The next gate on this
+path is an old-value tensor recurrence followed by typed-root/model binding;
+the complete numeric/effect/corpus/target objective remains open.
+
 [Byte-backed integer word atomics](byte_atomic_words.md) now form a complete
 source-to-Merlin host slice. All nine i32/i64 RMW kinds and i16/i32/i64 CAS
 retain word atomicity, old values, both logical byte orders, source masks and

@@ -174,10 +174,16 @@ outputs; source kernels and reproducible integration tests are tracked.
 
 ## Remaining full-scope work
 
-Qualify byte-word events with finite root selection, source for/while state,
-mixed ordinary updates, typed owning-root bindings and complete model captures.
-Those generic paths are connected, but their broader compositions require their
-own execution evidence. Floating byte-backed arithmetic needs explicit numeric
+Finite per-lane root selection and original for/while pointer recurrences now
+also qualify with ordinary byte updates between word events. Forty cases cover
+i32/i64 XOR and i16/i32/i64 CAS in both byte orders; twenty actual Merlin
+libraries each replay five domains, including zero trips, empty history and
+inactive RMW lanes. The kernel retains paired pointer advances in source-word
+units, toggled root selection, every old-word snapshot and both whole roots.
+Narrow writes become visible when the pointer returns to an earlier word.
+
+Continue with old-value tensor recurrences, typed owning-root bindings and
+complete model captures on this effect path. Floating byte-backed arithmetic needs explicit numeric
 policies. External participants, synchronization/publication, physical model
 views, complete corpus coverage and applicable accelerator materialization
 remain open in the full [completion plan](completion_plan.md).
