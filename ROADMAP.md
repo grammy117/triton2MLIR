@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Functional target execution](docs/target_execution.md) now qualifies selected
+complete models through actual Merlin RISC-V images and Spike. The public
+qualification driver retains every result, source parameter and runtime input
+observation. Empty tensor results and mixed BF16/F32 contractions exposed general
+consumer reader/readback fixes; broader target coverage remains open.
+
 [Source assembly implementations](docs/source_assembly.md) additionally provide
 an explicit optional source-language boundary. Checked integer snippets become
 standard scalar/tensor computation with retained source/provider identities;

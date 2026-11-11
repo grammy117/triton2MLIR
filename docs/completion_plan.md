@@ -39,7 +39,7 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Boundary | Established capability | Remaining completion requirement |
 |---|---|---|
 | Frontend and portable dataflow | Real shared conversion, logical grids, structured loops/branches, tiled contractions, reductions/scans and qualified shape/index operations. | Complete types/attributes/compositions and source versions; no generic arbitrary-kernel claim. |
-| Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering and reusable native libraries. | Applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
+| Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering/reusable libraries, and selected complete RISC-V images executed on Spike. | Broader applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
 | Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars and explicit dense model value views. | Physical/non-dense/mutating model views, general value-returning TTIR entries/CFGs and broader runtime/alias compositions. |
 | Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
@@ -109,6 +109,14 @@ dependent calls and empty values. The i64 public model CLI also passes. Their
 consumer extension retains computed tensor reads under the existing complete
 producer proof and lifetime gates; 107 destination and 34 ownership checks pass.
 
+[Functional target qualification](target_execution.md) now carries complete
+i32/i64 six-result models and a lifted-BF16 tiled contraction through actual
+Merlin RISC-V build/link and Spike execution. The retained wire bytes reopen
+against every original result and readonly argument. Empty output readback,
+native implicit named-region casts and attributed buffer-view printing now
+retain their real semantics. This closes the previous no-target-execution gap
+for these models; broad target, numeric/effect and runtime coverage remains open.
+
 ## Required evidence for every supported form
 
 Keep these gates separate for each opcode/type/attribute/composition:
@@ -140,9 +148,10 @@ memory fixture while leaving the missing families unexamined.
 
 1. **Expand the maintained coverage/refusal matrix.** All 50 definitions are
    now observed across explicit retained packages and current product cases;
-   49 occur in host-qualified captures. Continue with type/attribute and kernel
-   compositions, source dispositions and actual failures by stage. Preserve
-   implemented-but-unqualified forms and precise refusals in the denominator.
+   all 50 occur in host-qualified captures under selected profiles. Continue
+   with type/attribute and kernel compositions, source dispositions and actual
+   failures by stage. Preserve implemented-but-unqualified forms and precise
+   refusals in the denominator.
    A scalar map or reversible pointer cast does not cover arbitrary packing,
    memory effects or physical address observations. Keep upstream-only pass
    successes separate from actual package/consumer execution.

@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Functional RISC-V model qualification](target_execution.md) adds an external
+`t2m.spike-model-qualification.v1` receipt, leaving the source bundle unchanged.
+Compiler staging excludes evaluator archives. Original runtime input values are
+separately embedded by Merlin's bare-metal C harness generator, so this target
+image is specific to that invocation; reusable host-library evidence retains
+its different runtime contract. References remain outside build invocations.
+Complete raw-byte output and readonly-input observations are bound separately.
+The zero-element `OUT_BIN v1` extension retains empty shapes; older positive-only
+readers reject it. Functional ISA execution grants no vector, accelerator, RTL,
+timing, performance or universal source-equivalence qualification.
+
 [Optional source assembly implementations](source_assembly.md) add explicit
 source-language/provider contracts and installed implementation identities.
 Every accepted snippet expands to closed standard scalar computation or

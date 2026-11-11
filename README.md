@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Whole-model target execution](docs/target_execution.md) now carries selected
+complete packages through Merlin's ordinary RISC-V build and actual Spike runs.
+i32/i64 learned tuple models retain all six results, including empty values;
+a lifted-BF16 tiled contraction also passes. Complete output/reference and
+readonly-input checks are retained. Broader targets, effects and performance
+remain separate qualification requirements.
+
 [Optional source assembly implementations](docs/source_assembly.md) now expose
 checked integer programs as standard arithmetic and parallel Linalg. The PTX
 decoder is a separate package under `adapters/ptx`; the portable core retains
