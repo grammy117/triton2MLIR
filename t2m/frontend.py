@@ -104,15 +104,15 @@ def _expand_tensor_pointers(path, inventory_path):
                                 else "source-C-added-after-official-composite"), "physical_mapping": "undecided"}
             if op.get_int_attr("inputPrecision") in (0, 1):
                 records[-1]["dot_precision"]["logical_numeric_profile"] = "logical-tf32-e8m10-rtz-v1"
-    precision_implementation = None
-    if precision_dots:
+    normalizer_implementation = None
+    if precision_dots or names & TENSOR_DESCRIPTOR_OPS:
         from triton._C import libtriton
         binary = Path(libtriton.__file__)
         digest = hashlib.sha256()
         with binary.open("rb") as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
-        precision_implementation = {"version": PINNED_TRITON, "binary_sha256": digest.hexdigest(),
+        normalizer_implementation = {"version": PINNED_TRITON, "binary_sha256": digest.hexdigest(),
             "binary_bytes": binary.stat().st_size,
             "source_reference_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
             "source_reference_is_build_receipt": False}
@@ -120,7 +120,8 @@ def _expand_tensor_pointers(path, inventory_path):
         "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries",
         "normalization_passes": pipeline,
         "normalized_opcodes": sorted(normalized_names),
-        **({"dot_precision_implementation": precision_implementation} if precision_implementation else {})}, indent=2) + "\n")
+        **({"dot_precision_implementation": normalizer_implementation} if precision_dots else {}),
+        **({"descriptor_implementation": normalizer_implementation} if names & TENSOR_DESCRIPTOR_OPS else {})}, indent=2) + "\n")
     if "tt.cat" in names:
         _expand_cats(ir, context, module, operations)
     manager = ir.pass_manager(context)
@@ -300,6 +301,18 @@ def expand_tensor_pointers(source, work):
               "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
     if "dot_precision_implementation" in inventory:
         report["dot_precision_implementation"] = inventory["dot_precision_implementation"]
+    if "descriptor_implementation" in inventory:
+        report["descriptor_implementation"] = inventory["descriptor_implementation"]
+        report["descriptor_profile"] = {
+            "name": "logical-tensor-descriptors-v1",
+            "bounds": "signed-per-dimension; out-of-bounds loads use source padding; stores/reductions are masked",
+            "addressing": "source base/shape/element-strides and logical indices",
+            "effects": "ordinary stores require unique ownership; reducing stores retain atomic kind/order/scope",
+            "physical_mapping": "undecided",
+            "physical_descriptor_abi": "not-introduced",
+            "accelerator_equivalence": "not-established",
+            "grants_semantics": False,
+        }
     if "t2m-expand-tf32-e8m10-rtz-v1" in pipeline:
         report["tf32_numeric_profile"] = {"name": "logical-tf32-e8m10-rtz-v1",
             "dot_inputs": "E8M10-toward-zero; gradual-underflow; computed-NaN-class",

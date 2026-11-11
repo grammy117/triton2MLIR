@@ -6,6 +6,11 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+[Indexed descriptors](docs/indexed_descriptors.md) now reuse the installed upstream
+pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
+source padding, state and atomic kinds through the existing checked memory path.
+Original descriptor graphs and actual normalizer identity remain explicit;
+physical/external descriptor ABI and applicable target materialization stay open.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;

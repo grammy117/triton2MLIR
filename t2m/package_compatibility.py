@@ -23,6 +23,9 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(record.get("descriptor_profile", {}).get("name") == "logical-tensor-descriptors-v1"
+           for record in transformations):
+        differences.append("in-kernel tensor descriptors reuse Triton's pinned-version pre-layout pointer expansion: logical base/shape/element-strides, signed per-dimension bounds, source zero/NaN padding and store/reduction masks remain executable; indexed tiles and source reduction kind/order/scope are retained, with ordinary scatter uniqueness and private atomic effects checked by the selected memory profile; public inputs remain allocation tensors plus declared scalar bindings and writable allocations return complete state; no physical TMA descriptor ABI, async transport, alignment/placement mapping or accelerator equivalence is supplied; original and normalized source graphs remain distinct, and descriptor provenance grants no semantics")
     if any(step == "--math-expand-ops=ops=rsqrt" or isinstance(step, dict)
            and "--math-expand-ops=ops=rsqrt" in step.get("command", []) for step in trace.get("pipeline", [])):
         differences.append("the shared computation stage includes upstream's selected reciprocal-root expansion into sqrt/division; exact source-word pipeline custody requires a reader that admits this additional pass while retaining legacy evidence; unfiltered or different math expansions are not covered")

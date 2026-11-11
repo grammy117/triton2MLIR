@@ -1,5 +1,22 @@
 # Measured coverage and remaining boundaries
 
+[Logical indexed descriptors](indexed_descriptors.md) now reach actual native
+and Merlin execution through the official pointer rewrite. Twenty-four cases
+cover transfer i16/i32/f16/BF16/f32, zero/NaN padding, six i32 reduction kinds,
+signed i64/unsigned i32 min/max and explicit IEEE f32 addition. The resulting
+24 libraries replay 144 additional runtime domains and ten scatter conflicts
+abort actual invocations. Original descriptor intent and binary identity remain
+separate from executable masks/state/atomic kinds. Twenty canonical-NaN literal
+checks pass; unknown payloads still refuse. External descriptor ABI, broader
+numeric/effect compositions and applicable targets remain open.
+The explicit report at `out/indexed-descriptor-coverage/coverage.json` verifies
+44 selected packages and 30 standalone qualifications: 34/50 definitions are
+observed and 30 appear in host-qualified captures. The three visible descriptor
+packages each verify 33 artifacts; their qualifications each verify 52.
+Unmeasured definitions include implemented families; they are not all unsupported.
+The final descriptor/literal/CLI suite passes 47 checks; 152 existing pointer,
+source-word, tensor, dot-precision and float-format/cast regressions also pass.
+
 [Dense model tensor views](model_tensor_views.md) now bridge allocation roots
 to real i64 and f32/f16/BF16 captured model values while retaining shared updates,
 source K reuse, learned parameters and complete tuple results. The explicit v2

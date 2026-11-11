@@ -91,6 +91,32 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+The indexed descriptor path now reuses the actual installed Triton pre-layout
+pass for gather/scatter/reducing stores. Twenty-four real native/Merlin cases
+retain loaded indices, signed bounds, zero/NaN fills, ordinary scatter ownership,
+six integer reduction kinds, signed/unsigned min/max, f32 addition and loop/state
+recurrence. Every library replays six additional runtime domains; ten actual
+scatter conflict invocations refuse. Twenty literal checks independently retain
+canonical quiet-NaN/signed-zero words and preserve noncanonical-payload refusals.
+Original descriptor intent, actual binary identity and public package differences
+are explicit. See [logical indexed descriptors](indexed_descriptors.md).
+The final focused suite passes 47 checks and the relevant existing regression
+suite passes 152; three visible CLI packages have separate verified Merlin
+qualifications. The explicit 44-package report observes 34/50 definitions, with
+30 represented in host-qualified captures; universal coverage remains unproven.
+
+Continue toward the full objective in this order, completing each vertical
+slice through the actual consumer rather than accepting opaque coverage:
+
+1. Bind external logical descriptors to declared allocation/shape/stride fields;
+   extend model views/state and mixed-type/byte aliases with actual dependencies.
+2. Close remaining numeric/effect combinations against the pinned TTIR types
+   and attributes, retaining source recurrences, rounding and synchronization.
+3. Expand the maintained kernel/package corpus to every valid operator family
+   and important composition, with located refusals and independent references.
+4. Materialize applicable Merlin targets and explicitly implement physical
+   observations/dependencies; provenance supplies intent, never missing effects.
+
 Explicit dense model value views now bridge allocation roots to original
 matrix/scalar/empty caller values with standard reshapes and no dtype change.
 Four actual i64 and f32/f16/BF16 model captures retain shared updates, learned

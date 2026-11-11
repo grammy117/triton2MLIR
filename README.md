@@ -9,6 +9,11 @@ and [plan.md](plan.md) for the architecture.
 Contributor/commit rules are in [AGENTS.md](AGENTS.md). Broader coverage will reuse
 [triton-shared's existing passes and analyses](docs/triton_shared.md).
 
+[Indexed descriptors](docs/indexed_descriptors.md) reuse the official pre-layout
+pointer expansion for gather, scatter and reducing stores. Loaded indices,
+runtime bounds/padding, allocation state and atomic kinds reach standard MLIR;
+original descriptor intent remains in provenance with hardware mapping undecided.
+
 [Scaled contractions](docs/scaled_dot.md) now retain FP4 packing, FP8/half
 formats, optional per-group scales and original accumulation in standard
 tiled MLIR. `shared-demo --kernel scaled-dot` produces an independently

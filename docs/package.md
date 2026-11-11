@@ -12,6 +12,12 @@ Baseline inspected: model2MLIR `feat/triton-integration` at `035bb5a`, particula
 `m2m/capture/bundle.py`, `m2m/capture/provenance.py` and `m2m/transforms/externalize.py`.
 This document specifies the implemented R0/R1 package, not every future roadmap profile.
 
+[Logical indexed descriptors](indexed_descriptors.md) retain the existing tensor/scalar
+ABI and receipt schemas. Original descriptor intent and the actual normalizer
+identity are additive provenance; compatibility metadata records the logical
+shape/stride/padding/atomic boundary and absence of a physical descriptor ABI.
+Generated operations and the selected memory/effect profile retain computation.
+
 New model captures additionally support source-bound
 [lifted compiler constants](lifted_constants.md). The original source bytes
 live in `weights.safetensors` with explicit constant manifest entries and an

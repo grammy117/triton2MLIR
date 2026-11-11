@@ -47,9 +47,23 @@ from .input_storage import READONLY_SNAPSHOTS
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
 DTYPES.update(_FP8_BY_NAME)
+_CANONICAL_NAN_WORDS = {"f16": 0x7E00, "bf16": 0x7FC0, "f32": 0x7FC00000, "f64": 0x7FF8000000000000}
 
 
 class SharedParser(Parser):
+    def parse_dense_int_or_fp_elements_attr(self, type):
+        attribute = super().parse_dense_int_or_fp_elements_attr(type)
+        element = attribute.type.element_type
+        if element.name in _CANONICAL_NAN_WORDS:
+            width = element.compile_time_size
+            data = attribute.data.data
+            canonical = _CANONICAL_NAN_WORDS[element.name].to_bytes(width, "little")
+            for index, value in enumerate(element.iter_unpack(data)):
+                if host_math.isnan(value) and (data[index * width:(index + 1) * width] != canonical
+                                               or element.pack([value]) != canonical):
+                    self.raise_error("NaN constant payload preservation is not qualified")
+        return attribute
+
     def _parse_optional_builtin_attr(self):
         attribute = super()._parse_optional_builtin_attr()
         # Native MLIR escapes non-ASCII UTF-8 bytes in string attributes.
@@ -73,7 +87,9 @@ class SharedParser(Parser):
                 number = next(type_.iter_unpack(raw))
                 from .standard_floats import FP8_TYPE_NAMES
                 if host_math.isnan(number) and type_.name not in FP8_TYPE_NAMES:
-                    parser.raise_error("NaN constant payload preservation is not qualified", at_position=self.span)
+                    canonical = _CANONICAL_NAN_WORDS.get(type_.name)
+                    if canonical is None or int.from_bytes(raw, "little") != canonical or type_.pack([number]) != raw:
+                        parser.raise_error("NaN constant payload preservation is not qualified", at_position=self.span)
                 return number
             return super().to_type(parser, type_)
 
@@ -1452,6 +1468,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
     if original_inventory:
         # Expanded operations are a distinct graph, never the original TTIR.
+        if pointer_report and "descriptor_profile" in pointer_report:
+            descriptor_intent = {"profile": pointer_report["descriptor_profile"],
+                "operations": [record for record in original_inventory["operations"]
+                               if record["opcode"] in DESCRIPTOR_OPS], "grants_semantics": False}
+            for op in result.walk():
+                if isinstance(op, func.FuncOp):
+                    op.attributes["prov.kernel_original_descriptors"] = StringAttr(json.dumps(descriptor_intent, sort_keys=True))
         original_precisions = {record["id"]: {**record["dot_precision"], "inputs": record["inputs"],
             "input_types": record["input_types"], "intent": record.get("intent", {})}
             for record in original_inventory["operations"] if "dot_precision" in record}
