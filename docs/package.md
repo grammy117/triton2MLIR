@@ -84,10 +84,18 @@ metadata records the rule. See [readonly aliases](readonly_aliases.md).
 source interface through `shared-tensor --allocation-bindings`. The public entry
 takes roots once, passes source pointers/offsets through a real TTIR call and
 returns each updated root once. `source.ttir` contains this bound program and
-the private source body; pre-wrapper original bytes remain in conversion work.
+the private source body. New packages retain exact pre-wrapper/native input bytes,
+argument configuration and source-only fingerprints in a
+[portable source capsule](descriptor_state.md); older pointer-only packages may lack it.
 The descriptive binding table records both hashes without granting semantics.
 Existing ABI/receipt schemas and compiler/evaluator separation remain unchanged;
 compatibility metadata records the source/signature difference.
+External descriptors use source-argument configuration v2 to bind shared roots,
+runtime origins and actual native logical fields before helper inlining.
+This adds an explicit compiler artifact roster, with independent Merlin validation,
+without changing the public tensor receipt/ABI schemas. Older readers can refuse
+the added roster. Byte custody does not establish source equivalence or grant
+alias, numeric or target permission; `source_closure_verified` remains false.
 
 Non-dense source-allocation packages keep owning flat tensors, including
 padding, with typed runtime origins, signed element strides and capacities.

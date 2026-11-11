@@ -20,6 +20,14 @@ an implementation allowlist. Unknown `tt.*` names remain in `unknown_ttir`;
 all other dialect operations remain in `other_operations`, without assuming
 those dialects are standard or supported.
 
+Allocation packages with a normalized original-source capsule use its native
+`allocation-inventory.json` as the original graph. Case records identify
+`pre-wrapper-original-source-operations`, pin that inventory and retain separate
+bound-source hashes/counts. Pointer-only capsules without an original native
+inventory retain `allocation-bound-source-operations`; the report never invents
+an original inventory. Capsule/receipt validation precedes indexing. This
+records byte-bound producer observations, not independent source equivalence.
+
 Rows retain exact declared input/output types and available properties/attributes,
 with form hashes and source IDs. The native original-graph binding currently
 does not expose complete attribute dictionaries. Those fields remain explicit

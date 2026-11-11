@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Descriptor allocation state](descriptor_state.md) now binds runtime origins,
+shared writable roots and original i32-to-i64 field extensions before upstream
+inlining. Twenty-five focused checks cover three i64/f32/BF16 libraries, eight
+additional valid replays and four actual guard failures per library, nineteen
+protocol cases, an unused descriptor parameter, public/saved-v2 CLI packages
+and a complete model2MLIR tuple capture. Twenty-seven existing allocation/model
+and 58 package/coverage regressions pass. Merlin's 318 relevant arithmetic,
+staging and runtime/view checks pass, including the independent custody reader.
+BF16 add/sub/mul separately pass three native checks with 3,145,728 exact-word
+or computed-NaN-class comparisons and retained intermediate rounding. Mixed-type
+aliases, physical/mutating views, broader effects and target materialization
+remain completion requirements.
+
 [External logical descriptors](external_descriptors.md) now pass actual upstream
 typed argument expansion through Merlin, with runtime allocation/shape/stride/
 padding/rounding fields and original AST metadata inputs explicit. Eighteen
@@ -8,8 +21,9 @@ scatter violations. This includes rank-one i64/rank-three BF16 state, six i32
 reducing kinds and f32/BF16 two-descriptor GEMM retaining its original K loop,
 tiles and C. Eleven protocol checks and the public CLI workflows exercise the
 field boundary; 128 existing memory/model/descriptor regressions pass.
-External origins/shared writable roots, complete derived-model compositions,
-broader numeric/effects and applicable targets remain open.
+The descriptor allocation-state extension above now covers external origins,
+shared roots and a complete derived model; broader compositions, numeric/effects
+and applicable targets remain open.
 The final focused matrix passes 35 checks; the six visible packages each
 verify 33 artifacts and their separate Merlin qualifications each verify 52.
 `out/external-descriptor-coverage/coverage.json` selects 50 packages and 36

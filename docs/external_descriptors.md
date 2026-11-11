@@ -117,13 +117,12 @@ captures. This is measured composition evidence, not universal coverage.
 
 ## Remaining full-coverage requirements
 
-Nonzero descriptor-base origins, shared writable roots across external
-descriptors, physical/mutating model views, complete derived-model descriptor
-captures and portable pre-wrapper custody remain work. The current logical
-allocation field starts at element zero and does not supply physical pointer
-identity. Existing allocation-state bindings cover declared in-kernel pointer
-sharing; combining that source binding with external descriptor fields still
-needs an explicit adapter and evidence.
+[Descriptor allocation bindings](descriptor_state.md) now extend the field ABI
+with nonzero runtime origins, shared writable roots, real derived-model captures
+and portable pre-wrapper source custody. Direct logical fields still start at
+element zero; the allocation wrapper supplies executable origin arithmetic.
+Mixed-type aliases and physical/mutating model views remain open. Neither route
+supplies physical GPU descriptor identity.
 
 Broader element/rounding/effect combinations, external synchronization,
 physical descriptor byte interfaces and applicable target materialization also

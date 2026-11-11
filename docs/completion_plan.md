@@ -91,6 +91,21 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+External descriptor allocation bindings now retain runtime origins, shared
+writable roots and executable signed shape extensions before upstream inlining.
+Three i64/f32/BF16 libraries preserve tiled snapshots, recurrences and untouched
+root words over 24 additional valid replays and twelve actual guard failures.
+A complete model2MLIR capture retains three calls, learned weights, an empty
+domain and every tuple result through native and Merlin host execution.
+Portable compiler capsules retain exact original/normalized/generic source,
+original argument bindings and source-only stage fingerprints. Merlin checks
+their byte links independently for standalone and derived-model staging;
+custody remains distinct from source equivalence and alias/target admission.
+See [descriptor allocation state](descriptor_state.md). BF16 add/sub/mul also
+now preserve each source rounding boundary; 3,145,728 independent exact-word or
+NaN-class comparisons and two recurrence checks pass. Remaining full-scope
+work below remains active.
+
 External descriptor entry parameters now use the actual pinned upstream
 one-to-many typed field conversion through Merlin. A structural chained-offset
 fix reuses existing isolated native memory events for fully runtime strides.
@@ -123,9 +138,9 @@ qualifications. The explicit 44-package report observes 34/50 definitions, with
 Continue toward the full objective in this order, completing each vertical
 slice through the actual consumer rather than accepting opaque coverage:
 
-1. Extend external logical descriptor fields with nonzero allocation origins,
-   shared writable roots and complete derived-model captures; extend physical
-   model views/state, portable pre-wrapper custody and mixed-type/byte aliases.
+1. Extend the now-executable descriptor/root/model path to physical model
+   views/state, mixed-type/byte aliases and independently strided contraction
+   accumulators. Preserve source custody, original recurrences and guard gates.
 2. Close remaining numeric/effect combinations against the pinned TTIR types
    and attributes, retaining source recurrences, rounding and synchronization.
 3. Expand the maintained kernel/package corpus to every valid operator family

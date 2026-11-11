@@ -20,6 +20,12 @@ Merlin execution retain non-contiguous memory, state and two-descriptor tiled
 f32/BF16 GEMM with its original K reuse and C accumulator. Public field bindings
 and remaining origin/alias/model/target work are explicit.
 
+[Descriptor allocation state](docs/descriptor_state.md) now preserves runtime
+origins and shared writable roots through real TTIR calls before inlining.
+i64/f32/BF16 libraries, a public demo and an actual model2MLIR tuple capture
+execute through Merlin. Original and normalized source bytes travel in a
+separately checked compiler capsule; physical views and target work remain open.
+
 [Scaled contractions](docs/scaled_dot.md) now retain FP4 packing, FP8/half
 formats, optional per-group scales and original accumulation in standard
 tiled MLIR. `shared-demo --kernel scaled-dot` produces an independently

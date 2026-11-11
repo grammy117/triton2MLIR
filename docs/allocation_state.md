@@ -46,9 +46,10 @@ do not become duplicated independent state results.
 `source.ttir` in the package is the bound program, including the private
 original body and its helpers. Its complete source inventory includes the real
 wrapper call and offset operations; no helper is hidden as an opaque native
-implementation. The pre-wrapper source bytes remain in conversion work as
-`original.ttir`, alongside `bindings.json`. They are not a separate portable
-package artifact. `source_argument_binding` records both byte hashes and the
+implementation. New packages additionally retain the exact pre-wrapper bytes,
+generic native input, argument configuration and source-stage fingerprints in
+a [portable source capsule](descriptor_state.md). Legacy packages without that
+capsule retain pre-wrapper bytes only in conversion work. `source_argument_binding` records both byte hashes and the
 descriptive `t2m.source-allocation-bindings.v1` table with
 `grants_semantics=false`. Arithmetic, sharing and effects come from executable
 TTIR; the table grants no rewrite permission or independent source proof.

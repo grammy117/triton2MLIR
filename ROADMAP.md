@@ -14,8 +14,10 @@ physical descriptor byte interfaces and applicable target materialization stay o
 [External logical descriptor arguments](docs/external_descriptors.md) now bind
 the actual upstream one-to-many field interface through Merlin, including
 runtime strides/flags, block/indexed state and two-descriptor tiled f32/BF16 GEMM.
-Nonzero external origins/shared writable roots, complete model compositions,
-physical descriptor bytes and applicable target handling remain separate gates.
+[Descriptor allocation state](docs/descriptor_state.md) now retains nonzero
+runtime origins and shared writable roots, including a complete model2MLIR
+capture and independently checked portable original-source custody. Physical
+descriptor bytes, mixed-type aliases and applicable target handling remain open.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;
