@@ -6,6 +6,17 @@ selected case remains in the report: valid source, invalid source, conversion
 refusals, failed references/compilations and cases not started within a budget.
 All 50 pinned TTIR definitions remain in the denominator.
 
+The explicit optional source-provider selection at
+`out/source-assembly-product-qualified/` contains fourteen cases and twelve
+actual libraries. It adds a checked integer assembly implementation while
+retaining both default assembly and asymmetric packing refusals. The combined
+`out/source-assembly-inventory-coverage/coverage.json` reopens 70 packages and
+47 standalone qualifications; all 50 source definition names appear in
+native/Merlin-qualified captures under those selected profiles. This does not
+establish arbitrary instruction/type/attribute coverage or target execution.
+Pass `--assembly-provider ptx-integer-v1` to preparation to include that case;
+the optional provider must be installed in the frontend environment.
+
 [Proved layout-independent packed maps](packed_maps.md) now add a successful
 rank-two i64 case with runtime recurrence. The current copy at
 `out/packed-map-product-qualified/` contains thirteen cases, eleven actual
@@ -96,7 +107,7 @@ ABI inputs use exactly `in0`, `in1`, ...; references include exactly `out0`,
 and remain explicit in `rtol`/`atol`. Existing allocation bindings can be
 supplied as `allocation_bindings`. The allowed compiler options match the
 saved-source frontend: memory/address/effect profiles, f32 atomic-add policy,
-FP8 overflow policy and logical byte order.
+FP8 overflow policy, logical byte order and explicit installed assembly provider.
 
 Effect-only, failing and mixed tensor/effect cases use
 `reference_kind: "effects"`, JSON outcome references and, for mixed v2

@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Source assembly implementations](docs/source_assembly.md) additionally provide
+an explicit optional source-language boundary. Checked integer snippets become
+standard scalar/tensor computation with retained source/provider identities;
+hardware observations, broader instructions/effects/packing and applicable
+targets remain completion requirements.
+
 **Updated 2026-11-11.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
@@ -8,7 +14,8 @@ The active [completion plan](docs/completion_plan.md) orders the remaining front
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 The [maintained product corpus](docs/product_corpus.md) now records real refusals
 and execution against all 50 pinned definitions. The combined selection observes
-50 source definitions and 49 in native/Merlin-qualified captures. Proved
+all 50 definition names in source and native/Merlin-qualified captures under
+selected profiles, including the optional source implementation above. Proved
 [slot-independent packed DAGs](docs/packed_maps.md) now also reach Merlin while
 retaining packing intent. Coupled/asymmetric packed maps, broader mapped
 forms, source assembly, typed compositions and targets stay open.

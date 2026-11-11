@@ -45,12 +45,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/packed-map-inventory-coverage/coverage.json` selection reopens
-**69 packages, 46 standalone qualifications and thirteen maintained product
-cases**. It observes **50/50 source definitions**, with **49 represented in
-native- and Merlin-host-qualified captures**. The current corpus provides eleven
-actual libraries and retains two located refusals. Source assembly has no
-qualified host capture; coupled/asymmetric packed maps still refuse, while mapped reads qualify through the
+The current `out/source-assembly-inventory-coverage/coverage.json` selection reopens
+**70 packages, 47 standalone qualifications and fourteen maintained product
+cases**. It observes **50/50 source definition names**, with **all 50 represented
+in native- and Merlin-host-qualified captures under selected profiles**. The
+optional corpus provides twelve actual libraries and retains two refusals:
+assembly without a selected source implementation and asymmetric packing.
+The [source assembly adapter](source_assembly.md) qualifies checked integer
+programs; broader instructions/effects/packing remain open. Mapped reads qualify through the
 explicit guarded source-word profile. These are composition observations, not a completion
 percentage or per-operation execution measurement. The [product corpus](product_corpus.md)
 and [coverage v2](package_coverage.md) keep source/refusal/execution limits
@@ -92,6 +94,14 @@ retain pack two/four, i32/i64/f32, rank-one/two tiles and runtime recurrences,
 with four additional domains per library. Actual dependencies and arithmetic
 attributes are checked independently of provenance. Coupled/asymmetric slots,
 packed regions/reads, source assembly and applicable targets remain open.
+
+[Optional source-language implementations](source_assembly.md) now decode
+complete checked integer assembly into portable scalar/tensor computation.
+ISA decoding stays in a separate package; the core checks closed standard
+payloads and retains original source/provider identities. Sixteen word-program
+libraries, the public scalar CLI and the maintained optional corpus qualify.
+Seventy relevant checks pass. These finite profiles do not establish universal
+source equivalence, arbitrary hardware observations or target execution.
 
 ## Required evidence for every supported form
 

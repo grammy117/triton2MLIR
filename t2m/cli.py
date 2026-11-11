@@ -501,6 +501,7 @@ def main(argv=None):
     tensor.add_argument("--byte-order", choices=("little", "big"), help="explicit logical byte-buffer word representation")
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 finite-overflow and infinity conversion contract")
+    tensor.add_argument("--assembly-provider", help="explicit installed source-assembly semantics entry point; default refuses assembly")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--effect-reference",type=Path,help="independent JSON streams/outcome; v2 binds adjacent reference.npz; excludes --reference")
@@ -556,6 +557,7 @@ def main(argv=None):
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
     bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     bind.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="default FP8 contract; each binding may override it")
+    bind.add_argument("--assembly-provider", help="default installed source semantics provider; each binding may override it")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)
@@ -635,7 +637,8 @@ def main(argv=None):
                     abi = json.loads((args.bindings.parent / abi).read_text())
                 options = dict(optimizer=args.optimizer,memory_profile=item.get("memory_profile",args.memory_profile),
                     address_policy=item.get("address_policy",args.address_policy),effect_profile=item.get("effect_profile",args.effect_profile),
-                    fp8_overflow=item.get("fp8_overflow",args.fp8_overflow),byte_order=item.get("byte_order"))
+                    fp8_overflow=item.get("fp8_overflow",args.fp8_overflow),byte_order=item.get("byte_order"),
+                    assembly_provider=item.get("assembly_provider",args.assembly_provider))
                 allocation = None
                 if "allocation_bindings" in item:
                     from .allocation_bindings import arguments_from_dict,convert_allocations
@@ -720,7 +723,8 @@ def main(argv=None):
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
             options = dict(optimizer=args.optimizer,memory_profile=args.memory_profile,address_policy=args.address_policy,
-                           effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow,byte_order=args.byte_order)
+                           effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow,byte_order=args.byte_order,
+                           assembly_provider=args.assembly_provider)
             if args.allocation_bindings:
                 from .allocation_bindings import arguments_from_dict,convert_allocations
                 entry,bindings = arguments_from_dict(json.loads(args.allocation_bindings.read_text()))

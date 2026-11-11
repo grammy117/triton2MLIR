@@ -1,14 +1,29 @@
 # Measured coverage and remaining boundaries
 
+[Optional source assembly implementations](source_assembly.md) now qualify
+checked i32/i64 integer programs through standard arithmetic and parallel
+Linalg. Sixteen word-program libraries replay four additional runtime domains
+each; the public scalar CLI and maintained optional corpus also qualify.
+Seventy relevant producer/provider/consumer/corpus regressions pass.
+
+The current `out/source-assembly-inventory-coverage/coverage.json` reopens
+**70 packages, 47 standalone qualifications and fourteen product cases**. All
+**50 pinned source definition names** occur in native/Merlin-host-qualified
+captures under selected profiles. This is not universal opcode/type/attribute,
+instruction or per-operation execution coverage. The optional corpus has
+twelve working libraries and retains default assembly/asymmetric packing
+refusals. Broader source assembly, numeric/runtime/effect forms and applicable
+targets remain open. Previous selections below retain their actual scope.
+
 The [maintained product corpus](product_corpus.md) now retains successful,
 refused, failed and unstarted kernel cases against all pinned definitions.
-Thirteen maintained cases produce eleven actual Merlin libraries and two located
+The default thirteen cases produce eleven actual Merlin libraries and two located
 refusals. They close missing observation evidence for shape operations, maps,
 gather, histogram, high products, block pointers, scans, reductions and exact
 pointer round-trips. The corpus exposed and helped fix guarded softmax's fresh
 tensor allocation admission; its independent 39-case suite passes.
 
-The combined `out/packed-map-inventory-coverage/coverage.json` reopens 69 earlier
+The earlier `out/packed-map-inventory-coverage/coverage.json` reopens 69
 packages, 46 standalone qualifications and the thirteen-case current corpus.
 It observes **50/50 source definitions**, with **49 represented in native- and
 Merlin-host-qualified captures**. `tt.elementwise_inline_asm` has no qualified

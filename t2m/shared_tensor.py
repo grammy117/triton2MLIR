@@ -301,7 +301,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False):
+def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None):
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
     entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
@@ -349,6 +349,8 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
         elif name == "tt.extern_elementwise":
             from .external_math import contract as external_math_contract
             records[-1]["external_math"] = external_math_contract(op, source_id)
+        elif name == "tt.elementwise_inline_asm" and assembly_provider is not None:
+            records[-1]["source_assembly_provider"] = assembly_provider
         elif name in ("tt.atomic_rmw", "tt.atomic_cas") and atomics:
             from .atomic_memory import contract
             records[-1]["atomic"] = contract(op, _source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
@@ -1165,7 +1167,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None, byte_order=None):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None, byte_order=None, assembly_provider=None):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1220,7 +1222,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         # Check original effects/contracts before a greedy upstream pass can
         # fold them. Only selected composite precision is deferred to its pass.
         _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
-                   typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True)
+                   typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True,
+                   assembly_provider=assembly_provider)
         pointer_report = expand_tensor_pointers(source, work / "precision-intake")
         original_inventory = json.loads((work / "precision-intake/inventory.json").read_text())
         if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
@@ -1229,7 +1232,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
-    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
+    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
     intent_by_source = {}
     for op in parsed.walk():
         intent = {key: value for key, value in op.attributes.items()
@@ -1237,6 +1240,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         for source_id in _source_ids(op.location):
             if intent:
                 intent_by_source[source_id] = intent
+    assembly_reports = []
+    if assembly_provider is not None:
+        from .source_assembly import expand_source_assembly
+        # Decode every original snippet before inlining or any greedy pass can
+        # discard source operations based only on a caller's purity marker.
+        assembly_reports = expand_source_assembly(parsed, _source_ids, provider=assembly_provider)
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1348,6 +1357,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
             "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
+    transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
     transformations.extend(scan_reports)

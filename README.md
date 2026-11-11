@@ -1,15 +1,21 @@
 # triton2MLIR
 
+[Optional source assembly implementations](docs/source_assembly.md) now expose
+checked integer programs as standard arithmetic and parallel Linalg. The PTX
+decoder is a separate package under `adapters/ptx`; the portable core retains
+original source/provider identities and checks its executable value/effect
+boundary. Hardware observations and unsupported instructions remain refused.
+
 The [maintained product corpus](docs/product_corpus.md) now records real
 conversion refusals and Merlin execution alongside successful packages. The
-combined explicit report observes all 50 pinned TTIR definitions in source,
-with 49 represented in native/Merlin-host-qualified captures. Source assembly,
-coupled packed maps, broader mapped reads and numeric/runtime/target closure remain
+combined explicit report observes all 50 pinned TTIR definition names in source
+and native/Merlin-host-qualified captures under selected profiles. Broader source
+assembly, coupled packed maps, mapped reads and numeric/runtime/target closure remain
 open; these counts measure compositions, not universal operation support.
 
 [Mapped source reads](docs/memory_maps.md) now retain logical pointers,
 branches/loops and five-result snapshots around ordinary kernel writes through
-actual Merlin libraries. The updated corpus has eleven qualified cases and two
+actual Merlin libraries. The default corpus has eleven qualified cases and two
 located refusals; source assembly and packed grouping remain open.
 Selected-root map arguments, pointer results and mixed results additionally
 qualify through twelve libraries. Real i64/f32 model captures preserve learned

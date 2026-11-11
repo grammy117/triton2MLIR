@@ -12,7 +12,7 @@ from t2m.scalar_abi import RuntimeScalar
 from t2m.shared_tensor import TensorABI, TensorBuffer
 
 
-def prepare(out):
+def prepare(out, *, assembly_provider=None):
     out = Path(out).absolute()
     out.mkdir(parents=True, exist_ok=False)
     cases = []
@@ -189,6 +189,11 @@ def prepare(out):
     }}'''
     abi = TensorABI("assembly", buffers(("x", "out"), ((1,),) * 2, ("i32",) * 2))
     add("source-assembly", source, abi, [([np.asarray([42], np.int32)], [np.asarray([43], np.int32)])])
+    if assembly_provider is not None:
+        examples = [([np.asarray([value], np.int32)], [np.asarray([-(1 << 31) if value == (1 << 31) - 1 else value + 1], np.int32)])
+                    for value in (42, -1, -(1 << 31), (1 << 31) - 1)]
+        add("source-assembly-qualified", source, abi, examples)
+        cases[-1]["options"] = {**options, "assembly_provider": assembly_provider}
     path = out / "manifest.json"
     path.write_text(json.dumps({"schema": "t2m.product-corpus.v1", "cases": cases}, indent=2) + "\n")
     return path
@@ -197,4 +202,6 @@ def prepare(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(prepare(parser.parse_args().out))
+    parser.add_argument("--assembly-provider", help="optional installed provider; retains the default assembly refusal too")
+    arguments = parser.parse_args()
+    print(prepare(arguments.out, assembly_provider=arguments.assembly_provider))

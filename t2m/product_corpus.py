@@ -24,7 +24,7 @@ from .ttir_definitions import OPERATIONS, SOURCE
 from .upstream import inspect_optimizer
 
 OPTIONS = frozenset(("memory_profile", "address_policy", "effect_profile", "f32_atomic_add",
-                     "fp8_overflow", "byte_order"))
+                     "fp8_overflow", "byte_order", "assembly_provider"))
 STAGES = ("source", "conversion", "native_package", "merlin_host", "merlin_replays")
 
 

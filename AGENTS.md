@@ -52,6 +52,10 @@ permission to recover arbitrary IR semantics from printed lines.
 
 - `t2m/`: installed frontend, analyses, builders, transforms and artifact contracts.
 - `t2m/examples/`: small real kernel sources shipped with the demo.
+- `adapters/`: separately packaged optional source-language semantics adapters.
+  Keep ISA decoding here, outside the portable core. Providers must emit actual
+  standard computation and retain complete source/dependency contracts; opaque
+  assembly or unimplemented effects cannot count as portable conversion.
 - `tests/`: focused conversion, semantic, refusal and integration tests. Small source/IR fixtures
   may be tracked when they establish a contract and carry any upstream attribution.
 - `docs/`, `README.md`, `ROADMAP.md`, `plan.md`: durable contracts, design and current delivery status.

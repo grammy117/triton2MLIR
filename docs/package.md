@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Optional source assembly implementations](source_assembly.md) add explicit
+source-language/provider contracts and installed implementation identities.
+Every accepted snippet expands to closed standard scalar computation or
+parallel Linalg. Public tensor/scalar ABI and receipt schemas are unchanged;
+compatibility metadata names the extension and remaining effect/packing gates.
+Provider custody and finite qualifications do not establish universal source
+equivalence or applicable target execution.
+
 [Proved layout-independent packed maps](packed_maps.md) retain their original
 pack annotation while exposing the same scalar function at every logical
 element in standard parallel Linalg. The source graph, slot-independence

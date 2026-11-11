@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triton2mlir-ptx-semantics"
+version = "0.1.0"
+description = "Optional PTX integer source-semantics adapter for triton2MLIR"
+requires-python = ">=3.11"
+dependencies = ["triton2mlir==0.1.0"]
+
+[project.entry-points."triton2mlir.source_assembly.v1"]
+ptx-integer-v1 = "t2m_ptx:Provider"
+
+[tool.setuptools.packages.find]
+where = ["src"]
