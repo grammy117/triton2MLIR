@@ -14,6 +14,10 @@ Source-derived capability selection is shared with the host consumer. Target
 build records distinguish requested and effective features and bind the actual
 selector bytes; source operation bodies still require independent Merlin
 validation. Public tensor/scalar and capture receipt schemas are unchanged.
+The optional qualification evaluation field `comparison: words` additionally
+requires exact output bits and zero tolerances, including NaN payloads and signed
+zero. Existing receipts retain their value comparison; older readers may refuse
+the additive stricter policy. It changes no source numeric or memory permission.
 
 [Optional source assembly implementations](source_assembly.md) add explicit
 source-language/provider contracts and installed implementation identities.

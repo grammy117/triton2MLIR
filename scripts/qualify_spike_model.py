@@ -111,6 +111,7 @@ def worker(mode, root, out, *arguments):
                 "src/merlin/llvmlower/pipeline.py", "src/merlin/llvmlower/toolchain.py",
                 "src/merlin/frontends/linalg_mlir.py", "src/merlin/frontends/linalg_named_regions.py",
                 "src/merlin/xdsl_dialects/standard_linalg.py",
+                "src/merlin/xdsl_dialects/standard_scf.py",
                 "src/merlin/llvmlower/loop_tensor_destinations.py",
                 "src/merlin/llvmlower/atomic_compare_exchange.py",
                 "src/merlin/llvmlower/atomic_word_views.py",
@@ -209,10 +210,12 @@ def references(capture):
     return _references(capture, parent, entries[0].function_type.outputs, metadata=capture / "parent/meta.json")
 
 
-def compare(capture, out, rtol, atol):
+def compare(capture, out, rtol, atol, *, comparison="values"):
     from t2m.tensor_storage import assert_tensor_close
     if not all(np.isfinite(x) and x >= 0 for x in (rtol, atol)):
         raise ValueError("comparison tolerances must be finite and nonnegative")
+    if comparison not in ("values", "words") or comparison == "words" and (rtol or atol):
+        raise ValueError("word comparison requires zero tolerances and a known comparison policy")
     expected, reference_members = references(capture)
     signature = json.loads((out / "compiler/signature.json").read_text())
     with np.load(out / "outputs.npz", allow_pickle=False) as outputs:
@@ -224,18 +227,25 @@ def compare(capture, out, rtol, atol):
             actual = outputs[f"out{i}"]
             if (actual.shape, actual.dtype) != (golden.shape, golden.dtype):
                 raise ValueError(f"target result {i} differs from reference shape/dtype")
-            assert_tensor_close(actual, golden, spec["dtype"], rtol=rtol, atol=atol)
+            if comparison == "words":
+                if actual.tobytes() != golden.tobytes():
+                    raise ValueError(f"target result {i} differs from exact reference words")
+            else:
+                assert_tensor_close(actual, golden, spec["dtype"], rtol=rtol, atol=atol)
     return {"reference_comparison": "passed", "result_count": len(expected),
-        "reference_members": reference_members, "rtol": rtol, "atol": atol}
+        "reference_members": reference_members, "rtol": rtol, "atol": atol,
+        **({"comparison": "words"} if comparison == "words" else {})}
 
 
-def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=()):
+def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values"):
     from t2m.bundle import verify_bundle
     capture, out, root = Path(capture).resolve(), Path(out).absolute(), Path(merlin_root).resolve()
     if out.exists() or out.is_symlink() or capture in out.parents:
         raise ValueError("qualification output must be new and outside the source bundle")
     if not all(np.isfinite(x) and x >= 0 for x in (rtol, atol)):
         raise ValueError("comparison tolerances must be finite and nonnegative")
+    if comparison not in ("values", "words") or comparison == "words" and (rtol or atol):
+        raise ValueError("word comparison requires zero tolerances and a known comparison policy")
     receipt = verify_bundle(capture)
     if receipt["schema"] != "t2m.bound-model-receipt.v1":
         raise ValueError("this whole-model execution edge requires a bound model package")
@@ -246,7 +256,7 @@ def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0,
     run_worker("stage", root, out, [capture], python)
     run_worker("build", root, out, [capture / "inputs.npz", json.dumps(sorted(set(features) | {"reuse_loop_tensor_destinations"}))], python)
     run_worker("run", root, out, [], python)
-    evaluation = compare(capture, out, rtol, atol)
+    evaluation = compare(capture, out, rtol, atol, comparison=comparison)
     if verify_bundle(capture) != receipt or pin(capture / "capture_receipt.json") != original:
         raise ValueError("source model changed during target qualification")
     write_json(out / "evaluation.json", evaluation)
@@ -318,7 +328,7 @@ def verify(out, *, merlin_root, python=sys.executable):
     evaluation = report["evaluation"]
     if json.loads((out / "evaluation.json").read_text()) != evaluation:
         raise ValueError("inconsistent target evaluation record")
-    if compare(capture, out, evaluation["rtol"], evaluation["atol"]) != evaluation:
+    if compare(capture, out, evaluation["rtol"], evaluation["atol"], comparison=evaluation.get("comparison", "values")) != evaluation:
         raise ValueError("target comparison evidence differs from complete result references")
     return report
 
@@ -336,6 +346,8 @@ def main():
     parser.add_argument("--feature", action="append", default=[])
     parser.add_argument("--rtol", type=float, default=0)
     parser.add_argument("--atol", type=float, default=0)
+    parser.add_argument("--comparison", choices=("values", "words"), default="values",
+        help="reference policy for a new qualification; words retains every bit including NaN payloads")
     parser.add_argument("--verify", action="store_true")
     args = parser.parse_args()
     if args.verify:
@@ -346,7 +358,7 @@ def main():
         if args.capture is None or args.merlin_root is None:
             parser.error("--capture and --merlin-root are required for execution")
         report = qualify(args.capture, args.out, merlin_root=args.merlin_root, python=args.python,
-            rtol=args.rtol, atol=args.atol, features=args.feature)
+            rtol=args.rtol, atol=args.atol, features=args.feature, comparison=args.comparison)
     print(json.dumps({"schema": report["schema"], "status": report["status"], "evaluation": report["evaluation"]}))
 
 

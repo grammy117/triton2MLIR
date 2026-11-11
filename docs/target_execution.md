@@ -38,8 +38,23 @@ descriptor-state results and all three results of mixed-storage RMW64/CAS16.
 The latter exposed an order-dependent atomic preparation marker in the ordinary
 scalar pipeline. Destination reuse now precedes the complete atomic/ownership
 suffix in either feature application order. Byte-backed atomic recurrences
-remain refused by the target route's lifetime check pending their separate fix;
-their successful native host models do not qualify that target behavior.
+also qualify after preserving source execute-region attributes through the
+consumer's custom reader. Four actual byte-backed models retain selected roots,
+while-carried old values, learned state and all seven results, including empty
+domains. RMW32/RMW64 and CAS16/CAS32 keep one indivisible word event and their
+original byte representation; the lifetime and ownership gates remain enabled.
+
+The eight state-model integrations compare all 51 results bit for bit and
+recheck original input bytes. Their retained test receipts live under
+`.scratch/pytest-spike-state-words/test_complete_model_executes_a*/target/`.
+These extend the measured compositions; they do not establish general external
+participant, synchronization, physical-address or target coverage.
+The original integer tuple models and lifted-BF16 contraction also pass the
+same strict policy, bringing this selection to eleven models and 64 complete
+results. The BF16 consumer feature now supplies its upstream cast-expansion
+prerequisite in the ordinary default pipeline as well as the explicit host path.
+The local aggregate `out/spike-state-models/summary.json` pins these eleven
+reverified qualification receipts and records the remaining coverage limits.
 
 ## Reproduce with existing tools
 
@@ -54,7 +69,7 @@ python scripts/qualify_spike_model.py \
   --capture out/source-assembly-learned-i64 \
   --out out/spike-model-i64 \
   --merlin-root /path/to/merlin \
-  --python /path/to/merlin-env/bin/python
+  --python /path/to/merlin-env/bin/python --comparison words
 python scripts/qualify_spike_model.py --verify \
   --out out/spike-model-i64 \
   --merlin-root /path/to/merlin \
@@ -97,10 +112,14 @@ source-assembly and lifted-constant model tests document how to produce inputs.
    outputs and metrics. Every original argument is observed readonly after
    forward and before state commit. This checks end-of-call bytes; it supplies
    no proof about transient writes or synchronization with external agents.
-6. Compare every result outside compilation. Integer values compare exactly,
-   including values beyond F64's exact range; floating results use explicit
-   tolerances (zero by default) and the existing NaN policy. BF16 retains raw
-   source-word archive storage. Empty tensors retain their original shapes.
+6. Compare every result outside compilation. The default `values` policy keeps
+   exact integers, including values beyond F64's exact range, and floating
+   tolerances (zero by default) with the existing NaN policy. Explicit
+   `--comparison words` requires zero tolerances and retains every output bit,
+   including signed zeros and NaN payloads. Use it for exact storage/state
+   profiles. BF16 retains raw source-word archive storage. Empty tensors keep
+   their original shapes. No reference policy changes compilation or source
+   numeric permissions.
 7. Publish `t2m.spike-model-qualification.v1` only after all gates pass. Pin the
    source receipt, compiler projection, tools, relevant consumer sources, ELF,
    raw output, observer records, output archive and references. A complete
@@ -113,6 +132,11 @@ and readonly-input payloads with valid recomputed checksums and updated outer
 pins; both must still refuse. Injected evaluator data in compiler staging also
 refuses. Full readback uses the additive zero-element `OUT_BIN v1` extension;
 older positive-only readers reject those frames.
+
+The v1 qualification's additive evaluation field `comparison: words` records
+the stricter policy. Existing receipts without it retain their original value
+comparison; verification never silently upgrades historical evidence. Older
+readers that do not implement the stricter field refuse these qualifications.
 
 ## Remaining target work
 

@@ -120,9 +120,17 @@ for these models; broad target, numeric/effect and runtime coverage remains open
 Source-derived consumer capability selection now serves both native host and
 target workers. Mapped-memory fourteen-result, descriptor-state and mixed
 integer/floating RMW64/CAS16 models also pass on Spike after fixing the default
-atomic/destination pipeline composition. Byte-backed recurrence models still
-expose a default-target lifetime failure; retain that refusal until the actual
-storage schedule is fixed. Native host success supplies no target permission.
+atomic/destination pipeline composition. The byte-backed recurrence lifetime
+failure was traced to dropped execute-region attributes in the custom reader.
+Preserving original `no_inline` and provenance closes that failure with all
+ownership/lifetime gates retained. Four byte-backed RMW/CAS models additionally
+execute through Spike with all seven results each. The eight state-model
+integrations compare all 51 results as exact words and reject changed wire/input
+observations. Broader effect, ABI and applicable target scope remains open.
+The prior tuple/contraction target cases also pass exact words: eleven models
+now cover 64 complete results. The default BF16 transport feature includes its
+upstream arithmetic cast expansion rather than depending on an adapter-only
+pipeline. Remaining numeric contracts and target scope stay unqualified.
 
 ## Required evidence for every supported form
 

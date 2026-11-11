@@ -65,6 +65,22 @@ def test_invalid_policy_cannot_qualify_even_empty_outputs(tmp_path, rtol, atol):
         Q.compare(tmp_path / "source", tmp_path / "result", rtol, atol)
 
 
+def test_word_policy_retains_nan_payload_and_signed_zero(tmp_path, monkeypatch):
+    (tmp_path / "compiler").mkdir()
+    Q.write_json(tmp_path / "compiler/signature.json", {"outputs": [{"dtype": "f64", "shape": [2]}]})
+    expected = np.array([0x7FF8000000000123, 0x8000000000000000], dtype=np.uint64).view(np.float64)
+    changed = np.array([0x7FF8000000000124, 0], dtype=np.uint64).view(np.float64)
+    monkeypatch.setattr(Q, "references", lambda _source: ([expected], {}))
+    np.savez(tmp_path / "outputs.npz", out0=changed)
+    assert Q.compare(tmp_path, tmp_path, 0, 0)["reference_comparison"] == "passed"
+    with pytest.raises(ValueError, match="exact reference words"):
+        Q.compare(tmp_path, tmp_path, 0, 0, comparison="words")
+    np.savez(tmp_path / "outputs.npz", out0=expected)
+    assert Q.compare(tmp_path, tmp_path, 0, 0, comparison="words")["comparison"] == "words"
+    with pytest.raises(ValueError, match="zero tolerances"):
+        Q.compare(tmp_path, tmp_path, 0.1, 0, comparison="words")
+
+
 def _change_frame(raw, name):
     start = raw.index(f"OUT_BIN_BEGIN v1 {name} ".encode())
     payload_start = raw.index(b"\n", start) + 1
@@ -89,8 +105,9 @@ TOOLS = all(os.environ.get(name) for name in ("T2M_MERLIN_ROOT", "T2M_MERLIN_PYT
 def test_complete_model_executes_and_retained_wire_is_independently_checked(tmp_path, capture):
     options = {"merlin_root": os.environ["T2M_MERLIN_ROOT"], "python": os.environ["T2M_MERLIN_PYTHON"]}
     target = tmp_path / "target"
-    report = Q.qualify(capture, target, **options)
+    report = Q.qualify(capture, target, comparison="words", **options)
     assert report["status"] == "passed"
+    assert report["evaluation"]["comparison"] == "words"
     expected, _ = Q.references(capture)
     with np.load(target / "outputs.npz", allow_pickle=False) as actual:
         assert set(actual.files) == {f"out{i}" for i in range(len(expected))}

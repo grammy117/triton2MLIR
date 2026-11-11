@@ -5,6 +5,12 @@ complete models through actual Merlin RISC-V images and Spike. The public
 qualification driver retains every result, source parameter and runtime input
 observation. Empty tensor results and mixed BF16/F32 contractions exposed general
 consumer reader/readback fixes; broader target coverage remains open.
+Selected descriptor/map state and mixed/byte-backed RMW/CAS models now also
+execute through the ordinary target pipeline. All 51 results in eight state
+models pass exact-word comparison. Retained execute-region provenance and
+boundaries preserve the source snapshot and native lifetime checks.
+Together with the integer tuple and BF16 contraction cases, eleven complete
+models now qualify all 64 results bit for bit on this functional CPU path.
 
 [Source assembly implementations](docs/source_assembly.md) additionally provide
 an explicit optional source-language boundary. Checked integer snippets become
