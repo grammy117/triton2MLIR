@@ -45,6 +45,12 @@ with runtime offsets, shared updates and one returned root. The generic
 `shared-tensor --allocation-bindings` route records its signature/source differences;
 undeclared writable overlaps still refuse.
 
+[Typed allocation aliases](docs/allocation_word_views.md) now bind equal-width
+f16/BF16/f32/f64 and integer source arguments to one owning root, with actual
+read-after-write state through Merlin. Differently typed descriptors and a
+complete model2MLIR tuple capture use that same executable binding path.
+Different-width byte aliases retain a [source-backed implementation plan](docs/byte_aliases.md).
+
 [Dense model tensor views](docs/model_tensor_views.md) now bind matrix values
 to those roots with explicit standard reshapes. Actual i64 and f32/f16/BF16
 model captures retain shared updates, learned state, tiling and all results

@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Typed allocation aliases](allocation_word_views.md) now qualify distinct
+integer/floating source arguments over one owning root: eight actual libraries
+cover i16/f16, i16/BF16, i32/f32 and i64/f64 with both storage choices, retaining
+uncomputed NaN/signed-zero/subnormal words, partial offsets and read-after-write
+recurrences. Each library replays six valid cases and three actual guard failures.
+A mixed-descriptor library adds four replays; the public CLI qualifies through
+Merlin. Forty-eight focused and thirteen model/allocation regression checks pass,
+including a real model2MLIR capture with learned weights and every tuple result.
+Different-width byte aliases retain their own [implementation gates](byte_aliases.md).
+
 [Descriptor allocation state](descriptor_state.md) now binds runtime origins,
 shared writable roots and original i32-to-i64 field extensions before upstream
 inlining. Twenty-five focused checks cover three i64/f32/BF16 libraries, eight

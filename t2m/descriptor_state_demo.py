@@ -9,21 +9,27 @@ from .scalar_abi import RuntimeScalar
 from .shared_tensor import TensorABI, TensorBuffer
 
 
-def convert(work, *, dtype="i64", optimizer=None):
+def convert(work, *, dtype="i64", optimizer=None, word_views=False):
     from .examples.descriptor_state_kernels import descriptor_state_updates
 
-    if dtype not in ("i64", "f32", "bf16"):
+    if word_views:
+        from .examples.allocation_word_kernels import descriptor_word_updates
+
+        if dtype != "i32":
+            raise ValueError("descriptor word demo requires i32 owning storage")
+        descriptor_state_updates = descriptor_word_updates
+    elif dtype not in ("i64", "f32", "bf16"):
         raise ValueError("descriptor state demo requires i64, f32 or BF16 storage")
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
-    ptr = {"i64": "i64", "f32": "fp32", "bf16": "bf16"}[dtype]
+    ptr = {"i64": "i64", "i32": "i32", "f32": "fp32", "bf16": "bf16"}[dtype]
     descriptor = f"tensordesc<{ptr}[2,16]>"
     source = work / "source.ttir"
     source.write_text(
         capture_ttir(
             descriptor_state_updates,
             {
-                "first": descriptor,
+                "first": "tensordesc<fp32[2,16]>" if word_views else descriptor,
                 "second": descriptor,
                 **{name: "i32" for name in ("m", "n", "steps", "capacity")},
             },

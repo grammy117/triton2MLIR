@@ -90,6 +90,12 @@ argument configuration and source-only fingerprints in a
 The descriptive binding table records both hashes without granting semantics.
 Existing ABI/receipt schemas and compiler/evaluator separation remain unchanged;
 compatibility metadata records the source/signature difference.
+Equal-width byte-aligned pointer types may share one declared root. Executable
+wrapper casts preserve the original source signatures before inlining; register
+word views retain one state and the original public storage type. The source
+binding table records both types explicitly. This adds no ABI/receipt schema,
+byte-order choice, different-width alias or physical-pointer permission; see
+[typed allocation aliases](allocation_word_views.md).
 External descriptors use source-argument configuration v2 to bind shared roots,
 runtime origins and actual native logical fields before helper inlining.
 This adds an explicit compiler artifact roster, with independent Merlin validation,

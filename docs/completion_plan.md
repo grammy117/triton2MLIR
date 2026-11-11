@@ -91,6 +91,16 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Equal-width typed source arguments now bind one owning allocation before
+native inlining, with actual pointer casts and unchanged source-word offsets.
+Eight i16/f16, i16/BF16, i32/f32 and i64/f64 libraries retain current shared
+state, exact uncomputed NaN words, masks, tails and for/while recurrences.
+The final focused suite passes 48 checks; a real model2MLIR tuple capture and
+twelve legacy allocation/model cases additionally pass thirteen regressions.
+Mixed descriptor element types use that same root path. See
+[typed aliases](allocation_word_views.md) and the concrete
+[different-width byte-alias implementation plan](byte_aliases.md).
+
 External descriptor allocation bindings now retain runtime origins, shared
 writable roots and executable signed shape extensions before upstream inlining.
 Three i64/f32/BF16 libraries preserve tiled snapshots, recurrences and untouched
@@ -139,7 +149,7 @@ Continue toward the full objective in this order, completing each vertical
 slice through the actual consumer rather than accepting opaque coverage:
 
 1. Extend the now-executable descriptor/root/model path to physical model
-   views/state, mixed-type/byte aliases and independently strided contraction
+   views/state, different-width byte aliases and independently strided contraction
    accumulators. Preserve source custody, original recurrences and guard gates.
 2. Close remaining numeric/effect combinations against the pinned TTIR types
    and attributes, retaining source recurrences, rounding and synchronization.

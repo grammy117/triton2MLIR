@@ -22,7 +22,8 @@ This extension requires equal **bit** widths and byte-aligned scalar types.
 That is stricter than equal storage bytes: i1/i8 representations require further
 padding-bit semantics. Differing element widths need explicit address rescaling,
 byte-range bounds and overlap/alias reasoning. Explicit address-space changes
-and selected roots with different storage element types remain located refusals.
+remain located refusals. Selected roots retain their own equal-width storage
+types at each original memory event.
 The pinned unregistered TT pointer binding exposes its type parameter body;
 that parameter is parsed with the existing typed parser and checked against the
 supported scalar ABI. No operation semantics are recovered from printed IR lines.
@@ -53,6 +54,11 @@ The existing mixed standard-memory payload and public tensor/scalar interface
 are unchanged; this is not a claim of pure tensor memory or accelerator execution.
 
 ## Qualification and atomic extension
+
+[Explicit allocation bindings](allocation_word_views.md) now connect distinct
+typed source arguments to the same root before inlining, including integer and
+floating descriptor parameters. Runtime origins, shared state and all model
+results survive the same register-view conversion and source custody checks.
 
 Native and actual Merlin tests compare raw words for f16/i16, f32/i32 and
 f64/i64 views. They cover scalar storage of arbitrary words, NaNs, signed zeros,

@@ -1,6 +1,6 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
-**Updated 2026-11-10.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-11.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.
@@ -17,7 +17,11 @@ runtime strides/flags, block/indexed state and two-descriptor tiled f32/BF16 GEM
 [Descriptor allocation state](docs/descriptor_state.md) now retains nonzero
 runtime origins and shared writable roots, including a complete model2MLIR
 capture and independently checked portable original-source custody. Physical
-descriptor bytes, mixed-type aliases and applicable target handling remain open.
+descriptor bytes, different-width byte aliases and applicable target handling remain open.
+[Typed allocation aliases](docs/allocation_word_views.md) now retain equal-width
+integer/floating source arguments, descriptors and model calls on one owning
+root through Merlin. A [byte-alias plan](docs/byte_aliases.md) specifies the
+remaining address-unit, guard, atomic and target work from upstream evidence.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;
