@@ -36,6 +36,15 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Standalone runtime target ABI](standalone_target.md) now reuses unchanged
+typed kernel MLIR across dynamic shapes and all seven native scalar types.
+Ten actual Spike images retain eighteen complete exact-word results, including
+empty domains, signaling NaNs and BF16 storage. Runtime descriptor/scalar
+transport is checked separately; each image harness embeds its invocation.
+This finite target selection is additional to the package inventory below.
+General model-view/effect and arbitrary typed/composition/target closure remain
+required.
+
 | Boundary | Established capability | Remaining completion requirement |
 |---|---|---|
 | Frontend and portable dataflow | Real shared conversion, logical grids, structured loops/branches, tiled contractions, reductions/scans and qualified shape/index operations. | Complete types/attributes/compositions and source versions; no generic arbitrary-kernel claim. |

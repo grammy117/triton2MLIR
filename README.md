@@ -1,5 +1,13 @@
 # triton2MLIR
 
+[Standalone dynamic target invocation](docs/standalone_target.md) now reaches
+Merlin's ordinary RISC-V backend with unchanged kernel MLIR and native scalar
+arguments. Ten actual Spike images compare eighteen complete results exactly,
+including empty domains, signaling NaNs and BF16 source words. Changed runtime
+shapes/scalars keep identical kernel-object hashes in the qualified cases;
+each image's harness still embeds its invocation. Full arbitrary-kernel,
+model-view/effect and accelerator coverage remain open.
+
 [Whole-model target execution](docs/target_execution.md) now carries selected
 complete packages through Merlin's ordinary RISC-V build and actual Spike runs.
 i32/i64 learned tuple models retain all six results, including empty values;

@@ -1,5 +1,14 @@
 # Measured coverage and remaining boundaries
 
+[Standalone runtime kernels](standalone_target.md) additionally qualify five
+source cases through ten actual Merlin RISC-V/Spike images, with eighteen
+complete exact-word result comparisons. Dynamic domains, all seven native
+scalar types, exceptional scalar/BF16 words, zero-input programs and grouped
+memory with multiple results pass. Changed invocation values retain identical
+kernel program/object hashes. This separate target selection expands execution
+evidence; it does not change the 106-package registry selection below or imply
+universal type/attribute/kernel/target support.
+
 [Complete source-grouped memory models](grouped_memory.md) now retain learned
 matrix state, dependent calls and original snapshots kept live across mutation.
 Two real i64/f32 captures preserve all fifteen results each through native LLVM,

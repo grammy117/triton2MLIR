@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qualify a bound model through Merlin's ordinary whole-model Spike backend.
+"""Qualify models and standalone kernels through Merlin's ordinary Spike backend.
 
 This explicit execution edge supplies no target cases to TTIR conversion.
 Run with the frontend Python; --python selects the existing Merlin environment.
@@ -72,14 +72,15 @@ def worker(mode, root, out, *arguments):
         from consumer_features import select_features
         manifest = checked_stage(out / "compiler")
         signature = json.loads((out / "compiler/signature.json").read_text())
+        runtime = manifest.get("source_profile") == "standalone-tensor-kernel"
         entries = signature["inputs"] + signature["outputs"]
-        for entry in entries:
+        for entry in (() if runtime else entries):
             shape = entry.get("shape")
             if not isinstance(shape, list) or any(type(d) is not int or d < 0 for d in shape):
                 raise ValueError("whole-model image requires static ranked tensor arguments/results")
-        if sum(math.prod(e["shape"]) * 8 for e in entries) > 64 << 20:
+        if not runtime and sum(math.prod(e["shape"]) * 8 for e in entries) > 64 << 20:
             raise ValueError("whole-model qualification exceeds the 64 MiB value budget")
-        if not signature["inputs"] or not signature["outputs"]:
+        if (not signature["inputs"] and not runtime) or not signature["outputs"]:
             raise ValueError("whole-model qualification needs tensor arguments and results")
         source = (out / "compiler/program.mlir").read_bytes()
         module = parse_mlir_text(source.decode("utf-8"))
@@ -96,7 +97,8 @@ def worker(mode, root, out, *arguments):
         report = spike_model.build(projection, out / "image", inputs_npz=arguments[0],
             backend="scalar", features=features,
             full_readback=True, readonly_input_indices=tuple(range(len(signature["inputs"]))),
-            arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20)
+            arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20,
+            **({"runtime_signature": out / "compiler/signature.json"} if runtime else {}))
         checked_stage(out / "compiler")
         if (projection / "model.mlir").read_bytes() != source:
             raise ValueError("runtime filename projection changed the staged program")
@@ -108,6 +110,7 @@ def worker(mode, root, out, *arguments):
                 "src/merlin/runtime/backends/spike_model.py", "src/merlin/runtime/backends/_model_elf_metadata.py",
                 "src/merlin/runtime/whole_model_readback.py", "src/merlin/runtime/out_bin.py",
                 "src/merlin/runtime/input_observation.py", "src/merlin/llvmlower/c_runtime.py",
+                "src/merlin/llvmlower/runtime_invocation.py",
                 "src/merlin/llvmlower/pipeline.py", "src/merlin/llvmlower/toolchain.py",
                 "src/merlin/frontends/linalg_mlir.py", "src/merlin/frontends/linalg_named_regions.py",
                 "src/merlin/xdsl_dialects/standard_linalg.py",
@@ -118,6 +121,7 @@ def worker(mode, root, out, *arguments):
                 "src/merlin/llvmlower/atomic_integer_regions.py")},
             "dependency_source_closure": "not-established",
             "source_program": pin(out / "compiler/program.mlir"),
+            "runtime_input_path": str(Path(arguments[0]).resolve()),
             "runtime_inputs": pin(arguments[0]), "runtime_inputs_embedded_in_elf": True,
             "runtime_input_consumer": "merlin.llvmlower.c_runtime.generate",
             "compiler_directory_contains_evaluator_data": False,
@@ -143,8 +147,21 @@ def worker(mode, root, out, *arguments):
         else:
             raw = (out / "stdout.bin").read_bytes()
         outputs, metrics, frames = parse_binary_console_details(raw)
-        outputs, frames, observed = verify_observed_inputs(report["readonly_input_observation"], outputs, frames)
-        specs = _out_specs(out / "image-input/model.mlir")
+        if "readonly_input_observation" in report:
+            outputs, frames, observed = verify_observed_inputs(report["readonly_input_observation"], outputs, frames)
+        elif report.get("runtime_invocation_abi", {}).get("inputs") == []:
+            observed = {"arguments": [], "not_required": "source-has-no-inputs"}
+        else:
+            raise ValueError("target run lacks complete original input observations")
+        runtime_abi = report.get("runtime_invocation_abi")
+        if runtime_abi is not None:
+            from merlin.llvmlower.runtime_invocation import resolve
+            expected = resolve(out / "image-input/model.mlir", out / "compiler/signature.json", build["runtime_input_path"])
+            if runtime_abi != expected or json.loads((out / "image/cgen/runtime-abi.json").read_text()) != expected:
+                raise ValueError("runtime ABI does not match original types and actual invocation inputs")
+            specs = [(row["shape"], row["dtype"]) for row in expected["outputs"]]
+        else:
+            specs = _out_specs(out / "image-input/model.mlir")
         arrays = decode_outputs(outputs, frames, specs)
         for i, (_, dtype) in enumerate(specs):
             if dtype == "bf16":
@@ -196,13 +213,32 @@ def run_worker(mode, root, out, arguments, python):
         raise ValueError("whole-model " + mode + " failed: " + stderr[-3000:].decode(errors="replace"))
 
 
-def references(capture):
+def references(capture, override=None):
     from xdsl.dialects import func
     from t2m.model_bundle import _references
     from t2m.shared_tensor import parse_shared
     module = parse_shared((capture / "model.mlir").read_text())
     if any(op.name == "vector.print" for op in module.walk()):
         raise ValueError("numeric model qualification requires a separate reference for source print effects")
+    receipt = json.loads((capture / "capture_receipt.json").read_text())
+    if receipt["schema"] == "t2m.capture-receipt.v2":
+        spec = json.loads((capture / "spec.json").read_text())
+        entries = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == spec["entry"]]
+        if len(entries) != 1 or not entries[0].function_type.outputs:
+            raise ValueError("standalone numeric qualification requires its complete tensor result entry")
+        count = len(entries[0].function_type.outputs)
+        if override is not None:
+            with np.load(override, allow_pickle=False) as archive:
+                if set(archive.files) != {f"out{i}" for i in range(count)}:
+                    raise ValueError("invocation references require every standalone result exactly once")
+                values = [archive[f"out{i}"].copy() for i in range(count)]
+            return values, {"invocation_reference.npz": pin(override)}
+        values = [np.load(capture / "golden.npy", allow_pickle=False)]
+        with np.load(capture / "extra.npz", allow_pickle=False) as extra:
+            if set(extra.files) != {f"out{i}" for i in range(1, count)}:
+                raise ValueError("standalone references do not contain every result exactly once")
+            values.extend(extra[f"out{i}"].copy() for i in range(1, count))
+        return values, {name: pin(capture / name) for name in ("golden.npy", "extra.npz")}
     entries = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
     if len(entries) != 1:
         raise ValueError("expected exactly one model entry")
@@ -223,12 +259,17 @@ def checked_comparison(rtol, atol, comparison, word_results, *, result_count=Non
     return tuple(sorted(word_results))
 
 
-def compare(capture, out, rtol, atol, *, comparison="values", word_results=()):
+def compare(capture, out, rtol, atol, *, comparison="values", word_results=(), reference=None):
     from t2m.tensor_storage import assert_tensor_close
     word_results = checked_comparison(rtol, atol, comparison, word_results)
-    expected, reference_members = references(capture)
+    expected, reference_members = references(capture, reference) if reference is not None else references(capture)
     word_results = checked_comparison(rtol, atol, comparison, word_results, result_count=len(expected))
     signature = json.loads((out / "compiler/signature.json").read_text())
+    build_path = out / "build.json"
+    if build_path.is_file():
+        build = json.loads(build_path.read_text())
+        if "runtime_invocation_abi" in build["build"]:
+            signature["outputs"] = build["build"]["runtime_invocation_abi"]["outputs"]
     with np.load(out / "outputs.npz", allow_pickle=False) as outputs:
         if set(outputs.files) != {f"out{i}" for i in range(len(expected))}:
             raise ValueError("target output archive does not contain every model result")
@@ -249,7 +290,7 @@ def compare(capture, out, rtol, atol, *, comparison="values", word_results=()):
         **({"word_results": list(word_results)} if word_results else {})}
 
 
-def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values", word_results=()):
+def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values", word_results=(), inputs=None, reference=None):
     from t2m.bundle import verify_bundle
     from t2m.model_runtime_inputs import prepare as prepare_runtime_inputs
     capture, out, root = Path(capture).resolve(), Path(out).absolute(), Path(merlin_root).resolve()
@@ -257,24 +298,34 @@ def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0,
         raise ValueError("qualification output must be new and outside the source bundle")
     word_results = checked_comparison(rtol, atol, comparison, word_results)
     receipt = verify_bundle(capture)
-    if receipt["schema"] != "t2m.bound-model-receipt.v1":
-        raise ValueError("this whole-model execution edge requires a bound model package")
-    result_count = len(references(capture)[0])  # Check complete references/effect scope before building.
+    if receipt["schema"] not in {"t2m.bound-model-receipt.v1", "t2m.capture-receipt.v2"}:
+        raise ValueError("target execution requires a bound model or standalone numeric kernel package")
+    kernel = receipt["schema"] == "t2m.capture-receipt.v2"
+    if (inputs is None) != (reference is None) or inputs is not None and not kernel:
+        raise ValueError("changed target invocation requires standalone inputs and complete references together")
+    invocation = None
+    if inputs is not None:
+        inputs, reference = Path(inputs).absolute(), Path(reference).absolute()
+        if any(path.is_symlink() or not path.is_file() for path in (inputs, reference)):
+            raise ValueError("invocation archives must be direct regular files")
+        invocation = {key: {"path": str(path.resolve()), **pin(path)} for key, path in (("inputs", inputs), ("reference", reference))}
+    result_count = len(references(capture, reference)[0])  # Check complete references/effect scope before building.
     word_results = checked_comparison(rtol, atol, comparison, word_results, result_count=result_count)
     original = pin(capture / "capture_receipt.json")
     out.mkdir(parents=True, exist_ok=False)
     (out / "input-receipt.json").write_bytes((capture / "capture_receipt.json").read_bytes())
     run_worker("stage", root, out, [capture], python)
-    runtime_inputs = prepare_runtime_inputs(capture, out, json.loads((out / "compiler/signature.json").read_text()))
+    runtime_inputs = (inputs or capture / "inputs.npz") if kernel else prepare_runtime_inputs(capture, out, json.loads((out / "compiler/signature.json").read_text()))
     run_worker("build", root, out, [runtime_inputs, json.dumps(sorted(set(features) | {"reuse_loop_tensor_destinations"}))], python)
     run_worker("run", root, out, [], python)
-    evaluation = compare(capture, out, rtol, atol, comparison=comparison, word_results=word_results)
+    evaluation = compare(capture, out, rtol, atol, comparison=comparison, word_results=word_results, reference=reference)
     if verify_bundle(capture) != receipt or pin(capture / "capture_receipt.json") != original:
         raise ValueError("source model changed during target qualification")
     write_json(out / "evaluation.json", evaluation)
-    report = {"schema": "t2m.spike-model-qualification.v1", "source_directory": str(capture),
-        "source_receipt": original, "execution_scope": "functional-riscv-whole-model",
+    report = {"schema": "t2m.spike-kernel-qualification.v1" if kernel else "t2m.spike-model-qualification.v1", "source_directory": str(capture),
+        "source_receipt": original, "execution_scope": "functional-riscv-standalone-kernel" if kernel else "functional-riscv-whole-model",
         "status": "passed", "evaluation": evaluation,
+        **({"invocation": invocation} if invocation is not None else {}),
         "artifacts": {str(p.relative_to(out)): pin(p) for p in sorted(out.rglob("*")) if p.is_file()}}
     write_json(out / "qualification.json", report)
     try:
@@ -290,8 +341,9 @@ def verify(out, *, merlin_root, python=sys.executable):
     from t2m.model_runtime_inputs import ARCHIVE, RECORD, verify as verify_runtime_inputs
     out = Path(out)
     report = json.loads((out / "qualification.json").read_text())
-    if (report.get("schema") != "t2m.spike-model-qualification.v1" or report.get("status") != "passed"
-            or report.get("execution_scope") != "functional-riscv-whole-model"):
+    kernel = report.get("schema") == "t2m.spike-kernel-qualification.v1"
+    if (report.get("schema") not in {"t2m.spike-model-qualification.v1", "t2m.spike-kernel-qualification.v1"} or report.get("status") != "passed"
+            or report.get("execution_scope") != ("functional-riscv-standalone-kernel" if kernel else "functional-riscv-whole-model")):
         raise ValueError("not a completed whole-model target qualification")
     required = {"input-receipt.json", "compiler/compile-inputs.json", "compiler/program.mlir", "compiler/signature.json",
         "image-input/model.mlir", "image/model.elf", "build.json", "run.json", "stdout.bin", "outputs.npz", "evaluation.json"}
@@ -304,7 +356,9 @@ def verify(out, *, merlin_root, python=sys.executable):
         if any(out.joinpath(*relative.parts[:i]).is_symlink() for i in range(len(relative.parts) + 1)) or pin(out / name) != value:
             raise ValueError("target evidence changed: " + name)
     capture = Path(report["source_directory"])
-    verify_bundle(capture)
+    source_receipt = verify_bundle(capture)
+    if source_receipt["schema"] != ("t2m.capture-receipt.v2" if kernel else "t2m.bound-model-receipt.v1"):
+        raise ValueError("target qualification profile differs from its source package")
     if pin(capture / "capture_receipt.json") != report["source_receipt"] or pin(out / "input-receipt.json") != report["source_receipt"]:
         raise ValueError("target evidence does not bind the unchanged source receipt")
     stage = checked_stage(out / "compiler")
@@ -320,7 +374,21 @@ def verify(out, *, merlin_root, python=sys.executable):
     signature = json.loads((out / "compiler/signature.json").read_text())
     if any((out / name).exists() and name not in report["artifacts"] for name in (ARCHIVE, RECORD)):
         raise ValueError("runtime input projection is not bound by the qualification")
-    runtime_inputs = verify_runtime_inputs(capture, out, signature)
+    invocation, reference = report.get("invocation"), None
+    if invocation is not None:
+        if not kernel or not isinstance(invocation, dict) or set(invocation) != {"inputs", "reference"}:
+            raise ValueError("changed invocation requires a complete standalone archive binding")
+        for key, record in invocation.items():
+            path = Path(record["path"])
+            if not path.is_absolute() or path.is_symlink() or pin(path) != {k: record[k] for k in ("bytes", "sha256")}:
+                raise ValueError("changed invocation archive differs from its original binding")
+        reference = Path(invocation["reference"]["path"])
+    runtime_inputs = (Path(invocation["inputs"]["path"]) if invocation else capture / "inputs.npz") if kernel else verify_runtime_inputs(capture, out, signature)
+    if kernel and (any((out / name).exists() for name in (ARCHIVE, RECORD))
+            or build.get("runtime_input_path") != str(runtime_inputs.resolve())
+            or "runtime_invocation_abi" not in build["build"]
+            or stage.get("source_profile") != "standalone-tensor-kernel"):
+        raise ValueError("standalone runtime ABI does not bind original invocation storage")
     if (run.get("execution") != "passed" or run["elf"] != pin(out / "image/model.elf")
             or run["stdout"] != pin(out / "stdout.bin") or run["outputs"] != pin(out / "outputs.npz")
             or build["source_program"] != pin(out / "compiler/program.mlir")
@@ -345,7 +413,7 @@ def verify(out, *, merlin_root, python=sys.executable):
     if json.loads((out / "evaluation.json").read_text()) != evaluation:
         raise ValueError("inconsistent target evaluation record")
     if compare(capture, out, evaluation["rtol"], evaluation["atol"], comparison=evaluation.get("comparison", "values"),
-            word_results=evaluation.get("word_results", ())) != evaluation:
+            word_results=evaluation.get("word_results", ()), reference=reference) != evaluation:
         raise ValueError("target comparison evidence differs from complete result references")
     return report
 
@@ -357,6 +425,8 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture", type=Path)
+    parser.add_argument("--inputs", type=Path, help="changed standalone runtime argument archive; requires --reference")
+    parser.add_argument("--reference", type=Path, help="independent complete result archive for changed standalone inputs")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--merlin-root", type=Path)
     parser.add_argument("--python", type=Path, default=Path(sys.executable))
@@ -377,7 +447,8 @@ def main():
         if args.capture is None or args.merlin_root is None:
             parser.error("--capture and --merlin-root are required for execution")
         report = qualify(args.capture, args.out, merlin_root=args.merlin_root, python=args.python,
-            rtol=args.rtol, atol=args.atol, features=args.feature, comparison=args.comparison, word_results=args.word_result)
+            rtol=args.rtol, atol=args.atol, features=args.feature, comparison=args.comparison, word_results=args.word_result,
+            inputs=args.inputs, reference=args.reference)
     print(json.dumps({"schema": report["schema"], "status": report["status"], "evaluation": report["evaluation"]}))
 
 

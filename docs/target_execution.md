@@ -1,5 +1,12 @@
 # Functional whole-model target execution
 
+[Standalone runtime kernels](standalone_target.md) additionally use this driver
+with dynamic tensor dimensions and native scalar arguments. Ten target images
+retain eighteen complete result tensors, including zero-input/empty cases and
+exact scalar/BF16 words. Changed invocations preserve kernel program/object
+hashes; their harness images remain invocation-specific. The static public
+model requirements below apply to the bound-model route.
+
 `scripts/qualify_spike_model.py` carries an existing bound model package through
 Merlin's ordinary whole-model RISC-V backend and actual Spike execution. This
 is an explicit execution edge outside TTIR conversion. Portable source MLIR,
@@ -157,9 +164,11 @@ source-assembly and lifted-constant model tests document how to produce inputs.
 ## Boundaries and evidence
 
 1. Verify the complete immutable source bundle and independent model result
-   roster. The current execution edge requires `t2m.bound-model-receipt.v1` and
-   a static ranked tensor public model ABI. Dynamic kernel scalars already
-   specialized by model binding retain that source contract.
+   roster. The bound-model edge requires `t2m.bound-model-receipt.v1` and a
+   static ranked tensor public model ABI. Dynamic kernel scalars already
+   specialized by model binding retain that source contract. The standalone
+   `t2m.capture-receipt.v2` edge instead checks its actual runtime signature;
+   see [the runtime ABI and qualification differences](standalone_target.md).
 2. Call Merlin's actual `stage_compile_inputs`. Its directory contains no
    runtime input/reference archives or their individual digests. Reopen every
    declared member and reject undeclared files or symlinks.

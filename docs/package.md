@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Standalone target invocation](standalone_target.md) adds the separate external
+`t2m.spike-kernel-qualification.v1` receipt, with unchanged source capture/ABI
+schemas. Optional paired input/reference archives bind a new invocation outside
+compiler staging. Merlin's `merlin.runtime-invocation-abi.v1` records checked
+runtime dimensions and exact native scalar words without rewriting MLIR.
+Private scalar descriptors are C-harness storage only; the actual C interface
+passes native typed values. Each image embeds invocation values; selected cases
+retain identical kernel program/object hashes across changed inputs. Bound
+models retain their existing separate receipt and public ABI. Older consumers
+without the runtime-signature/exact-scalar APIs cannot qualify this route.
+
 [Functional RISC-V model qualification](target_execution.md) adds an external
 `t2m.spike-model-qualification.v1` receipt, leaving the source bundle unchanged.
 Compiler staging excludes evaluator archives. Original runtime input values are

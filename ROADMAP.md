@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Standalone runtime target ABI](docs/standalone_target.md) now carries dynamic
+tensors and all seven native scalar types through actual Merlin/Spike images.
+Ten target invocations retain eighteen complete exact-word results. Changed
+shapes/scalars preserve the kernel program/object; runtime metadata and each
+image harness bind their particular invocation separately. This closes the
+previous static-model-only target entry gap for the qualified forms; general
+model views, effects, typed compositions and target coverage remain open.
+
 [Functional target execution](docs/target_execution.md) now qualifies selected
 complete models through actual Merlin RISC-V images and Spike. The public
 qualification driver retains every result, source parameter and runtime input

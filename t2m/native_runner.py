@@ -296,7 +296,10 @@ def main(work):
             if isinstance(type_, ir.RankedTensorType):
                 packed.append(ctypes.pointer(ctypes.pointer(runtime.get_ranked_memref_descriptor(array))))
             else:
-                packed.append(ctypes.pointer(SCALAR_CTYPES[str(type_)](array.item())))
+                raw = array.tobytes()
+                if str(type_) == "i1" and raw not in (b"\x00", b"\x01"):
+                    raise ValueError("native Boolean scalar requires canonical source storage")
+                packed.append(ctypes.pointer(SCALAR_CTYPES[str(type_)].from_buffer_copy(raw)))
         packed.extend(ctypes.pointer(ctypes.pointer(runtime.get_ranked_memref_descriptor(a))) for a in outputs)
         observed = not signature.results or (work / "observe-config.json").is_file()
         if observed:

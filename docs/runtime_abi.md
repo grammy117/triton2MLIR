@@ -1,5 +1,13 @@
 # Runtime scalars and the remaining dynamic ABI
 
+[Standalone target invocation](standalone_target.md) now carries dynamic
+tensors and native i1/i8/i16/i32/i64/f32/f64 arguments through actual Merlin
+RISC-V images and Spike. Exact scalar storage preserves signaling NaNs and wide
+integers in native/host invocation too. Changed shapes/scalars keep the same
+kernel MLIR and compiled object in the qualified cases; each target harness
+still embeds its particular invocation. General model-view/effect/target ABI
+coverage remains open.
+
 `t2m.shared-tensor-abi.v3` extends the standalone functional profile with plain
 runtime scalar inputs. Each declaration has exactly `name`, `dtype` and
 `source_arg` (its zero-based TTIR argument position). This supports interleaved
@@ -43,9 +51,9 @@ behavior. A complete package continues to use `t2m.capture-receipt.v2`; ABI v3 i
 an explicit signature extension, not a relabeled Torch capture. Native and
 Merlin host checks cover f32/f64/i32 payload values and runtime i1 source branches,
 interleaved arguments, tails, integer wrapping and changed invocation values.
-Supported scalar declarations also include i8/i16/i64; their broader operation/
-composition matrix still needs qualification. This is not universal numeric or
-target certification.
+All seven declared scalar types now have exact native/host/target word
+qualification; their broader operation/composition matrix remains open.
+This is not universal numeric or target certification.
 
 `invoke-merlin` now reuses a verified native library with new typed argument and
 reference archives. It runs only the evaluator worker, needs no compiler, and

@@ -177,7 +177,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
         if invocation:
             for output in outputs:
                 output.fill(np.nan if np.issubdtype(output.dtype, np.floating) else 85)
-        invocation_args = [ScalarArg(array.item(), declared["dtype"]) if declared.get("kind") == "scalar"
+        invocation_args = [ScalarArg.from_storage(array.tobytes(), declared["dtype"]) if declared.get("kind") == "scalar"
                            else (array.ctypes.data, array.shape) for array, declared in zip(arrays, signature["inputs"], strict=True)]
         model([*invocation_args, *[(a.ctypes.data, a.shape) for a in outputs]])
         if any(array.tobytes() != original for array, original in zip(arrays, before, strict=True)):
