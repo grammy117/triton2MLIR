@@ -86,8 +86,10 @@ def arguments_as_dict(source_entry, bindings):
             "source_entry": source_entry, "arguments": records}
 
 
-def bind_module(module, source_entry, abi, bindings):
+def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
     """Return a cloned source module with an explicit public allocation entry."""
+    if byte_order is not None and byte_order not in ("little", "big"):
+        raise ValueError("byte-buffer bindings require explicit little or big byte order")
     module = module.clone()
     functions = list(module.ops)
     if any(opcode(op) != "tt.func" for op in functions):
@@ -107,7 +109,7 @@ def bind_module(module, source_entry, abi, bindings):
     roots = {buffer.name:buffer for buffer in abi.buffers}
     scalars = {scalar.name:scalar for scalar in abi.runtime_scalars}
     from .ir import context
-    from .pointer_views import compatible
+    from .pointer_views import byte_compatible, compatible
     ctx = context()
     ctx.allow_unregistered = True
     pointer_types = {name: SharedParser(ctx, f"!tt.ptr<{root.dtype}>").parse_type()
@@ -121,7 +123,8 @@ def bind_module(module, source_entry, abi, bindings):
                 raise ConversionError("source pointer binding requires a declared allocation")
             storage_type = pointer_types[root.name]
             viewed = str(arg.type) != str(storage_type)
-            if viewed and (isinstance(arg.type, builtin.TensorType) or not compatible(arg.type, storage_type)):
+            byte_view = (viewed and byte_order is not None and byte_compatible(arg.type, storage_type))
+            if viewed and (isinstance(arg.type, builtin.TensorType) or not compatible(arg.type, storage_type) and not byte_view):
                 raise ConversionError("source pointer binding requires the same element type or an equal byte-aligned word view")
             if type(binding.offset) is int:
                 if not -(2**63) <= binding.offset < 2**63:
@@ -132,7 +135,8 @@ def bind_module(module, source_entry, abi, bindings):
             used_roots.add(root.name)
             records.append({"kind":"pointer",**asdict(binding), **({
                 "source_type": str(arg.type), "storage_type": str(storage_type),
-                "representation": "equal-width-word-view-v1"} if viewed else {})})
+                "representation": "byte-buffer-view-v1" if byte_view else "equal-width-word-view-v1",
+                **({"byte_order": byte_order} if byte_view else {})} if viewed else {})})
         elif isinstance(binding,ScalarArgument):
             scalar = scalars.get(binding.name)
             if scalar is None or arg.type != scalar.type:
@@ -244,7 +248,7 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     module = parse_shared(generic)
     from .descriptor_bindings import expand
     flat, descriptor_bindings = expand(bindings, intake.get("descriptor_argument_expansion") if intake else None, source_entry, abi)
-    module,report = bind_module(module,source_entry,abi,flat)
+    module,report = bind_module(module,source_entry,abi,flat,byte_order=options.get("byte_order"))
     stream = StringIO()
     Printer(stream=stream,print_generic_format=True,print_debuginfo=True).print_op(module)
     bound = work / "bound.ttir"

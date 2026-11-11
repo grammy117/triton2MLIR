@@ -42,6 +42,14 @@ def compatible(left, right):
         return False
 
 
+def byte_compatible(view, storage):
+    """A logical wide scalar view of an actual i8 allocation root."""
+    try:
+        return element(storage) == builtin.i8 and element(view).bitwidth in (16, 32, 64)
+    except (ValueError, ParseError):
+        return False
+
+
 def lower_memory_view(op, view, storage, fill=None):
     """Use actual storage at one ordinary event and return its logical value."""
     from .shared_tensor import opcode

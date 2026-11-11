@@ -41,6 +41,16 @@ atomic requirements. This finite matrix does not prove arbitrary-kernel coverage
 
 ## Reuse the existing analyses at an explicit boundary
 
+Original wide pointer and external descriptor parameters may also bind a
+declared i8 root through `convert_allocations(..., byte_order="big")` or its
+little-endian form. Wrapper origins are byte offsets before real pointer casts;
+descriptor element strides keep their original pointee units. The original
+v1/v2 source-argument configuration remains unchanged, with the representation
+choice explicit on conversion. `byte-buffer-view-v1` records both pointer types
+and byte order in source custody. Two actual Merlin libraries retain partial
+and unaligned origins, shared state and empty domains; one uses the actual
+native external-descriptor expansion. Default bindings retain their width gate.
+
 Meta triton-shared `17f0c234ce474bee334af36e351c62eca7852836` rejects
 different-stride pointer bitcasts in `TritonToUnstructuredPass.cpp` and
 `bitcast_ptr_unstructured_invalid.mlir`: element offsets cannot simply survive

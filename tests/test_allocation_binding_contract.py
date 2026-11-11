@@ -68,6 +68,21 @@ def test_equal_width_source_views_use_one_root_before_offset_and_bitcast():
     assert report["bindings"][0]["representation"] == "equal-width-word-view-v1"
 
 
+def test_explicit_byte_root_binding_keeps_byte_origins_before_wide_casts():
+    module, abi, bindings = case()
+    abi = replace(abi, buffers=(replace(abi.buffers[0], dtype="i8"),))
+    result, report = bind_module(module, "source", abi, bindings, byte_order="big")
+    wrapper = next(iter(result.ops))
+    assert str(wrapper.regions[0].block.args[0].type) == "!tt.ptr<i8>"
+    call = next(op for op in wrapper.walk() if opcode(op) == "tt.call")
+    offset = call.operands[1].owner.operands[0]
+    assert opcode(offset.owner) == "tt.addptr" and str(offset.type) == "!tt.ptr<i8>"
+    assert report["bindings"][0]["representation"] == "byte-buffer-view-v1"
+    assert report["bindings"][0]["byte_order"] == "big"
+    with pytest.raises(ConversionError, match="same element type"):
+        bind_module(module, "source", abi, bindings)
+
+
 @pytest.mark.parametrize("source_type", ("tensor<2x!tt.ptr<i64>>", "!tt.ptr<i64, 3>", "!tt.ptr<i1>"))
 def test_alias_binding_does_not_grant_tensor_pointer_address_space_or_padding_views(source_type):
     from t2m.shared_tensor import parse_shared

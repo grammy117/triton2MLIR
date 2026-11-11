@@ -1,10 +1,12 @@
-"""Expose pointer state as logical bases and signed i64 element offsets.
+"""Expose pointer state as logical bases and signed i64 offsets.
 
 Meta triton-shared 17f0c234's TritonToUnstructuredPass.cpp provides the
 base/offset representation and offset-bit-width policy. Its use traversal
 handles scf.for but leaves pointer-valued scf.if/while unresolved. This narrow
 adapter supplies those region edges and finite selectors before running the unchanged upstream
 converter. It does not choose a physical address, memory space or grid mapping.
+Explicit byte-buffer views accumulate source-pointee-scaled byte offsets;
+ordinary roots retain their original element-offset representation.
 """
 
 from collections import deque
