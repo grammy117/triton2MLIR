@@ -1,5 +1,19 @@
 # Measured coverage and remaining boundaries
 
+[Source-specialized packed groups](source_grouping.md) now preserve coupled and
+asymmetric scalar computation through standard MLIR and actual Merlin host
+libraries. Seven libraries cover i64/f32, pack two/four, source geometries,
+rank-one/two tiles, all memory profiles and coupled branch/while state; six
+libraries replay 24 more domains. The source choice is explicit initial layout
+specialization, not final GPU-binary or accelerator evidence.
+
+The current `out/source-grouped-map-inventory/coverage.json` reopens
+**95 packages, 68 standalone qualifications and fourteen product cases**. All
+50 pinned definition names remain observed under selected native/host profiles.
+The default corpus still retains its unselected assembly/grouping refusals.
+Per-operation execution, universal types/attributes/compositions and broader
+targets remain unestablished. Previous selections below keep their scope.
+
 [Structured packed maps](packed_maps.md) now retain scalar branches, for/while
 state, per-element loaded trip counts and original nested source correspondence.
 Fourteen actual libraries replay 56 additional domains; eleven direct proof
@@ -8,7 +22,7 @@ captures retain learned weights, two dependent calls and all four results each
 through native/Merlin host and actual Spike execution. All eight target results
 match exact words; target evidence is separate from the package inventory.
 
-The current `out/packed-control-model-inventory/coverage.json` reopens
+The prior `out/packed-control-model-inventory/coverage.json` reopens
 **88 packages, 61 standalone qualifications and fourteen product cases**. All
 **50 pinned source definition names** still occur in native/Merlin-host-qualified
 captures under selected profiles. This broadens typed control/composition

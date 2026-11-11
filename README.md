@@ -39,9 +39,12 @@ recurrences. Fourteen additional libraries preserve scalar branches and
 per-element for/while trip counts, with 56 further runtime replays. Two real
 model captures retain learned weights, dependent calls and all eight results
 through Merlin host and actual Spike execution with exact-word comparison.
-The current [coverage selection](docs/coverage.md) reopens 88 packages and 61
-standalone qualifications. Coupled/asymmetric slots still require actual register-group facts;
-the frontend never infers adjacency from tensor shape.
+Coupled/asymmetric slots
+now have an explicit [source-specialized grouping path](docs/source_grouping.md)
+through seven additional Merlin libraries. The current
+[coverage selection](docs/coverage.md) reopens 95 packages and 68 standalone
+qualifications. The frontend never infers
+adjacency from tensor shape or assigns consumer hardware placement.
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.

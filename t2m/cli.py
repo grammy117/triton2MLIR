@@ -502,6 +502,7 @@ def main(argv=None):
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 finite-overflow and infinity conversion contract")
     tensor.add_argument("--assembly-provider", help="explicit installed source-assembly semantics entry point; default refuses assembly")
+    tensor.add_argument("--source-layout", type=Path, help="explicit source layout specialization JSON for packed grouping; not consumer hardware placement")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
     tensor.add_argument("--reference", type=Path, help="optional independent NPZ with out0, out1, ...")
     tensor.add_argument("--effect-reference",type=Path,help="independent JSON streams/outcome; v2 binds adjacent reference.npz; excludes --reference")
@@ -639,6 +640,8 @@ def main(argv=None):
                     address_policy=item.get("address_policy",args.address_policy),effect_profile=item.get("effect_profile",args.effect_profile),
                     fp8_overflow=item.get("fp8_overflow",args.fp8_overflow),byte_order=item.get("byte_order"),
                     assembly_provider=item.get("assembly_provider",args.assembly_provider))
+                if "source_layout" in item:
+                    options["source_layout"] = item["source_layout"]
                 allocation = None
                 if "allocation_bindings" in item:
                     from .allocation_bindings import arguments_from_dict,convert_allocations
@@ -725,6 +728,8 @@ def main(argv=None):
             options = dict(optimizer=args.optimizer,memory_profile=args.memory_profile,address_policy=args.address_policy,
                            effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow,byte_order=args.byte_order,
                            assembly_provider=args.assembly_provider)
+            if args.source_layout:
+                options["source_layout"] = json.loads(args.source_layout.read_text())
             if args.allocation_bindings:
                 from .allocation_bindings import arguments_from_dict,convert_allocations
                 entry,bindings = arguments_from_dict(json.loads(args.allocation_bindings.read_text()))

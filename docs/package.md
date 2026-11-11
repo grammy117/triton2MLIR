@@ -51,6 +51,15 @@ preserve learned weights, both calls and every original result through Merlin
 host and functional RISC-V execution. Static public model ABI and source runtime
 scalar specialization keep their existing documented differences.
 
+[Source-specialized groups](source_grouping.md) additionally admit coupled and
+asymmetric maps after an explicit initial TritonGPU layout selection. The public
+ABI and receipts remain unchanged; additive `source_layout_specialization`
+provenance binds source/TTGIR bytes, actual native-library identity and checked
+coordinate maps. The standard payload computes each logical group once and
+restores tensor coordinates. This source choice may change math and is not a
+consumer placement hint. Final GPU-binary equivalence and accelerator execution
+remain unestablished.
+
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The
 argument configuration schemas remain v1/v2; `typed-root-byte-view-v1` records

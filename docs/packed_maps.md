@@ -1,5 +1,11 @@
 # Packed maps with layout-independent scalar computation
 
+Coupled/asymmetric maps now additionally have an explicit
+[source-specialized grouping path](source_grouping.md). Its initial native
+TritonGPU mapping becomes logical tensor dataflow; it is not inferred from
+tensor adjacency or selected implicitly. The default proof below stays
+independent of source register grouping.
+
 Packed maps now lower automatically when the actual inlined scalar SSA graph
 establishes that every slot computes the same function of its own input slots.
 That function may now contain pure scalar `scf.if`, `scf.for` and `scf.while`

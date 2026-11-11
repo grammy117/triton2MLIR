@@ -134,6 +134,14 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
         supported.update(("tts.unstructured_atomic_rmw", "tt.atomic_cas"))
     controls = {"scf.for", "scf.if", "scf.while", "scf.condition", "scf.yield"}
 
+    from .control_flow import complete_parallel_rows
+    from .standard_ops import ForallOp
+    parallel_values = set()
+    for operation in original:
+        if isinstance(operation, ForallOp) and complete_parallel_rows(operation):
+            parallel_values.add(operation)
+            parallel_values.add(operation.body.block.last_op)
+
     def refuse(op, message):
         raise ConversionError(message, source_id=next(iter(source_ids(op.location)), None), opcode=opcode(op))
 
@@ -164,6 +172,8 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
     # An input attribute cannot authorize a synthetic runtime guard operation.
     for op in original:
         name = opcode(op)
+        if op in parallel_values:
+            continue
         if name == "tt.print":
             from .source_prints import contract
             contract(op,next(iter(source_ids(op.location)),"ttir.print"))

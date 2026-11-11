@@ -424,6 +424,83 @@ def _context():
     return ir, context
 
 
+def _extract_map_layouts(path, record_path, options):
+    """Worker: derive packed value grouping with official layout conversion.
+
+    Only source layout selection runs, never LLVM/device code generation. The
+    caller adds unique map markers to the exact inlined pre-layout source.
+    """
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+    from triton._C.libtriton import gluon_ir, linear_layout, passes
+    library = Path(sys.modules["triton._C.libtriton"].__file__).resolve()
+    with library.open("rb") as stream:
+        native = {"path": str(library), "bytes": library.stat().st_size,
+                  "sha256": hashlib.file_digest(stream, "sha256").hexdigest()}
+    options = json.loads(options)
+    ir, context = _context()
+    module = ir.parse_mlir_module(str(Path(path).resolve()), context)
+    if not module.verify():
+        raise ConversionError("Triton rejected the source layout specialization")
+    before = []
+    module.walk(before.append)
+    expected = [op.get_str_attr("t2m.map_key") for op in before if op.get_name() == "tt.map_elementwise" and op.get_int_attr("pack") != 1]
+    if not expected or any(key is None for key in expected) or len(set(expected)) != len(expected):
+        raise ConversionError("source layout extraction needs unique map identities")
+    manager = ir.pass_manager(context)
+    passes.ttir.add_convert_to_ttgpuir(manager, options["target"], options["num_warps"],
+                                     options["threads_per_warp"], options["num_ctas"])
+    manager.run(module, "t2m-source-layout")
+    if not module.verify():
+        raise ConversionError("Triton rejected the converted source layout")
+    operations = []
+    module.walk(operations.append)
+    builder = gluon_ir.GluonOpBuilder(context)
+    maps = []
+    for op in operations:
+        if op.get_name() != "tt.map_elementwise" or op.get_int_attr("pack") == 1:
+            continue
+        values = [op.get_operand(i) for i in range(op.get_num_operands())]
+        values += [op.get_result(i) for i in range(op.get_num_results())]
+        layouts, shape = [], None
+        for value in values:
+            current_shape = builder.get_shape_from_tensor(value)
+            encoding = builder.get_gluon_layout_from_tensor(value)
+            layout = builder.to_linear_layout(encoding._to_ir(builder), current_shape)
+            fields = {name: getattr(layout, name) for name in ("reg_bases", "lane_bases", "warp_bases", "block_bases", "shape")}
+            if shape is None:
+                shape = current_shape
+            if current_shape != shape or fields["shape"] != shape:
+                raise ConversionError("packed source values need matching logical shapes")
+            layouts.append(fields)
+        if not layouts or any(value != layouts[0] for value in layouts):
+            raise ConversionError("packed source values need the same register-to-coordinate mapping")
+        bases = [(name, layouts[0][field]) for name, field in (
+            ("register", "reg_bases"), ("lane", "lane_bases"), ("warp", "warp_bases"), ("block", "block_bases"))]
+        names = [f"dim{i}" for i in range(len(shape))]
+        forward = linear_layout.LinearLayout.from_bases(bases, names, shape)
+        if not forward.is_invertible():
+            raise ConversionError("packed source grouping currently requires bijective value coverage; replicated layouts need an observation contract")
+        pack = op.get_int_attr("pack")
+        if pack is None or pack < 2 or (1 << len(bases[0][1])) % pack:
+            raise ConversionError("source pack must divide its actual per-thread register value count")
+        inverse = forward.invert()
+        maps.append({"id": op.get_str_attr("t2m.map_key"), "pack": pack, "shape": shape,
+            "forward": {"bases": forward.bases, "out_dims": forward.out_dims},
+            "inverse": {"bases": inverse.bases, "out_dims": inverse.out_dims},
+            "source_value_types": [str(value.get_type()) for value in values]})
+    if sorted(row["id"] for row in maps) != sorted(expected):
+        raise ConversionError("source layout conversion changed the map identity roster")
+    text = module.str_nodebug()
+    Path(record_path).write_text(json.dumps({"schema": "t2m.source-map-layout.v1", "maps": maps,
+        "source_sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest(), "source_options": options,
+        "triton_version": PINNED_TRITON, "pipeline": ["convert-triton-to-tritongpu"],
+        "native_library": native, "dependency_source_closure": "not-established",
+        "ttgir": text, "ttgir_sha256": hashlib.sha256(text.encode()).hexdigest(),
+        "device_codegen": "not-invoked"}, indent=2) + "\n")
+
+
 @dataclass
 class TTIR:
     context: object

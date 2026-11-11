@@ -54,6 +54,8 @@ def members(trace):
 
 
 def validate(trace, artifacts, source):
+    from .map_layout import validate_trace
+    validate_trace(trace)
     names = members(trace)
     if not names:
         return

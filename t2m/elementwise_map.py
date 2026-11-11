@@ -175,7 +175,7 @@ def _independent_packing(source, end, pack, refuse, source_ids):
     return representatives, selected, equivalents, proof
 
 
-def expand_elementwise_maps(module, source_ids, *, memory_events=False):
+def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=None):
     from .shared_tensor import _pointer_type, opcode
     reports = []
     for op in list(module.walk()):
@@ -222,6 +222,18 @@ def expand_elementwise_maps(module, source_ids, *, memory_events=False):
             if not all(isinstance(v.type, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat))
                        or memory_events and _pointer_type(v.type) and not isinstance(v.type, TensorType) for v in values):
                 refuse("elementwise map scalar body cannot access tensors, addresses or effects", child)
+        if pack > 1 and layouts is not None:
+            from .grouped_map import expand
+            from .map_layout import KEY
+            key = op.attributes.get(KEY)
+            if not isinstance(key, StringAttr) or key.data not in layouts:
+                refuse("packed map lacks its source-derived logical grouping")
+            proof = expand(op, source, end, pack, layouts[key.data], refuse)
+            reports.append({"kind": "ttir-elementwise-map", "source_ids": ids, "pack": pack,
+                "shape": list(shape), "inputs": len(inputs), "results": len(outputs),
+                "expansion": "parallel-logical-groups-with-original-scalar-region-and-coordinate-restoration",
+                "physical_mapping": "undecided", "packing_proof": proof})
+            continue
         children, returned, locations, packing_proof = list(source.ops)[:-1], list(end.operands), {}, None
         if pack > 1:
             children, returned, locations, packing_proof = _independent_packing(source, end, pack, refuse, source_ids)

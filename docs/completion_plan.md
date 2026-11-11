@@ -45,8 +45,8 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/packed-control-model-inventory/coverage.json` selection reopens
-**88 packages, 61 standalone qualifications and fourteen maintained product
+The current `out/source-grouped-map-inventory/coverage.json` selection reopens
+**95 packages, 68 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -156,6 +156,15 @@ host and actual Spike execution. All eight target results match exact words;
 the separate selection is `out/spike-packed-control-models/summary.json`.
 This is finite CPU composition evidence. The 88-package inventory keeps broader
 type/attribute/composition and per-operation/target execution unestablished.
+
+Coupled/asymmetric packed maps now also reach standard tensor dataflow and
+Merlin under an explicit initial source-layout specialization. Actual native
+Triton conversion/linear-layout APIs supply the facts, whose inverse and pure
+parallel row updates are checked structurally. Seven libraries cover source
+geometries, numeric types, all memory profiles and coupled scalar control;
+24 additional domains replay unchanged libraries. This does not qualify
+replicated layouts, packed source memory, final GPU layout correspondence or
+applicable target execution. See [the source contract](source_grouping.md).
 
 ## Required evidence for every supported form
 

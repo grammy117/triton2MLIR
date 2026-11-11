@@ -40,7 +40,12 @@ Two real i64/f32 model captures also retain learned weights, dependent calls and
 all eight results through native/Merlin host and actual Spike execution with
 exact-word comparison. The refreshed explicit selection reopens 88 packages,
 61 standalone qualifications and fourteen product cases.
-Coupled/asymmetric packed maps, broader mapped
+Coupled/asymmetric packed maps additionally have an explicit
+[initial source-layout specialization](docs/source_grouping.md) through seven
+Merlin libraries and 24 further runtime domains. Its native-derived grouping
+becomes logical tensor dataflow, leaving consumer placement undecided. The
+current inventory reopens 95 packages and 68 standalone qualifications.
+Replicated layouts, packed source memory, final GPU correspondence, broader mapped
 forms, source assembly, typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete
 TTIR packages and actual Merlin libraries, retaining byte order, old values,

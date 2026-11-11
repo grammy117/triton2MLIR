@@ -1167,7 +1167,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None, byte_order=None, assembly_provider=None):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None, byte_order=None, assembly_provider=None, source_layout=None):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1263,6 +1263,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         middle_source = work / "expanded-source/lowered.mlir"
     middle_module = parse_shared(middle_source.read_text())
+    layout_maps, layout_witness = None, None
+    if source_layout is not None:
+        from .map_layout import prepare
+        layout_maps, layout_witness = prepare(middle_module, work / "source-layout", source_layout)
     from .boolean_memory import normalize_boolean_memory
     boolean_reports = normalize_boolean_memory(middle_module, _source_ids)
     public_abi, storage_transport = abi, None
@@ -1298,7 +1302,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         bind_source(records, pointer_control_reports)
     scan_reports = expand_scans(middle_module, _source_ids)
     from .elementwise_map import expand_elementwise_maps
-    map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events)
+    map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events, layouts=layout_maps)
     from .tile_gather import expand_tile_gathers
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
     from .histogram import expand_histograms
@@ -1556,6 +1560,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if storage_transport:
         trace["typed_storage_transport"] = storage_transport
         trace["abi_difference"] += "; typed owning tensors use explicit bit-preserving internal byte planes for width-changing views"
+    if layout_witness is not None:
+        trace["source_layout_specialization"] = layout_witness
+        trace["abi_difference"] += "; source-dependent packed computation uses explicit original layout specialization reified as logical groups; consumer placement remains undecided"
     if descriptor_binding:
         trace["descriptor_argument_binding"] = descriptor_binding
         trace["abi_difference"] += "; external descriptors expand to typed logical allocation/shape/stride/padding/rounding fields before ABI binding"
