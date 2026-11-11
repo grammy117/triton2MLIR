@@ -17,6 +17,7 @@ def convert(
     word_views=False,
     byte_storage=False,
     byte_order=None,
+    root_dtype=None,
 ):
     from .examples.descriptor_state_kernels import descriptor_state_updates
 
@@ -32,6 +33,8 @@ def convert(
         raise ValueError(
             "byte descriptor word demo requires explicit byte order and word views"
         )
+    if root_dtype is not None and (byte_storage or not word_views or byte_order not in ("little", "big")):
+        raise ValueError("typed-root descriptor binding requires explicit byte order and word views")
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
     ptr = {"i64": "i64", "i32": "i32", "f32": "fp32", "bf16": "bf16"}[dtype]
@@ -64,7 +67,7 @@ def convert(
         "descriptor_allocation_state",
         (
             TensorBuffer(
-                "state", ("capacity",), "readwrite", "i8" if byte_storage else dtype
+                "state", ("capacity",), "readwrite", root_dtype or ("i8" if byte_storage else dtype)
             ),
         ),
         grid=(GridExtent("m", 2), GridExtent("n", 16)),
@@ -113,6 +116,8 @@ def demo(
     out,
     *,
     dtype="i64",
+    root_dtype=None,
+    byte_order=None,
     optimizer=None,
     python=None,
     memory_profile="guarded-buffer",
@@ -130,8 +135,13 @@ def demo(
     if out.exists():
         raise FileExistsError(out)
     work = out.with_name(out.name + ".work")
-    result = convert(work, dtype=dtype, optimizer=optimizer)
-    values, expected = arguments(dtype)
+    result = convert(work, dtype="i32" if root_dtype else dtype, optimizer=optimizer,
+        word_views=root_dtype is not None, root_dtype=root_dtype, byte_order=byte_order)
+    if root_dtype is None:
+        values, expected = arguments(dtype)
+    else:
+        from .examples.typed_parameter_reference import arguments as typed_arguments
+        values, expected = typed_arguments(root_dtype, byte_order, descriptor=True)
     write_effect_bundle(
         result,
         out,

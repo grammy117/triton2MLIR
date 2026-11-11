@@ -19,6 +19,7 @@ def convert(
     optimizer=None,
     byte_storage=False,
     byte_order=None,
+    root_dtype=None,
 ):
     from .examples.allocation_word_kernels import allocation_word_updates
 
@@ -52,6 +53,10 @@ def convert(
         if byte_order not in ("little", "big"):
             raise ValueError("byte-root word demo requires explicit byte order")
         dtype = "i8"
+    if root_dtype is not None:
+        if byte_storage or byte_order not in ("little", "big"):
+            raise ValueError("typed-root word binding requires explicit byte order and typed storage")
+        dtype = root_dtype
     abi = TensorABI(
         "allocation_word_state",
         (TensorBuffer("state", ("capacity",), "readwrite", dtype),),
@@ -88,6 +93,8 @@ def demo(
     width=32,
     storage="integer",
     bfloat=False,
+    root_dtype=None,
+    byte_order=None,
     optimizer=None,
     python=None,
     memory_profile="guarded-buffer",
@@ -106,9 +113,14 @@ def demo(
         raise FileExistsError(out)
     work = out.with_name(out.name + ".work")
     result = convert(
-        work, width=width, storage=storage, bfloat=bfloat, optimizer=optimizer
+        work, width=width, storage=storage, bfloat=bfloat, optimizer=optimizer,
+        root_dtype=root_dtype, byte_order=byte_order
     )
-    values, expected = arguments(width, storage, bfloat)
+    if root_dtype is None:
+        values, expected = arguments(width, storage, bfloat)
+    else:
+        from .examples.typed_parameter_reference import arguments as typed_arguments
+        values, expected = typed_arguments(root_dtype, byte_order, width=width)
     write_effect_bundle(
         result,
         out,

@@ -42,10 +42,12 @@ def compatible(left, right):
         return False
 
 
-def byte_compatible(view, storage):
-    """A logical wide scalar view of an actual i8 allocation root."""
+def byte_compatible(view, storage, *, typed_root=False):
+    """A changed-width view with an explicit logical byte representation."""
     try:
-        return element(storage) == builtin.i8 and element(view).bitwidth in (16, 32, 64)
+        source, root = element(view), element(storage)
+        return (source.bitwidth in (8, 16, 32, 64) and source.bitwidth != root.bitwidth
+                and (root == builtin.i8 or typed_root and root.bitwidth in (16, 32, 64)))
     except (ValueError, ParseError):
         return False
 

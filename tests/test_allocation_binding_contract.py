@@ -83,6 +83,24 @@ def test_explicit_byte_root_binding_keeps_byte_origins_before_wide_casts():
         bind_module(module, "source", abi, bindings)
 
 
+@pytest.mark.parametrize("dtype", ("i16", "i32", "f16", "bf16", "f32"))
+@pytest.mark.parametrize("order", ("little", "big"))
+def test_explicit_typed_root_binding_preserves_origin_units_before_source_cast(dtype, order):
+    module, abi, bindings = case()
+    abi = replace(abi, buffers=(replace(abi.buffers[0], dtype=dtype),))
+    result, report = bind_module(module, "source", abi, bindings, byte_order=order)
+    wrapper = next(iter(result.ops))
+    call = next(op for op in wrapper.walk() if opcode(op) == "tt.call")
+    cast = call.operands[1].owner
+    origin = cast.operands[0]
+    assert opcode(cast) == "tt.bitcast" and str(cast.results[0].type) == "!tt.ptr<i64>"
+    assert opcode(origin.owner) == "tt.addptr" and str(origin.type) == f"!tt.ptr<{dtype}>"
+    assert report["bindings"][1]["representation"] == "typed-root-byte-view-v1"
+    assert report["bindings"][1]["byte_order"] == order
+    with pytest.raises(ConversionError, match="same element type"):
+        bind_module(module, "source", abi, bindings)
+
+
 @pytest.mark.parametrize("source_type", ("tensor<2x!tt.ptr<i64>>", "!tt.ptr<i64, 3>", "!tt.ptr<i1>"))
 def test_alias_binding_does_not_grant_tensor_pointer_address_space_or_padding_views(source_type):
     from t2m.shared_tensor import parse_shared

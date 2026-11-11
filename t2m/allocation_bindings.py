@@ -15,8 +15,8 @@ from xdsl.dialects import arith, builtin
 from xdsl.ir import Block, Region
 from xdsl.printer import Printer
 
-from .diagnostics import ConversionError
 from .descriptor_bindings import DescriptorArgument, ExtendScalar
+from .diagnostics import ConversionError
 from .shared_tensor import SharedParser, convert_shared, opcode, parse_shared
 from .upstream import inspect_optimizer, lower_with_shared
 
@@ -123,7 +123,7 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
                 raise ConversionError("source pointer binding requires a declared allocation")
             storage_type = pointer_types[root.name]
             viewed = str(arg.type) != str(storage_type)
-            byte_view = (viewed and byte_order is not None and byte_compatible(arg.type, storage_type))
+            byte_view = (viewed and byte_order is not None and byte_compatible(arg.type, storage_type, typed_root=True))
             if viewed and (isinstance(arg.type, builtin.TensorType) or not compatible(arg.type, storage_type) and not byte_view):
                 raise ConversionError("source pointer binding requires the same element type or an equal byte-aligned word view")
             if type(binding.offset) is int:
@@ -135,7 +135,7 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
             used_roots.add(root.name)
             records.append({"kind":"pointer",**asdict(binding), **({
                 "source_type": str(arg.type), "storage_type": str(storage_type),
-                "representation": "byte-buffer-view-v1" if byte_view else "equal-width-word-view-v1",
+                "representation": ("byte-buffer-view-v1" if root.dtype == "i8" else "typed-root-byte-view-v1") if byte_view else "equal-width-word-view-v1",
                 **({"byte_order": byte_order} if byte_view else {})} if viewed else {})})
         elif isinstance(binding,ScalarArgument):
             scalar = scalars.get(binding.name)
