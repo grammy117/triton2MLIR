@@ -14,15 +14,15 @@ import sys
 import numpy as np
 
 
-def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None):
-    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root)
+def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, integer_atomic_regions=False):
+    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root,integer_atomic_regions=integer_atomic_regions)
 
 
-def observe_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None):
-    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root,observe_outcome=True)
+def observe_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, integer_atomic_regions=False):
+    return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root,observe_outcome=True,integer_atomic_regions=integer_atomic_regions)
 
 
-def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, observe_outcome=False):
+def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, observe_outcome=False, integer_atomic_regions=False):
     work = Path(work)
     arrays = [np.asarray(x) for x in inputs]
     if sum(x.nbytes for x in arrays) > 64 * 1024 * 1024:
@@ -30,6 +30,10 @@ def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_su
     if any(np.shares_memory(a, b) for i, a in enumerate(arrays) for b in arrays[i + 1:]):
         raise ValueError("native execution requires independently allocated inputs")
     work.mkdir(parents=True, exist_ok=False)
+    if type(integer_atomic_regions) is not bool:
+        raise ValueError("integer atomic native feature selection must be Boolean")
+    if integer_atomic_regions:
+        (work / "native-features.json").write_text(json.dumps({"schema": "t2m.native-features.v1", "features": ["lower_integer_atomic_regions"]}) + "\n")
     (work / "model.mlir").write_text(mlir_text)
     if shape_abi is not None:
         (work / "shape-abi.json").write_text(json.dumps(shape_abi, sort_keys=True) + "\n")

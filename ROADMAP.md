@@ -6,6 +6,10 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+[Byte-backed atomic word mechanisms](docs/byte_atomic_words.md) now execute
+through native and actual Merlin host libraries with byte order retained.
+TTIR event/template/guard accounting remains a required intake gate; the
+existing frontend refusal stays in place until that integration qualifies.
 [Indexed descriptors](docs/indexed_descriptors.md) now reuse the installed upstream
 pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
 source padding, state and atomic kinds through the existing checked memory path.

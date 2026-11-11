@@ -124,6 +124,13 @@ def main(work):
             adapters.append({"name":"readonly-functional-tensor-inputs","arguments":readonly_count,
                 "upstream_contract":"bufferization.writable=false"})
         restore_atomics = None
+        integer_regions = False
+        feature_file = work / "native-features.json"
+        if feature_file.exists():
+            features = json.loads(feature_file.read_text())
+            if features != {"schema": "t2m.native-features.v1", "features": ["lower_integer_atomic_regions"]}:
+                raise ValueError("unknown native atomic region feature selection")
+            integer_regions = True
         def operations(op):
             yield op
             for region in op.regions:
@@ -140,11 +147,11 @@ def main(work):
             exec(atomic_compare_exchange.SUPPORT, namespace)
             word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "f32", "f64")
                 for op in operations(module.operation))
-            count = namespace["_cas_rewrite"](context, module, word_views=word_views)
-            prepared = work / ("prepared-atomic-word-views.mlir" if word_views else "prepared-compare-exchange.mlir")
+            count = namespace["_cas_rewrite"](context, module, word_views=word_views, integer_regions=integer_regions)
+            prepared = work / ("prepared-integer-atomic-regions.mlir" if integer_regions else "prepared-atomic-word-views.mlir" if word_views else "prepared-compare-exchange.mlir")
             prepared.write_text(str(module))
             import hashlib
-            adapters.append({"name": "merlin-exact-atomic-word-views" if word_views else "merlin-exact-integer-compare-exchange", "events": count,
+            adapters.append({"name": "merlin-pure-integer-atomic-regions" if integer_regions else "merlin-exact-atomic-word-views" if word_views else "merlin-exact-integer-compare-exchange", "events": count,
                 "support_form": "embedded-native-python-prelude",
                 "support_sha256": hashlib.sha256(atomic_compare_exchange.SUPPORT.encode()).hexdigest(),
                 "prepared_sha256": hashlib.sha256(prepared.read_bytes()).hexdigest()})
@@ -196,7 +203,7 @@ def main(work):
                     "upstream_pass":"arith-emulate-unsupported-floats{source-types=bf16 target-type=f32}",
                     "support_sha256":hashlib.sha256(bfloat_elementwise.SUPPORT.encode()).hexdigest()})
         pipelines = (
-            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage else "") + ")",
+            "builtin.module(scf-forall-to-for,canonicalize,cse,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map allow-return-allocs-from-loops},buffer-results-to-out-params{modify-public-functions}" + (",buffer-deallocation-pipeline" if guard_size or guard_storage or integer_regions else "") + ")",
             "builtin.module(func.func(convert-linalg-to-loops)," + ("arith-expand{include-bf16=true}," if has_bfloat else "") + "expand-strided-metadata,lower-affine,convert-scf-to-cf)",
             "builtin.module(math-expand-ops{ops=rsqrt},convert-math-to-libm,convert-math-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
         )

@@ -91,6 +91,16 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+[Byte-backed word atomic mechanisms](byte_atomic_words.md) now have executable
+standard MLIR and a separately selected Merlin pure-integer-region lowering.
+Native cases and actual Merlin libraries retain word atomicity, both declared
+byte orders, old values and intervening narrow stores. Borrowing reconstructs
+the current helper and pure scalar callee through real ownership/lifetime
+checks. TTIR byte-atomic admission remains refused until native-template,
+whole-word byte-guard and source/payload-evidence integration is complete;
+these are component checks, not new TTIR or accelerator coverage. Follow the
+concrete source-integration sequence in that document next.
+
 [Different-width source parameter bindings](typed_parameters.md) now retain
 original pointer/descriptor types on typed owning roots, with root origins
 applied before source casts and original element strides afterward. Wider and
