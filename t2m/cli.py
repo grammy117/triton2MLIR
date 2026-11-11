@@ -533,9 +533,20 @@ def main(argv=None):
     effect.add_argument("--memory-profile",choices=("tensor","buffer","guarded-buffer"),default="tensor")
     effect.add_argument("--address-policy",choices=("structured","source-words"),default="structured")
     packages = commands.add_parser("package-coverage", help="index verified package observations against all pinned TTIR definitions")
-    packages.add_argument("bundles", nargs="+", type=Path)
+    packages.add_argument("bundles", nargs="*", type=Path)
     packages.add_argument("--qualification", action="append", type=Path, default=[], help="explicit standalone Merlin qualification; matched by source receipt")
+    packages.add_argument("--corpus", action="append", type=Path, default=[], help="verified product corpus, retaining refusals; emits coverage v2")
     packages.add_argument("--out", type=Path, required=True)
+    product = commands.add_parser("product-coverage", help="measure real kernel conversion, refusals and Merlin execution")
+    product.add_argument("manifest", type=Path)
+    product.add_argument("--out", type=Path, required=True)
+    product.add_argument("--optimizer", type=Path)
+    product.add_argument("--python", type=Path, help="existing native torch-mlir environment")
+    product.add_argument("--merlin-root", type=Path)
+    product.add_argument("--merlin-python", type=Path)
+    product.add_argument("--merlin-clang", type=Path)
+    product.add_argument("--limit", type=int, default=256)
+    product.add_argument("--budget", type=float, default=300)
     bind = commands.add_parser("bind-model", help="replace model2MLIR registered kernel calls and write a natively checked model bundle")
     bind.add_argument("capture", type=Path)
     bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
@@ -594,10 +605,18 @@ def main(argv=None):
             summary["functional_tensor_coverage"] = report["functional_tensor_coverage"]
         elif args.command == "package-coverage":
             from .package_coverage import package_coverage
-            report = package_coverage(args.bundles, qualifications=args.qualification)
+            report = package_coverage(args.bundles, qualifications=args.qualification, corpora=args.corpus)
             args.out.mkdir(parents=True, exist_ok=False)
             (args.out / "coverage.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
             summary = {key: report[key] for key in ("definition_count", "observed_definition_count", "merlin_observed_definition_count", "unmeasured_definitions")}
+        elif args.command == "product-coverage":
+            from .product_corpus import qualify_product_corpus, verify_product_corpus
+            report = qualify_product_corpus(args.manifest, args.out, optimizer=args.optimizer, python=args.python,
+                merlin_root=args.merlin_root, merlin_python=args.merlin_python, clang=args.merlin_clang,
+                limit=args.limit, budget=args.budget)
+            verify_product_corpus(args.out)
+            summary = {key: report[key] for key in ("selected_cases", "measured_cases", "complete_selection_measured",
+                "all_selected_cases_merlin_host_qualified", "stage_definition_counts", "unmeasured_definitions")}
         elif args.command == "bind-model":
             from .model_binding import KernelBinding
             from .model_bundle import write_model_bundle

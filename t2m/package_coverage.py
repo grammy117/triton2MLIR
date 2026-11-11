@@ -83,13 +83,13 @@ def operation_observations(cases):
     return {"ttir": rows, "unknown_ttir": unknown, "other_operations": other}
 
 
-def package_coverage(bundles, *, qualifications=()):
+def package_coverage(bundles, *, qualifications=(), corpora=()):
     """Reopen selected receipts before indexing their byte-bound source traces.
 
     Only explicit paths are read. Standalone Merlin qualifications are matched
     by the exact source receipt digest, never by their source_directory hint.
     """
-    if len(bundles) > MAX_SELECTION or len(qualifications) > MAX_SELECTION:
+    if len(bundles) > MAX_SELECTION or len(qualifications) > MAX_SELECTION or len(corpora) > 16:
         raise ValueError(f"coverage accepts at most {MAX_SELECTION} packages/qualifications")
     qualified, qualification_records = {}, []
     for path in qualifications:
@@ -184,16 +184,44 @@ def package_coverage(bundles, *, qualifications=()):
                 "normalized_operation_counts": dict(Counter(op["opcode"] for op in trace.get("normalized_operations", [])))})
     if set(qualified) - selected:
         raise ValueError("standalone qualification has no matching selected source receipt")
-    observations = operation_observations(cases)
-    return {"schema": "t2m.package-coverage.v1", "definitions": SOURCE, "definition_count": len(OPERATIONS),
-        "selection": "explicit packages only; not an exhaustive kernel corpus",
+    product_cases, corpus_records, corpus_pins = [], [], set()
+    for index, path in enumerate(corpora):
+        from .product_corpus import verify_product_corpus
+        root = Path(path).absolute()
+        corpus = verify_product_corpus(root)
+        pin = _record(root / "coverage.json")
+        if pin["sha256"] in corpus_pins:
+            raise ValueError("duplicate product corpus in coverage selection")
+        corpus_pins.add(pin["sha256"])
+        corpus_records.append({"path": str(root), "report": pin, "manifest": corpus["manifest"]})
+        for case in corpus["cases"]:
+            product_cases.append({"id": f"corpus.{index}:" + case["id"], "corpus_case": case["id"],
+                "corpus_report": pin, "case_record": corpus["case_records"][case["id"]],
+                "merlin_host": case["merlin_host"], "operations": case["operations"],
+                "status": case["status"], "stages": case.get("stages", {}), "failure": case.get("failure"),
+                "inventory_authority": "native original-source observation; not independent transformation proof"})
+    if len(cases) + len(product_cases) > MAX_SELECTION:
+        raise ValueError("combined package/product cases exceed the coverage selection budget")
+    observations = operation_observations([*cases, *product_cases])
+    for name, row in observations["ttir"].items():
+        if corpora:
+            row["attributed_product_refusals"] = [case["id"] for case in product_cases
+                if case["status"] == "refused" and (case.get("failure") or {}).get("opcode") == name]
+    native_names = {op["opcode"] for case in [*cases, *product_cases]
+                    if "status" not in case or case["stages"].get("native_package") == "passed"
+                    for op in case["operations"]}
+    return {"schema": "t2m.package-coverage.v2" if corpora else "t2m.package-coverage.v1",
+        "definitions": SOURCE, "definition_count": len(OPERATIONS),
+        "selection": "explicit packages and product corpora; not exhaustive" if corpora else "explicit packages only; not an exhaustive kernel corpus",
         "packages": packages, "qualifications": qualification_records,
         "kernel_cases": [{k:v for k,v in case.items() if k != "operations"} for case in cases],
+        **({"corpora": corpus_records, "product_cases": [{k:v for k,v in case.items() if k != "operations"} for case in product_cases],
+            "native_observed_definition_count": sum(name in native_names for name in OPERATIONS)} if corpora else {}),
         **observations,
         "observed_definition_count": sum(bool(row["cases"]) for row in observations["ttir"].values()),
         "merlin_observed_definition_count": sum(bool(row["merlin_cases"]) for row in observations["ttir"].values()),
         "unmeasured_definitions": [name for name,row in observations["ttir"].items() if not row["cases"]],
-        "refusal_coverage": "not-collected-by-package-selection; use upstream corpus reports separately",
+        "refusal_coverage": "explicit product corpus cases only; not exhaustive" if corpora else "not-collected-by-package-selection; use upstream corpus reports separately",
         "operation_execution_coverage": "not-measured; host evidence concerns the containing package and its explicit numeric/effect reference policy",
         "universal_opcode_type_attribute_coverage": "not-established",
         "target_materialization": "not-qualified-by-this-report"}

@@ -21,5 +21,8 @@ t2m = "t2m.cli:main"
 [tool.setuptools.packages.find]
 include = ["t2m*"]
 
+[tool.setuptools.package-data]
+"t2m.examples" = ["*.ttir"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

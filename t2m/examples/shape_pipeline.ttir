@@ -1,0 +1,30 @@
+// Saved pre-layout TTIR fixture. Cat chooses the permitted lhs-then-rhs order.
+module {
+  tt.func public @shape_pipeline(%x:!tt.ptr<i32>,%y:!tt.ptr<i32>,%out:!tt.ptr<i32>) {
+    %r4=tt.make_range {start=0:i32,end=4:i32}:tensor<4xi32>
+    %px=tt.splat %x:!tt.ptr<i32> -> tensor<4x!tt.ptr<i32>>
+    %py=tt.splat %y:!tt.ptr<i32> -> tensor<4x!tt.ptr<i32>>
+    %ax=tt.addptr %px,%r4:tensor<4x!tt.ptr<i32>>,tensor<4xi32>
+    %ay=tt.addptr %py,%r4:tensor<4x!tt.ptr<i32>>,tensor<4xi32>
+    %a=tt.load %ax:tensor<4x!tt.ptr<i32>>
+    %b=tt.load %ay:tensor<4x!tt.ptr<i32>>
+    %joined="tt.join"(%a,%b):(tensor<4xi32>,tensor<4xi32>)->tensor<4x2xi32>
+    %first,%second="tt.split"(%joined):(tensor<4x2xi32>)->(tensor<4xi32>,tensor<4xi32>)
+    %cat="tt.cat"(%first,%second):(tensor<4xi32>,tensor<4xi32>)->tensor<8xi32>
+    %transposed="tt.trans"(%joined) <{order=array<i32:1,0>}>:(tensor<4x2xi32>)->tensor<2x4xi32>
+    %flat="tt.reshape"(%transposed):(tensor<2x4xi32>)->tensor<8xi32>
+    %one=tt.splat %x:!tt.ptr<i32> -> tensor<1x!tt.ptr<i32>>
+    %loaded=tt.load %one:tensor<1x!tt.ptr<i32>>
+    %scalar="tt.unsplat"(%loaded):(tensor<1xi32>)->i32
+    %programs=tt.get_num_programs x:i32
+    %offset=arith.addi %scalar,%programs:i32
+    %splat=tt.splat %offset:i32 -> tensor<8xi32>
+    %sum=arith.addi %cat,%flat:tensor<8xi32>
+    %result=arith.addi %sum,%splat:tensor<8xi32>
+    %r8=tt.make_range {start=0:i32,end=8:i32}:tensor<8xi32>
+    %po=tt.splat %out:!tt.ptr<i32> -> tensor<8x!tt.ptr<i32>>
+    %dest=tt.addptr %po,%r8:tensor<8x!tt.ptr<i32>>,tensor<8xi32>
+    tt.store %dest,%result:tensor<8x!tt.ptr<i32>>
+    tt.return
+  }
+}
