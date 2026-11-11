@@ -39,6 +39,7 @@ class Access:
     offsets: tuple = ()
     strides: tuple = ()
     prefixes: tuple = ()
+    word_bytes: int = 1
 
 
 def normalize_scalars(module, source_ids):
@@ -96,7 +97,7 @@ def normalize_scalars(module, source_ids):
     return reports
 
 
-def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None):
+def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None, byte_order=None):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
@@ -127,7 +128,12 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
                 refuse(op, "atomic pointer views require one scalar declared logical base")
             buffer = buffers[op.operands[0]]
             try:
-                info = view_info(buffer.type.element_type, element(op.results[0].type))
+                word = element(op.results[0].type)
+                if buffer.type.element_type == builtin.i8 and byte_order is not None:
+                    from .byte_atomic_events import view_info as byte_view_info
+                    info = byte_view_info(word, byte_order)
+                else:
+                    info = view_info(buffer.type.element_type, word)
             except ValueError:
                 refuse(op, "atomic pointer view differs from equal-width floating storage")
             buffers[op.results[0]] = buffer
@@ -285,10 +291,14 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             from .atomic_memory import contract
             atomic_contract = contract(op, source_ids, typed=typed_atomics, f32_atomic_add=f32_atomic_add)
             if op.operands[0] in word_views:
-                atomic_contract["word_view"] = word_views[op.operands[0]]
+                info = word_views[op.operands[0]]
+                atomic_contract["byte_view" if info["storage_dtype"] == "i8" else "word_view"] = info
             elif op.operands[0] in descriptor_word_views:
-                atomic_contract["word_view"] = descriptor_word_views[op.operands[0]]
+                info = descriptor_word_views[op.operands[0]]
+                atomic_contract["byte_view" if info["storage_dtype"] == "i8" else "word_view"] = info
         access = describe(op, write)
+        if atomic_contract and "byte_view" in atomic_contract:
+            access.word_bytes = atomic_contract["byte_view"]["alignment_bytes"]
         if not access.sizes or any(n <= 0 for n in access.sizes):
             refuse(op, "memory guards require a positive static tile shape")
         if write and access.buffer.effect == "read":
@@ -302,6 +312,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
                          "effect": "atomic-readwrite" if atomic else "write" if write else "read", "tile": list(access.sizes),
                          "guard": "bounds-atomic-compatibility-initialization" if atomic else "bounds-owner-lane-uniqueness" if write else "active-bounds" if access.buffer.effect == "read" else "bounds-read-ownership-initialization",
                          "mask": "source-per-lane" if access.mask is not None else "source-prefix" if access.prefixes else "unmasked",
+                         **({"guard_tile": [*access.sizes, access.word_bytes]} if access.word_bytes > 1 else {}),
                          **({"atomic": atomic_contract} if atomic else {})})
     from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
     return {"schema": "t2m.memory-admission.v4" if typed_atomics else "t2m.memory-admission.v3" if atomics else "t2m.memory-admission.v2", "strategy": "runtime-guarded-private-output-state",
@@ -314,6 +325,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             "parallelism": "original-logical-grid-and-payload-retained",
             **({"effect_profile": TYPED_EFFECT_PROFILE if typed_atomics else EFFECT_PROFILE} if atomics else {}),
             **({"f32_atomic_add": f32_atomic_add} if f32_atomic_add is not None else {}),
+            **({"byte_order": byte_order} if any("byte_view" in a.get("atomic", {}) for a in accesses) else {}),
             **layout}
 
 
@@ -367,6 +379,25 @@ def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_word
         for iv, stride in zip(indices, access.strides, strict=True):
             offset = add(body, arith.AddiOp(offset, add(body, arith.MuliOp(iv, index(body, stride)))))
         offset = add(body, arith.IndexCastOp(offset, builtin.i64))
+    if access.word_bytes != 1:
+        if not atomic or access.word_bytes not in (2, 4, 8):
+            raise ValueError("whole-word byte guards require a qualified indivisible atomic")
+        size = constant(body, access.word_bytes, builtin.i64)
+        capacity = add(body, arith.DivUIOp(extra["extent", access.buffer.name], size))
+        low = add(body, arith.CmpiOp(offset, constant(body, 0, builtin.i64), "sge"))
+        high = add(body, arith.CmpiOp(offset, capacity, "slt"))
+        add(body, cf.AssertOp(add(body, arith.AndIOp(low, high)), "Triton active memory index outside logical allocation"))
+        # The complete-word bound precedes scaling, so neither the multiply
+        # nor the last byte's address can overflow the signed address domain.
+        base = add(body, arith.MuliOp(offset, size))
+        lo, hi, step = (constant(body, n) for n in (0, access.word_bytes, 1))
+        nested = Block(arg_types=[IndexType()])
+        add(body, scf.ForOp(lo, hi, step, [], Region(nested)), "whole_word_byte_guard")
+        byte = add(nested, arith.IndexCastOp(nested.args[0], builtin.i64))
+        offset = add(nested, arith.AddiOp(base, byte))
+        # Close the original lane (or active branch) after the byte loop.
+        body.add_op(scf.YieldOp())
+        body = nested
     if not cleanup:
         low = add(body, arith.CmpiOp(offset, constant(body, 0, builtin.i64), "sge"))
         high = add(body, arith.CmpiOp(offset, extra["extent", access.buffer.name], "slt"))
@@ -411,7 +442,7 @@ def guard_loops(source, access, extra, *, write=False, cleanup=False, owner_word
                 initialized = add(body, arith.CmpiOp(state, constant(body, 0, builtin.i64), "eq"))
                 add(body, cf.AssertOp(initialized, "Triton writable-buffer read before completed initialization"))
     body.add_op(scf.YieldOp())
-    if body is not parent:
+    if selected is not None:
         parent.add_op(scf.YieldOp())
     operations = list(outer.ops)
     for op in operations:

@@ -18,7 +18,7 @@ from xdsl.rewriter import Rewriter
 from .diagnostics import ConversionError
 
 
-def expand_byte_events(state, source_ids, byte_order):
+def expand_byte_events(state, source_ids, byte_order, *, byte_atomics=False):
     from .pointer_views import element
     from .shared_tensor import _array, opcode
     from .word_events import MEMORY_EVENTS
@@ -43,6 +43,15 @@ def expand_byte_events(state, source_ids, byte_order):
             )
 
         if opcode(op) not in ("tt.load", "tt.store"):
+            if byte_atomics:
+                from .atomic_memory import contract
+                from .byte_atomic_events import view_info
+                contract(op, source_ids, typed=True)
+                try:
+                    view_info(view, byte_order)
+                except ValueError:
+                    refuse("byte atomics require an integer word numeric profile")
+                continue
             refuse(
                 "different-width byte atomics require an indivisible word-effect implementation"
             )

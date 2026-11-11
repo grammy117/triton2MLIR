@@ -27,6 +27,8 @@ FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bi
 
 
 def payload(info):
+    if "byte_view" in info:
+        return "standard-byte-backed-word-atomic-with-original-returned-old-value"
     if info.get("numeric_contract") == F64_CONTRACT:
         from .atomic_float_add import F64_PAYLOAD
         return F64_PAYLOAD
@@ -66,11 +68,30 @@ def validate_evidence(admission, memory, records, buffers):
         dtype = info.get("value_dtype") if floating else "i" + str(info.get("word_bits")) if isinstance(info, dict) else None
         word = isinstance(info, dict) and "word_view" in info
         # A callee's typed primitive is shared; storage views belong to uses.
-        primitive = {key: value for key, value in info.items() if key != "word_view"} if word else info
+        byte = isinstance(info, dict) and "byte_view" in info
+        primitive = {key: value for key, value in info.items() if key not in ("word_view", "byte_view")} if word or byte else info
         expected_view = {"storage_dtype": "f" + str(info.get("word_bits")), "value_dtype": "i" + str(info.get("word_bits")),
             "element_bits": info.get("word_bits"), "address_units": "equal-width-elements"} if word else None
         if word:
             dtype = expected_view["storage_dtype"]
+        if byte:
+            from .byte_atomic_events import view_info
+            if type(info.get("word_bits")) is not int:
+                raise ValueError("byte atomic word widths must be exact integers")
+            try:
+                expected_byte = view_info(builtin.IntegerType(info["word_bits"]), admission.get("byte_order"))
+            except (ValueError, KeyError):
+                raise ValueError("byte atomic evidence lacks its explicit word/byte boundary") from None
+            if (profile != TYPED_EFFECT_PROFILE or floating or word or info["byte_view"] != expected_byte
+                    or not isinstance(info["byte_view"], dict)
+                    or any(type(info["byte_view"].get(key)) is not int for key in ("word_bits", "alignment_bytes"))
+                    or memory.get("byte_order") != admission.get("byte_order")
+                    or access.get("mask") not in ("unmasked", "source-per-lane")
+                    or not isinstance(access.get("guard_tile"), list)
+                    or any(type(n) is not int for n in access.get("guard_tile", []))
+                    or access.get("guard_tile") != [*access.get("tile", []), expected_byte["alignment_bytes"]]):
+                raise ValueError("byte atomic evidence differs from its complete word/byte ownership contract")
+            dtype = "i8"
         if (not isinstance(info, dict) or not candidates or any(c != info and c != primitive for c in candidates)
                 or buffer.get("dtype") != dtype
                 or word and (profile != TYPED_EFFECT_PROFILE or floating
@@ -147,7 +168,7 @@ def adapt_payload(module, abi, admission, source_ids):
     buffers = {arg: value for arg, (kind, value) in zip(function.body.block.args, abi.source_bindings) if kind == "buffer"}
     accesses = [a for a in admission["accesses"] if a["effect"] == "atomic-readwrite"]
     observed = [0] * len(accesses)
-    views = {"memref.cast", "memref.subview", "memref.reinterpret_cast", "memref.collapse_shape", "memref.expand_shape"}
+    views = {"memref.cast", "memref.subview", "memref.reinterpret_cast", "memref.collapse_shape", "memref.expand_shape", "memref.view"}
     def root(value):
         while value not in buffers:
             op = value.owner
@@ -173,6 +194,28 @@ def adapt_payload(module, abi, admission, source_ids):
             generic = generic.parent_op()
         if generic is None:
             raise ConversionError("native atomic left its parallel tensor event")
+        if len(matches) == 1 and "byte_view" in accesses[matches[0]]["atomic"]:
+            access = accesses[matches[0]]
+            info = access["atomic"]
+            if not region or list(generic.results[0].type.get_shape()) != access["tile"]:
+                raise ConversionError("native byte atomic changed its original word event tile")
+            from .byte_atomic_match import match as match_byte
+            match_byte(generic, info, masked=access["mask"] == "source-per-lane")
+            observed[matches[0]] += 1
+            ancestor = generic
+            while ancestor is not None:
+                if isinstance(ancestor, GenericOp) and ancestor not in generics:
+                    generics.append(ancestor)
+                ancestor = ancestor.parent_op()
+            op.attributes.update({"prov.atomic_operation": builtin.StringAttr(info["operation"]),
+                "prov.atomic_source_order": builtin.StringAttr(info["source_order"]),
+                "prov.atomic_source_scope": builtin.StringAttr(info["source_scope"]),
+                "prov.atomic_logical_scope": builtin.StringAttr(info["logical_scope"]),
+                "prov.atomic_standard_order": builtin.StringAttr("acq_rel")})
+            reports.append({"source_ids": ids, "buffer": buffer.name, **info,
+                "inactive_old_value": "zero-refinement-of-source-undefined-old-value" if access["mask"] == "source-per-lane" else "no-inactive-lanes",
+                "effect_boundary": "standard-execute-region-no-inline", "payload": payload(info)})
+            continue
         kind = op.properties.get("kind")
         standard_kind = "compare-exchange" if cas else kind.value.data if isinstance(kind, builtin.IntegerAttr) else None
         word_info = None

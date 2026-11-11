@@ -42,7 +42,7 @@ from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
 
 
-def dispatch(op, roots, offset, selector, *, pointer_type=None):
+def dispatch(op, roots, offset, selector, *, pointer_type=None, byte_offsets=False):
     """Select logical bases with scalar branches inside the original parallel tile."""
     type_ = op.results[0].type
     tiled = isinstance(type_, builtin.TensorType)
@@ -69,6 +69,13 @@ def dispatch(op, roots, offset, selector, *, pointer_type=None):
         base = roots[ordinal]
         scalar = pointer_type.element_type if isinstance(pointer_type, builtin.TensorType) else pointer_type
         viewed = base
+        if byte_offsets:
+            pointer = raw("tt.addptr", [base, local_offset], [base.type])
+            cast = raw("tt.bitcast", [pointer.results[0]], [scalar])
+            atomic = raw("tt.atomic_cas", [cast.results[0], comparison, value], [element],
+                         {"prov.pointer_base_ordinal": builtin.IntegerAttr(base.index, builtin.i32)})
+            block.add_ops([pointer, cast, atomic])
+            return atomic.results[0]
         if scalar is not None and scalar != base.type:
             cast = raw("tt.bitcast", [base], [scalar])
             block.add_op(cast)

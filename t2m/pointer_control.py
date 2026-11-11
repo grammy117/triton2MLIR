@@ -83,12 +83,14 @@ def lower_offsets(state):
         Rewriter.replace_op(op, added)
 
 
-def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None, _inspect_roots=False):
+def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None, _inspect_roots=False, byte_atomics=False):
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS
     from .pointer_views import compatible, element as pointer_element, normalize as normalize_word_views
     if byte_order is not None and byte_order not in ("little", "big"):
         raise ValueError("byte-buffer views require explicit little or big byte order")
+    if byte_atomics and (not typed_atomics or byte_order is None):
+        raise ValueError("byte atomic normalization requires the typed effect profile and explicit byte order")
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
@@ -224,12 +226,13 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
         return state
     if byte_roots:
         from .byte_memory import expand_byte_events
-        expanded = expand_byte_events(state, source_ids, byte_order)
+        expanded = expand_byte_events(state, source_ids, byte_order, byte_atomics=byte_atomics)
         if expanded:
             return expanded + normalize_pointer_control(module, source_ids, isolate_memory=True,
-                typed_atomics=typed_atomics, byte_order=byte_order)
+                typed_atomics=typed_atomics, byte_order=byte_order, byte_atomics=byte_atomics)
         isolate_memory = True
-    views = normalize_word_views(state, source_ids, typed_atomics=typed_atomics)
+    views = normalize_word_views(state, source_ids, typed_atomics=typed_atomics,
+                                 byte_atomics=byte_atomics, byte_order=byte_order)
     if any(len(roots) > 1 for roots in bases.values()):
         from .pointer_select import normalize_selected
         return views + normalize_selected(state, source_ids)
@@ -247,6 +250,21 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
         pointer = base
         emitted = []
         scalar = type_.element_type if isinstance(type_, TensorType) else type_
+        if base in byte_roots and pointer_element(scalar).bitwidth > 8:
+            raw_type = TensorType(base.type, type_.get_shape()) if isinstance(type_, TensorType) else base.type
+            if isinstance(raw_type, TensorType):
+                splat = builtin.UnregisteredOp.with_name("tt.splat").create(operands=[base], result_types=[raw_type])
+                emitted.append(splat)
+                pointer = splat.results[0]
+            address = builtin.UnregisteredOp.with_name("tt.addptr").create(
+                operands=[pointer, op.operands[0]], result_types=[raw_type])
+            cast = builtin.UnregisteredOp.with_name("tt.bitcast").create(operands=[address.results[0]], result_types=[type_])
+            emitted.extend((address, cast))
+            for item in emitted:
+                item.location = op.location
+            op.parent.insert_ops_before(emitted, op)
+            op.operands = [cast.results[0], *op.operands[1:]]
+            continue
         if scalar != base.type:
             viewed = builtin.UnregisteredOp.with_name("tt.bitcast").create(operands=[base], result_types=[scalar])
             emitted.append(viewed)

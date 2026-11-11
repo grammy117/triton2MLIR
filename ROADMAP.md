@@ -6,11 +6,12 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
-[Byte-backed atomic word mechanisms](docs/byte_atomic_words.md) now execute
-through native and actual Merlin host libraries with byte order retained.
-Source templates also replay the byte/word boundary through actual native
-stages. Whole-word guards, payload accounting and independent consumer
-integration remain required intake gates; the frontend refusal stays in place.
+[Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete
+TTIR packages and actual Merlin libraries, retaining byte order, old values,
+whole-word bounds/alignment and per-byte ownership. Source templates, executable
+payload recipes and independent consumer declarations are checked separately.
+Selected/loop/model compositions, floating policies and targets still need their
+own qualifications; full arbitrary-kernel coverage remains open.
 [Indexed descriptors](docs/indexed_descriptors.md) now reuse the installed upstream
 pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
 source padding, state and atomic kinds through the existing checked memory path.

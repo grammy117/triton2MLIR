@@ -15,6 +15,17 @@ from xdsl.ir.affine import AffineMap
 from .diagnostics import ConversionError
 
 
+def view_info(word, byte_order):
+    if word not in (builtin.i16, builtin.i32, builtin.i64) or byte_order not in ("little", "big"):
+        raise ValueError("byte atomic views require integer words and explicit little or big byte order")
+    return {
+        "storage_dtype": "i8", "value_dtype": str(word), "word_bits": word.bitwidth,
+        "byte_order": byte_order, "address_units": "signed-i64-bytes",
+        "template_address_units": "word-elements-after-active-alignment",
+        "alignment_bytes": word.bitwidth // 8,
+    }
+
+
 def boundary(op, source_ids, byte_order):
     """Recognize a real byte addptr followed by a word pointer bitcast.
 
@@ -54,12 +65,7 @@ def boundary(op, source_ids, byte_order):
             or isinstance(cast.operands[0].type, builtin.TensorType) != bool(shape)
             or shape and cast.operands[0].type.get_shape() != shape):
         refuse("byte atomic templates require matching static tiles and signed i64 byte addresses")
-    return address, {
-        "storage_dtype": "i8", "value_dtype": str(view), "word_bits": view.bitwidth,
-        "byte_order": byte_order, "address_units": "signed-i64-bytes",
-        "template_address_units": "word-elements-after-active-alignment",
-        "alignment_bytes": view.bitwidth // 8,
-    }
+    return address, view_info(view, byte_order)
 
 
 def prefix(body, size, mask, location):

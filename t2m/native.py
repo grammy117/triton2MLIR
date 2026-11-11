@@ -14,6 +14,22 @@ import sys
 import numpy as np
 
 
+def requires_integer_atomic_regions(module):
+    """Select a backend capability from actual byte-word memory operations."""
+    from xdsl.dialects import builtin
+
+    for op in module.walk():
+        if op.name != "memref.generic_atomic_rmw" or op.results[0].type not in (builtin.i16, builtin.i32, builtin.i64):
+            continue
+        value = op.operands[0]
+        while getattr(value.owner, "name", None) == "memref.cast":
+            value = value.owner.operands[0]
+        owner = value.owner
+        if getattr(owner, "name", None) == "memref.view" and owner.operands[0].type.element_type == builtin.i8:
+            return True
+    return False
+
+
 def execute_native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, integer_atomic_regions=False):
     return _native(mlir_text,inputs,work,python=python,shape_abi=shape_abi,compiler_support_root=compiler_support_root,integer_atomic_regions=integer_atomic_regions)
 

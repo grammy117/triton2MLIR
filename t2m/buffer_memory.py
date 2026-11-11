@@ -101,7 +101,9 @@ def functionalize_memory(module, abi, *, guards=None):
         value = incoming
         if declared.effect != "read":
             dynamic = [dimensions[n] for n in declared.shape if isinstance(n, str)]
-            value = append(entry, memref.AllocOp.build(operands=[dynamic, []], result_types=[type_]), role="owned-output-state").memref
+            byte_atomic = guards is not None and any(a["buffer"] == declared.name and "byte_view" in a.get("atomic", {}) for a in guards["accesses"])
+            value = append(entry, memref.AllocOp.build(operands=[dynamic, []], result_types=[type_],
+                properties={"alignment": IntegerAttr(8, builtin.i64)} if byte_atomic else {}), role="owned-output-state").memref
             if incoming is not None:
                 append(entry, memref.CopyOp(incoming, value), role="preserve-incoming-output-state")
             states[declared.name] = value

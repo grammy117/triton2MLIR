@@ -54,7 +54,9 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     arrays, references = validate_inputs(result.spec,inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
-    actual, execution = execute_native(mlir, arrays, work, python=python, shape_abi=result.spec.runtime_shapes())
+    from .native import requires_integer_atomic_regions
+    actual, execution = execute_native(mlir, arrays, work, python=python, shape_abi=result.spec.runtime_shapes(),
+        integer_atomic_regions=requires_integer_atomic_regions(result.module))
     for computed, golden, buffer in zip(actual, references, result.spec.outputs, strict=True):
         if computed.shape != golden.shape or computed.dtype != golden.dtype:
             raise ValueError("reference shapes/dtypes must exactly match results")

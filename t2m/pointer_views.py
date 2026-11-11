@@ -96,7 +96,7 @@ def lower_memory_view(op, view, storage, fill=None):
     return restored
 
 
-def normalize(state, source_ids, *, typed_atomics=False):
+def normalize(state, source_ids, *, typed_atomics=False, byte_atomics=False, byte_order=None):
     from .shared_tensor import _array, opcode
     from .word_events import MEMORY_EVENTS
     def refuse(op, message):
@@ -109,6 +109,14 @@ def normalize(state, source_ids, *, typed_atomics=False):
         roots = state.bases[pointer]
         scalar = state.types[pointer].element_type if isinstance(state.types[pointer], builtin.TensorType) else state.types[pointer]
         root, *others = sorted(roots, key=lambda v: v.index)
+        if (byte_atomics and opcode(op) in ("tt.atomic_rmw", "tt.atomic_cas")
+                and all(element(base.type) == builtin.i8 for base in roots)
+                and element(scalar).bitwidth > 8):
+            from .byte_atomic_events import view_info
+            reports.append({"kind": "logical-byte-atomic-word-view", "source_ids": source_ids(op.location),
+                "opcode": opcode(op), "roots": sorted(v.index for v in roots),
+                **view_info(element(scalar), byte_order)})
+            continue
         if any(other.type != root.type for other in others):
             # Selection will split the original event before applying each
             # root's register view. Validate all roots before any mutation.

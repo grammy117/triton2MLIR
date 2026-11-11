@@ -91,6 +91,22 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+[Byte-backed integer word atomics](byte_atomic_words.md) now form a complete
+source-to-Merlin host slice. All nine i32/i64 RMW kinds and i16/i32/i64 CAS
+retain word atomicity, old values, both logical byte orders, source masks and
+returned byte state. A 102-case source/payload matrix passes through actual
+Merlin libraries; six added evidence/initialization/ordinary-conflict checks
+pass. Whole-word bounds precede byte scaling; every byte participates in
+ownership/init admission. Executable recipe matching and independent reader
+checks keep source custody separate from numerical/source equivalence.
+The public saved-source CLI produces a verified 20-member package and separate
+45-member qualification. Existing memory/model/coverage regressions pass.
+Next qualify selected roots, source for/while state, ordinary updates, typed
+roots and full model captures on this path, then continue numerical/effect,
+maintained-corpus and applicable-target closure. The historical component-only
+notes below describe the preceding state; their intake refusals are superseded
+only for the explicitly qualified integer profile above.
+
 [Byte-backed word atomic mechanisms](byte_atomic_words.md) now have executable
 standard MLIR and a separately selected Merlin pure-integer-region lowering.
 Native cases and actual Merlin libraries retain word atomicity, both declared

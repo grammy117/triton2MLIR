@@ -1279,7 +1279,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         from .word_events import MEMORY_EVENTS, needs_isolation
         isolated_events = needs_isolation(middle_module) or (byte_order is not None and any(
             opcode(op) in MEMORY_EVENTS for op in middle_module.walk()))
-        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics, byte_order=byte_order)
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics, byte_order=byte_order,
+            byte_atomics=typed_atomics and byte_order is not None)
         from .atomic_word_views import bind_source
         bind_source(records, pointer_control_reports)
     scan_reports = expand_scans(middle_module, _source_ids)
@@ -1309,7 +1310,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if isolated_events:
         from .word_events import convert_events, print_ir
         from .word_evidence import record as word_record
-        events = convert_events(middle_module, work / "word-events", optimizer, _source_ids)
+        events = convert_events(middle_module, work / "word-events", optimizer, _source_ids, byte_order=byte_order)
         compute_input = print_ir(middle_module)
         compute_source = work / "word-compute.mlir"
         compute_source.write_text(compute_input)
@@ -1371,7 +1372,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     admission = None
     if memory_profile == "guarded-buffer":
         from .guarded_memory import instrument
-        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
+        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, byte_order=byte_order)
         result = witness = None
     else:
         result = witness = _functionalize(lowered, abi)
@@ -1389,6 +1390,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if memory_profile in ("buffer", "guarded-buffer"):
         from .buffer_memory import functionalize_memory, parse_memory
         if atomics:
+            from .byte_atomic_expansion import expand as expand_byte_atomics
+            transformations.extend(expand_byte_atomics(lowered, admission, _source_ids))
             from .compare_exchange import expand
             transformations.extend(expand(lowered, _source_ids))
             from .atomic_word_views import expand as expand_word_atomics
@@ -1433,7 +1436,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         abi = public_abi
         transformations.append({"kind": "typed-root-byte-storage-transport", **storage_transport})
     word_views = [r for r in transformations if r.get("kind") in ("logical-pointer-word-view", "logical-atomic-word-view")]
-    byte_views = [r for r in transformations if r.get("kind") == "logical-byte-buffer-word-event"]
+    byte_views = [r for r in transformations if r.get("kind") in ("logical-byte-buffer-word-event", "logical-byte-atomic-word-view")]
     if byte_views:
         next(iter(result.ops)).attributes["prov.logical_byte_views"] = StringAttr(json.dumps(byte_views, sort_keys=True))
     if word_views:
@@ -1602,6 +1605,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             ordering="source-program-order; linearizable-RMW-with-standard-acq_rel; ordinary-races-refused")
         if f32_atomic_add is not None:
             trace["memory"]["f32_atomic_add"] = f32_atomic_add
+        if "byte_order" in admission:
+            trace["memory"]["byte_order"] = admission["byte_order"]
         trace["abi_difference"] += "; private-invocation atomic payload; atomic collisions permitted; ordinary races still guarded"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)

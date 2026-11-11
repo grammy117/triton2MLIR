@@ -7,6 +7,9 @@ from .input_storage import READONLY_SNAPSHOTS
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    byte_atomics = any("byte_view" in item for item in trace.get("memory", {}).get("atomic_payload", []))
+    if byte_atomics:
+        differences.append("explicit private-invocation typed byte-word atomics retain i8 owning storage and integer word values in one standard generic atomic region per active lane; original source-pointee byte addresses, whole-word bounds/alignment and per-byte ownership/initialization remain executable; source-word v2 bindings separately declare actual byte captures and isolated word formals with one explicit byte order; a checked private literal probe and integer codecs preserve logical byte order; native materialization selects the checked pure-integer atomic-region feature through normal ownership/lifetime checks; the public tensor/scalar ABI and receipt schemas are unchanged; this supplies no external participants, physical pointer identity, floating numeric policy or accelerator qualification")
     if "typed_storage_transport" in trace:
         differences.append("explicit typed storage transport preserves public owning tensor dtypes/shapes while selected width-changing roots use private i8 storage with an appended static word-byte axis; standard integer bitcasts/shifts retain every incoming and returned word without floating conversion; original memory-event grouping remains recoverable; guard costs are derived per public result from byte capacity and independently checked by Merlin; whole-root transport is an executable correctness path whose aligned wide-memory optimization remains downstream; this supplies no byte-backed atomic, physical address identity or accelerator implementation")
     if any(record.get("kind") == "logical-byte-buffer-word-event" for record in trace.get("transformations", [])):
@@ -123,4 +126,12 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("explicit IEEE f32 atomic addition policy preserves subnormal inputs/results with round-to-nearest-even, exact old words and unspecified arithmetic NaN payload/sign; portable generic atomic regions retain addition and explicit result NaN quieting through canonicalization; native ownership requires Merlin's checked atomic-word feature and complete internal CAS retry helper under the default 64-bit descriptor/index ABI; package artifacts and tensor/scalar ABI are unchanged")
     if any(item.get("operation") == "cas" for item in trace.get("memory", {}).get("atomic_payload", [])):
         differences.append("compare/exchange uses a standard generic atomic comparison/select region, retaining success/failure values and the original old word; selected bases branch inside parallel tiles; the pinned native ownership toolchain additionally requires Merlin's checked compare/exchange or atomic-word-view helper legalization and qualified default 64-bit descriptor/index ABI (T2M_MERLIN_ROOT for native qualification); portable model.mlir retains no LLVM operations or opaque helper calls")
+    if byte_atomics:
+        # Ordinary representation records describe their own permission only;
+        # the separate typed event contract above supplies atomic admission.
+        differences = [difference.replace("no byte-backed atomic,", "no independent atomic permission,")
+                       .replace("indivisible byte-backed atomic,", "independent atomic permission,")
+                       .replace(", byte-backed atomic,", ", independent atomic permission,")
+                       .replace("no byte-backed atomic permission", "no independent atomic permission")
+                       for difference in differences]
     return differences

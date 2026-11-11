@@ -197,8 +197,15 @@ def normalize_selected(state, source_ids):
         offset = op.operands[0]
 
         def address(base, pointer_type=type_):
+            from .pointer_views import element
             root = base
             scalar = pointer_type.element_type if isinstance(pointer_type, TensorType) else pointer_type
+            if base in state.byte_roots and element(scalar).bitwidth > 8:
+                byte_type = TensorType(base.type, pointer_type.get_shape()) if isinstance(pointer_type, TensorType) else base.type
+                if isinstance(byte_type, TensorType):
+                    root = at(op, raw("tt.splat", [base], [byte_type]))
+                byte_address = at(op, raw("tt.addptr", [root, offset], [byte_type]))
+                return at(op, raw("tt.bitcast", [byte_address], [pointer_type]))
             if scalar != base.type:
                 root = at(op, raw("tt.bitcast", [base], [scalar]))
             if isinstance(pointer_type, TensorType):
@@ -211,7 +218,8 @@ def normalize_selected(state, source_ids):
         if name == "tt.atomic_cas":
             from .compare_exchange import dispatch
             ids = source_ids(op.location)
-            dispatch(op, roots, offset, logical_tag(pointer, op), pointer_type=type_)
+            dispatch(op, roots, offset, logical_tag(pointer, op), pointer_type=type_,
+                     byte_offsets=all(base in state.byte_roots for base in roots))
             memory_reports.append({"kind": "selected-pointer-memory", "source_ids": ids, "opcode": name,
                 "bases": [v.index for v in roots], "selector": "per-lane" if varying[pointer] else "uniform",
                 "memory_position": "original-event; conditional-CAS-in-parallel-logical-tile",

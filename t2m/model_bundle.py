@@ -169,7 +169,9 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     inputs, sources = _arguments(capture, bound.module, work / "arguments", python, compiler_support_root=merlin_root)
     entry = next(op for op in bound.module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
     goldens, reference_members = _references(capture, parent, entry.function_type.outputs)
-    actual, execution = execute_native(mlir, inputs, work / "native", python=python, compiler_support_root=merlin_root)
+    from .native import requires_integer_atomic_regions
+    actual, execution = execute_native(mlir, inputs, work / "native", python=python, compiler_support_root=merlin_root,
+        integer_atomic_regions=requires_integer_atomic_regions(bound.module))
     _compare_results(actual, goldens, rtol, atol, entry.function_type.outputs)
     if _parent(capture) != parent or _record(capture / "capture_receipt.json") != parent_receipt_record:
         raise ValueError("parent capture changed during qualification")

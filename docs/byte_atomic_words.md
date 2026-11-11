@@ -1,10 +1,12 @@
-# Byte-backed atomic words: verified mechanism and remaining intake work
+# Byte-backed atomic words through the Merlin interface
 
-The standard-MLIR mechanism and Merlin host lowering now execute. **TTIR
-byte-atomic admission remains refused:** pointer-control reconstruction, full-word
-byte guards and source/payload accounting still need integration. Isolated word
-templates now retain and check the byte-address boundary. These component
-tests do not increase TTIR opcode coverage or claim a runnable Triton package.
+The explicit `typed-atomics` effect profile with `--byte-order little|big` now
+admits integer TTIR atomics on i8 owning storage through complete native and
+Merlin host packages. All nine i32/i64 RMW kinds and i16/i32/i64 CAS retain their
+word update, original old values, masks and complete returned byte state.
+Source conversion, byte guards, executable payload matching and independent
+consumer declarations are integrated. Broader compositions, floating numeric
+profiles and applicable targets remain completion requirements.
 
 ## Executable mechanism
 
@@ -26,8 +28,11 @@ source byte order stays explicit; no host endian constant enters the frontend.
 Bounds cover the entire word without overflowing an end-address sum. Alignment
 and bounds checks occur only for active lanes. Inactive extreme addresses and
 empty storage perform no word read and return the declared zero refinement.
-The caller supplies an aligned private allocation and retains whole-event
-ownership, initialization and ordinary/atomic conflict checks. The probe uses
+The frontend supplies an aligned private allocation and checks whole-event
+ownership, initialization and ordinary/atomic conflicts for every touched byte.
+The complete-word bound precedes scaling a word index back to bytes. A byte
+iteration supplies guard metadata only; the payload remains one word atomic.
+The probe uses
 normal ownership-based deallocation, with no manual-free bypass.
 
 `prov.byte_word_atomic` retains the operation, width, byte order, byte-address
@@ -51,13 +56,29 @@ effects lose permission. Numeric/source equivalence remains independent of
 this no-escape check. The feature shares one seam with existing CAS/word
 lowering; selecting legacy CAS keeps its original closed profile.
 
-The native `execute_native` / `observe_native` API requires explicit
+The raw native `execute_native` / `observe_native` API requires explicit
 `integer_atomic_regions=True` plus the existing Merlin compiler-support path.
 Its feature file and adapter report distinguish this path. Portable input
 remains standard MLIR. The present native helper requires the qualified default
 64-bit host ABI; accelerator materialization retains its own requirements.
+Package writers and the Merlin compiler worker select this capability from
+actual integer atomic regions on standard byte views. The worker composes it
+with loop destination reuse at the same checked bufferization seam. No
+provenance label selects the update's numerical behavior.
+
+The qualified Merlin branch is `ttir-experiment-grammy` at `8a0ed43b7` or a
+compatible successor. Older readers retain their refusal of the additional
+byte-word contract; the base integer-region lowering was introduced at `22d9cf702`.
 
 ## Verified evidence
+
+The integrated source/payload matrix passes 102 cases: actual source RMW/CAS
+kernels, scalar/tiled events, both declared orders, all nine RMW kinds, every
+integer CAS width, changing runtime counts and reused Merlin libraries. Actual
+runtime refusals cover alignment, negative/partial-word addresses and invalid
+unmasked CAS tails. Six additional checks retain strict integer evidence fields,
+uninitialized byte refusal and last-byte ordinary/atomic conflicts in both
+cross-program orders. Existing component evidence remains useful separately:
 
 - 42 native integer RMW/CAS cases cover both declared byte orders, duplicate
   indices, exact old values, masked extreme addresses and intervening byte stores.
@@ -90,39 +111,73 @@ index, plus the original returned-old-value relation. Native constant pooling
 may reorder literal definitions; their full typed values and all remaining SSA
 edges still have to match. Caller tags grant no permission.
 
-The source-word v2 component chain retains these actual template bytes and
+The source-word v2 chain retains these actual template bytes and
 one consistent explicit byte order. Producer replay regenerates every template
 and substitutes the checked native output. Real Triton pointer kernels exercise
 both native event and arithmetic stages; altered capture types, divisions,
-alignment, masks, indices and old-value returns refuse. This is native source
-conversion/replay evidence, not complete byte ownership, source equivalence,
-consumer admission or runnable-kernel qualification. The main frontend and the
-independent Merlin reader retain their current refusal until the remaining
-integration gates below are implemented together.
+alignment, masks, indices and old-value returns refuse. Pointer normalization
+reconstructs a byte addptr before the word cast, preserving original pointee
+scales through source arithmetic. Producer replay and the independent Merlin
+reader bind actual i8 captures, isolated word formals, source primitive/order/
+scope, logical byte order and original-word/per-byte guard tiles.
 
-The focused run passes 57 source-boundary/alignment/replay cases and 100
+The earlier focused run passes 57 source-boundary/alignment/replay cases and 100
 existing byte-refusal, region-event and word-CAS regressions (157 total), using
 the pinned shared optimizer and actual native/Merlin environments. Package
-coverage counts remain unchanged.
+coverage counts did not change from those component tests alone.
 
-## Remaining source integration, in order
+## Current payload verification
 
-1. Connect the checked templates to pointer-control/finite-root reconstruction.
-   After lowering original pointer state to byte offsets, reconstruct a byte
-   addptr and then its word cast. A word addptr receiving a byte offset would
-   misrepresent source units even if a later converter happened to compensate.
-   Preserve pointer selections, original source integer arithmetic and region state.
-2. Extend the independent Merlin source-word reader for this explicit typed
-   byte-storage capture boundary. Preserve original primitive/order/scope and
-   exact stage custody. Producer replay already supports the component chain;
-   current consumer refusal is required until the byte effect relation is checked.
-3. Guard every byte of each word as one atomic participant event. Preserve
-   initialization, returned-old semantics and ordinary/atomic conflicts.
-   Several byte atomics cannot implement one source word atomic.
-4. Expand admitted events through this mechanism and account for the actual
-   alias, complete update region and old-value decoding. Producer/consumer
-   evidence must check the changed storage relation without granting semantics
-   from metadata or dropping difficult payloads.
-5. Qualify original kernels, selected roots, loops, mixed ordinary/atomic state,
-   public CLI packages and complete model captures through the real Merlin
-   interface. Floating numeric profiles and applicable targets stay explicit.
+`byte_atomic_match` rebuilds the executable recipe and compares its effect/
+control skeleton and typed integer expression DAGs against the current payload.
+Only literal folding and exact neutral integer identities are normalized.
+Word alias, bounds/alignment assertions, active branch, complete update and
+old-word decoder must match; dead extra arithmetic and unknown effects refuse.
+The endian flag must arise from the actual private literal allocation, stores,
+word view/load and representation assertion. Tags may be removed without changing
+permission; altered tags cannot authorize a different body.
+
+The checked byte import uses standard zero-offset, unit-stride reinterpretation
+with the exact guard-ABI extent. This avoids upstream LLVM's
+`ViewOpMemrefCastFolder`, which folds an unranked-to-ranked `memref.cast` into
+`memref.view` without preserving its ranked source requirement. Native per-pass
+verification localized that assertion in the pinned `triton-ptr-to-memref`
+canonicalizer. No shadow storage, unchecked physical pointer or toolchain build
+is introduced. Normal ownership/deallocation remains mandatory.
+
+The independent reader checks declarations and byte custody. Recipe checks,
+runtime guards and measured libraries are separate evidence; universal source
+equivalence and `source_closure_verified` are not established by these records.
+
+## Public saved-source workflow
+
+The visible i64 unsigned-max demo uses big logical byte order, collisions, a
+masked tail and untouched padding. Its source/ABI/independent arrays are at
+`out/byte-atomic-rmw-inputs/`; the public commands produce a source package and
+a separate Merlin qualification:
+
+```bash
+python -m t2m shared-tensor out/byte-atomic-rmw-inputs/source.ttir \
+  --abi out/byte-atomic-rmw-inputs/abi.json --out out/byte-atomic-rmw \
+  --memory-profile guarded-buffer --address-policy source-words \
+  --effect-profile typed-atomics --byte-order big \
+  --inputs out/byte-atomic-rmw-inputs/inputs.npz \
+  --reference out/byte-atomic-rmw-inputs/reference.npz \
+  --optimizer "$TRITON_SHARED_OPT" --python "$T2M_NATIVE_PYTHON"
+python -m t2m qualify-merlin out/byte-atomic-rmw --out out/byte-atomic-rmw-merlin \
+  --merlin-root "$T2M_MERLIN_ROOT" --merlin-python "$T2M_MERLIN_PYTHON" \
+  --python "$T2M_NATIVE_PYTHON" --merlin-clang "$T2M_MERLIN_CLANG"
+```
+
+These generated development artifacts verify 20/45 members. They are ignored
+outputs; source kernels and reproducible integration tests are tracked.
+
+## Remaining full-scope work
+
+Qualify byte-word events with finite root selection, source for/while state,
+mixed ordinary updates, typed owning-root bindings and complete model captures.
+Those generic paths are connected, but their broader compositions require their
+own execution evidence. Floating byte-backed arithmetic needs explicit numeric
+policies. External participants, synchronization/publication, physical model
+views, complete corpus coverage and applicable accelerator materialization
+remain open in the full [completion plan](completion_plan.md).

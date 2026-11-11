@@ -11,7 +11,7 @@ import sys
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
-def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, fp8_narrowing=False, literal_diagnostics=False, scalar_diagnostics=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, fp8_narrowing=False, literal_diagnostics=False, scalar_diagnostics=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -45,6 +45,9 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, bfloat=False, b
     elif compare_exchange:
         from merlin.llvmlower.atomic_compare_exchange import edit_pipeline as edit_compare_exchange
         passes = edit_compare_exchange(passes)
+    if integer_regions:
+        from merlin.llvmlower.atomic_integer_regions import edit_pipeline as edit_integer_regions
+        passes = edit_integer_regions(passes)
     if bfloat_elementwise:
         from merlin.llvmlower.bfloat_elementwise import edit_pipeline as edit_bfloat_elementwise
         passes = edit_bfloat_elementwise(passes)
@@ -105,11 +108,17 @@ def compile_model(staged, work):
     elif any(op.name == "cf.assert" and "\x00" in op.msg.data for op in module.walk()):
         features = features | {"lower_length_aware_diagnostics"}
     regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
+    from native import requires_integer_atomic_regions
+    integer_regions = requires_integer_atomic_regions(module)
+    if integer_regions:
+        from merlin.llvmlower.atomic_integer_regions import ensure_registered
+        ensure_registered()
+        features = features | {"lower_integer_atomic_regions"}
     if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
         features = features | {"lower_atomic_word_views"}
-    elif regions:
+    elif regions and not integer_regions:
         features = features | {"lower_integer_compare_exchange"}
-    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features,
+    pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features, integer_regions=integer_regions,
         bfloat="preserve_bfloat_transport" in features, bfloat_elementwise=bfloat_math in features,
         fp8_widening="lower_fp8_widening" in features,
         fp8_narrowing="lower_fp8_narrowing" in features,

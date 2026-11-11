@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Byte-backed integer atomics](byte_atomic_words.md) now reach native and actual
+Merlin packages with one word event, explicit logical byte order, old values
+and complete byte-state returns. All nine i32/i64 RMW kinds and i16/i32/i64 CAS
+qualify across both declared orders. The 102-case source/payload matrix,
+six additional evidence/init/conflict checks, 118 existing regressions and
+345 independent Merlin reader/native ownership checks pass. Public saved-source
+CLI artifacts verify 20/45 members. Selected/loop/model compositions, floating
+byte atomics, complete numeric/effect closure and applicable targets remain open.
+
+The refreshed explicit report at `out/byte-atomic-coverage/coverage.json`
+verifies 67 packages and 46 standalone qualifications. Observed opcode counts
+remain 34/50, with 30 represented in host-qualified captures; this broadens
+memory/effect composition evidence, not universal opcode/type/attribute coverage.
+The older measurements below retain their original selection and scope.
+
 [Changed-width source parameters](typed_parameters.md) now qualify ordinary
 pointers and external descriptors over typed owning tensors. Root origins and
 source strides keep their different element units, including partial sharing,

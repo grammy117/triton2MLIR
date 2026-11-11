@@ -349,14 +349,19 @@ Producer replay reconstructs the complete pair; Merlin refuses a missing or
 inconsistent declaration. This adds no public/dummy argument, receipt schema,
 artifact name, physical alias or final opaque call.
 
-The byte-atomic template component has a separate additive declaration:
+Byte-backed integer atomics have a separate additive declaration:
 `events.byte_order` and each binding's `byte_view` retain logical byte order,
 word width, alignment and byte/word address units. `input_types` keeps the
 actual i8 root while `template_input_types` declares the isolated integer-word
 formal. Producer replay checks native alignment, division, event operands and
-returned-old relations. **This component is not an admitted package variant**:
-the complete byte-ownership/payload relation and independent Merlin reader
-still require integration. It cannot inherit equal-width word-CAS permission.
+returned-old relations. Under explicit typed-atomics and logical byte order,
+memory admission v4 adds `atomic.byte_view` and `guard_tile` (original word tile
+plus its byte axis), with one indivisible word payload and per-byte guard state.
+The independent Merlin reader checks source/storage/width/order/guard declarations;
+the producer checks the current complete executable payload recipe. Standard
+MLIR and the public tensor/scalar ABI remain unchanged. Native materialization
+selects `lower_integer_atomic_regions` through normal ownership/lifetime checks.
+This permission is separate from equal-width word CAS and floating policies.
 See [the current evidence and remaining gates](byte_atomic_words.md).
 
 Merlin checks/copies these compiler-only members for standalone and static derived
