@@ -143,6 +143,14 @@ comparison. The exceptional BF16 model pins both stored BF16 results and their
 integer observations while retaining the computed F32 NaN policy. This is an
 evaluation contract, not a change to source arithmetic or target lowering.
 
+Packed scalar maps now extend their checked slot-independent arithmetic proof
+to structured branches and for/while state. Fourteen native/Merlin libraries
+retain per-element loaded trip counts and runtime scalars, with 56 further
+runtime replays. Eleven direct proof checks retain hidden capture/guard,
+lexical-binder, result-order, attribute and termination boundaries. Coupled or
+asymmetric slots still need source-backed logical grouping facts; packed memory,
+unretained control execution and applicable targets remain separate work.
+
 ## Required evidence for every supported form
 
 Keep these gates separate for each opcode/type/attribute/composition:

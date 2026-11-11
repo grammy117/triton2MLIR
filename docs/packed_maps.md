@@ -2,6 +2,8 @@
 
 Packed maps now lower automatically when the actual inlined scalar SSA graph
 establishes that every slot computes the same function of its own input slots.
+That function may now contain pure scalar `scf.if`, `scf.for` and `scf.while`
+regions, including data-dependent trip counts and carried values.
 The result is a parallel `linalg.generic`, with the original pack size retained
 in `prov.map_pack` and the checked abstraction named by
 `prov.map_grouping="proved-slot-independent-v1"`. No GPU register/lane layout,
@@ -42,10 +44,34 @@ For every returned scalar slot, the adapter checks two separate facts:
 Terms are interned iteratively, so repeated expressions do not require recursive
 expression expansion or element enumeration. A shared normalized term does
 not erase the separate slot-dependency check: `a0+a1` cannot become `2*a`.
-Only known effect-free scalar arithmetic/math DAGs qualify. The pinned xDSL
+Known effect-free scalar arithmetic/math DAGs use the original proof;
+structured scalar regions use its extension described next. The pinned xDSL
 binding omits the effect trait on `arith.extsi`; that exact registered class is
 admitted using upstream MLIR's `Arith_CastOp` purity contract. Unknown effects,
 regions and memory reads do not inherit that exception.
+
+### Structured scalar regions
+
+`typed-structured-ssa-congruence-v1` extends the same proof to known scalar SCF
+operations. Region arguments use lexical binders instead of SSA identities;
+typed operands, captures, result positions, executable attributes/properties,
+region order, terminators and complete ordered bodies remain part of the key.
+An inner induction variable cannot be substituted for an outer one. Interned
+region terms avoid expanding nested expressions into duplicated trees.
+
+Slot-dependency analysis includes every captured region value as well as direct
+operation operands. A guard or hidden body capture from a different slot still
+refuses even when its normalized expression matches. Representative liveness
+retains the producers of captured values. Corresponding nested source locations
+are fused at their original positions; provenance does not supply the proof.
+
+The actual branches and loops are cloned into the scalar Linalg body. They are
+not converted to eager selects, unrolled, or assigned to physical threads. Loop
+bounds may differ between logical elements. Complete region bodies remain
+executable. Unused structured control currently refuses rather than being
+discarded as dead arithmetic: unknown termination is observable even when a
+loop has no memory effects. Packed memory and physical grouping remain separate
+requirements.
 
 The emitted scalar body contains a representative output dependency closure.
 Unused pure arithmetic is removed before scalar arguments are identified,
@@ -81,10 +107,21 @@ case with two results and three independent runtime domains. The asymmetric
 `packed-map` case remains refused, alongside source assembly. The current
 verified corpus has thirteen cases and eleven actual Merlin libraries.
 
-This closes the layout-independent pure-DAG class, not arbitrary packed maps.
+Fourteen additional native/Merlin libraries now qualify structured packed maps:
+pack two/four, i32/i64/f32, rank-one/two tiles, zero-divisor branches and for/while
+loops whose per-element trip counts come from an input tensor plus a runtime
+scalar. Each unchanged library replays four more domains (56 replays total),
+including empty/scalar inputs, zero/negative trip domains and ragged tails.
+Independent integer references retain values above 2^53; every complete result
+and functional input preservation is checked. Eleven direct proof checks cover
+hidden cross-slot guards/captures, lexical binders, result ordering, nested
+fastmath differences, producer/source-location preservation and unused loops.
+The 59 existing packed, unpacked and mapped-memory regressions also pass.
+
+This closes the qualified layout-independent scalar class, not arbitrary packed maps.
 Coupled/asymmetric slots need an established mapping from original register
 groups to logical coordinates, carried out of a supported layout IR as dataflow
-facts. Regions, mapped reads and broader numeric forms need their own checked
+facts. Other regions, mapped reads and broader numeric forms need their own checked
 expansions. Inferring adjacency, duplicating packed inputs or dropping slots
 would change computation and remains forbidden. Applicable target execution
 and performance are separate completion gates.

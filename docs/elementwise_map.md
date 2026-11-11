@@ -5,7 +5,8 @@ guarded-buffer/source-words profile, retaining scalar branches/loops, source
 fills and five-result shared-state snapshots across ordinary kernel writes.
 The pinned native verifier still forbids writes inside map regions; this
 adapter preserves that source boundary. The pure numeric profile below also
-admits [proved layout-independent packed DAGs](packed_maps.md).
+admits [proved layout-independent packed computation](packed_maps.md), including
+scalar branches and for/while recurrences with per-element runtime trip counts.
 
 `tt.map_elementwise` / `tt.map_elementwise.return` now have a standard expansion
 for `pack=1` with numeric tensors and an inlined scalar value region. Inputs may
@@ -52,7 +53,7 @@ assume that packed lanes are identical. No Ascend backend or custom op is needed
 Coupled/asymmetric packed maps retain a separate grouping contract: flattening
 physical packed groups into independent elements could change cross-element dataflow. Pointer
 inputs and source reads now have the separately checked adapter above. Packed
-maps without a proved slot-independent DAG retain located refusals. They remain in the
+maps without proved slot-independent scalar computation retain located refusals. They remain in the
 completion scope; no opaque successful fallback is emitted. Tile-local histogram
 now has [a separate standard expansion and qualification](histogram.md). Numerical
 unsplat already lowers through the shared path.

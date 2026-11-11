@@ -1,17 +1,18 @@
 """Turn scalar TTIR maps into parallel tensor computation, retaining the body.
 
 Triton 3.7.1 defines pack=1 as one scalar subregion invocation per element.
-For larger packs, identical slot-local scalar DAGs are independent of the
+For larger packs, identical slot-local scalar computations are independent of the
 physical register grouping. Certify that fact before using the same expansion.
 The shared Meta/Microsoft arithmetic converters do not handle this region op.
 Use standard linalg generalization: identity maps, parallel iterators and the
 original inlined scalar region, including its structured control flow.
 """
 
+from collections import ChainMap
 import math
 import struct
 
-from xdsl.dialects import arith, builtin, tensor
+from xdsl.dialects import arith, builtin, scf, tensor
 from xdsl.dialects.builtin import AffineMapAttr, IntegerAttr, StringAttr, TensorType
 from xdsl.dialects.linalg.attrs import IteratorTypeAttr
 from xdsl.dialects.linalg.ops import GenericOp, YieldOp
@@ -39,13 +40,14 @@ def _attribute_key(value):
 
 
 def _independent_packing(source, end, pack, refuse, source_ids):
-    """Certify slot-local congruent DAGs without selecting a register layout.
+    """Certify slot-local congruent computations without choosing a register layout.
 
     Intern typed SSA terms, separately retaining their actual slot dependency.
     Equal terms alone are insufficient: a0+a1 and a1+a0 must not become 2*a.
     Every executable attribute/property, operand order and result ordinal is
     part of a term. Location/provenance describe terms, not their semantics.
-    No memory event, region or unknown effect is discarded by this proof.
+    Structured regions retain their binders, execution order and full bodies.
+    No memory event, unproved termination or unknown effect is discarded.
     """
     from .shared_tensor import opcode
 
@@ -66,21 +68,57 @@ def _independent_packing(source, end, pack, refuse, source_ids):
             dependencies[value] = None
         return terms[value]
 
-    operations = list(source.ops)[:-1]
-    for child in operations:
-        # xDSL 0.68 omits the effect trait on ExtSIOp. Upstream MLIR's
-        # Arith_IToICastOp inherits Pure through Arith_CastOp; admit that exact
-        # registered class rather than treating unknown dialect ops as pure.
-        pure = is_side_effect_free(child) or isinstance(child, arith.ExtSIOp)
-        if child.regions or opcode(child).split(".")[0] not in ("arith", "math") or not pure:
-            refuse("packed elementwise maps need an explicit logical grouping contract unless a pure scalar DAG proves slot independence", child)
-        operands = tuple(term(v) for v in child.operands)
-        slots = {dependencies[v] for v in child.operands} - {None}
-        dependency = next(iter(slots)) if len(slots) == 1 else (None if not slots else -1)
+    def operation_key(child, environment, path=()):
+        # Region arguments use lexical binders, never capture identities. Equal
+        # loops/branches in distinct slots therefore compare modulo SSA names,
+        # while an outer induction variable cannot alias an inner one.
+        control = isinstance(child, (scf.IfOp, scf.ForOp, scf.WhileOp))
+        terminal = isinstance(child, (scf.YieldOp, scf.ConditionOp))
+        # xDSL 0.68 omits purity on this exact upstream pure integer cast.
+        # These exact SCF operations have only recursive memory effects; every
+        # nested operation is checked below instead of repeatedly walking them.
+        pure = control or is_side_effect_free(child) or isinstance(child, arith.ExtSIOp)
+        if (not control and (child.regions or not pure
+                or opcode(child).split(".")[0] not in ("arith", "math") and not terminal)):
+            refuse("packed elementwise maps need an explicit logical grouping contract unless pure scalar computation proves slot independence", child)
+        captures = set()
+        operands = []
+        for value in child.operands:
+            if value in environment:
+                operands.append(environment[value])
+            else:
+                operands.append(term(value))
+                captures.add(value)
+        regions = []
+        for region_index, region in enumerate(child.regions):
+            if len(region.blocks) != 1:
+                refuse("packed scalar control requires single-block structured regions", child)
+            block = region.block
+            nested_path = (*path, region_index)
+            local = environment.new_child()
+            for index, arg in enumerate(block.args):
+                local[arg] = intern(("region-argument", nested_path, index, arg.type))
+            body = []
+            for position, nested in enumerate(block.ops):
+                key, free = operation_key(nested, local, (*nested_path, position))
+                captures.update(free)
+                body.append(intern(("region-operation", key)))
+                for index, value in enumerate(nested.results):
+                    local[value] = intern(("operation", key, index))
+            regions.append((tuple(arg.type for arg in block.args), tuple(body)))
         semantic_attributes = tuple(sorted((key, _attribute_key(value)) for key, value in child.attributes.items()
                                            if not key.startswith("prov.")))
-        key = (opcode(child), operands, tuple(v.type for v in child.results),
-               semantic_attributes, tuple(sorted((k, _attribute_key(v)) for k, v in child.properties.items())))
+        key = (opcode(child), tuple(operands), tuple(v.type for v in child.results), semantic_attributes,
+               tuple(sorted((k, _attribute_key(v)) for k, v in child.properties.items())), tuple(regions))
+        return key, captures
+
+    operations = list(source.ops)[:-1]
+    uses = {}
+    for child in operations:
+        key, captures = operation_key(child, ChainMap())
+        uses[child] = captures
+        slots = {dependencies[v] for v in captures} - {None}
+        dependency = next(iter(slots)) if len(slots) == 1 else (None if not slots else -1)
         # A dead mixed-slot node can have the same normalized term as a
         # slot-local node. It is not an equivalent source location.
         if dependency != -1:
@@ -104,23 +142,31 @@ def _independent_packing(source, end, pack, refuse, source_ids):
     representatives = []
     for child in reversed(operations):
         if any(value in needed for value in child.results):
-            needed.update(child.operands)
+            needed.update(uses[child])
             representatives.append(child)
     representatives.reverse()
     live = set(end.operands)
     dead = []
     for child in reversed(operations):
         if any(value in live for value in child.results):
-            live.update(child.operands)
+            live.update(uses[child])
         else:
+            if child.regions:
+                refuse("unused packed scalar control needs its execution/termination retained, not dead arithmetic elimination", child)
             dead.extend(source_ids(child.location))
     equivalents = {}
     for group in nodes.values():
-        locations = builtin.FusedLoc(builtin.ArrayAttr(child.location for child in group), builtin.NoneAttr())
-        for child in group:
-            equivalents[child] = locations
-    proof = {"method": "typed-scalar-ssa-congruence-v1", "grouping": "independent-of-register-layout",
+        # Matching complete region syntax establishes correspondence at every
+        # nested position, including conditions, yields and carried values.
+        for corresponding in zip(*(tuple(child.walk()) for child in group), strict=True):
+            locations = builtin.FusedLoc(builtin.ArrayAttr(child.location for child in corresponding), builtin.NoneAttr())
+            for child in corresponding:
+                equivalents[child] = locations
+    structured = any(child.regions for child in operations)
+    proof = {"method": "typed-structured-ssa-congruence-v1" if structured else "typed-scalar-ssa-congruence-v1",
+        "grouping": "independent-of-register-layout",
         "source_scalar_operations": len(operations), "representative_scalar_operations": len(representatives),
+        **({"source_nested_operations": sum(len(tuple(child.walk())) - 1 for child in operations)} if structured else {}),
         "discarded_pure_dead_source_ids": sorted(set(dead)),
         "outputs": [{"tensor_result": index, "scalar_slots": pack,
                      "source_ids": sorted({identity for value in end.operands[index * pack:(index + 1) * pack]
@@ -183,7 +229,8 @@ def expand_elementwise_maps(module, source_ids, *, memory_events=False):
         mapping = {arg: body.args[i // pack] for i, arg in enumerate(source.args)}
         for child in children:
             cloned = child.clone(value_mapper=mapping)
-            cloned.location = locations.get(child, child.location)
+            for original, copy in zip(child.walk(), cloned.walk(), strict=True):
+                copy.location = locations.get(original, original.location)
             body.add_op(cloned)
         terminal = YieldOp(*(mapping.get(v, v) for v in returned))
         terminal.location = end.location

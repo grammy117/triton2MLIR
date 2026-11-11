@@ -32,8 +32,11 @@ The [maintained product corpus](docs/product_corpus.md) now records real refusal
 and execution against all 50 pinned definitions. The combined selection observes
 all 50 definition names in source and native/Merlin-qualified captures under
 selected profiles, including the optional source implementation above. Proved
-[slot-independent packed DAGs](docs/packed_maps.md) now also reach Merlin while
-retaining packing intent. Coupled/asymmetric packed maps, broader mapped
+[slot-independent packed computation](docs/packed_maps.md) now also reaches Merlin
+while retaining packing intent. Fourteen additional libraries preserve scalar
+branches and for/while state with per-element loaded trip counts and runtime
+scalars; the same libraries pass 56 further runtime domains.
+Coupled/asymmetric packed maps, broader mapped
 forms, source assembly, typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete
 TTIR packages and actual Merlin libraries, retaining byte order, old values,
