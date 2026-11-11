@@ -6,8 +6,11 @@ Exact word transport, byte-level guards and independently derived per-result
 scratch costs reach native and Merlin execution, including complete model captures.
 [Original changed-width pointer/descriptor parameters](docs/typed_parameters.md)
 also share typed roots. [Byte-backed integer atomics](docs/byte_atomic_words.md)
-now retain indivisible word updates, byte order and old values through complete
-Merlin host packages. Broader model/effect compositions and target work remain.
+now retain indivisible word updates, byte order, selected for/while state and
+old-value tensor recurrences through complete Merlin host packages. Real models
+keep learned state and all seven results through API and CLI binding.
+The [current completion plan](docs/completion_plan.md) separates these working
+paths from remaining full numeric/effect/runtime/target coverage.
 
 Translate Triton TTIR into portable tensor MLIR while retaining the kernel's original dataflow
 and intent in annotations and provenance. Examples now include ragged tiled GEMM,
@@ -61,7 +64,8 @@ complete model2MLIR tuple capture use that same executable binding path.
 [Different-width byte-buffer views](docs/byte_aliases.md) now retain typed word
 loads/stores, byte updates and explicit byte order through Merlin. Pointer and
 descriptor parameters can share one byte root; a real model capture keeps all
-five results. Typed-root packing, byte-backed atomics and targets remain open.
+five results. Typed-root packing and integer byte atomics have their qualified
+profiles above; broader effects and applicable targets remain open.
 
 [Dense model tensor views](docs/model_tensor_views.md) now bind matrix values
 to those roots with explicit standard reshapes. Actual i64 and f32/f16/BF16
