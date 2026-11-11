@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Source effects on the target](docs/target_effects.md) now preserve actual void
+entries, assertions, diagnostics and returning tensors through Merlin/Spike.
+Checked invocation/outcome markers and separate source-byte frames distinguish
+source failure from setup errors and traps. Original float signs, formatting
+and complete tensor/input observations remain explicit.
+
 [Standalone dynamic target invocation](docs/standalone_target.md) now reaches
 Merlin's ordinary RISC-V backend with unchanged kernel MLIR and native scalar
 arguments. Ten actual Spike images compare eighteen complete results exactly,

@@ -72,7 +72,8 @@ def worker(mode, root, out, *arguments):
         from consumer_features import select_features
         manifest = checked_stage(out / "compiler")
         signature = json.loads((out / "compiler/signature.json").read_text())
-        runtime = manifest.get("source_profile") == "standalone-tensor-kernel"
+        effect = manifest.get("source_profile") == "standalone-effect-kernel"
+        runtime = effect or manifest.get("source_profile") == "standalone-tensor-kernel"
         entries = signature["inputs"] + signature["outputs"]
         for entry in (() if runtime else entries):
             shape = entry.get("shape")
@@ -80,7 +81,7 @@ def worker(mode, root, out, *arguments):
                 raise ValueError("whole-model image requires static ranked tensor arguments/results")
         if not runtime and sum(math.prod(e["shape"]) * 8 for e in entries) > 64 << 20:
             raise ValueError("whole-model qualification exceeds the 64 MiB value budget")
-        if (not signature["inputs"] and not runtime) or not signature["outputs"]:
+        if (not signature["inputs"] and not runtime) or not signature["outputs"] and not effect:
             raise ValueError("whole-model qualification needs tensor arguments and results")
         source = (out / "compiler/program.mlir").read_bytes()
         module = parse_mlir_text(source.decode("utf-8"))
@@ -98,18 +99,21 @@ def worker(mode, root, out, *arguments):
             backend="scalar", features=features,
             full_readback=True, readonly_input_indices=tuple(range(len(signature["inputs"]))),
             arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20,
-            **({"runtime_signature": out / "compiler/signature.json"} if runtime else {}))
+            **({"runtime_signature": out / "compiler/signature.json"} if runtime else {}),
+            **({"effect_observation_bytes": 4 << 20} if effect else {}))
         checked_stage(out / "compiler")
         if (projection / "model.mlir").read_bytes() != source:
             raise ValueError("runtime filename projection changed the staged program")
         write_json(out / "build.json", {"build": report, "tools": tools,
             "driver": pin(__file__), "selected_features": sorted(features),
+            **({"effect_observer": pin(Path(__file__).with_name("qualify_spike_effect.py"))} if effect else {}),
             "requested_features": requested_features,
             "feature_selector": pin(Path(__file__).resolve().parents[1] / "t2m/consumer_features.py"),
             "merlin_sources": {name: pin(Path(root) / name) for name in (
                 "src/merlin/runtime/backends/spike_model.py", "src/merlin/runtime/backends/_model_elf_metadata.py",
                 "src/merlin/runtime/whole_model_readback.py", "src/merlin/runtime/out_bin.py",
                 "src/merlin/runtime/input_observation.py", "src/merlin/llvmlower/c_runtime.py",
+                "src/merlin/runtime/effect_observation.py",
                 "src/merlin/llvmlower/runtime_invocation.py",
                 "src/merlin/llvmlower/pipeline.py", "src/merlin/llvmlower/toolchain.py",
                 "src/merlin/frontends/linalg_mlir.py", "src/merlin/frontends/linalg_named_regions.py",
@@ -136,6 +140,9 @@ def worker(mode, root, out, *arguments):
         build = json.loads((out / "build.json").read_text())
         tools = build["tools"]
         report = build["build"]
+        if "effect_observation" in report:
+            from qualify_spike_effect import observe
+            return observe(mode, root, out)
         if mode == "run":
             for item in tools.values():
                 if pin(item["path"]) != {k: item[k] for k in ("bytes", "sha256")}:

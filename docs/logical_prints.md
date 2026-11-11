@@ -1,5 +1,10 @@
 # Logical source print events
 
+[Target source-effect execution](target_effects.md) now preserves the logical
+stream through actual Merlin/Spike images. Decimal NaN signs come from original
+typed words before widening; finite values retain typed casts. Physical
+replicas and final GPU correspondence remain separate boundaries.
+
 `tt.print` now lowers into standard `vector.print`, `tensor.extract`, arithmetic
 and structured loops. Actual printed values, signedness, hex word decoding,
 literal prefixes, source control positions and logical coordinates remain
@@ -92,9 +97,10 @@ the portable source/ABI stays unchanged.
 
 Void/read-only packets now qualify returning print effects; initially failing
 tensor kernels retain their real result declarations and exact print/failure
-streams. A complete returning-tensor packet still needs a mixed numeric and
-observable-output reference contract. Existing numeric-only comparisons do not
-qualify diagnostic streams. This remains an explicit next package gate.
+streams. Returning tensors use the complete [mixed reference v2](mixed_effects.md)
+with exact diagnostic and per-result numeric policies, including the separate
+[target route](target_effects.md). Numeric-only comparisons do not qualify
+diagnostic streams.
 
 ## Visible demo and evidence
 

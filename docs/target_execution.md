@@ -1,5 +1,10 @@
 # Functional whole-model target execution
 
+[Source-effect qualification](target_effects.md) additionally carries actual
+void/asserting entries and mixed diagnostic/tensor results through this backend,
+with separate invocation/outcome and byte observations. Numeric receipts below
+retain their normal-return/result requirements.
+
 [Standalone runtime kernels](standalone_target.md) additionally use this driver
 with dynamic tensor dimensions and native scalar arguments. Ten target images
 retain eighteen complete result tensors, including zero-input/empty cases and

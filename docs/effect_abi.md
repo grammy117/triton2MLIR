@@ -1,5 +1,10 @@
 # Effect-only kernel ABI
 
+[Target source-effect execution](target_effects.md) now preserves these actual
+signatures/outcomes through ordinary Merlin RISC-V/Spike images. It adds an
+external target receipt and checked invocation/byte/outcome transport; source
+capture/reference schemas stay unchanged.
+
 `t2m.shared-tensor-abi.v6` explicitly selects `effect_only: true`. It permits
 readonly tensor inputs, runtime scalars, static specializations and a logical
 grid, including an empty argument list. The function has no tensor results.
@@ -119,8 +124,9 @@ not universal opcode execution coverage.
 [Logical print events](logical_prints.md) now also execute through actual Merlin
 for readonly/void entries and initial tensor failures. `print-words` and
 `print-hex` are public demos. Physical print replicas and the selected numeric
-formatting/runtime are explicit differences. Mixed tensor results plus exact
-diagnostic references remain a required package extension.
+formatting/runtime are explicit differences. Mixed tensor results and exact
+diagnostics now use [reference v2](mixed_effects.md), including the separate
+[target observation route](target_effects.md).
 
 Assertions now retain embedded NUL and Unicode through the explicit
 [length-aware literal transport](literal_diagnostics.md). New packets bind

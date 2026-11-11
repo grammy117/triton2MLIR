@@ -36,6 +36,13 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Source-effect target execution](target_effects.md) now retains real void and
+asserting entries, diagnostics and all mixed tensor results through actual
+Merlin/Spike images. Explicit call/outcome markers distinguish source assertions
+from traps and setup failures. Decimal NaN signs retain source words; formatting
+and half transport have independent checks. Physical/external effects and
+broader target scope remain required.
+
 [Standalone runtime target ABI](standalone_target.md) now reuses unchanged
 typed kernel MLIR across dynamic shapes and all seven native scalar types.
 Ten actual Spike images retain eighteen complete exact-word results, including

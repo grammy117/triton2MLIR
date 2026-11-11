@@ -1,5 +1,9 @@
 # Standalone kernels with a runtime target ABI
 
+[Source-effect target qualification](target_effects.md) now supplies the
+separate void/assertion/diagnostic route. The numeric receipt and normal-return
+contract described here retain their meaning.
+
 `scripts/qualify_spike_model.py` also accepts a verified standalone numeric
 `t2m.capture-receipt.v2` package. Dynamic tensors and native scalar arguments
 reach Merlin's ordinary RISC-V build and Spike execution without enclosing the
@@ -16,8 +20,9 @@ Static dimensions must agree with those types; dynamic dimensions bind to
 named integer scalars, with their declared guarded bounds checked. Dtypes,
 scalar rank, canonical Boolean words and complete value byte budgets must
 agree before generation. The present C transport accepts unencoded dense
-tensors of rank at most eight and ranked tensor results. Other layouts and
-effect-only target entries remain explicit completion requirements.
+tensors of rank at most eight and ranked tensor results. Other layouts remain
+unsupported by this transport. Effectful entries use the separate source-effect
+observation route.
 
 `image/cgen/runtime-abi.json` records `merlin.runtime-invocation-abi.v1`: source,
 signature and invocation archive hashes, concrete tensor shapes, native scalar

@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Observable target effects](target_effects.md) add the external
+`t2m.spike-effect-qualification.v1` receipt with `matched-expected-outcome`.
+Actual void/result signatures and source capture/reference schemas stay
+unchanged. Process, invocation phase, source-byte frame, outcome, readonly
+inputs and every returning tensor remain distinct observations. Expected
+assertions publish no fabricated tensor or normal-return evidence. These APIs
+require the experimental Merlin consumer; numeric receipts keep their meanings.
+
 [Standalone target invocation](standalone_target.md) adds the separate external
 `t2m.spike-kernel-qualification.v1` receipt, with unchanged source capture/ABI
 schemas. Optional paired input/reference archives bind a new invocation outside

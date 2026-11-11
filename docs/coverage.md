@@ -1,5 +1,10 @@
 # Measured coverage and remaining boundaries
 
+[Source effects on target](target_effects.md) now preserve actual void/result
+signatures, assertions, diagnostic bytes and complete tensors through ordinary
+Merlin/Spike execution. This adds target evidence for selected host profiles;
+the 106-package registry selection below and its scope remain unchanged.
+
 [Standalone runtime kernels](standalone_target.md) additionally qualify five
 source cases through ten actual Merlin RISC-V/Spike images, with eighteen
 complete exact-word result comparisons. Dynamic domains, all seven native

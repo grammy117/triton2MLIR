@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Observable target effects](docs/target_effects.md) now extend ordinary Merlin
+target execution to void entries, initially failing tensor entries and mixed
+diagnostic/result kernels. Calls, source bytes, independent outcomes, all
+results and readonly inputs are checked separately. Physical/external effects
+and accelerator qualification remain open.
+
 [Standalone runtime target ABI](docs/standalone_target.md) now carries dynamic
 tensors and all seven native scalar types through actual Merlin/Spike images.
 Ten target invocations retain eighteen complete exact-word results. Changed
