@@ -1,14 +1,14 @@
 """The only module importing Triton internals. Native parsing, never regex IR parsing."""
 
-from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 import hashlib
 import json
 import os
 import struct
 import subprocess
 import sys
+from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 from .diagnostics import ConversionError
 
@@ -40,61 +40,7 @@ def _function_parameters(operations):
     return functions
 
 
-def _expand_tensor_pointers(path, inventory_path):
-    """Worker-only checked intake rewrites; never invoke a target backend."""
-    import resource
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
-    ir, context = _context()
-    from triton._C.libtriton import passes
-    module = ir.parse_mlir_module(str(Path(path).resolve()), context)
-    if not module.verify():
-        raise ConversionError("Triton rejected the original tensor-pointer source")
-    operations = []
-    module.walk(operations.append)
-    names = {op.get_name() for op in operations}
-    original_parameters = _function_parameters(operations)
-    from .descriptor_arguments import has_parameters
-    descriptor_parameters = has_parameters(original_parameters)
-    descriptors = bool(names & TENSOR_DESCRIPTOR_OPS) or descriptor_parameters
-    # Parse only the typed value's complete type syntax, never printed IR lines.
-    from xdsl.dialects.builtin import TensorType, f32
-    from xdsl.parser import Parser
-    from .ir import context as xdsl_context
-    type_context = xdsl_context()
-    precision_dots = []
-    for op in operations:
-        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") not in (0, 1, 3, 4):
-            continue
-        types = [Parser(type_context, str(op.get_operand(i).get_type())).parse_type() for i in range(3)]
-        if not all(isinstance(type_, TensorType) and type_.element_type == f32 for type_ in types[:2]):
-            continue  # The pinned pass ignores precision for other inputs.
-        if types[2].element_type != f32 or (op.get_int_attr("maxNumImpreciseAcc") or 0) < 0:
-            raise ConversionError("selected f32 dot precision requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
-        precision_dots.append(op)
-    normalized_names = names & (DESCRIPTOR_OPS | {"tt.cat"})
-    if descriptor_parameters:
-        normalized_names.add("tt.func")
-    if precision_dots:
-        if any(op.get_name() == "tt.load" and op.get_bool_attr("isVolatile") for op in operations):
-            raise ConversionError("volatile observations cannot become stable tensor reads", opcode="tt.load")
-        if names & {"tt.inline_asm", "tt.elementwise_inline_asm"}:
-            raise ConversionError("source assembly needs a separately qualified numeric/effect profile", opcode="tt.elementwise_inline_asm")
-        normalized_names.add("tt.dot")
-    if not normalized_names:
-        raise ConversionError("input does not use a supported intake normalization")
-    pipeline = []
-    if "tt.cat" in names:
-        pipeline.extend(("t2m-expand-cat-preserve-order", "canonicalize"))
-    if descriptors:
-        pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
-    if names & BLOCK_POINTER_OPS:
-        pipeline.append("triton-rewrite-tensor-pointer")
-    precision_modes = {op.get_int_attr("inputPrecision") for op in precision_dots}
-    if precision_modes & {1, 3, 4}:
-        pipeline.append("tritongpu-F32DotTC{emu-tf32=" + ("true" if 1 in precision_modes else "false") + "}")
-    if precision_modes & {0, 1}:
-        pipeline.extend(("t2m-expand-tf32-e8m10-rtz-v1", "canonicalize"))
+def _native_operation_inventory(operations, precision_dots=()):
     values, blocks, records, regions = {}, {}, [], {}
 
     def value_id(value):
@@ -130,6 +76,111 @@ def _expand_tensor_pointers(path, inventory_path):
                                 else "source-C-added-after-official-composite"), "physical_mapping": "undecided"}
             if op.get_int_attr("inputPrecision") in (0, 1):
                 records[-1]["dot_precision"]["logical_numeric_profile"] = "logical-tf32-e8m10-rtz-v1"
+    return {"operations": records, "blocks": list(blocks.values()),
+            "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries"}
+
+
+def _inspect_ttir(path, inventory_path):
+    """Worker-only source verification/inventory without normalization."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+    ir, context = _context()
+    module = ir.parse_mlir_module(str(Path(path).resolve()), context)
+    if not module.verify():
+        raise ConversionError("Triton rejected the original source")
+    operations = []
+    module.walk(operations.append)
+    if len(operations) > 200_000:
+        raise ConversionError("source inventory exceeds its operation budget")
+    result = _native_operation_inventory(operations)
+    result.update(schema="t2m.native-source-inventory.v1", triton_version=PINNED_TRITON,
+                  normalization="not-performed", target_backend="not-invoked")
+    Path(inventory_path).write_text(json.dumps(result, indent=2) + "\n")
+
+
+def inspect_ttir(source, work):
+    """Retain exact source and native verification independently of conversion."""
+    source, work = Path(source), Path(work)
+    if source.stat().st_size > 16 * 1024 * 1024:
+        raise ValueError("source inspection exceeds its 16 MiB input budget")
+    data = source.read_bytes()
+    work.mkdir(parents=True, exist_ok=False)
+    saved, inventory = work / "source.ttir", work / "inventory.json"
+    saved.write_bytes(data)
+    command = [sys.executable, "-c", ("import sys; sys.path.insert(0,sys.argv[1]); "
+               "from t2m.frontend import _inspect_ttir; _inspect_ttir(sys.argv[2],sys.argv[3])"),
+               str(Path(__file__).resolve().parents[1]), str(saved.resolve()), str(inventory.resolve())]
+    with (work / "stdout.log").open("xb") as stdout, (work / "stderr.log").open("xb") as stderr:
+        try:
+            process = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=30, check=False,
+                env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(work.resolve())))
+        except subprocess.TimeoutExpired as exc:
+            raise ConversionError("native source inspection exceeded 30 seconds") from exc
+    if process.returncode or not inventory.is_file():
+        raise ConversionError("native source verification failed; inspect " + str(work / "stderr.log"))
+    if saved.read_bytes() != data:
+        raise ConversionError("source changed during native inspection")
+    return json.loads(inventory.read_text())
+
+
+def _expand_tensor_pointers(path, inventory_path):
+    """Worker-only checked intake rewrites; never invoke a target backend."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+    ir, context = _context()
+    from triton._C.libtriton import passes
+    module = ir.parse_mlir_module(str(Path(path).resolve()), context)
+    if not module.verify():
+        raise ConversionError("Triton rejected the original tensor-pointer source")
+    operations = []
+    module.walk(operations.append)
+    names = {op.get_name() for op in operations}
+    original_parameters = _function_parameters(operations)
+    from .descriptor_arguments import has_parameters
+    descriptor_parameters = has_parameters(original_parameters)
+    descriptors = bool(names & TENSOR_DESCRIPTOR_OPS) or descriptor_parameters
+    # Parse only the typed value's complete type syntax, never printed IR lines.
+    from xdsl.dialects.builtin import TensorType, f32
+    from xdsl.parser import Parser
+
+    from .ir import context as xdsl_context
+    type_context = xdsl_context()
+    precision_dots = []
+    for op in operations:
+        if op.get_name() != "tt.dot" or op.get_int_attr("inputPrecision") not in (0, 1, 3, 4):
+            continue
+        types = [Parser(type_context, str(op.get_operand(i).get_type())).parse_type() for i in range(3)]
+        if not all(isinstance(type_, TensorType) and type_.element_type == f32 for type_ in types[:2]):
+            continue  # The pinned pass ignores precision for other inputs.
+        if types[2].element_type != f32 or (op.get_int_attr("maxNumImpreciseAcc") or 0) < 0:
+            raise ConversionError("selected f32 dot precision requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
+        precision_dots.append(op)
+    normalized_names = names & (DESCRIPTOR_OPS | {"tt.cat"})
+    if descriptor_parameters:
+        normalized_names.add("tt.func")
+    if precision_dots:
+        if any(op.get_name() == "tt.load" and op.get_bool_attr("isVolatile") for op in operations):
+            raise ConversionError("volatile observations cannot become stable tensor reads", opcode="tt.load")
+        if names & {"tt.inline_asm", "tt.elementwise_inline_asm"}:
+            raise ConversionError("source assembly needs a separately qualified numeric/effect profile", opcode="tt.elementwise_inline_asm")
+        normalized_names.add("tt.dot")
+    if not normalized_names:
+        raise ConversionError("input does not use a supported intake normalization")
+    pipeline = []
+    if "tt.cat" in names:
+        pipeline.extend(("t2m-expand-cat-preserve-order", "canonicalize"))
+    if descriptors:
+        pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
+    if names & BLOCK_POINTER_OPS:
+        pipeline.append("triton-rewrite-tensor-pointer")
+    precision_modes = {op.get_int_attr("inputPrecision") for op in precision_dots}
+    if precision_modes & {1, 3, 4}:
+        pipeline.append("tritongpu-F32DotTC{emu-tf32=" + ("true" if 1 in precision_modes else "false") + "}")
+    if precision_modes & {0, 1}:
+        pipeline.extend(("t2m-expand-tf32-e8m10-rtz-v1", "canonicalize"))
+    inventory = _native_operation_inventory(operations, precision_dots)
     normalizer_implementation = None
     if precision_dots or descriptors:
         from triton._C import libtriton
@@ -142,9 +193,7 @@ def _expand_tensor_pointers(path, inventory_path):
             "binary_bytes": binary.stat().st_size,
             "source_reference_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
             "source_reference_is_build_receipt": False}
-    Path(inventory_path).write_text(json.dumps({"operations": records, "blocks": list(blocks.values()),
-        "attributes": "exact-original-source; native binding does not expose complete attribute dictionaries",
-        "normalization_passes": pipeline,
+    Path(inventory_path).write_text(json.dumps({**inventory, "normalization_passes": pipeline,
         "normalized_opcodes": sorted(normalized_names),
         **({"dot_precision_implementation": normalizer_implementation} if precision_dots else {}),
         **({"descriptor_implementation": normalizer_implementation} if descriptors else {})}, indent=2) + "\n")
@@ -186,6 +235,7 @@ def _expand_tf32(ir, native_context, module):
     """
     from xdsl.dialects.builtin import TensorType, f32
     from xdsl.parser import Parser
+
     from .ir import context
 
     type_context = context()
@@ -273,6 +323,7 @@ def _expand_cats(ir, native_context, module, operations):
     """
     from xdsl.dialects.builtin import NoneAttr, TensorType
     from xdsl.parser import Parser
+
     from .ir import context
     type_context = context()
     type_context.allow_unregistered = True
@@ -314,13 +365,13 @@ def expand_tensor_pointers(source, work):
     saved, output = work / "source.ttir", work / "lowered.mlir"
     saved.write_bytes(data)
     command = [sys.executable, "-c",
-               "import sys; sys.path.insert(0, sys.argv[1]); "
+               ("import sys; sys.path.insert(0, sys.argv[1]); "
                "from t2m.frontend import _expand_tensor_pointers; "
-               "sys.stdout.write(_expand_tensor_pointers(sys.argv[2], sys.argv[3]))",
+               "sys.stdout.write(_expand_tensor_pointers(sys.argv[2], sys.argv[3]))"),
                str(Path(__file__).resolve().parents[1]), str(saved.resolve()), str((work / "inventory.json").resolve())]
     with output.open("xb") as stdout, (work / "stderr.log").open("xb") as stderr:
         try:
-            process = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=30,
+            process = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=30, check=False,
                                      env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                                               TMPDIR=str(work.resolve())))
         except subprocess.TimeoutExpired as exc:

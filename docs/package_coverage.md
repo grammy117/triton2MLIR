@@ -1,5 +1,12 @@
 # Package observations against every TTIR definition
 
+`t2m.frontend.inspect_ttir(source, work)` now supplies a separate original-source
+inventory even when product conversion refuses. It uses the pinned native
+parser/verifier in a bounded subprocess, retains exact input bytes and logs,
+and performs no normalization or target compilation. Invalid source creates no
+successful inventory. The successful-package registry below stays unchanged;
+source inspection alone grants no product or execution coverage.
+
 Each explicit selection admits at most 256 packages and 256 standalone
 qualifications. The earlier 64-entry limit prevented the expanded corpus from
 being reported together. Processing remains serial with the existing receipt,
