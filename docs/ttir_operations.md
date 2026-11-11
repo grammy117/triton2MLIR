@@ -40,7 +40,7 @@ implementation paths and open requirements.
 | Logical diagnostics | `print` | [Standard scalar/string printing and structured formatting](logical_prints.md) retain numeric values, masks/fills, source regions and logical coordinates through actual Merlin execution. Physical replicas/interleaving and typed-word float hex are explicit software-profile differences. [Mixed tensor/stream references](mixed_effects.md) now retain every result and effect from one call. Physical pointers, FP8/other carriers, effectful combiners and accelerator handling remain open. |
 | External effects / implementations | `extern_elementwise`, `elementwise_inline_asm` | [Pure default-library math](external_math.md) qualifies 52 typed declarations across 26 f32/f64 families with exact library/purity/prototype checks. Original source assembly and unknown/impure libraries still require actual implementations; backend observations cannot be inferred from provenance. |
 | Indexed descriptor effects | `descriptor_gather`, `descriptor_scatter`, `descriptor_reduce` | [Official logical pointer expansion](indexed_descriptors.md) qualifies loaded row indices, signed bounds/padding, scatter ownership and private reducing stores through Merlin. Transfer i16/i32/f16/BF16/f32, six i32 reduction kinds, signed i64 and unsigned i32 min/max and explicit IEEE f32 addition are measured. [External logical fields](external_descriptors.md) retain runtime strides/padding/rounding and original AST metadata; [allocation state](descriptor_state.md) adds runtime origins/shared roots. Broader numeric compositions, physical descriptors and applicable targets remain open. |
-| Physical observations | `ptr_to_int`, `int_to_ptr` | Concrete address-space/identity contract required; a pure logical tensor ABI does not supply it. |
+| Physical observations | `ptr_to_int`, `int_to_ptr` | Exact same-type pointer round-trips already fold through the supported upstream path and now have an actual Merlin-qualified corpus case with original source operations retained. Escaping integer addresses and other physical observations require a concrete address-space/identity contract; a pure logical tensor ABI does not supply it. |
 
 Local survey evidence is retained under `.scratch/ttir-definition-survey/`,
 including every source hash, the complete TableGen JSON and the 50 selected
@@ -54,6 +54,10 @@ llvm-tblgen --dump-json include/triton/Dialect/Triton/IR/TritonOps.td \
 The [package observation registry](package_coverage.md) now joins all 50
 definitions to typed source forms and receipt-bound package/native/Merlin
 outcomes, retaining unmeasured definitions, unknown TTIR and other dialects.
+The [combined maintained selection](product_corpus.md) now observes all 50
+source definitions and 49 in native/Merlin-qualified captures; only source
+assembly lacks a qualified host capture. This is composition evidence, not
+universal type/attribute or per-operation execution coverage.
 Source dispositions, a maintained full kernel/refusal corpus and applicable
 target evidence remain open. An observation in one composition is not a
 universal type/attribute or source-version compatibility claim.

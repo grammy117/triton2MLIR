@@ -43,14 +43,25 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars and explicit dense model value views. | Physical/non-dense/mutating model views, general value-returning TTIR entries/CFGs and broader runtime/alias compositions. |
 | Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
-| Coverage evidence | Complete pinned 50-definition inventory, upstream-stage corpus measurements, explicit receipt-bound package observation registry. | Maintained complete product kernel/refusal matrix and per-form applicable target evidence. |
+| Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The explicit `out/byte-atomic-coverage/coverage.json` selection contains **67
-packages and 46 standalone qualifications**, observing **34/50 definitions**;
-30 occur in host-qualified captures. These are composition observations, not a
-completion percentage or per-operation execution measurement. The selection
-excludes failed/refused kernels. [Package coverage](package_coverage.md) keeps
-these limits machine-readable.
+The current `out/ttir-full-inventory-coverage/coverage.json` selection reopens
+**67 packages, 46 standalone qualifications and twelve maintained product
+cases**. It observes **50/50 source definitions**, with **49 represented in
+native- and Merlin-host-qualified captures**. The current corpus provides nine
+actual libraries and retains three located refusals. Source assembly has no
+qualified host capture; packed and memory-accessing maps still refuse despite
+qualified scalar maps. These are composition observations, not a completion
+percentage or per-operation execution measurement. The [product corpus](product_corpus.md)
+and [coverage v2](package_coverage.md) keep source/refusal/execution limits
+machine-readable. The older byte-atomic selection retains its 34/50 source,
+30 host-definition measurements.
+
+The corpus also exposed guarded softmax's rejected rank-zero tensor allocations.
+The [allocation admission fix](guarded_reductions.md) preserves the actual fresh
+allocation and native lifetime semantics; four real Merlin libraries and the
+39-case allocation/guarded-memory suite pass. Nineteen corpus/registry checks
+exercise actual success/refusal/failure, effects, reuse and changed evidence.
 
 Latest implementation: [byte-backed atomic words](byte_atomic_words.md) retain
 all nine i32/i64 RMW kinds and i16/i32/i64 CAS, both logical byte orders,
@@ -92,15 +103,14 @@ Finish coherent source-to-consumer slices and commit each. Keep the full
 workstreams below active; do not indefinitely extend one already-qualified
 memory fixture while leaving the missing families unexamined.
 
-1. **Maintain the full coverage/refusal denominator.** Add reproducible product
-   cases for implemented-but-unmeasured definitions, and record actual failures
-   by stage. The current selection omits observations of `advance`, `cat`,
-   `gather`, `get_num_programs`, `histogram`, `join`, `make_tensor_ptr`,
-   `map_elementwise`/its return, `mulhiui`, `split`, `trans`, `unsplat`,
-   `elementwise_inline_asm`, `ptr_to_int` and `int_to_ptr`. Several already have
-   implementations/tests; lack of an observation is not proof of no support.
-   Join typed forms, source dispositions, successful execution and refusals
-   against all 50 definitions. Keep upstream-only successes separate.
+1. **Expand the maintained coverage/refusal matrix.** All 50 definitions are
+   now observed across explicit retained packages and current product cases;
+   49 occur in host-qualified captures. Continue with type/attribute and kernel
+   compositions, source dispositions and actual failures by stage. Preserve
+   implemented-but-unqualified forms and precise refusals in the denominator.
+   A scalar map or reversible pointer cast does not cover arbitrary packing,
+   memory effects or physical address observations. Keep upstream-only pass
+   successes separate from actual package/consumer execution.
 2. **Close numeric and effect families.** Use the matrix to select actual
    implementation gaps, starting with packed/effectful maps, remaining numeric
    contracts, external/assembly implementations and physical observations.

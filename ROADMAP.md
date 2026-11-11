@@ -6,6 +6,10 @@ annotations/provenance while computations lower into standard MLIR. This roadmap
 the design document explains the transformations. Milestones below are capability gates, not dates.
 The active [completion plan](docs/completion_plan.md) orders the remaining frontend,
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
+The [maintained product corpus](docs/product_corpus.md) now records real refusals
+and execution against all 50 pinned definitions. The combined selection observes
+50 source definitions and 49 in native/Merlin-qualified captures. Packed/
+effectful maps, source assembly, broader typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete
 TTIR packages and actual Merlin libraries, retaining byte order, old values,
 whole-word bounds/alignment and per-byte ownership. Source templates, executable

@@ -1,5 +1,12 @@
 # triton2MLIR
 
+The [maintained product corpus](docs/product_corpus.md) now records real
+conversion refusals and Merlin execution alongside successful packages. The
+combined explicit report observes all 50 pinned TTIR definitions in source,
+with 49 represented in native/Merlin-host-qualified captures. Source assembly,
+packed/effectful map forms and broader numeric/runtime/target closure remain
+open; these counts measure compositions, not universal operation support.
+
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.
 Exact word transport, byte-level guards and independently derived per-result

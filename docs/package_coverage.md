@@ -1,5 +1,14 @@
 # Package observations against every TTIR definition
 
+The [maintained product corpus](product_corpus.md) now supplies valid-source
+refusals and actual staged execution alongside successful packages. Optional
+`package-coverage --corpus` selections emit coverage v2, preserving product
+case/stage/refusal records separately. The current combined explicit selection
+observes all 50 definitions in source and 49 in native/Merlin-qualified captures;
+source assembly remains without a qualified host capture. These are measured
+compositions, not universal type/attribute support. Default package-only v1
+behavior and the historical measurements below stay unchanged.
+
 `t2m.frontend.inspect_ttir(source, work)` now supplies a separate original-source
 inventory even when product conversion refuses. It uses the pinned native
 parser/verifier in a bounded subprocess, retains exact input bytes and logs,
