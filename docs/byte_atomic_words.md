@@ -172,7 +172,7 @@ python -m t2m qualify-merlin out/byte-atomic-rmw --out out/byte-atomic-rmw-merli
 These generated development artifacts verify 20/45 members. They are ignored
 outputs; source kernels and reproducible integration tests are tracked.
 
-## Remaining full-scope work
+## Selected state, tensor recurrences and model binding
 
 Finite per-lane root selection and original for/while pointer recurrences now
 also qualify with ordinary byte updates between word events. Forty cases cover
@@ -182,8 +182,37 @@ inactive RMW lanes. The kernel retains paired pointer advances in source-word
 units, toggled root selection, every old-word snapshot and both whole roots.
 Narrow writes become visible when the pointer returns to an earlier word.
 
-Continue with old-value tensor recurrences, typed owning-root bindings and
-complete model captures on this effect path. Floating byte-backed arithmetic needs explicit numeric
-policies. External participants, synchronization/publication, physical model
+Old-word results now also feed the next iteration's tensor update. Twenty
+additional native-to-Merlin cases cover i32/i64 XOR and i16/i32/i64 CAS across
+source for/while loops and both logical byte orders; each library replays the
+same five runtime domains. Eight additional cases bind different-width i64,
+f16, f64 and i32 owning roots. Their independent byte/word oracle checks the
+entire returned roots, every old value and untouched floating NaN payloads and
+signed zeros. Floating storage does not imply floating atomic arithmetic.
+
+Merlin recognizes recursively checked, exactly-once nested atomic snapshots and
+copies only the completed tensor value into an independent carried destination.
+It retains scalar unit-tensor construction, private word views, byte ownership
+guard loops, assertions, event order and all original boundaries. It does not
+clone/move events, remove frees or assume positive loop trip counts. Fourteen
+positive/adversarial snapshot checks plus 105 existing destination/integer-body
+tests pass; external roots, shared seeds, opaque producers, missing boundaries
+and extra effects still refuse the rewrite. Native alias/lifetime checks remain
+authoritative. This consumer fix requires Merlin commit `9403bf8f2` or later.
+
+`scripts/capture_byte_atomic_model.py` captures a real `torch.library.triton_op`
+model with learned 8x8 state, two dependent calls and an empty third call. Four
+model cases cover byte and typed i64 roots, RMW and CAS. All seven original
+results, learned weights and reference archives survive native and actual
+Merlin execution byte for byte. The typed-root CAS16 case additionally passes
+the public `bind-model` CLI. Dense logical value views are explicit; the public
+model ABI stays unchanged. See `tests/test_byte_atomic_state_model.py` for the
+complete binding configuration. Model captures use little logical byte order;
+both orders are qualified separately by the standalone recurrence matrix.
+
+## Remaining full-scope work
+
+Floating byte-backed arithmetic needs explicit numeric policies. External
+participants, synchronization/publication, physical model
 views, complete corpus coverage and applicable accelerator materialization
 remain open in the full [completion plan](completion_plan.md).

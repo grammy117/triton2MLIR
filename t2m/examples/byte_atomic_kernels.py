@@ -61,18 +61,19 @@ def byte_atomic_conflict(raw, out, REVERSE: tl.constexpr):
 
 
 @triton.jit
-def _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice,
+def _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice, carry,
                             B: tl.constexpr, WIDTH: tl.constexpr, CAS: tl.constexpr,
-                            OP: tl.constexpr, NARROW: tl.constexpr):
+                            OP: tl.constexpr, NARROW: tl.constexpr, CARRY: tl.constexpr):
     lane = tl.arange(0, B)
     word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
     pointer = tl.where((lane % 2 == 0) == choice, pa, pb)
     if CAS:
         current = tl.load(pointer)
         comparison = tl.where(lane % 2 == 0, current, current ^ 1)
-        previous = tl.atomic_cas(pointer, comparison, current ^ 31, sem="acq_rel", scope="gpu")
+        desired = carry ^ 31 if CARRY else current ^ 31
+        previous = tl.atomic_cas(pointer, comparison, desired, sem="acq_rel", scope="gpu")
     else:
-        value = (lane + iteration + 3).to(word)
+        value = carry if CARRY else (lane + iteration + 3).to(word)
         if OP == "xor": previous = tl.atomic_xor(pointer, value, lane < n, sem="acq_rel", scope="gpu")
         else: previous = tl.atomic_add(pointer, value, lane < n, sem="acq_rel", scope="gpu")
     tl.store(out + iteration * n + lane, previous, lane < n)
@@ -80,24 +81,26 @@ def _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice,
         tl.store(a.to(tl.pointer_type(tl.int8), bitcast=True) + 1, (iteration + 0x5A).to(tl.int8))
         tl.store(b.to(tl.pointer_type(tl.int8), bitcast=True) + 1, (iteration + 0x33).to(tl.int8))
     advance = tl.where(iteration % 2 == 0, 1, -1)
-    return pa + advance, pb + advance, ~choice
+    carry = previous ^ (lane + iteration + 3).to(word) if CARRY else carry
+    return pa + advance, pb + advance, ~choice, carry
 
 
 @triton.jit
 def byte_atomic_state(a, b, out, n, steps, capacity, choice, B: tl.constexpr,
                       WIDTH: tl.constexpr, CAS: tl.constexpr, OP: tl.constexpr,
-                      WHILE: tl.constexpr, NARROW: tl.constexpr):
+                      WHILE: tl.constexpr, NARROW: tl.constexpr, CARRY: tl.constexpr):
     lane = tl.arange(0, B).to(tl.int64)
     word: tl.constexpr = tl.int16 if WIDTH == 16 else tl.int32 if WIDTH == 32 else tl.int64
     pa = (a.to(tl.pointer_type(tl.int8), bitcast=True) + lane * (2 * (WIDTH // 8))).to(tl.pointer_type(word), bitcast=True)
     pb = (b.to(tl.pointer_type(tl.int8), bitcast=True) + lane * (2 * (WIDTH // 8))).to(tl.pointer_type(word), bitcast=True)
+    carry = (tl.arange(0, B) + 3).to(word)
     if WHILE:
         iteration = 0
         while iteration < steps:
-            pa, pb, choice = _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice,
-                B, WIDTH, CAS, OP, NARROW)
+            pa, pb, choice, carry = _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice, carry,
+                B, WIDTH, CAS, OP, NARROW, CARRY)
             iteration += 1
     else:
         for iteration in range(steps):
-            pa, pb, choice = _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice,
-                B, WIDTH, CAS, OP, NARROW)
+            pa, pb, choice, carry = _byte_atomic_state_step(a, b, pa, pb, out, n, iteration, choice, carry,
+                B, WIDTH, CAS, OP, NARROW, CARRY)

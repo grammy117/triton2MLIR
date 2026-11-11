@@ -7,7 +7,7 @@ from .shared_tensor import TensorABI, TensorBuffer
 
 
 def convert(work, *, width=32, cas=False, operation="xor", while_=False,
-            byte_order="little", optimizer=None, root_dtype="i8"):
+            byte_order="little", optimizer=None, root_dtype="i8", carry=False):
     from .examples.byte_atomic_kernels import byte_atomic_state
     from .frontend import capture_ttir
     from .shared_tensor import convert_shared
@@ -16,7 +16,7 @@ def convert(work, *, width=32, cas=False, operation="xor", while_=False,
         raise ValueError("byte state demo requires integer CAS or add/xor RMW")
     root = Path(work)
     root.mkdir(parents=True, exist_ok=False)
-    constants = {"B": 4, "WIDTH": width, "CAS": cas, "OP": operation, "WHILE": while_, "NARROW": True}
+    constants = {"B": 4, "WIDTH": width, "CAS": cas, "OP": operation, "WHILE": while_, "NARROW": True, "CARRY": carry}
     pointer = "*" + {"f16": "fp16", "f32": "fp32", "f64": "fp64"}.get(root_dtype, root_dtype)
     source = root / "source.ttir"
     source.write_text(capture_ttir(byte_atomic_state, {

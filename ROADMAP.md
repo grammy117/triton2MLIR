@@ -10,8 +10,10 @@ compiler-staging, payload-materialization and coverage work with explicit eviden
 TTIR packages and actual Merlin libraries, retaining byte order, old values,
 whole-word bounds/alignment and per-byte ownership. Source templates, executable
 payload recipes and independent consumer declarations are checked separately.
-Selected/loop/model compositions, floating policies and targets still need their
-own qualifications; full arbitrary-kernel coverage remains open.
+Selected-root for/while state, old-value tensor recurrences, different-width
+typed roots and complete seven-result models now also qualify on this path.
+Floating policies and applicable targets still need their own qualifications;
+full arbitrary-kernel coverage remains open.
 [Indexed descriptors](docs/indexed_descriptors.md) now reuse the installed upstream
 pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
 source padding, state and atomic kinds through the existing checked memory path.

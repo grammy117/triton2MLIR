@@ -38,3 +38,27 @@ def test_merlin_libraries_retain_selected_roots_loops_and_narrow_updates(tmp_pat
 
     result = convert(tmp_path / "source", width=width, cas=cas, while_=while_, byte_order=order, optimizer=OPT)
     replay_library(tmp_path, result, cases(width, cas, byte_order=order))
+
+
+@pytest.mark.skipif(not MERLIN, reason="existing explicit Merlin toolchain required")
+@pytest.mark.parametrize("width,cas", ((32, False), (64, False), (16, True), (32, True), (64, True)))
+@pytest.mark.parametrize("while_", (False, True))
+@pytest.mark.parametrize("order", ("little", "big"))
+def test_original_atomic_old_value_tensor_recurrence_reaches_merlin(tmp_path, width, cas, while_, order):
+    from test_integer_products import replay_library
+
+    result = convert(tmp_path / "source", width=width, cas=cas, while_=while_, byte_order=order, optimizer=OPT, carry=True)
+    replay_library(tmp_path, result, cases(width, cas, byte_order=order, carry=True))
+
+
+@pytest.mark.skipif(not MERLIN, reason="existing explicit Merlin toolchain required")
+@pytest.mark.parametrize("width,cas,root_dtype,while_", (
+    (32, False, "i64", True), (64, False, "f16", True),
+    (16, True, "f64", False), (64, True, "i32", False)))
+@pytest.mark.parametrize("order", ("little", "big"))
+def test_atomic_old_values_recur_over_different_width_typed_roots(tmp_path, width, cas, root_dtype, while_, order):
+    from test_integer_products import replay_library
+
+    result = convert(tmp_path / "source", width=width, cas=cas, while_=while_, byte_order=order,
+                     root_dtype=root_dtype, carry=True, optimizer=OPT)
+    replay_library(tmp_path, result, cases(width, cas, byte_order=order, root_dtype=root_dtype, carry=True))

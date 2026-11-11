@@ -6,8 +6,13 @@ and complete byte-state returns. All nine i32/i64 RMW kinds and i16/i32/i64 CAS
 qualify across both declared orders. The 102-case source/payload matrix,
 six additional evidence/init/conflict checks, 118 existing regressions and
 345 independent Merlin reader/native ownership checks pass. Public saved-source
-CLI artifacts verify 20/45 members. Selected/loop/model compositions, floating
-byte atomics, complete numeric/effect closure and applicable targets remain open.
+CLI artifacts verify 20/45 members. Forty selected-pointer cases, twenty
+old-value tensor recurrence cases, eight different-width typed-root cases and
+four complete model captures now additionally qualify; typed-root CAS also
+passes public model binding. The recurrence libraries replay five domains each.
+Merlin's 119 snapshot/destination/integer-body checks retain all lifetime gates.
+Floating byte atomics, complete numeric/effect closure and applicable targets
+remain open.
 
 The refreshed explicit report at `out/byte-atomic-coverage/coverage.json`
 verifies 67 packages and 46 standalone qualifications. Observed opcode counts
