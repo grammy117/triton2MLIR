@@ -14,6 +14,8 @@ from .bundle import _record, verify_bundle
 from .kernel_consumer import verify_kernel_qualification
 from .ttir_definitions import OPERATIONS, SOURCE
 
+MAX_SELECTION = 256
+
 
 def _json(path):
     if path.stat().st_size > 32 * 1024 * 1024:
@@ -87,8 +89,8 @@ def package_coverage(bundles, *, qualifications=()):
     Only explicit paths are read. Standalone Merlin qualifications are matched
     by the exact source receipt digest, never by their source_directory hint.
     """
-    if len(bundles) > 64 or len(qualifications) > 64:
-        raise ValueError("coverage accepts at most 64 packages/qualifications")
+    if len(bundles) > MAX_SELECTION or len(qualifications) > MAX_SELECTION:
+        raise ValueError(f"coverage accepts at most {MAX_SELECTION} packages/qualifications")
     qualified, qualification_records = {}, []
     for path in qualifications:
         root = Path(path).absolute()

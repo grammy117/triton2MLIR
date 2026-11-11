@@ -1,5 +1,11 @@
 # Package observations against every TTIR definition
 
+Each explicit selection admits at most 256 packages and 256 standalone
+qualifications. The earlier 64-entry limit prevented the expanded corpus from
+being reported together. Processing remains serial with the existing receipt,
+per-JSON size and per-case operation budgets; increasing the selection limit
+grants no operation coverage or source/target authority.
+
 `package-coverage` joins verified shared-tensor and bound-model packages to
 the [complete pinned 50-op inventory](ttir_operations.md). It reopens retained
 evidence and executes no compiler or kernel. The report is
