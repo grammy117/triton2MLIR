@@ -47,6 +47,9 @@ typed operands/results, graph IDs and profile on the emitted function. The
 grants no semantics. Existing source IDs and normalized IDs keep their separate
 meanings; this kernel-level intent record is not a fabricated exact descendant
 mapping for every operation introduced by upstream.
+[External entry descriptors](external_descriptors.md) now additionally expose
+the actual upstream logical field interface with original/expanded ordinals;
+device descriptor bytes and nonzero external origins remain separate gates.
 
 Executable pointer arithmetic, loaded row indices, masks, zero/NaN padding,
 stores and atomic kinds supply computation. Gather permits repeated rows;
@@ -61,8 +64,8 @@ scalars. Writable allocation state returns once as a complete tensor. Existing
 ABI v5 and effect receipt/reference schemas remain unchanged. Compatibility
 metadata explicitly distinguishes this logical view from a physical TMA
 descriptor, device alignment/placement constraints, async transfer, launch ABI
-or accelerator-equivalence claim. Unknown external descriptor arguments still
-need an actual declared representation and binding implementation.
+or accelerator-equivalence claim. External descriptor parameters use the
+separately declared logical field representation and its binding checks.
 
 ## Reproduction and qualification
 

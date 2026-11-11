@@ -14,6 +14,12 @@ pointer expansion for gather, scatter and reducing stores. Loaded indices,
 runtime bounds/padding, allocation state and atomic kinds reach standard MLIR;
 original descriptor intent remains in provenance with hardware mapping undecided.
 
+[External descriptor parameters](docs/external_descriptors.md) now expand into
+typed logical allocation/shape/stride/padding/rounding fields. Actual native and
+Merlin execution retain non-contiguous memory, state and two-descriptor tiled
+f32/BF16 GEMM with its original K reuse and C accumulator. Public field bindings
+and remaining origin/alias/model/target work are explicit.
+
 [Scaled contractions](docs/scaled_dot.md) now retain FP4 packing, FP8/half
 formats, optional per-group scales and original accumulation in standard
 tiled MLIR. `shared-demo --kernel scaled-dot` produces an independently

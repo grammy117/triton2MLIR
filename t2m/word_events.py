@@ -1,8 +1,8 @@
 """Use the official pointer converter on isolated, typed memory events.
 
 Meta 17f0c234's TritonToUnstructuredPass.cpp and gather_no_loop.mlir supply
-the base/offset conversion. The pinned binary can leave region-local pointer
-preparation unresolved. Straight-line event templates avoid that traversal;
+the base/offset conversion. The pinned binary can leave region-local and
+chained runtime-stride pointer preparation unresolved. Event templates avoid that traversal;
 their converted bodies are substituted at the original event, never hoisted.
 The parent receives arithmetic conversion only: the pointer pass is not
 idempotent on already converted unstructured gathers/scatters.
@@ -31,6 +31,28 @@ def print_ir(module):
 def needs_isolation(module):
     from .shared_tensor import opcode
     from .shared_tensor import _pointer_type
+
+    # The shared whole-function pointer pass can leave chained pointer offsets
+    # unresolved when descriptor strides are runtime values. Normalize their
+    # actual base/offset expressions before invoking the same native converter
+    # on event templates, independently of source annotations or kernel names.
+    def nested_offset(value):
+        seen = set()
+        while value not in seen:
+            seen.add(value)
+            owner = value.owner
+            if not hasattr(owner, "operands"):
+                return False
+            name = opcode(owner)
+            if name == "tt.addptr":
+                return True
+            if name not in ("tt.splat", "tt.broadcast", "tt.expand_dims", "tt.reshape", "tt.trans") or not owner.operands:
+                return False
+            value = owner.operands[0]
+        return False
+
+    if any(opcode(op) == "tt.addptr" and nested_offset(op.operands[0]) for op in module.walk()):
+        return True
     word_atomics = (any(opcode(op) == "tt.atomic_rmw" for op in module.walk())
         and any(opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.results) for op in module.walk()))
     return word_atomics or any(opcode(op) == "tt.atomic_cas" for op in module.walk()) or any(opcode(op) in ("scf.if", "scf.while")

@@ -20,6 +20,26 @@ DESCRIPTOR_OPS = BLOCK_POINTER_OPS | TENSOR_DESCRIPTOR_OPS
 INTAKE_NORMALIZATION_OPS = DESCRIPTOR_OPS | frozenset(("tt.cat", "tt.dot"))
 
 
+def _function_parameters(operations):
+    """Read native function-entry block types without printed IR parsing."""
+    blocks = {}
+    for op in operations:
+        if op.get_name() == "builtin.module":
+            continue
+        block = op.get_block()
+        blocks.setdefault(block.get_parent().id(), {})[block.id()] = block
+    functions = {}
+    for op in operations:
+        if op.get_name() != "tt.func" or not op.get_num_regions():
+            continue
+        owned = blocks.get(op.get_region(0).id(), {})
+        if owned:
+            entry = next(iter(owned.values()))
+            functions[op.get_str_attr("sym_name")] = [str(entry.get_argument(i).get_type())
+                                                      for i in range(entry.get_num_arguments())]
+    return functions
+
+
 def _expand_tensor_pointers(path, inventory_path):
     """Worker-only checked intake rewrites; never invoke a target backend."""
     import resource
@@ -33,6 +53,7 @@ def _expand_tensor_pointers(path, inventory_path):
     operations = []
     module.walk(operations.append)
     names = {op.get_name() for op in operations}
+    original_parameters = _function_parameters(operations) if names & TENSOR_DESCRIPTOR_OPS else {}
     # Parse only the typed value's complete type syntax, never printed IR lines.
     from xdsl.dialects.builtin import TensorType, f32
     from xdsl.parser import Parser
@@ -139,6 +160,15 @@ def _expand_tensor_pointers(path, inventory_path):
         _expand_tf32(ir, context, module)
     if not module.verify():
         raise ConversionError("official tensor-pointer rewrite produced invalid IR")
+    if names & TENSOR_DESCRIPTOR_OPS:
+        from .descriptor_arguments import expansions
+        normalized = []
+        module.walk(normalized.append)
+        arguments = expansions(original_parameters, _function_parameters(normalized))
+        if arguments is not None:
+            inventory = json.loads(Path(inventory_path).read_text())
+            inventory["descriptor_argument_expansion"] = arguments
+            Path(inventory_path).write_text(json.dumps(inventory, indent=2) + "\n")
     return str(module)  # Keep source NameLocs; str_nodebug discards provenance.
 
 
@@ -313,6 +343,8 @@ def expand_tensor_pointers(source, work):
             "accelerator_equivalence": "not-established",
             "grants_semantics": False,
         }
+    if "descriptor_argument_expansion" in inventory:
+        report["descriptor_argument_expansion"] = inventory["descriptor_argument_expansion"]
     if "t2m-expand-tf32-e8m10-rtz-v1" in pipeline:
         report["tf32_numeric_profile"] = {"name": "logical-tf32-e8m10-rtz-v1",
             "dot_inputs": "E8M10-toward-zero; gradual-underflow; computed-NaN-class",

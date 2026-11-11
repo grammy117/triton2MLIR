@@ -18,6 +18,15 @@ identity are additive provenance; compatibility metadata records the logical
 shape/stride/padding/atomic boundary and absence of a physical descriptor ABI.
 Generated operations and the selected memory/effect profile retain computation.
 
+[External descriptor fields](external_descriptors.md) add an explicit original
+argument-to-expanded-field map under `t2m.logical-descriptor-arguments.v1`.
+The public inputs are allocation tensors and ordinary typed scalars; source
+positions refer to the actual expanded TTIR signature. Original descriptor
+source bytes and AST metadata inputs remain explicit. Existing outer ABI/receipt
+schemas and compiler/evaluator custody stay intact; this is a logical field
+interface with its physical/origin/alias differences recorded in compatibility
+metadata.
+
 New model captures additionally support source-bound
 [lifted compiler constants](lifted_constants.md). The original source bytes
 live in `weights.safetensors` with explicit constant manifest entries and an

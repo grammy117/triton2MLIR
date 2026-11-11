@@ -91,6 +91,21 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+External descriptor entry parameters now use the actual pinned upstream
+one-to-many typed field conversion through Merlin. A structural chained-offset
+fix reuses existing isolated native memory events for fully runtime strides.
+Logical dimensions/strides/flags and additional ordinary AST metadata retain
+their original argument correspondence; source bytes and normalized graphs
+remain distinct. Block/indexed transfers, reducing state and two-descriptor
+f32/BF16 tiled GEMM retain original masks, K reuse and C. See
+[external descriptors](external_descriptors.md).
+Thirty-five focused checks and 128 existing memory/model/descriptor regressions
+pass. Eighteen semantic libraries replay 100 additional valid domains and
+refuse 20 capacity/scatter violations. Six public workflows produce verified
+packages and separate Merlin qualifications. The explicit 50-package report
+retains 34/50 observed definitions and 30 in host-qualified captures; remaining
+origin/alias/model/numeric/effect/target requirements are not discharged.
+
 The indexed descriptor path now reuses the actual installed Triton pre-layout
 pass for gather/scatter/reducing stores. Twenty-four real native/Merlin cases
 retain loaded indices, signed bounds, zero/NaN fills, ordinary scatter ownership,
@@ -108,8 +123,9 @@ qualifications. The explicit 44-package report observes 34/50 definitions, with
 Continue toward the full objective in this order, completing each vertical
 slice through the actual consumer rather than accepting opaque coverage:
 
-1. Bind external logical descriptors to declared allocation/shape/stride fields;
-   extend model views/state and mixed-type/byte aliases with actual dependencies.
+1. Extend external logical descriptor fields with nonzero allocation origins,
+   shared writable roots and complete derived-model captures; extend physical
+   model views/state, portable pre-wrapper custody and mixed-type/byte aliases.
 2. Close remaining numeric/effect combinations against the pinned TTIR types
    and attributes, retaining source recurrences, rounding and synchronization.
 3. Expand the maintained kernel/package corpus to every valid operator family

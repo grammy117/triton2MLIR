@@ -1,5 +1,22 @@
 # Measured coverage and remaining boundaries
 
+[External logical descriptors](external_descriptors.md) now pass actual upstream
+typed argument expansion through Merlin, with runtime allocation/shape/stride/
+padding/rounding fields and original AST metadata inputs explicit. Eighteen
+semantic libraries replay 100 additional valid domains and reject 20 capacity/
+scatter violations. This includes rank-one i64/rank-three BF16 state, six i32
+reducing kinds and f32/BF16 two-descriptor GEMM retaining its original K loop,
+tiles and C. Eleven protocol checks and the public CLI workflows exercise the
+field boundary; 128 existing memory/model/descriptor regressions pass.
+External origins/shared writable roots, complete derived-model compositions,
+broader numeric/effects and applicable targets remain open.
+The final focused matrix passes 35 checks; the six visible packages each
+verify 33 artifacts and their separate Merlin qualifications each verify 52.
+`out/external-descriptor-coverage/coverage.json` selects 50 packages and 36
+standalone qualifications: 34/50 definitions are observed and 30 appear in
+host-qualified captures. Interface/type compositions expanded without adding
+new opcode definitions to the measured denominator.
+
 [Logical indexed descriptors](indexed_descriptors.md) now reach actual native
 and Merlin execution through the official pointer rewrite. Twenty-four cases
 cover transfer i16/i32/f16/BF16/f32, zero/NaN padding, six i32 reduction kinds,

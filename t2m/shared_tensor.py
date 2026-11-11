@@ -1225,6 +1225,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             raise ConversionError("original source changed during dot precision normalization")
         intake = lower_with_shared(work / "precision-intake/lowered.mlir", work / "precision-source", optimizer=optimizer, stage="source")
         parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
+    from .descriptor_arguments import bind_entry as bind_descriptor_entry
+    descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1468,6 +1470,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         emitted.append({"id": f"mlir.op.{len(emitted):04d}", "opcode": opcode(op), "source_ids": ids})
     if original_inventory:
         # Expanded operations are a distinct graph, never the original TTIR.
+        if descriptor_binding:
+            for op in result.walk():
+                if isinstance(op, func.FuncOp):
+                    op.attributes["prov.kernel_descriptor_arguments"] = StringAttr(json.dumps(descriptor_binding, sort_keys=True))
         if pointer_report and "descriptor_profile" in pointer_report:
             descriptor_intent = {"profile": pointer_report["descriptor_profile"],
                 "operations": [record for record in original_inventory["operations"]
@@ -1514,6 +1520,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                      source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
                      original_attributes=original_inventory["attributes"],
                      correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
+    if descriptor_binding:
+        trace["descriptor_argument_binding"] = descriptor_binding
+        trace["abi_difference"] += "; external descriptors expand to typed logical allocation/shape/stride/padding/rounding fields before ABI binding"
     if any(isinstance(g, GridExtent) for g in abi.grid):
         trace["memory"]["logical_grid_relations"] = [
             {"axis": axis, "dimension": g.dimension, "ceil_divisor": g.divisor,

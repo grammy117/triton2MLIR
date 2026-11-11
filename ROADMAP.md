@@ -10,7 +10,12 @@ compiler-staging, payload-materialization and coverage work with explicit eviden
 pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
 source padding, state and atomic kinds through the existing checked memory path.
 Original descriptor graphs and actual normalizer identity remain explicit;
-physical/external descriptor ABI and applicable target materialization stay open.
+physical descriptor byte interfaces and applicable target materialization stay open.
+[External logical descriptor arguments](docs/external_descriptors.md) now bind
+the actual upstream one-to-many field interface through Merlin, including
+runtime strides/flags, block/indexed state and two-descriptor tiled f32/BF16 GEMM.
+Nonzero external origins/shared writable roots, complete model compositions,
+physical descriptor bytes and applicable target handling remain separate gates.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;
