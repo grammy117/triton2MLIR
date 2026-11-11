@@ -155,14 +155,30 @@ def package_coverage(bundles, *, qualifications=()):
                     or trace.get("source_sha256") != _record(base / "source.ttir")["sha256"]
                     or trace.get("mlir_sha256") != _record(base / "model.mlir")["sha256"]):
                 raise ValueError("coverage source trace must bind its actual source/payload")
+            operations = trace["source_operations"]
+            source_graph, source_sha256 = "original-source-operations", trace["source_sha256"]
+            allocation = trace.get("source_argument_binding", {})
+            capsule = allocation.get("source_capsule", {})
+            original_inventory = {}
+            if capsule:
+                source_graph = "allocation-bound-source-operations"
+                if capsule["normalized"]:
+                    # verify_bundle has checked both receipt and capsule byte links.
+                    # Native pre-wrapper inventory stays distinct from bound operations.
+                    operations = _json(base / "allocation-inventory.json")["operations"]
+                    source_graph = "pre-wrapper-original-source-operations"
+                    source_sha256 = _record(base / "allocation-original.ttir")["sha256"]
+                    original_inventory = {"original_inventory": _record(base / "allocation-inventory.json"),
+                        "bound_source_sha256": trace["source_sha256"],
+                        "allocation_bound_operation_counts": dict(Counter(op["opcode"] for op in trace["source_operations"]))}
             cases.append({"id": pin["sha256"] + ":" + (directory or "kernel"), "package_receipt": pin,
-                "trace": _record(base / "provenance.json"), "source_sha256": trace["source_sha256"],
-                "payload_sha256": trace["mlir_sha256"], "source_graph": "original-source-operations",
+                "trace": _record(base / "provenance.json"), "source_sha256": source_sha256,
+                "payload_sha256": trace["mlir_sha256"], "source_graph": source_graph, **original_inventory,
                 "inventory_authority": "byte-bound producer declaration; not independent source proof",
                 "merlin_host": host is not None, "profile": trace.get("profile", "functional-tensor"),
                 "reference_kind":reference_kind,
                 **({"host_outcome":host["termination"]} if effect and host is not None else {}),
-                "abi": trace["spec"], "operations": trace["source_operations"],
+                "abi": trace["spec"], "operations": operations,
                 "normalized_operation_counts": dict(Counter(op["opcode"] for op in trace.get("normalized_operations", [])))})
     if set(qualified) - selected:
         raise ValueError("standalone qualification has no matching selected source receipt")

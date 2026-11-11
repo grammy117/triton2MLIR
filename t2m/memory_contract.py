@@ -40,7 +40,8 @@ def guarded_arguments(spec):
 
 def validate_memory_evidence(trace, artifacts):
     profile = trace.get("profile", TENSOR_PROFILE)
-    if profile not in PROFILE_FILES or set(artifacts) != PROFILE_FILES[profile]:
+    from .source_capsule import members as source_members
+    if profile not in PROFILE_FILES or set(artifacts) not in (PROFILE_FILES[profile], PROFILE_FILES[profile] | source_members(trace)):
         raise ValueError("memory profile has an incomplete or unknown evidence inventory")
     if profile == TENSOR_PROFILE:
         return profile

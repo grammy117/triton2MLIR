@@ -16,6 +16,7 @@ from .memory_contract import PROFILE_FILES, validate_memory_evidence
 from .native import observe_native
 from .package_compatibility import kernel_representation_differences
 from .shared_tensor import TensorABI
+from .source_capsule import members as source_members, validate as validate_source_capsule
 
 SCHEMA = "t2m.effect-kernel-receipt.v1"
 CORE = {"model.mlir","source.ttir","spec.json","provenance.json","inputs.npz","input_order.json",
@@ -62,6 +63,7 @@ def write_effect_bundle(result, out, inputs, reference, *, work, python=None, co
             or json.loads(json.dumps(result.spec.as_dict())) != json.loads(json.dumps(result.trace["spec"]))):
         raise ValueError("effect source/payload/ABI changed after conversion")
     profile = validate_memory_evidence(result.trace,result.auxiliary_artifacts)
+    validate_source_capsule(result.trace, result.auxiliary_artifacts, result.source_ttir)
     observe_native(result.mlir_text,arrays,work,python=python,shape_abi=result.spec.runtime_shapes(),compiler_support_root=compiler_support_root)
     if mixed:
         # Expected values never enter this worker's compiler/JIT inputs.
@@ -100,7 +102,7 @@ def write_effect_bundle(result, out, inputs, reference, *, work, python=None, co
     _json(out / "execution.json",{"schema":"t2m.effect-execution.v1","input_sha256":result.trace["mlir_sha256"],
         "reference":_record(out / "reference.json"),"observation":_record(out / "native/outcome.json"),**comparison,
         "source_kernel_execution":"not-performed","consumer_execution":"not-performed"})
-    required = CORE | set(reference_members(reference)) | set(PROFILE_FILES[profile]) | {"native/"+name for name in _native_files(result.spec,reference,compiler_log=True)}
+    required = CORE | set(reference_members(reference)) | set(PROFILE_FILES[profile]) | source_members(result.trace) | {"native/"+name for name in _native_files(result.spec,reference,compiler_log=True)}
     _json(out / "capture_receipt.json",{"schema":SCHEMA,"profile":profile,
         "artifacts":{name:_record(out / name) for name in sorted(required)},
         "materialized_abi":{"complete":True,"inputs":len(result.spec.inputs),"outputs":len(result.spec.outputs)},
@@ -128,13 +130,14 @@ def verify_effect_bundle(out):
     reference,trace = (json.loads((out / name).read_text()) for name in ("reference.json","provenance.json"))
     validate_reference(reference,trace)
     # Additive compiler evidence; original v1 packets remain readable.
-    required = CORE | set(reference_members(reference)) | set(PROFILE_FILES[receipt["profile"]]) | {"native/"+name for name in _native_files(
+    required = CORE | set(reference_members(reference)) | set(PROFILE_FILES[receipt["profile"]]) | source_members(trace) | {"native/"+name for name in _native_files(
         spec,reference,compiler_log="native/compiler.log" in receipt.get("artifacts",{}))}
     if set(receipt.get("artifacts",{})) != required or receipt.get("outcome_reference") != "reference.json":
         raise ValueError("effect receipt lacks its complete explicit outcome profile")
     if (trace.get("spec") != json.loads(json.dumps(spec.as_dict())) or trace.get("mlir_sha256") != _record(out / "model.mlir")["sha256"]
             or trace.get("source_sha256") != _record(out / "source.ttir")["sha256"]):
         raise ValueError("effect provenance differs from its source/payload/ABI")
+    validate_source_capsule(trace, {name: (out / name).read_bytes() for name in source_members(trace)}, (out / "source.ttir").read_bytes())
     if validate_memory_evidence(trace,{name:(out / name).read_text() for name in PROFILE_FILES[receipt["profile"]]}) != receipt["profile"]:
         raise ValueError("effect receipt differs from its actual memory profile")
     if receipt.get("materialized_abi") != {"complete":True,"inputs":len(spec.inputs),"outputs":len(spec.outputs)}:

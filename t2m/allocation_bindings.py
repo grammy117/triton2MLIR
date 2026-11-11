@@ -16,6 +16,7 @@ from xdsl.ir import Block, Region
 from xdsl.printer import Printer
 
 from .diagnostics import ConversionError
+from .descriptor_bindings import DescriptorArgument, ExtendScalar
 from .shared_tensor import convert_shared, opcode, parse_shared
 from .upstream import inspect_optimizer, lower_with_shared
 
@@ -45,7 +46,7 @@ class ScalarArgument:
 def arguments_from_dict(value):
     """Read the strict source-order argument configuration used by the CLI."""
     if (not isinstance(value,dict) or set(value) != {"schema","source_entry","arguments"}
-            or value["schema"] != ARGUMENTS_SCHEMA or type(value["source_entry"]) is not str
+            or value["schema"] not in (ARGUMENTS_SCHEMA, "t2m.source-allocation-arguments.v2") or type(value["source_entry"]) is not str
             or not value["source_entry"] or not isinstance(value["arguments"],list)):
         raise ValueError("source allocation arguments require their explicit schema, entry and complete roster")
     bindings = []
@@ -59,10 +60,30 @@ def arguments_from_dict(value):
             binding = ScalarArgument(argument["name"])
         elif kind == "constant" and set(argument) == {"kind","value"} and type(argument["value"]) is int:
             binding = argument["value"]
+        elif (kind == "descriptor" and value["schema"] == "t2m.source-allocation-arguments.v2"
+              and {"kind", "allocation", "shape", "strides"} <= set(argument)
+              and set(argument) <= {"kind", "allocation", "shape", "strides", "offset", "padding_nan", "round_f32_to_tf32"}):
+            binding = DescriptorArgument(**{key: item for key, item in argument.items() if key != "kind"})
         else:
             raise ValueError("unknown or incomplete source allocation argument record")
         bindings.append(binding)
+    if (value["schema"] == "t2m.source-allocation-arguments.v2") != any(isinstance(binding, DescriptorArgument) for binding in bindings):
+        raise ValueError("descriptor source arguments require their explicit v2 schema")
     return value["source_entry"],tuple(bindings)
+
+
+def arguments_as_dict(source_entry, bindings):
+    records = []
+    for binding in bindings:
+        if isinstance(binding, (PointerArgument, ScalarArgument, DescriptorArgument)):
+            kind = "pointer" if isinstance(binding, PointerArgument) else "scalar" if isinstance(binding, ScalarArgument) else "descriptor"
+            records.append({"kind": kind, **asdict(binding)})
+        elif type(binding) is int:
+            records.append({"kind": "constant", "value": binding})
+        else:
+            raise ValueError("unknown original source allocation argument")
+    return {"schema": "t2m.source-allocation-arguments.v2" if any(isinstance(binding, DescriptorArgument) for binding in bindings) else ARGUMENTS_SCHEMA,
+            "source_entry": source_entry, "arguments": records}
 
 
 def bind_module(module, source_entry, abi, bindings):
@@ -105,6 +126,11 @@ def bind_module(module, source_entry, abi, bindings):
             if scalar is None or arg.type != scalar.type:
                 raise ConversionError("source scalar binding requires its exact declared wrapper type")
             records.append({"kind":"scalar",**asdict(binding)})
+        elif isinstance(binding, ExtendScalar):
+            scalar = scalars.get(binding.name)
+            if scalar is None or scalar.dtype != "i32" or arg.type != builtin.i64:
+                raise ConversionError("descriptor field extension requires an i32 scalar and i64 source field")
+            records.append({"kind": "sext", "name": binding.name, "from": "i32", "type": "i64"})
         elif type(binding) is int and isinstance(arg.type,builtin.IntegerType):
             width = arg.type.width.data
             if not (binding in (0,1) if width == 1 else -(2**(width-1)) <= binding < 2**(width-1)):
@@ -135,6 +161,10 @@ def bind_module(module, source_entry, abi, bindings):
             operands.append(value)
         elif isinstance(binding,ScalarArgument):
             operands.append(values[binding.name])
+        elif isinstance(binding, ExtendScalar):
+            extended = arith.ExtSIOp(values[binding.name], builtin.i64)
+            block.add_op(extended)
+            operands.append(extended.result)
         else:
             constant = arith.ConstantOp.from_int_and_width(binding,arg.type)
             block.add_op(constant)
@@ -161,8 +191,8 @@ def bind_module(module, source_entry, abi, bindings):
 def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=None, **options):
     """Compile a source kernel with an explicit allocation-state calling ABI.
 
-    The package's source is the bound TTIR program, including the private source
-    body. The original source bytes and binding report remain in this work area.
+    The package source is the executable bound program. Its portable source
+    capsule retains exact original, normalized and generic input bytes separately.
     """
     work = Path(work)
     work.mkdir(parents=True,exist_ok=False)
@@ -170,17 +200,72 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     original = Path(source).read_bytes()
     saved = work / "original.ttir"
     saved.write_bytes(original)
-    lower_with_shared(saved,work / "source",optimizer=optimizer,stage="source")
-    module = parse_shared((work / "source/lowered.mlir").read_text())
-    module,report = bind_module(module,source_entry,abi,bindings)
+    bindings = tuple(bindings)
+    configuration = arguments_as_dict(source_entry, bindings)
+    normalized, intake, inventory = None, None, None
+
+    def normalize():
+        from .frontend import expand_tensor_pointers
+        report = expand_tensor_pointers(saved, work / "intake")
+        return work / "intake/lowered.mlir", report, json.loads((work / "intake/inventory.json").read_text())
+
+    source_stage_dir = work / "source"
+    if any(isinstance(binding, DescriptorArgument) for binding in bindings):
+        normalized, intake, inventory = normalize()
+    try:
+        source_stage = lower_with_shared(normalized or saved, source_stage_dir, optimizer=optimizer, stage="source")
+    except ConversionError as original_error:
+        if normalized is not None:
+            raise
+        try:
+            normalized, intake, inventory = normalize()
+        except ConversionError:
+            raise original_error
+        source_stage_dir = work / "normalized-source"
+        source_stage = lower_with_shared(normalized, source_stage_dir, optimizer=optimizer, stage="source")
+    generic = (source_stage_dir / "lowered.mlir").read_text()
+    module = parse_shared(generic)
+    from .descriptor_bindings import expand
+    flat, descriptor_bindings = expand(bindings, intake.get("descriptor_argument_expansion") if intake else None, source_entry, abi)
+    module,report = bind_module(module,source_entry,abi,flat)
     stream = StringIO()
     Printer(stream=stream,print_generic_format=True,print_debuginfo=True).print_op(module)
     bound = work / "bound.ttir"
     bound.write_text(stream.getvalue()+"\n")
     report.update(original_source_sha256=hashlib.sha256(original).hexdigest(),
                   bound_source_sha256=hashlib.sha256(bound.read_bytes()).hexdigest())
+    if descriptor_bindings:
+        report["descriptor_bindings"] = descriptor_bindings
+    from .source_capsule import SCHEMA, record, validate
+    source_custody = {"schema": "t2m.source-stage-custody.v1", "source_stage_schema": source_stage["schema"],
+                      "stage": source_stage["stage"], "stage_completed": source_stage["stage_completed"],
+                      "flags": source_stage["command"][1:-1], "artifacts": source_stage["artifacts"],
+                      "optimizer": {key: source_stage["optimizer"][key] for key in ("sha256", "bytes")},
+                      "grants_semantics": False}
+    capsule = {"allocation-original.ttir": original.decode(), "allocation-input.mlir": generic,
+               "allocation-arguments.json": json.dumps(configuration, sort_keys=True, indent=2) + "\n",
+               "allocation-source-stage.json": json.dumps(source_custody, sort_keys=True, indent=2) + "\n",
+               "allocation-source-stderr.log": (source_stage_dir / "stderr.log").read_text()}
+    if normalized is not None:
+        capsule.update({"allocation-normalized.ttir": normalized.read_text(),
+                        "allocation-intake.json": (work / "intake/report.json").read_text(),
+                        "allocation-inventory.json": (work / "intake/inventory.json").read_text()})
+    report["source_capsule"] = {"schema": SCHEMA, "normalized": normalized is not None,
+                                "artifacts": {name: record(data) for name, data in capsule.items()}, "grants_semantics": False}
     (work / "bindings.json").write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
     result = convert_shared(bound,abi,work / "translate",optimizer=optimizer,**options)
     result.trace["source_argument_binding"] = report
+    result.auxiliary_artifacts.update(capsule)
     result.trace["abi_difference"] += "; explicit allocation-state entry binds source pointers before inlining; updated roots returned once"
+    if descriptor_bindings:
+        from .ir import text
+        entry = next(iter(result.module.ops))
+        entry.attributes["prov.kernel_descriptor_state_bindings"] = builtin.StringAttr(json.dumps(descriptor_bindings, sort_keys=True))
+        original_descriptors = [operation for operation in inventory["operations"]
+                                if operation["opcode"].startswith("tt.descriptor_") or operation["opcode"] == "tt.make_tensor_descriptor"]
+        entry.attributes["prov.kernel_original_descriptors"] = builtin.StringAttr(json.dumps(
+            {"source_sha256": report["original_source_sha256"], "operations": original_descriptors, "grants_semantics": False}, sort_keys=True))
+        result.trace["mlir_sha256"] = hashlib.sha256(text(result.module).encode()).hexdigest()
+        result.trace["abi_difference"] += "; original descriptors bind declared root origins and logical fields after native normalization"
+    validate(result.trace, result.auxiliary_artifacts, result.source_ttir)
     return result

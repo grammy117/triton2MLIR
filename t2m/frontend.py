@@ -53,7 +53,10 @@ def _expand_tensor_pointers(path, inventory_path):
     operations = []
     module.walk(operations.append)
     names = {op.get_name() for op in operations}
-    original_parameters = _function_parameters(operations) if names & TENSOR_DESCRIPTOR_OPS else {}
+    original_parameters = _function_parameters(operations)
+    from .descriptor_arguments import has_parameters
+    descriptor_parameters = has_parameters(original_parameters)
+    descriptors = bool(names & TENSOR_DESCRIPTOR_OPS) or descriptor_parameters
     # Parse only the typed value's complete type syntax, never printed IR lines.
     from xdsl.dialects.builtin import TensorType, f32
     from xdsl.parser import Parser
@@ -70,6 +73,8 @@ def _expand_tensor_pointers(path, inventory_path):
             raise ConversionError("selected f32 dot precision requires f32 C and a nonnegative accumulation bound", opcode="tt.dot")
         precision_dots.append(op)
     normalized_names = names & (DESCRIPTOR_OPS | {"tt.cat"})
+    if descriptor_parameters:
+        normalized_names.add("tt.func")
     if precision_dots:
         if any(op.get_name() == "tt.load" and op.get_bool_attr("isVolatile") for op in operations):
             raise ConversionError("volatile observations cannot become stable tensor reads", opcode="tt.load")
@@ -81,7 +86,7 @@ def _expand_tensor_pointers(path, inventory_path):
     pipeline = []
     if "tt.cat" in names:
         pipeline.extend(("t2m-expand-cat-preserve-order", "canonicalize"))
-    if names & TENSOR_DESCRIPTOR_OPS:
+    if descriptors:
         pipeline.extend(("triton-rewrite-tensor-descriptor-to-pointer", "canonicalize"))
     if names & BLOCK_POINTER_OPS:
         pipeline.append("triton-rewrite-tensor-pointer")
@@ -126,7 +131,7 @@ def _expand_tensor_pointers(path, inventory_path):
             if op.get_int_attr("inputPrecision") in (0, 1):
                 records[-1]["dot_precision"]["logical_numeric_profile"] = "logical-tf32-e8m10-rtz-v1"
     normalizer_implementation = None
-    if precision_dots or names & TENSOR_DESCRIPTOR_OPS:
+    if precision_dots or descriptors:
         from triton._C import libtriton
         binary = Path(libtriton.__file__)
         digest = hashlib.sha256()
@@ -142,11 +147,11 @@ def _expand_tensor_pointers(path, inventory_path):
         "normalization_passes": pipeline,
         "normalized_opcodes": sorted(normalized_names),
         **({"dot_precision_implementation": normalizer_implementation} if precision_dots else {}),
-        **({"descriptor_implementation": normalizer_implementation} if names & TENSOR_DESCRIPTOR_OPS else {})}, indent=2) + "\n")
+        **({"descriptor_implementation": normalizer_implementation} if descriptors else {})}, indent=2) + "\n")
     if "tt.cat" in names:
         _expand_cats(ir, context, module, operations)
     manager = ir.pass_manager(context)
-    if names & TENSOR_DESCRIPTOR_OPS:
+    if descriptors:
         passes.ttir.add_rewrite_tensor_descriptor_to_pointer(manager)
         # The official pass emits both padding alternatives and selects the
         # actual descriptor option. Fold unused NaN alternatives before intake.
@@ -160,7 +165,7 @@ def _expand_tensor_pointers(path, inventory_path):
         _expand_tf32(ir, context, module)
     if not module.verify():
         raise ConversionError("official tensor-pointer rewrite produced invalid IR")
-    if names & TENSOR_DESCRIPTOR_OPS:
+    if descriptors:
         from .descriptor_arguments import expansions
         normalized = []
         module.walk(normalized.append)

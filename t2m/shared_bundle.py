@@ -11,6 +11,7 @@ import numpy as np
 from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
+from .source_capsule import BASE as SOURCE_BASE, NORMALIZED as SOURCE_NORMALIZED, members as source_members, validate as validate_source_capsule
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
@@ -49,6 +50,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     if hashlib.sha256(source.encode()).hexdigest() != result.trace["source_sha256"]:
         raise ValueError("source changed after conversion")
     profile = validate_memory_evidence(result.trace, result.auxiliary_artifacts)
+    validate_source_capsule(result.trace, result.auxiliary_artifacts, result.source_ttir)
     arrays, references = validate_inputs(result.spec,inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
         raise ValueError("supply one independent reference per returned tensor")
@@ -89,7 +91,7 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
           "output_type": "functional-tensor-with-standard-memory" if profile in (BUFFER_PROFILE, *GUARDED_PROFILES) else "linalg-on-tensors", "execution": "native-host-LLVM-JIT",
           "merlin_staged_execution": "not-certified"})
     receipt = {"schema": "t2m.capture-receipt.v2", "profile": profile,
-               "artifacts": {name: _record(out / name) for name in sorted(REQUIRED | PROFILE_FILES[profile])},
+               "artifacts": {name: _record(out / name) for name in sorted(REQUIRED | PROFILE_FILES[profile] | source_members(trace))},
                "materialized_abi": {"complete": True, "inputs": len(arrays), "outputs": len(actual)},
                "source_closure_verified": False}
     _json(out / "capture_receipt.json", receipt)
@@ -101,7 +103,9 @@ def verify_shared_bundle(out):
     out = Path(out)
     receipt = json.loads((out / "capture_receipt.json").read_text())
     profile = receipt.get("profile", TENSOR_PROFILE)
-    if receipt.get("schema") != "t2m.capture-receipt.v2" or profile not in PROFILE_FILES or set(receipt.get("artifacts", {})) != REQUIRED | PROFILE_FILES[profile]:
+    if (receipt.get("schema") != "t2m.capture-receipt.v2" or profile not in PROFILE_FILES
+            or not REQUIRED | PROFILE_FILES[profile] <= set(receipt.get("artifacts", {}))
+            or not set(receipt.get("artifacts", {})) <= REQUIRED | PROFILE_FILES[profile] | SOURCE_BASE | SOURCE_NORMALIZED):
         raise ValueError("not a complete shared tensor capture receipt")
     for name, record in receipt["artifacts"].items():
         path = out / name
@@ -109,6 +113,9 @@ def verify_shared_bundle(out):
             raise ValueError("bundle integrity mismatch: " + name)
     spec = TensorABI.from_dict(json.loads((out / "spec.json").read_text()))
     trace = json.loads((out / "provenance.json").read_text())
+    if set(receipt["artifacts"]) != REQUIRED | PROFILE_FILES[profile] | source_members(trace):
+        raise ValueError("shared receipt differs from its explicit source capsule roster")
+    validate_source_capsule(trace, {name: (out / name).read_bytes() for name in source_members(trace)}, (out / "source.ttir").read_bytes())
     if validate_memory_evidence(trace, {name: (out / name).read_bytes() for name in PROFILE_FILES[profile]}) != profile:
         raise ValueError("receipt and provenance memory profiles differ")
     if trace["spec"] != json.loads(json.dumps(spec.as_dict())):

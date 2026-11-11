@@ -13,6 +13,22 @@ from .ir import context
 SCHEMA = "t2m.logical-descriptor-arguments.v1"
 
 
+def has_parameters(functions):
+    from xdsl.utils.exceptions import ParseError
+
+    ctx = context()
+    ctx.allow_unregistered = True
+    for arguments in functions.values():
+        for spelling in arguments:
+            try:
+                type_ = Parser(ctx, spelling).parse_type()
+            except ParseError:
+                continue  # Other native types are checked by their own intake adapters.
+            if isinstance(type_, UnregisteredAttr) and type_.attr_name.data == "tt.tensordesc":
+                return True
+    return False
+
+
 def expansions(original, normalized):
     ctx = context()
     ctx.allow_unregistered = True

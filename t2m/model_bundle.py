@@ -23,6 +23,7 @@ from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evid
 from .package_compatibility import kernel_representation_differences
 from .tensor_storage import DTYPES, assert_tensor_close
 from .model_tensor_words import FILENAME as WORD_ARCHIVE, TensorWords
+from .source_capsule import members as source_members, validate as validate_source_capsule
 
 CORE = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
         "input_order.json", "inputs.npz", "extra.npz", "golden.npy"}
@@ -191,6 +192,7 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                        if b.implementation.trace["mlir_sha256"] in selected}
     kernel_artifacts, kernel_profiles = {}, {}
     for i, (digest, implementation) in enumerate(implementations.items()):
+        validate_source_capsule(implementation.trace, implementation.auxiliary_artifacts, implementation.source_ttir)
         directory = out / "kernels" / str(i)
         directory.mkdir(parents=True)
         (directory / "source.ttir").write_text(implementation.source_ttir)
@@ -350,4 +352,9 @@ def verify_model_bundle(out):
         if profile not in PROFILE_FILES or any(directory + "/" + name not in receipt["artifacts"] for name in PROFILE_FILES[profile]):
             raise ValueError("kernel memory profile evidence is outside the bound inventory")
         validate_memory_evidence(provenance, {name: (out / directory / name).read_bytes() for name in PROFILE_FILES[profile]})
+        capsule = source_members(provenance)
+        if any(directory + "/" + name not in receipt["artifacts"] for name in capsule):
+            raise ValueError("kernel source capsule is outside the bound artifact inventory")
+        validate_source_capsule(provenance, {name: (out / directory / name).read_bytes() for name in capsule},
+                                (out / directory / "source.ttir").read_bytes())
     return receipt
