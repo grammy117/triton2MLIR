@@ -75,6 +75,12 @@ positions remain executable; original snapshots survive intervening ordinary
 writes. Compatibility metadata names this extension. Public tensor/scalar ABI
 and receipt schemas stay unchanged. No map-write, physical-address or additional
 target permission follows from this profile.
+Two real model captures now qualify the same mapped-read state path through
+native/Merlin host and functional RISC-V execution, retaining learned weights,
+dependent calls, live original snapshots and all fifteen results each. Existing
+dense value views and captured runtime/source-option bindings preserve the
+static public model ABI and unchanged parent data. No new receipt schema or
+numeric/alias/target permission is introduced. See [the qualified compositions](grouped_memory.md).
 
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The

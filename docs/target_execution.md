@@ -96,6 +96,16 @@ no projection retain their original input-file binding.
 
 ## Reproduce with existing tools
 
+Source-grouped mapped reads additionally retain original mutation snapshots
+through two real learned-state models. Three calls per model retain fifteen
+results each, including the first state kept live after a dependent call and
+five empty results. Both models pass actual Spike execution with all thirty
+results bit-exact. Weights and source input bytes remain unchanged. The
+separate selection is `out/spike-grouped-memory-models/summary.json`; the public
+CLI example is `out/grouped-memory-model-demo/`. See [the complete memory/model
+contract and reproducible bindings](grouped_memory.md). Returned-pointer model
+compositions and broader target/effect coverage remain open.
+
 Source-specialized coupled/asymmetric maps also reach this ordinary target path.
 Three complete models retain two/four-warp initial source grouping, learned
 weights, two dependent calls, 300-element ragged domains and coupled branch/while

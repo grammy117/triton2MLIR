@@ -1,0 +1,100 @@
+{
+  "buffers": [
+    {
+      "dtype": "i64",
+      "effect": "readwrite",
+      "name": "x",
+      "shape": [
+        "capacity"
+      ]
+    },
+    {
+      "dtype": "i64",
+      "effect": "read",
+      "name": "y",
+      "shape": [
+        "capacity"
+      ]
+    },
+    {
+      "dtype": "i64",
+      "effect": "write",
+      "name": "out_initial",
+      "shape": [
+        "n"
+      ]
+    },
+    {
+      "dtype": "i64",
+      "effect": "write",
+      "name": "out_sum",
+      "shape": [
+        "n"
+      ]
+    },
+    {
+      "dtype": "i64",
+      "effect": "write",
+      "name": "out_final",
+      "shape": [
+        "n"
+      ]
+    },
+    {
+      "dtype": "i64",
+      "effect": "write",
+      "name": "out_final_sum",
+      "shape": [
+        "n"
+      ]
+    }
+  ],
+  "entry": "grouped_read_state",
+  "grid": [
+    {
+      "dimension": "n",
+      "divisor": 256
+    }
+  ],
+  "intent": "",
+  "runtime_scalars": [
+    {
+      "bounds": [
+        0,
+        531
+      ],
+      "dtype": "i32",
+      "name": "n",
+      "source_arg": 6
+    },
+    {
+      "bounds": [
+        0,
+        550
+      ],
+      "dtype": "i32",
+      "name": "capacity",
+      "source_arg": 7
+    },
+    {
+      "bounds": [
+        0,
+        3
+      ],
+      "dtype": "i32",
+      "name": "iterations",
+      "source_arg": 8
+    },
+    {
+      "bounds": [
+        -3,
+        5
+      ],
+      "dtype": "i32",
+      "name": "delta",
+      "source_arg": 9
+    }
+  ],
+  "scalar_constants": [],
+  "schema": "t2m.shared-tensor-abi.v5"
+}

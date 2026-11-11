@@ -1,0 +1,41 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::grouped_read_state",
+      "ttir": "../out/grouped-read-source/source.ttir",
+      "abi": "grouped_memory_abi.json",
+      "tensor_views": "dense-row-major-v1",
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "source_layout": {"target": "cuda:80", "num_warps": 2, "threads_per_warp": 32, "num_ctas": 1},
+      "scalar_arguments": {"n": 300, "capacity": 320, "iterations": 3, "delta": 2, "source_target": "cuda:80", "source_warps": 2, "source_threads": 32, "source_ctas": 1, "while_loop": true, "selected": true},
+      "runtime_arguments": {"n": "n", "capacity": "capacity", "iterations": "iterations", "delta": "delta"},
+      "source_layout_arguments": {"target": "source_target", "num_warps": "source_warps", "threads_per_warp": "source_threads", "num_ctas": "source_ctas"}
+    },
+    {
+      "kernel": "t2m_demo::grouped_read_state",
+      "ttir": "../out/grouped-read-source/source.ttir",
+      "abi": "grouped_memory_abi.json",
+      "tensor_views": "dense-row-major-v1",
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "source_layout": {"target": "cuda:80", "num_warps": 2, "threads_per_warp": 32, "num_ctas": 1},
+      "scalar_arguments": {"n": 319, "capacity": 320, "iterations": 1, "delta": -3, "source_target": "cuda:80", "source_warps": 2, "source_threads": 32, "source_ctas": 1, "while_loop": true, "selected": true},
+      "runtime_arguments": {"n": "n", "capacity": "capacity", "iterations": "iterations", "delta": "delta"},
+      "source_layout_arguments": {"target": "source_target", "num_warps": "source_warps", "threads_per_warp": "source_threads", "num_ctas": "source_ctas"}
+    },
+    {
+      "kernel": "t2m_demo::grouped_read_state",
+      "ttir": "../out/grouped-read-source/source.ttir",
+      "abi": "grouped_memory_abi.json",
+      "tensor_views": "dense-row-major-v1",
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "source_layout": {"target": "cuda:80", "num_warps": 2, "threads_per_warp": 32, "num_ctas": 1},
+      "scalar_arguments": {"n": 0, "capacity": 0, "iterations": 2, "delta": 5, "source_target": "cuda:80", "source_warps": 2, "source_threads": 32, "source_ctas": 1, "while_loop": true, "selected": true},
+      "runtime_arguments": {"n": "n", "capacity": "capacity", "iterations": "iterations", "delta": "delta"},
+      "source_layout_arguments": {"target": "source_target", "num_warps": "source_warps", "threads_per_warp": "source_threads", "num_ctas": "source_ctas"}
+    }
+  ]
+}

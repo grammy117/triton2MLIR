@@ -42,7 +42,7 @@ through Merlin host and actual Spike execution with exact-word comparison.
 Coupled/asymmetric slots
 now have an explicit [source-specialized grouping path](docs/source_grouping.md)
 through seven additional Merlin libraries. The current
-[coverage selection](docs/coverage.md) reopens 104 packages and 74 standalone
+[coverage selection](docs/coverage.md) reopens 106 packages and 74 standalone
 qualifications. The frontend never infers
 adjacency from tensor shape or assigns consumer hardware placement.
 Three complete source-specialized model captures additionally preserve learned
@@ -52,8 +52,10 @@ typed model-call scalars; final optimized GPU correspondence remains open.
 [Packed mapped reads](docs/grouped_memory.md) now also retain source grouping,
 selected roots, pointer results and snapshots across ordinary writes. Six
 actual native/Merlin libraries replay five domains each, retaining all results
-and existing memory/lifetime checks. Complete-model and target evidence for
-these new memory compositions remain open.
+and existing memory/lifetime checks. Two complete learned-state models now also
+preserve original snapshots across dependent calls and all thirty results
+through native/Merlin host and actual Spike execution with exact-word comparison.
+Returned-pointer model compositions and broader targets remain open.
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.

@@ -70,7 +70,66 @@ source-group expansion; original map identities, pack size, coordinate witness
 and event correspondence remain retained. Public tensor/scalar ABI and receipt
 schemas are unchanged. Generated compatibility metadata records this extension.
 
+## Complete models and functional target execution
+
+`scripts/capture_grouped_memory_model.py` captures real model2MLIR i64/f32
+models with learned 10x32 state, two dependent calls and a third empty call.
+All fifteen results remain public, including the first complete state and
+snapshots that are still live after the dependent call. Calls specialize
+runtime domains `(n, capacity, iterations, delta)` as `(300,320,3,2)`,
+`(319,320,1,-3)` and `(0,0,2,5)`. The existing dense value-view policy preserves
+matrix/empty public shapes while the kernel owns logical one-dimensional roots.
+Source grouping options match the original typed call attributes through the
+existing captured-source-layout profile.
+
+The independent evaluator in `t2m/examples/grouped_memory_reference.py` uses
+only NumPy, the declared example grouping and program-local observations. It
+reads no frontend witness or emitted IR. Forty-eight typed/domain cases compare
+it with the separate scalar oracle. This is the explicit initial-stage source
+contract; no final GPU-binary equivalence is asserted.
+
+Both complete models pass native LLVM, actual Merlin host compilation and
+RISC-V/Spike execution. All thirty results match exact reference words, with
+original inputs observed readonly. Weights, manifests, inputs and complete
+reference archives remain byte-identical to the parent capture. The target
+selection at `out/spike-grouped-memory-models/summary.json` reopens both actual
+qualification receipts. Public binding and target CLI artifacts are retained at
+`out/grouped-memory-model-demo/`.
+
+To reproduce the i64/two-warp/while model, first capture the shipped TTIR with
+the frontend Python:
+
+```python
+from pathlib import Path
+from t2m.examples.grouped_memory_kernels import grouped_read_state
+from t2m.frontend import capture_ttir
+out = Path("out/grouped-read-source")
+out.mkdir(parents=True, exist_ok=False)
+names = ("x", "y", "out_initial", "out_sum", "out_final", "out_final_sum")
+(out / "source.ttir").write_text(capture_ttir(grouped_read_state,
+    {**{name: "*i64" for name in names},
+     **{name: "i32" for name in ("n", "capacity", "iterations", "delta")},
+     **{name: "constexpr" for name in ("B", "WHILE", "SELECT")}},
+    {"B": 256, "WHILE": True, "SELECT": True}))
+```
+
+Then use the [explicit bindings](../examples/grouped_memory_binding.json) and
+[kernel ABI](../examples/grouped_memory_abi.json) with the existing environments:
+
+```bash
+/path/to/m2m-python scripts/capture_grouped_memory_model.py \
+  --out out/grouped-memory-parent --dtype i64 --warps 2
+python -m t2m bind-model out/grouped-memory-parent \
+  --bindings examples/grouped_memory_binding.json --out out/grouped-memory-bound \
+  --python /path/to/native-python --merlin-root /path/to/merlin \
+  --merlin-python /path/to/frontend-python --merlin-clang /path/to/clang --merlin-host
+```
+
+Use the existing [functional target driver](target_execution.md) for the Spike
+qualification. Consumer capabilities, ownership/lifetime checks and placement
+remain independent of source geometry; no new target-specific frontend case is
+required for these models.
+
 This finite qualification does not establish all pack widths, numeric policies,
-source versions, complete-model integration, final GPU correspondence, broader
-targets or performance. Source-specialized pure model target qualifications do
-not qualify these new memory compositions.
+source versions, pointer-result model/target compositions, general physical or
+mutating public views, final GPU correspondence, broader targets or performance.

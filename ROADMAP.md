@@ -44,15 +44,17 @@ Coupled/asymmetric packed maps additionally have an explicit
 [initial source-layout specialization](docs/source_grouping.md) through seven
 Merlin libraries and 24 further runtime domains. Its native-derived grouping
 becomes logical tensor dataflow, leaving consumer placement undecided. The
-current inventory reopens 104 packages and 74 standalone qualifications.
+current inventory reopens 106 packages and 74 standalone qualifications.
 Three complete source-specialized models additionally preserve all twelve
 results through actual native/Merlin host and RISC-V/Spike execution. Their
 semantic grouping options are checked against original typed model-call
 attributes by both the package verifier and consumer stager.
 [Packed source reads and pointers](docs/grouped_memory.md) additionally qualify
 through six actual libraries and five runtime domains each, preserving original
-read regions, per-slot root tags and mutation snapshots. Their complete-model
-and target qualifications remain open.
+read regions, per-slot root tags and mutation snapshots. Two actual learned-state
+models additionally retain three calls and all thirty results through native/
+Merlin host and actual Spike execution, including live original states and empty
+results. Returned-pointer model compositions and broader targets remain open.
 Replicated layouts, broader packed memory, final GPU correspondence, broader mapped
 forms, source assembly, typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete

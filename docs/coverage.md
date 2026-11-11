@@ -1,14 +1,31 @@
 # Measured coverage and remaining boundaries
 
+[Complete source-grouped memory models](grouped_memory.md) now retain learned
+matrix state, dependent calls and original snapshots kept live across mutation.
+Two real i64/f32 captures preserve all fifteen results each through native LLVM,
+Merlin host and actual RISC-V/Spike execution. All thirty target results match
+exact words, including five empty results per model; original weights, inputs
+and complete parent reference archives remain unchanged. Forty-eight typed/domain
+oracle cases check the independent declared-profile evaluator. The separate
+target selection is `out/spike-grouped-memory-models/summary.json`.
+
+The current `out/grouped-memory-model-inventory/coverage.json` reopens **106
+packages, 74 standalone qualifications and fourteen product cases**. All 50
+pinned definition names remain observed under selected native/Merlin-host
+profiles. Returned-pointer model/target compositions, general physical/mutating
+views, final GPU correspondence and broader typed/attribute/kernel/target
+coverage remain unestablished.
+
 [Packed source reads and pointers](grouped_memory.md) now retain original
 cross-slot read/control regions once per logical group. Six actual native/Merlin
 libraries run five runtime domains each, including selected roots, pointer
 results, per-slot masks, intervening writes and retained snapshots. Existing
 bounds/ownership/lifetime gates remain enabled; invalid active reads and missing
-source grouping refuse. Complete-model and target evidence for these new memory
-compositions remain unestablished.
+source grouping refuse. The read-state models have the separate complete-model
+and target qualification above. Returned-pointer model/target forms remain
+unestablished.
 
-The current `out/grouped-read-inventory/coverage.json` reopens **104 packages,
+The prior `out/grouped-read-inventory/coverage.json` reopens **104 packages,
 74 standalone qualifications and fourteen product cases**. All 50 pinned
 definition names remain observed under selected native/Merlin-host profiles.
 This adds qualified compositions, not per-operation execution measurement or
