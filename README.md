@@ -5,6 +5,9 @@ checked integer programs as standard arithmetic and parallel Linalg. The PTX
 decoder is a separate package under `adapters/ptx`; the portable core retains
 original source/provider identities and checks its executable value/effect
 boundary. Hardware observations and unsupported instructions remain refused.
+Real i32/i64 model captures now retain learned words and all six original
+results through Merlin; i64 also passes public model CLI binding. Their
+computed tensor captures use the consumer's checked destination handling.
 
 The [maintained product corpus](docs/product_corpus.md) now records real
 conversion refusals and Merlin execution alongside successful packages. The

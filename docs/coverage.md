@@ -4,10 +4,13 @@
 checked i32/i64 integer programs through standard arithmetic and parallel
 Linalg. Sixteen word-program libraries replay four additional runtime domains
 each; the public scalar CLI and maintained optional corpus also qualify.
-Seventy relevant producer/provider/consumer/corpus regressions pass.
+Seventy relevant producer/provider/consumer/corpus regressions pass. Two real
+i32/i64 model captures additionally retain learned words and all six original
+results; i64 also passes the public binding CLI. Their computed read roots
+qualify with the generic Merlin destination fix and retained lifetime gates.
 
-The current `out/source-assembly-inventory-coverage/coverage.json` reopens
-**70 packages, 47 standalone qualifications and fourteen product cases**. All
+The current `out/source-assembly-model-inventory/coverage.json` reopens
+**72 packages, 47 standalone qualifications and fourteen product cases**. All
 **50 pinned source definition names** occur in native/Merlin-host-qualified
 captures under selected profiles. This is not universal opcode/type/attribute,
 instruction or per-operation execution coverage. The optional corpus has

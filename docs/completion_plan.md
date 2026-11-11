@@ -45,8 +45,8 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/source-assembly-inventory-coverage/coverage.json` selection reopens
-**70 packages, 47 standalone qualifications and fourteen maintained product
+The current `out/source-assembly-model-inventory/coverage.json` selection reopens
+**72 packages, 47 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -102,6 +102,12 @@ payloads and retains original source/provider identities. Sixteen word-program
 libraries, the public scalar CLI and the maintained optional corpus qualify.
 Seventy relevant checks pass. These finite profiles do not establish universal
 source equivalence, arbitrary hardware observations or target execution.
+
+Two real i32/i64 source-assembly models additionally preserve learned weights,
+typed shift state and all six results through native/Merlin execution, including
+dependent calls and empty values. The i64 public model CLI also passes. Their
+consumer extension retains computed tensor reads under the existing complete
+producer proof and lifetime gates; 107 destination and 34 ownership checks pass.
 
 ## Required evidence for every supported form
 

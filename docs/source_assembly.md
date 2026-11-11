@@ -123,3 +123,33 @@ at `out/source-assembly-provider/build-receipt.json` checks identical decoder
 bytes in the checkout, built wheel and installed package. This Python-wheel
 receipt does not establish source/build correspondence for the native
 Triton/shared binaries.
+
+## Complete model captures
+
+`scripts/capture_assembly_model.py` captures genuine i32/i64 model2MLIR models
+with nonzero public inputs, learned word tensors and typed shift counts. Two
+dependent kernel calls retain the original assembly-defined recurrence; a third
+call retains empty matrix values. All six original results preserve dtype,
+shape and exact words through native and actual Merlin execution. Every parent
+weight, manifest, input and complete reference archive remains byte-identical.
+The i64 model additionally qualifies through public `bind-model`, exercising
+both global and per-binding provider selection. The existing explicit dense
+value-view policy preserves the public matrix/empty ABI.
+
+The integration exposed a consumer destination-proof gap for scalar reads of a
+preceding computed model tensor. [Merlin 5d3a62d](https://github.com/ucb-bar/merlin/commit/5d3a62dcad5be54faf7fada0706dd143ead4b74d)
+recursively checks complete pure read producers before applying its existing
+destination/copy mechanism. Unknown/effectful/init-dependent/library-backed
+producers still refuse; source reads and all native alias/lifetime gates stay
+intact. Its 107 destination and 34 ownership checks pass, together with the
+structure/documentation gates. Both models were requalified against that
+published consumer revision.
+
+The verified bundles at `out/source-assembly-learned-i64/` and
+`out/source-assembly-learned-i32/` each bind eighty artifacts and retain every
+parent result. The explicit
+report at `out/source-assembly-model-inventory/coverage.json` reopens 72
+packages, 47 standalone qualifications and fourteen corpus cases. All 50
+definition names remain observed in native/Merlin-qualified captures under
+selected profiles. This adds complete-model composition evidence; it supplies
+no arbitrary-assembly, universal numeric/effect or target qualification.
