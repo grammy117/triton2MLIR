@@ -8,6 +8,13 @@ cover both byte orders, runtime matrix axes and disjoint bytes within one word.
 A real model2MLIR capture retains every result through API and CLI binding.
 Remaining root-parameter/effect/target requirements stay open.
 
+The refreshed explicit package selection at
+`out/typed-storage-coverage/coverage.json` verifies 60 packages and 41 standalone
+Merlin qualifications. It observes 34/50 pinned TTIR definitions, with 30
+represented in host-qualified captures. The unchanged opcode counts reflect
+broader typed memory compositions; per-operation execution, universal
+type/attribute coverage and accelerator materialization remain unestablished.
+
 [Different-width byte-buffer views](byte_aliases.md) now preserve complete
 word events, explicit byte order, source-pointee offset units and byte-level
 guards through native and Merlin execution. Sixty focused checks include

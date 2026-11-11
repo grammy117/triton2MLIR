@@ -73,6 +73,15 @@ uses `shared-tensor --byte-order little|big`. The model capture script
 `scripts/capture_byte_buffer_model.py --typed-root --out ...` supplies the
 matching real typed-parent example; its GPU path remains unqualified.
 
+Visible artifacts are `out/typed-root-byte-buffer` (33 verified artifacts),
+its separate `-merlin` qualification (52), the generic saved-source package
+`out/typed-root-byte-buffer-generic` (20), and the copied verified complete
+model `out/typed-root-byte-model` (80). The refreshed explicit registry at
+`out/typed-storage-coverage/coverage.json` contains 60 packages and 41 standalone
+qualifications. It still observes 34/50 TTIR definitions, with 30 represented
+in host-qualified captures. This is deeper storage/composition coverage, not
+new universal opcode or accelerator coverage.
+
 Byte-backed indivisible atomics, changed-width allocation-parameter bindings
 from typed roots, physical/mutating model views, independent numerical/effect
 closure and applicable target materialization remain separate requirements.

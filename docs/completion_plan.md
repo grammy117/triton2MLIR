@@ -104,6 +104,12 @@ checks pass. Changed-width allocation-parameter bindings from typed roots,
 byte-backed atomic effects, physical model views and the full numeric/effect/
 corpus/target goal remain open.
 
+Public typed-root demo, separate Merlin qualification, generic saved-source
+conversion and complete model bundles verify 33/52/20/80 artifacts respectively.
+The refreshed explicit 60-package/41-qualification registry still observes
+34/50 pinned definitions and 30 in host-qualified captures; no universal
+opcode/type/attribute or target claim follows.
+
 Different-width ordinary views of declared i8 roots now retain source-pointee
 units, explicit byte order, one byte-plane event per original word and standard
 pack/unpack with source intent. Native/Merlin evidence covers all seven supported
