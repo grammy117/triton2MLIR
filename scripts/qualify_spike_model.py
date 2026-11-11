@@ -66,7 +66,10 @@ def worker(mode, root, out, *arguments):
         checked_stage(out / "compiler")
     elif mode == "build":
         from merlin.llvmlower import toolchain
+        from merlin.frontends.linalg_mlir import parse_mlir_text
         from merlin.runtime.backends import spike, spike_model
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "t2m"))
+        from consumer_features import select_features
         manifest = checked_stage(out / "compiler")
         signature = json.loads((out / "compiler/signature.json").read_text())
         entries = signature["inputs"] + signature["outputs"]
@@ -79,6 +82,10 @@ def worker(mode, root, out, *arguments):
         if not signature["inputs"] or not signature["outputs"]:
             raise ValueError("whole-model qualification needs tensor arguments and results")
         source = (out / "compiler/program.mlir").read_bytes()
+        module = parse_mlir_text(source.decode("utf-8"))
+        module.verify()
+        requested_features = json.loads(arguments[1])
+        features = select_features(module) | frozenset(requested_features)
         projection = out / "image-input"
         shutil.copytree(out / "compiler", projection)
         (projection / "model.mlir").write_bytes(source)
@@ -87,21 +94,27 @@ def worker(mode, root, out, *arguments):
             ("clang", toolchain.clang()), ("compiler_python", toolchain.compiler_python()),
             ("gcc", spike.gcc_path()), ("spike", spike.spike_path()), ("nm", toolchain.nm()))}
         report = spike_model.build(projection, out / "image", inputs_npz=arguments[0],
-            backend="scalar", features=frozenset(json.loads(arguments[1])),
+            backend="scalar", features=features,
             full_readback=True, readonly_input_indices=tuple(range(len(signature["inputs"]))),
             arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20)
         checked_stage(out / "compiler")
         if (projection / "model.mlir").read_bytes() != source:
             raise ValueError("runtime filename projection changed the staged program")
         write_json(out / "build.json", {"build": report, "tools": tools,
-            "driver": pin(__file__), "selected_features": json.loads(arguments[1]),
+            "driver": pin(__file__), "selected_features": sorted(features),
+            "requested_features": requested_features,
+            "feature_selector": pin(Path(__file__).resolve().parents[1] / "t2m/consumer_features.py"),
             "merlin_sources": {name: pin(Path(root) / name) for name in (
                 "src/merlin/runtime/backends/spike_model.py", "src/merlin/runtime/backends/_model_elf_metadata.py",
                 "src/merlin/runtime/whole_model_readback.py", "src/merlin/runtime/out_bin.py",
                 "src/merlin/runtime/input_observation.py", "src/merlin/llvmlower/c_runtime.py",
                 "src/merlin/llvmlower/pipeline.py", "src/merlin/llvmlower/toolchain.py",
                 "src/merlin/frontends/linalg_mlir.py", "src/merlin/frontends/linalg_named_regions.py",
-                "src/merlin/xdsl_dialects/standard_linalg.py")},
+                "src/merlin/xdsl_dialects/standard_linalg.py",
+                "src/merlin/llvmlower/loop_tensor_destinations.py",
+                "src/merlin/llvmlower/atomic_compare_exchange.py",
+                "src/merlin/llvmlower/atomic_word_views.py",
+                "src/merlin/llvmlower/atomic_integer_regions.py")},
             "dependency_source_closure": "not-established",
             "source_program": pin(out / "compiler/program.mlir"),
             "runtime_inputs": pin(arguments[0]), "runtime_inputs_embedded_in_elf": True,

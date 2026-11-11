@@ -117,6 +117,13 @@ native implicit named-region casts and attributed buffer-view printing now
 retain their real semantics. This closes the previous no-target-execution gap
 for these models; broad target, numeric/effect and runtime coverage remains open.
 
+Source-derived consumer capability selection now serves both native host and
+target workers. Mapped-memory fourteen-result, descriptor-state and mixed
+integer/floating RMW64/CAS16 models also pass on Spike after fixing the default
+atomic/destination pipeline composition. Byte-backed recurrence models still
+expose a default-target lifetime failure; retain that refusal until the actual
+storage schedule is fixed. Native host success supplies no target permission.
+
 ## Required evidence for every supported form
 
 Keep these gates separate for each opcode/type/attribute/composition:

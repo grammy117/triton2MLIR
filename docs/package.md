@@ -10,6 +10,10 @@ Complete raw-byte output and readonly-input observations are bound separately.
 The zero-element `OUT_BIN v1` extension retains empty shapes; older positive-only
 readers reject it. Functional ISA execution grants no vector, accelerator, RTL,
 timing, performance or universal source-equivalence qualification.
+Source-derived capability selection is shared with the host consumer. Target
+build records distinguish requested and effective features and bind the actual
+selector bytes; source operation bodies still require independent Merlin
+validation. Public tensor/scalar and capture receipt schemas are unchanged.
 
 [Optional source assembly implementations](source_assembly.md) add explicit
 source-language/provider contracts and installed implementation identities.

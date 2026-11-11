@@ -27,6 +27,20 @@ for attributed `bufferization.to_buffer`. Named contractions and their actual
 mixed types/maps/provenance remain present. Native implicit casts preserve the
 source accumulator precision.
 
+Host and target materialization now share `t2m.consumer_features`: actual BF16,
+FP8, diagnostic and atomic operations select the existing consumer capabilities.
+The target records both caller-requested and effective features. Provenance,
+model names and reference values never select these implementations; Merlin
+still checks every body's legality and ownership independently.
+
+Additional measured models retain fourteen mapped-memory results, three
+descriptor-state results and all three results of mixed-storage RMW64/CAS16.
+The latter exposed an order-dependent atomic preparation marker in the ordinary
+scalar pipeline. Destination reuse now precedes the complete atomic/ownership
+suffix in either feature application order. Byte-backed atomic recurrences
+remain refused by the target route's lifetime check pending their separate fix;
+their successful native host models do not qualify that target behavior.
+
 ## Reproduce with existing tools
 
 Select the existing tools through Merlin's normal environment variables:
@@ -71,7 +85,8 @@ source-assembly and lifted-constant model tests document how to produce inputs.
 3. Copy that compiler projection and add only the byte-identical `model.mlir`
    filename alias required by the whole-model builder. Use ordinary
    `spike_model.build(backend="scalar", full_readback=True)` with checked loop
-   destination reuse. Additional native features require explicit `--feature`.
+   destination reuse and source-derived consumer capabilities. `--feature`
+   additionally selects an explicitly requested existing native capability.
 4. Supply original runtime inputs separately to the C harness generator.
    **Bare-metal images embed those runtime values.** This differs from the
    reusable host-library invocation path: the build worker receives runtime

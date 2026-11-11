@@ -8,7 +8,10 @@ import platform
 import resource
 import sys
 
-COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
+if __package__:
+    from .consumer_features import COMPILER_FEATURES, select_features
+else:
+    from consumer_features import COMPILER_FEATURES, select_features
 
 
 def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, fp8_narrowing=False, literal_diagnostics=False, scalar_diagnostics=False):
@@ -91,33 +94,9 @@ def compile_model(staged, work):
     add_c_interface(module)
     prepared = text(module, generic=True)
     (work / "prepared.mlir").write_text(prepared)
-    features = COMPILER_FEATURES
-    if any("bf16" in str(value.type) for op in module.walk() for value in (*op.operands, *op.results)):
-        features = features | {"preserve_bfloat_transport"}
+    features = select_features(module)
     bfloat_math = "emulate_bfloat_elementwise"
-    from bfloat_math import requires_emulation
-    if requires_emulation(module.walk()):
-        features = features | {bfloat_math}
-    from fp8_math import requires_widening,requires_narrowing
-    if requires_widening(module.walk()):
-        features = features | {"lower_fp8_widening"}
-    if requires_narrowing(module.walk()):
-        features = features | {"lower_fp8_narrowing"}
-    if any(op.name == "vector.print" for op in module.walk()):
-        features = features | {"lower_scalar_diagnostics"}
-    elif any(op.name == "cf.assert" and "\x00" in op.msg.data for op in module.walk()):
-        features = features | {"lower_length_aware_diagnostics"}
-    regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
-    from native import requires_integer_atomic_regions
-    integer_regions = requires_integer_atomic_regions(module)
-    if integer_regions:
-        from merlin.llvmlower.atomic_integer_regions import ensure_registered
-        ensure_registered()
-        features = features | {"lower_integer_atomic_regions"}
-    if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
-        features = features | {"lower_atomic_word_views"}
-    elif regions and not integer_regions:
-        features = features | {"lower_integer_compare_exchange"}
+    integer_regions = "lower_integer_atomic_regions" in features
     pipeline = tensor_pipeline(compare_exchange="lower_integer_compare_exchange" in features, word_views="lower_atomic_word_views" in features, integer_regions=integer_regions,
         bfloat="preserve_bfloat_transport" in features, bfloat_elementwise=bfloat_math in features,
         fp8_widening="lower_fp8_widening" in features,
