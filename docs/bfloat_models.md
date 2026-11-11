@@ -95,3 +95,11 @@ Set `TRITON_SHARED_OPT` to the existing shared optimizer. The matmul route uses
 `examples/model_bfloat_matmul_binding.json`. The saved observation/matmul model
 bundles pass 81/80 artifact checks respectively, including actual Merlin host
 execution. Accelerator execution remains unperformed.
+
+The [whole-model target driver](target_execution.md#exact-bf16-runtime-inputs)
+now also preserves public BF16 source inputs through functional RISC-V execution.
+Three complete model cases retain all thirteen results, including an explicit
+canonical-NaN legacy archive projection that previously lost input word bits.
+The source package stays unchanged during qualification. A separately checked
+runtime archive supplies exact source-word embeddings to the C harness; it is
+outside compiler-only staging and leaves capture/reference archives intact.

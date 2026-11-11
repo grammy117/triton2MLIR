@@ -11,6 +11,10 @@ models pass exact-word comparison. Retained execute-region provenance and
 boundaries preserve the source snapshot and native lifetime checks.
 Together with the integer tuple and BF16 contraction cases, eleven complete
 models now qualify all 64 results bit for bit on this functional CPU path.
+Public BF16 runtime inputs additionally preserve exact original words through a
+checked runtime-only archive projection. Three complete model cases retain all
+thirteen results, including canonical legacy NaNs and finite legacy recovery;
+computed NaN payloads keep their separately declared numeric policy.
 
 [Source assembly implementations](docs/source_assembly.md) additionally provide
 an explicit optional source-language boundary. Checked integer snippets become

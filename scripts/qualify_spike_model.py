@@ -239,6 +239,7 @@ def compare(capture, out, rtol, atol, *, comparison="values"):
 
 def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values"):
     from t2m.bundle import verify_bundle
+    from t2m.model_runtime_inputs import prepare as prepare_runtime_inputs
     capture, out, root = Path(capture).resolve(), Path(out).absolute(), Path(merlin_root).resolve()
     if out.exists() or out.is_symlink() or capture in out.parents:
         raise ValueError("qualification output must be new and outside the source bundle")
@@ -254,7 +255,8 @@ def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0,
     out.mkdir(parents=True, exist_ok=False)
     (out / "input-receipt.json").write_bytes((capture / "capture_receipt.json").read_bytes())
     run_worker("stage", root, out, [capture], python)
-    run_worker("build", root, out, [capture / "inputs.npz", json.dumps(sorted(set(features) | {"reuse_loop_tensor_destinations"}))], python)
+    runtime_inputs = prepare_runtime_inputs(capture, out, json.loads((out / "compiler/signature.json").read_text()))
+    run_worker("build", root, out, [runtime_inputs, json.dumps(sorted(set(features) | {"reuse_loop_tensor_destinations"}))], python)
     run_worker("run", root, out, [], python)
     evaluation = compare(capture, out, rtol, atol, comparison=comparison)
     if verify_bundle(capture) != receipt or pin(capture / "capture_receipt.json") != original:
@@ -275,6 +277,7 @@ def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0,
 
 def verify(out, *, merlin_root, python=sys.executable):
     from t2m.bundle import verify_bundle
+    from t2m.model_runtime_inputs import ARCHIVE, RECORD, verify as verify_runtime_inputs
     out = Path(out)
     report = json.loads((out / "qualification.json").read_text())
     if (report.get("schema") != "t2m.spike-model-qualification.v1" or report.get("status") != "passed"
@@ -305,10 +308,13 @@ def verify(out, *, merlin_root, python=sys.executable):
     build = json.loads((out / "build.json").read_text())
     run = json.loads((out / "run.json").read_text())
     signature = json.loads((out / "compiler/signature.json").read_text())
+    if any((out / name).exists() and name not in report["artifacts"] for name in (ARCHIVE, RECORD)):
+        raise ValueError("runtime input projection is not bound by the qualification")
+    runtime_inputs = verify_runtime_inputs(capture, out, signature)
     if (run.get("execution") != "passed" or run["elf"] != pin(out / "image/model.elf")
             or run["stdout"] != pin(out / "stdout.bin") or run["outputs"] != pin(out / "outputs.npz")
             or build["source_program"] != pin(out / "compiler/program.mlir")
-            or build["runtime_inputs"] != pin(capture / "inputs.npz")
+            or build["runtime_inputs"] != pin(runtime_inputs)
             or run.get("accelerator_execution") != "not-performed"
             or run.get("timing_qualification") != "not-established"
             or [row["original_index"] for row in run["readonly_inputs"]["arguments"]] != list(range(len(signature["inputs"])))

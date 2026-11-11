@@ -18,6 +18,13 @@ The optional qualification evaluation field `comparison: words` additionally
 requires exact output bits and zero tolerances, including NaN payloads and signed
 zero. Existing receipts retain their value comparison; older readers may refuse
 the additive stricter policy. It changes no source numeric or memory permission.
+Target execution may additionally emit `runtime-inputs.npz` and
+`runtime-inputs.json` (`t2m.runtime-input-projection.v1`) outside the compiler
+projection. These derive exact BF16 runtime input words from the existing parent
+witness or proved legacy embedding; every other input remains byte-identical.
+They change no public model ABI, source capture archive or result reference.
+The target verifier replays the derivation; older readers may refuse the changed
+runtime-file binding. See [the measured target scope](target_execution.md).
 
 [Optional source assembly implementations](source_assembly.md) add explicit
 source-language/provider contracts and installed implementation identities.

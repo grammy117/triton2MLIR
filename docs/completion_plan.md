@@ -131,6 +131,13 @@ The prior tuple/contraction target cases also pass exact words: eleven models
 now cover 64 complete results. The default BF16 transport feature includes its
 upstream arithmetic cast expansion rather than depending on an adapter-only
 pipeline. Remaining numeric contracts and target scope stay unqualified.
+Public BF16 runtime inputs now also follow the same checked source-word contract
+as host execution. A real canonical-NaN legacy archive projection exposed a
+target-only loss of input bits; a runtime-only exact embedding closes that gap.
+Three complete model integrations retain thirteen results, covering exceptional
+observations, finite legacy recovery and a BF16-input contraction. The source
+package and compiler staging remain intact; general dynamic/alias/effect and
+target completion requirements above remain active.
 
 ## Required evidence for every supported form
 

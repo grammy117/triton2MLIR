@@ -56,6 +56,39 @@ prerequisite in the ordinary default pipeline as well as the explicit host path.
 The local aggregate `out/spike-state-models/summary.json` pins these eleven
 reverified qualification receipts and records the remaining coverage limits.
 
+### Exact BF16 runtime inputs
+
+Public BF16 inputs now use their receipt-bound source-word witness, or the
+existing proved legacy embedding without NaNs. A separate runtime-only archive
+projects each word into the high bits of an F32 container. Merlin's existing C
+generator emits the original BF16 storage from that exact embedding; every one
+of the 65,536 encodings passes an actual C storage/readback test. Other input
+arrays retain their original dtype, shape and bytes. Weights keep their ordinary
+compiler-owned safetensors path.
+
+This closes a real difference from host materialization: a valid archive with
+canonical legacy NaN values and unchanged exact source words previously built
+and ran on Spike but returned incorrect integer word observations. A fresh real
+model capture with that explicit archive projection now passes host and target
+execution with all six results, including exact BF16 selections and integer
+views. A finite legacy observation model and a BF16-input contraction also pass.
+The three complete-model tests retain thirteen results under
+`.scratch/pytest-bfloat-runtime-model/`.
+
+Computed F32 NaN payloads may differ between host and RISC-V under this numeric
+profile. The exceptional observation case uses value comparison for those
+computations and separately checks storage/word results exactly. Finite legacy
+and contraction cases pass the all-word policy. No source numeric permission is
+broadened to make a target result pass.
+
+`runtime-inputs.npz` and its `t2m.runtime-input-projection.v1` derivation record
+live beside the qualification, outside compiler staging. Only the projected
+input archive reaches the build worker; the mixed input/reference word archive
+and result references do not. Verification re-derives every projected byte from
+the unchanged source bundle and rejects changed values even after outer hashes
+and the build's archive digest have been rebound. Existing qualifications with
+no projection retain their original input-file binding.
+
 ## Reproduce with existing tools
 
 Select the existing tools through Merlin's normal environment variables:
@@ -102,7 +135,8 @@ source-assembly and lifted-constant model tests document how to produce inputs.
    `spike_model.build(backend="scalar", full_readback=True)` with checked loop
    destination reuse and source-derived consumer capabilities. `--feature`
    additionally selects an explicitly requested existing native capability.
-4. Supply original runtime inputs separately to the C harness generator.
+4. Supply original runtime inputs separately to the C harness generator,
+   using the checked exact-word projection above for public BF16 arguments.
    **Bare-metal images embed those runtime values.** This differs from the
    reusable host-library invocation path: the build worker receives runtime
    inputs for harness generation, although compiler staging excludes them.
