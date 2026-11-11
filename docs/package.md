@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Proved layout-independent packed maps](packed_maps.md) retain their original
+pack annotation while exposing the same scalar function at every logical
+element in standard parallel Linalg. The source graph, slot-independence
+evidence and source locations remain explicit; no register/lane mapping or
+caller-supplied proof tag is trusted. Public ABI and receipt schemas stay
+unchanged. Coupled/asymmetric packing still needs its original grouping facts.
+
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The
 argument configuration schemas remain v1/v2; `typed-root-byte-view-v1` records

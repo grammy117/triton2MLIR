@@ -8,8 +8,10 @@ The active [completion plan](docs/completion_plan.md) orders the remaining front
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 The [maintained product corpus](docs/product_corpus.md) now records real refusals
 and execution against all 50 pinned definitions. The combined selection observes
-50 source definitions and 49 in native/Merlin-qualified captures. Packed/
-effectful maps, source assembly, broader typed compositions and targets stay open.
+50 source definitions and 49 in native/Merlin-qualified captures. Proved
+[slot-independent packed DAGs](docs/packed_maps.md) now also reach Merlin while
+retaining packing intent. Coupled/asymmetric packed maps, broader mapped
+forms, source assembly, typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete
 TTIR packages and actual Merlin libraries, retaining byte order, old values,
 whole-word bounds/alignment and per-byte ownership. Source templates, executable

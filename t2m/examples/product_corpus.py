@@ -60,6 +60,7 @@ def prepare(out):
 
     from t2m.examples.elementwise_map_kernels import (
         elementwise_map_values,
+        independent_packed_maps,
         packed_map_values,
         pointer_load_map,
     )
@@ -76,6 +77,23 @@ def prepare(out):
             first += y * step
         examples.append(([x, y, np.asarray(n, np.int32), np.asarray(count, np.int32)], [first, x + y]))
     add("scalar-map", source, abi, examples)
+    source = captured(independent_packed_maps, {"x": "*i64", "y": "*i64", "out_a": "*i64", "out_b": "*i64",
+                      "n": "i32", "iterations": "i32"}, {"B": 32, "PACK": 4})
+    abi = TensorABI("independent_packed_maps", buffers(("x", "y", "out_a", "out_b"), (("n",),) * 4, ("i64",) * 4),
+        grid=(GridExtent("n", 32),), runtime_scalars=(RuntimeScalar("n", "i32", 4, bounds=(0, 67)),
+                                                   RuntimeScalar("iterations", "i32", 5, bounds=(0, 4))))
+    examples = []
+    for n, count in ((37, 3), (0, 0), (67, 2)):
+        x = np.arange(n, dtype=np.int64) * 3 - 17 + np.int64(1 << 60)
+        y = np.resize(np.asarray([0, -2, 4, 1, -1, 0, 2], np.int64), n)
+        a, b = [int(v) for v in x], [int(v) for v in y]
+        for step in range(count):
+            q = [(-1 if (left < 0) != (right < 0) else 1) * (abs(left) // abs(right)) if right else -7
+                 for left, right in zip(a, b, strict=True)]
+            a, b = [v + step for v in q], [left + right for left, right in zip(a, b, strict=True)]
+        examples.append(([x, y, np.asarray(n, np.int32), np.asarray(count, np.int32)],
+                         [np.asarray(a, np.int64), np.asarray(b, np.int64)]))
+    add("independent-packed-map", source, abi, examples)
     for name, kernel, names in (("packed-map", packed_map_values, ("x", "y", "out")),
                                 ("memory-map", pointer_load_map, ("x", "out"))):
         source = captured(kernel, {key: "*fp32" for key in names}, {})

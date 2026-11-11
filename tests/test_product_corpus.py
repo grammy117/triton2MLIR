@@ -165,7 +165,7 @@ def test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_ga
     report = qualify_product_corpus(manifest, tmp_path / "report", optimizer=OPT, python=NATIVE,
         merlin_root=os.environ["T2M_MERLIN_ROOT"], merlin_python=os.environ["T2M_MERLIN_PYTHON"],
         clang=os.environ["T2M_MERLIN_CLANG"])
-    assert report["selected_cases"] == 12 and report["complete_selection_measured"]
+    assert report["selected_cases"] == 13 and report["complete_selection_measured"]
     cases = {row["id"]: row for row in report["cases"]}
     gaps = {"packed-map", "source-assembly"}
     assert {name for name, row in cases.items() if row["status"] == "refused"} == gaps

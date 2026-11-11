@@ -6,14 +6,18 @@ selected case remains in the report: valid source, invalid source, conversion
 refusals, failed references/compilations and cases not started within a budget.
 All 50 pinned TTIR definitions remain in the denominator.
 
-Mapped source reads now additionally qualify under the explicit guarded
-source-word profile; see [the map memory contract](memory_maps.md). The current
-copy at `out/memory-map-product-qualified/` contains twelve cases, ten actual
-Merlin libraries and two located refusals (packing and source assembly).
-`out/memory-map-inventory-coverage/coverage.json` joins it to the earlier
-67 packages/46 qualifications and retains 50 observed source definitions and
-49 in native/Merlin-qualified captures. The earlier measurements below retain
-their original code and scope.
+[Proved layout-independent packed maps](packed_maps.md) now add a successful
+rank-two i64 case with runtime recurrence. The current copy at
+`out/packed-map-product-qualified/` contains thirteen cases, eleven actual
+Merlin libraries and two located refusals (asymmetric packing and source
+assembly). The combined `out/packed-map-inventory-coverage/coverage.json`
+retains 50 observed source definitions and 49 in native/Merlin-qualified
+captures. The earlier measurements below retain their original code and scope.
+
+The previous mapped-read corpus at `out/memory-map-product-qualified/` retains
+its twelve cases, ten actual libraries and two refusals. Its report at
+`out/memory-map-inventory-coverage/coverage.json` joins 67 packages and 46
+standalone qualifications. See [the map memory contract](memory_maps.md).
 
 ## Reproduction
 

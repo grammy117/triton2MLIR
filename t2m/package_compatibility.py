@@ -1,7 +1,12 @@
 """Explicit kernel representation differences shared by both package writers."""
 
-from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, TENSOR_PROFILE, WORD_PROFILE
 from .input_storage import READONLY_SNAPSHOTS
+from .memory_contract import (
+    BUFFER_PROFILE,
+    GUARDED_PROFILES,
+    TENSOR_PROFILE,
+    WORD_PROFILE,
+)
 
 
 def kernel_representation_differences(trace, *, dynamic=False):
@@ -45,6 +50,9 @@ def kernel_representation_differences(trace, *, dynamic=False):
         if trace.get("memory", {}).get("word_conversion") == "native-isolated-events-v2":
             differences.append("region-local memory uses isolated native event templates reinserted at original locations and arithmetic-only parent conversion; word-stage v2 archives intermediate IR and both actual native reports; typed event reconstruction is checked; tensor/scalar ABI is unchanged")
     transformations = trace.get("transformations", [])
+    if any(record.get("kind") == "ttir-elementwise-map" and record.get("packing_proof")
+           for record in transformations):
+        differences.append("packed scalar arithmetic is exposed as parallel logical element computation only after typed SSA establishes identical slot-local functions independent of register grouping; original pack size, congruence evidence and equivalent source locations remain in provenance; no physical lane/register layout, new public ABI or caller proof annotation is assumed; coupled/asymmetric slots and packed memory/regions require their own grouping/effect contracts")
     if trace.get("descriptor_argument_binding", {}).get("schema") == "t2m.logical-descriptor-arguments.v1":
         differences.append("external tensor descriptor arguments use the official one-to-many logical field ABI: one owning allocation tensor, rank signed-i64 shapes, rank signed-i64 element strides, a NaN-padding bool and an f32-to-TF32 rounding bool; ordinary source arguments retain their order with expanded source positions explicit; shape fields require nonnegative input bounds, runtime allocation bounds/ownership remain checked, and flags drive the actual standard computation; this is not a device descriptor byte layout or physical pointer identity contract, and nonzero descriptor-base origins/shared writable descriptor roots still require explicit state bindings")
     if any(record.get("descriptor_profile", {}).get("name") == "logical-tensor-descriptors-v1"

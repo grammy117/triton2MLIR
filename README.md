@@ -4,17 +4,23 @@ The [maintained product corpus](docs/product_corpus.md) now records real
 conversion refusals and Merlin execution alongside successful packages. The
 combined explicit report observes all 50 pinned TTIR definitions in source,
 with 49 represented in native/Merlin-host-qualified captures. Source assembly,
-packed maps and broader mapped-read forms and broader numeric/runtime/target closure remain
+coupled packed maps, broader mapped reads and numeric/runtime/target closure remain
 open; these counts measure compositions, not universal operation support.
 
 [Mapped source reads](docs/memory_maps.md) now retain logical pointers,
 branches/loops and five-result snapshots around ordinary kernel writes through
-actual Merlin libraries. The updated corpus has ten qualified cases and two
+actual Merlin libraries. The updated corpus has eleven qualified cases and two
 located refusals; source assembly and packed grouping remain open.
 Selected-root map arguments, pointer results and mixed results additionally
 qualify through twelve libraries. Real i64/f32 model captures preserve learned
 state and every one of fourteen original results through Merlin; i64 also
 passes the public model CLI. See [the complete map contract](docs/memory_maps.md).
+
+[Layout-independent packed maps](docs/packed_maps.md) now retain their original
+packing annotation while lowering proved slot-local arithmetic to parallel
+Linalg. Eight libraries cover pack two/four, i32/i64/f32 and runtime tiled
+recurrences. Coupled/asymmetric slots still require actual register-group facts;
+the frontend never infers adjacency from tensor shape.
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.

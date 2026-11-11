@@ -57,6 +57,57 @@ def packed_map_values(x, y, out):
 
 
 @triton.jit
+def _packed_value(a, b, step):
+    divisor = tl.where(b != 0, b, 1)
+    quotient = a / divisor if a.dtype.is_floating() else a // divisor
+    return tl.where(b != 0, quotient, -7) + step, a + b
+
+
+@triton.jit
+def _packed_independent2(a0, a1, b0, b1, s0, s1):
+    q0, r0 = _packed_value(a0, b0, s0)
+    q1, r1 = _packed_value(a1, b1, s1)
+    return q0, q1, r0, r1
+
+
+@triton.jit
+def _packed_independent4(a0, a1, a2, a3, b0, b1, b2, b3, s0, s1, s2, s3):
+    q0, r0 = _packed_value(a0, b0, s0)
+    q1, r1 = _packed_value(a1, b1, s1)
+    q2, r2 = _packed_value(a2, b2, s2)
+    q3, r3 = _packed_value(a3, b3, s3)
+    return q0, q1, q2, q3, r0, r1, r2, r3
+
+
+@triton.jit
+def independent_packed_maps(x, y, out_a, out_b, n, iterations, B: tl.constexpr, PACK: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    if PACK == 4:
+        lane = tl.reshape(lane, (4, B // 4))
+    a = tl.load(x + lane, lane < n, other=0)
+    b = tl.load(y + lane, lane < n, other=0)
+    for step in range(iterations):
+        if PACK == 2:
+            a, b = tl.map_elementwise(_packed_independent2, a, b, step, pack=PACK)
+        else:
+            a, b = tl.map_elementwise(_packed_independent4, a, b, step, pack=PACK)
+    tl.store(out_a + lane, a, lane < n)
+    tl.store(out_b + lane, b, lane < n)
+
+
+@triton.jit
+def _packed_cross_slot(a0, a1):
+    return a0 + a1, a1 + a0
+
+
+@triton.jit
+def coupled_packed_map(x, out):
+    lane = tl.arange(0, 8)
+    value, = tl.map_elementwise(_packed_cross_slot, tl.load(x + lane), pack=2)
+    tl.store(out + lane, value)
+
+
+@triton.jit
 def _map_pointer_load(pointer):
     return tl.load(pointer)
 

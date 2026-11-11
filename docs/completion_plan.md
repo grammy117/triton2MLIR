@@ -45,12 +45,12 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/memory-map-inventory-coverage/coverage.json` selection reopens
-**67 packages, 46 standalone qualifications and twelve maintained product
+The current `out/packed-map-inventory-coverage/coverage.json` selection reopens
+**69 packages, 46 standalone qualifications and thirteen maintained product
 cases**. It observes **50/50 source definitions**, with **49 represented in
-native- and Merlin-host-qualified captures**. The current corpus provides ten
+native- and Merlin-host-qualified captures**. The current corpus provides eleven
 actual libraries and retains two located refusals. Source assembly has no
-qualified host capture; packed maps still refuse, while mapped reads qualify through the
+qualified host capture; coupled/asymmetric packed maps still refuse, while mapped reads qualify through the
 explicit guarded source-word profile. These are composition observations, not a completion
 percentage or per-operation execution measurement. The [product corpus](product_corpus.md)
 and [coverage v2](package_coverage.md) keep source/refusal/execution limits
@@ -85,6 +85,13 @@ pointer results and mixed pointer/numeric results; 34 existing selector
 regressions pass. Two real i64/f32 model captures retain learned state and all
 fourteen results through Merlin; the i64 model also qualifies via public CLI.
 The [complete map contract](memory_maps.md) records the exact composition scope.
+
+[Layout-independent packed DAGs](packed_maps.md) now additionally qualify when
+typed SSA establishes identical slot-local functions. Eight actual libraries
+retain pack two/four, i32/i64/f32, rank-one/two tiles and runtime recurrences,
+with four additional domains per library. Actual dependencies and arithmetic
+attributes are checked independently of provenance. Coupled/asymmetric slots,
+packed regions/reads, source assembly and applicable targets remain open.
 
 ## Required evidence for every supported form
 
