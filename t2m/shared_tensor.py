@@ -1271,6 +1271,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                 raise ConversionError("physical pointer observations require a separate address-space contract",
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
     else:
+        for op in middle_module.walk():
+            if opcode(op) == "tt.map_elementwise" and any(opcode(child) == "tt.load" for child in op.walk()):
+                raise ConversionError("mapped source memory requires guarded-buffer memory with source-words addresses",
+                    opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
         check_source_addresses(middle_module, abi)
     pointer_control_reports = []
     isolated_events = False
@@ -1285,7 +1289,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         bind_source(records, pointer_control_reports)
     scan_reports = expand_scans(middle_module, _source_ids)
     from .elementwise_map import expand_elementwise_maps
-    map_reports = expand_elementwise_maps(middle_module, _source_ids)
+    map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events)
     from .tile_gather import expand_tile_gathers
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
     from .histogram import expand_histograms

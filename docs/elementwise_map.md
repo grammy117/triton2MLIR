@@ -1,5 +1,12 @@
 # Scalar regions mapped over logical tiles
 
+[Mapped source reads](memory_maps.md) now additionally qualify through the
+guarded-buffer/source-words profile, retaining scalar branches/loops, source
+fills and five-result shared-state snapshots across ordinary kernel writes.
+The pinned native verifier still forbids writes inside map regions; this
+adapter preserves that source boundary. The pure numeric profile below stays
+unchanged.
+
 `tt.map_elementwise` / `tt.map_elementwise.return` now have a standard expansion
 for `pack=1` with numeric tensors and an inlined scalar value region. Inputs may
 have different element types, but all input/result shapes must match. The public
@@ -44,9 +51,8 @@ assume that packed lanes are identical. No Ascend backend or custom op is needed
 
 Packed maps remain a separate grouping contract: flattening physical packed
 groups into independent elements could change cross-element dataflow. Pointer
-inputs or source-memory operations inside a map also need an effect adapter
-that preserves each event, mask and source order. Both forms currently produce
-located refusals, with real source regression cases. They are retained in the
+inputs and source reads now have the separately checked adapter above. Packed
+maps retain located refusals, with real source regression cases. They remain in the
 completion scope; no opaque successful fallback is emitted. Tile-local histogram
 now has [a separate standard expansion and qualification](histogram.md). Numerical
 unsplat already lowers through the shared path.

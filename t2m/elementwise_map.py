@@ -17,8 +17,8 @@ from xdsl.rewriter import Rewriter
 from .diagnostics import ConversionError
 
 
-def expand_elementwise_maps(module, source_ids):
-    from .shared_tensor import opcode
+def expand_elementwise_maps(module, source_ids, *, memory_events=False):
+    from .shared_tensor import _pointer_type, opcode
     reports = []
     for op in list(module.walk()):
         if opcode(op) != "tt.map_elementwise":
@@ -41,6 +41,7 @@ def expand_elementwise_maps(module, source_ids):
         if len(op.regions) != 1 or len(op.regions[0].blocks) != 1:
             refuse("elementwise maps need one inlined scalar region")
         source = op.regions[0].block
+        has_memory = any(opcode(child) == "tt.load" for child in source.walk())
         end = source.last_op
         input_elements, output_elements = [t.element_type for t in inputs], [t.element_type for t in outputs]
         if ([v.type for v in source.args] != input_elements or end is None
@@ -51,11 +52,13 @@ def expand_elementwise_maps(module, source_ids):
             name = opcode(child)
             if child is end:
                 continue
-            if name.split(".")[0] not in ("arith", "math") and name not in controls:
+            memory = memory_events and name in ("tt.load", "tt.addptr", "tt.bitcast")
+            if name.split(".")[0] not in ("arith", "math") and name not in controls and not memory:
                 refuse("elementwise map body requires inlined scalar arithmetic/math and structured value control", child)
             values = [*child.operands, *child.results,
                       *(arg for region in child.regions for block in region.blocks for arg in block.args)]
-            if not all(isinstance(v.type, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat)) for v in values):
+            if not all(isinstance(v.type, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat))
+                       or memory_events and _pointer_type(v.type) and not isinstance(v.type, TensorType) for v in values):
                 refuse("elementwise map scalar body cannot access tensors, addresses or effects", child)
         body = Block(arg_types=input_elements + output_elements)
         mapping = dict(zip(source.args, body.args[:len(inputs)], strict=True))
@@ -77,5 +80,6 @@ def expand_elementwise_maps(module, source_ids):
         Rewriter.replace_op(op, [*empty, generic])
         reports.append({"kind": "ttir-elementwise-map", "source_ids": ids, "pack": 1,
             "shape": list(shape), "inputs": len(inputs), "results": len(outputs),
-            "expansion": "parallel-linalg-generic-with-original-scalar-region", "physical_mapping": "undecided"})
+            "expansion": "parallel-linalg-generic-with-original-scalar-region", "physical_mapping": "undecided",
+            **({"memory": "isolated-source-word-events-in-original-scalar-region"} if has_memory else {})})
     return reports

@@ -66,3 +66,52 @@ def pointer_load_map(x, out):
     lane = tl.arange(0, 8)
     value = tl.map_elementwise(_map_pointer_load, x + lane)
     tl.store(out + lane, value)
+
+
+@triton.jit
+def _mapped_read(pointer, lane, n, capacity, iterations, WHILE: tl.constexpr):
+    if lane < n:
+        initial = tl.load(pointer)
+        value = initial
+        if WHILE:
+            step = 0
+            while step < iterations:
+                value += tl.load(pointer + step, lane + step < capacity, other=-3)
+                step += 1
+        else:
+            for step in range(iterations):
+                value += tl.load(pointer + step, lane + step < capacity, other=-3)
+    else:
+        initial = tl.full((), -7, pointer.dtype.element_ty)
+        value = initial
+    return initial, value
+
+
+@triton.jit
+def _mapped_read_for(pointer, lane, n, capacity, iterations):
+    return _mapped_read(pointer, lane, n, capacity, iterations, False)
+
+
+@triton.jit
+def _mapped_read_while(pointer, lane, n, capacity, iterations):
+    return _mapped_read(pointer, lane, n, capacity, iterations, True)
+
+
+@triton.jit
+def memory_map_state(x, out_initial, out_sum, out_final, out_final_sum, n, capacity, iterations, delta,
+                     B: tl.constexpr, WHILE: tl.constexpr):
+    lane = tl.arange(0, B)
+    if WHILE:
+        initial, first = tl.map_elementwise(_mapped_read_while, x + lane, lane, n, capacity, iterations)
+    else:
+        initial, first = tl.map_elementwise(_mapped_read_for, x + lane, lane, n, capacity, iterations)
+    tl.store(x + lane, initial + delta, lane < n)
+    if WHILE:
+        changed, second = tl.map_elementwise(_mapped_read_while, x + lane, lane, n, capacity, iterations)
+    else:
+        changed, second = tl.map_elementwise(_mapped_read_for, x + lane, lane, n, capacity, iterations)
+    # Both original snapshots are consumed after the intervening mutation.
+    tl.store(out_initial + lane, initial, lane < n)
+    tl.store(out_sum + lane, first, lane < n)
+    tl.store(out_final + lane, changed, lane < n)
+    tl.store(out_final_sum + lane, second, lane < n)

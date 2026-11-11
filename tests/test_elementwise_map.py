@@ -96,5 +96,6 @@ def test_map_requires_logical_pack_and_memory_contracts(tmp_path, kind):
     abi = TensorABI(kernel.__name__, tuple(TensorBuffer(name, (8,), "write" if name == "out" else "read") for name in names))
     with pytest.raises(ConversionError, match="logical grouping" if kind == "packed" else "source memory") as exc:
         convert_shared(source, abi, tmp_path / "translation", optimizer=OPT,
-                       memory_profile="guarded-buffer", address_policy="source-words")
+                       memory_profile="guarded-buffer" if kind == "packed" else "tensor",
+                       address_policy="source-words" if kind == "packed" else "structured")
     assert exc.value.opcode == "tt.map_elementwise" and exc.value.source_id

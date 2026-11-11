@@ -167,7 +167,7 @@ def test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_ga
         clang=os.environ["T2M_MERLIN_CLANG"])
     assert report["selected_cases"] == 12 and report["complete_selection_measured"]
     cases = {row["id"]: row for row in report["cases"]}
-    gaps = {"packed-map", "memory-map", "source-assembly"}
+    gaps = {"packed-map", "source-assembly"}
     assert {name for name, row in cases.items() if row["status"] == "refused"} == gaps
     assert all(row["merlin_host"] for name, row in cases.items() if name not in gaps)
     assert report["ttir"]["tt.ptr_to_int"]["merlin_cases"] == ["pointer-roundtrip"]

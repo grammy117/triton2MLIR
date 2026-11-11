@@ -85,7 +85,7 @@ def lower_offsets(state):
 
 def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None, _inspect_roots=False, byte_atomics=False):
     from .shared_tensor import _pointer_type, opcode
-    from .word_events import MEMORY_EVENTS
+    from .word_events import MEMORY_EVENTS, same_type
     from .pointer_views import compatible, element as pointer_element, normalize as normalize_word_views
     if byte_order is not None and byte_order not in ("little", "big"):
         raise ValueError("byte-buffer views require explicit little or big byte order")
@@ -94,7 +94,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
-                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat", "tt.bitcast")
+                                                     "tt.cat", "tt.join", "tt.split", "tt.trans", "tt.reshape", "tt.gather", "tt.unsplat", "tt.bitcast", "tt.map_elementwise")
                 and (any(_pointer_type(v.type) for v in (*op.results,
                     *(a for region in op.regions for block in region.blocks for a in block.args)))
                     or opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.operands))]
@@ -133,6 +133,20 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
             refuse(op, "pointer control has an unexpected region terminator")
         return result
 
+    maps = [op for op in original if opcode(op) == "tt.map_elementwise"
+            and any(_pointer_type(v.type) for v in (*op.operands, *op.results, *block(op, 0).args))]
+    for op in maps:
+        pack = op.properties.get("pack")
+        body = block(op, 0)
+        end = terminator(op, 0, "tt.map_elementwise.return")
+        if (not isinstance(pack, builtin.IntegerAttr) or pack.value.data != 1
+                or len(body.args) != len(op.operands) or len(end.operands) != len(op.results)
+                or any(not isinstance(v.type, TensorType) or not same_type(v.type.element_type, a.type)
+                       for v, a in zip(op.operands, body.args, strict=True))
+                or any(not isinstance(v.type, TensorType) or not same_type(v.type.element_type, a.type)
+                       for v, a in zip(op.results, end.operands, strict=True))):
+            refuse(op, "mapped pointers require the exact pack-one scalar/tensor region interface")
+
     for value in values:
         if isinstance(value, BlockArgument):
             if value.block is entry:
@@ -147,6 +161,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
                     inputs = (op.operands[value.index], terminator(op, 1, "scf.yield").operands[value.index])
                 else:
                     inputs = (terminator(op, 0, "scf.condition").operands[value.index + 1],)
+            elif op in maps:
+                inputs = (op.operands[value.index],)
             else:
                 refuse(op, "pointer block arguments need a qualified structured control edge")
         else:
@@ -162,6 +178,8 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
                 inputs = (op.operands[index + 3], terminator(op, 0, "scf.yield").operands[index])
             elif name == "scf.while":
                 inputs = (terminator(op, 0, "scf.condition").operands[index + 1],)
+            elif op in maps:
+                inputs = (terminator(op, 0, "tt.map_elementwise.return").operands[index],)
             else:
                 refuse(op, "pointer control has an unqualified pointer producer")
         if not inputs or any(v not in bases for v in inputs):
@@ -208,6 +226,7 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
                        or name == "arith.select" and position in (1, 2)
                        or name == "scf.for" and position >= 3 or name == "scf.while"
                        or name == "scf.yield" or name == "scf.condition" and position >= 1
+                       or op in maps or name == "tt.map_elementwise.return"
                        or name in MEMORY_EVENTS and position == 0)
             if not allowed:
                 refuse(op, "pointer control cannot observe or escape a logical buffer address")

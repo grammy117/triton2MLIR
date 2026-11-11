@@ -6,6 +6,15 @@ selected case remains in the report: valid source, invalid source, conversion
 refusals, failed references/compilations and cases not started within a budget.
 All 50 pinned TTIR definitions remain in the denominator.
 
+Mapped source reads now additionally qualify under the explicit guarded
+source-word profile; see [the map memory contract](memory_maps.md). The current
+copy at `out/memory-map-product-qualified/` contains twelve cases, ten actual
+Merlin libraries and two located refusals (packing and source assembly).
+`out/memory-map-inventory-coverage/coverage.json` joins it to the earlier
+67 packages/46 qualifications and retains 50 observed source definitions and
+49 in native/Merlin-qualified captures. The earlier measurements below retain
+their original code and scope.
+
 ## Reproduction
 
 ```bash
@@ -25,7 +34,7 @@ reference values. Inputs/outputs are ordinary generated artifacts, not tracked
 weights or binaries. Block pointers remain in the corpus despite their
 upstream deprecation, since pinned TTIR still defines them.
 
-`out/ttir-product-qualified/` is a verified copy of the current maintained
+`out/ttir-product-qualified/` is a verified copy of the earlier maintained
 test run: twelve cases, nine actual Merlin libraries and three located
 refusals. Its standalone original-source counts are 33 observed definitions,
 with 32 represented in native/Merlin-qualified captures. The cases cover shape
@@ -50,7 +59,7 @@ native-qualified and Merlin-host-qualified captures**. The one definition
 without a host-qualified capture is `tt.elementwise_inline_asm`.
 These counts are composition observations, not universal opcode/type/attribute
 support or measurements of which individual operations executed. Arbitrary
-packed/effectful maps, source assembly, broader numeric/runtime/alias forms
+packed maps, broader mapped reads, source assembly, numeric/runtime/alias forms
 and applicable targets remain completion requirements.
 
 ## Manifest and stage contract

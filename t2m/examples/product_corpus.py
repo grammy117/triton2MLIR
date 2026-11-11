@@ -80,7 +80,12 @@ def prepare(out):
                                 ("memory-map", pointer_load_map, ("x", "out"))):
         source = captured(kernel, {key: "*fp32" for key in names}, {})
         abi = TensorABI(kernel.__name__, buffers(names, ((8,),) * len(names), ("f32",) * len(names)))
-        add(name, source, abi)
+        examples = []
+        if name == "memory-map":
+            for shift in (0, 3):
+                x = np.arange(8, dtype=np.float32) - shift
+                examples.append(([x], [x.copy()]))
+        add(name, source, abi, examples)
 
     from t2m.examples.histogram_kernels import histogram_tiles
     source = captured(histogram_tiles, {"x": "*i64", "out": "*i32", "n": "i32", "tiles": "i32"},

@@ -45,13 +45,13 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/ttir-full-inventory-coverage/coverage.json` selection reopens
+The current `out/memory-map-inventory-coverage/coverage.json` selection reopens
 **67 packages, 46 standalone qualifications and twelve maintained product
 cases**. It observes **50/50 source definitions**, with **49 represented in
-native- and Merlin-host-qualified captures**. The current corpus provides nine
-actual libraries and retains three located refusals. Source assembly has no
-qualified host capture; packed and memory-accessing maps still refuse despite
-qualified scalar maps. These are composition observations, not a completion
+native- and Merlin-host-qualified captures**. The current corpus provides ten
+actual libraries and retains two located refusals. Source assembly has no
+qualified host capture; packed maps still refuse, while mapped reads qualify through the
+explicit guarded source-word profile. These are composition observations, not a completion
 percentage or per-operation execution measurement. The [product corpus](product_corpus.md)
 and [coverage v2](package_coverage.md) keep source/refusal/execution limits
 machine-readable. The older byte-atomic selection retains its 34/50 source,
@@ -73,6 +73,13 @@ all seven results; typed CAS also passes the public model CLI. Merlin's nested
 snapshot/destination/integer-body suite passes 119 checks with lifetime gates
 retained. This closes the previously failing nested CAS recurrence slice, not
 the remaining numeric/effect/target work.
+
+[Mapped reads](memory_maps.md) now retain source pointer/block edges, scalar
+branches and for/while reads through Merlin. Seven libraries preserve the basic
+map and five-result snapshots around ordinary kernel writes across i32/i64/f32.
+Thirty-four map/memory regression checks and the refreshed maintained corpus
+pass. The pinned verifier forbids writes inside maps; source reads and ordinary
+writes outside those maps retain their actual effects and guard gates.
 
 ## Required evidence for every supported form
 

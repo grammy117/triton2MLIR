@@ -2,18 +2,18 @@
 
 The [maintained product corpus](product_corpus.md) now retains successful,
 refused, failed and unstarted kernel cases against all pinned definitions.
-Twelve maintained cases produce nine actual Merlin libraries and three located
+Twelve maintained cases produce ten actual Merlin libraries and two located
 refusals. They close missing observation evidence for shape operations, maps,
 gather, histogram, high products, block pointers, scans, reductions and exact
 pointer round-trips. The corpus exposed and helped fix guarded softmax's fresh
 tensor allocation admission; its independent 39-case suite passes.
 
-The combined `out/ttir-full-inventory-coverage/coverage.json` reopens 67 earlier
+The combined `out/memory-map-inventory-coverage/coverage.json` reopens 67 earlier
 packages, 46 standalone qualifications and the twelve-case current corpus.
 It observes **50/50 source definitions**, with **49 represented in native- and
 Merlin-host-qualified captures**. `tt.elementwise_inline_asm` has no qualified
-host capture in this selection. Packed and memory-accessing maps still refuse,
-even though scalar maps qualify. Per-operation execution, universal typed/
+host capture in this selection. Packed maps still refuse; [mapped source reads](memory_maps.md) now
+qualify guarded source-word pointers, scalar control and five-result snapshots. Per-operation execution, universal typed/
 attribute/composition coverage and applicable targets remain unestablished.
 Nineteen corpus/registry regressions pass; the wheel contains the exact saved
 TTIR fixture and executable corpus modules. Earlier selections below retain
