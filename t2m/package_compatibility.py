@@ -7,6 +7,8 @@ from .input_storage import READONLY_SNAPSHOTS
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(record.get("kind") == "logical-byte-buffer-word-event" for record in trace.get("transformations", [])):
+        differences.append("different-width views of declared i8 allocation roots use explicit logical byte order and signed i64 byte offsets: each original addptr retains its own source-pointee size after source integer arithmetic; ordinary word loads/stores become one guarded byte plane with standard integer pack/unpack, preserving whole-tile snapshots, inactive fill bits and byte-level overlap/initialization checks; original word width, tile, byte order and source grouping remain in provenance; this grants no physical pointer identity, typed-root byte reinterpretation, indivisible byte-backed atomic, synchronization or accelerator implementation; public tensor/scalar ABI and receipt schemas are unchanged")
     if trace.get("source_argument_binding", {}).get("schema") == "t2m.source-allocation-bindings.v1":
         if any(record.get("representation") == "equal-width-word-view-v1"
                for record in trace["source_argument_binding"].get("bindings", [])):

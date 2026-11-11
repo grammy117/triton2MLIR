@@ -1,9 +1,43 @@
-# Byte aliases: remaining implementation plan
+# Byte aliases: implementation and remaining plan
 
-Equal-width typed allocation aliases now execute through Merlin; see
-[their contract and evidence](allocation_word_views.md). This document plans
-the remaining different-width source views. They are not yet supported by that
-contract. The full TTIR-to-Merlin goal remains open.
+Different-width ordinary views of declared i8 byte buffers now execute through
+Merlin. `convert_shared(..., memory_profile="guarded-buffer",
+address_policy="source-words", byte_order="little")` selects the explicit
+logical byte representation; `big` is also supported. Equal-width typed-root
+aliases retain [their existing contract](allocation_word_views.md). The full
+TTIR-to-Merlin goal remains open for typed-root byte packing, byte-backed atomic
+effects, physical views and applicable target materialization.
+
+## Implemented byte-buffer path
+
+Each source addptr keeps its own pointee size after the original integer
+computation is sign-extended to i64. Pointer casts preserve the byte address.
+The existing finite-root/control analysis therefore carries bytes for these
+roots through source region edges, including signed word advances after casts.
+No offset is rounded or divided to invent alignment.
+
+A wide ordinary load/store becomes one byte-plane event with a final static
+word-byte dimension. Standard parallel linalg pack/unpack retains the original
+word type and explicit byte order. One store plane exposes overlap across both
+source lanes and byte positions to the existing uniqueness guard; splitting
+each byte into a separate store would miss that conflict. Byte storage keeps
+the existing guard protocol at actual byte granularity. Masks, original fills,
+whole-tile snapshots, narrow stores and untouched byte state remain executable.
+
+`logical-byte-buffer-word-event` records and `prov.logical_byte_views` retain
+the source IDs, word widths, byte order, original tiles, byte tiles and roots.
+`prov.byte_word_event` marks the standard word pack/unpack. These are dataflow
+and source-intent records, not source-equivalence or target proof. Existing
+tensor/scalar ABI, receipts and compiler/evaluator separation remain unchanged;
+compatibility metadata explicitly describes the logical representation.
+
+Sixteen actual native/Merlin libraries cover i16/i32/i64/f16/BF16/f32/f64,
+both byte orders and scalar/tiled events. They retain source NaN/payload words,
+byte and word stores, signed strides/advances, tails and empty domains over
+96 additional runtime replays. Forty-eight actual guard invocations reject a
+missing last byte, overlapping words and cross-program conflicts. Ten protocol
+checks retain default refusals, address-space/root restrictions and indivisible
+atomic requirements. This finite matrix does not prove arbitrary-kernel coverage.
 
 ## Reuse the existing analyses at an explicit boundary
 

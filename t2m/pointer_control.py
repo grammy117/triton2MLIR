@@ -14,6 +14,7 @@ from xdsl.dialects import arith, builtin
 from xdsl.dialects.builtin import IntegerType, TensorType
 from xdsl.ir import BlockArgument
 from xdsl.rewriter import Rewriter
+from xdsl.utils.exceptions import ParseError
 
 from .diagnostics import ConversionError
 
@@ -29,6 +30,7 @@ class PointerState:
     bases: dict
     edges: dict
     memory_types: dict
+    byte_roots: frozenset = frozenset()
 
 
 def offset_type(type_):
@@ -38,6 +40,10 @@ def offset_type(type_):
 def lower_offsets(state):
     """Shared source-word conversion for single- and selected-base state."""
     from .shared_tensor import opcode
+    from .pointer_views import element
+    scales = {op: element(state.types[op.operands[0]]).bitwidth // 8
+              for op in state.operations if opcode(op) == "tt.addptr"
+              and state.byte_roots.intersection(state.bases[op.operands[0]])}
     bitcasts = {op for op in state.operations if opcode(op) == "tt.bitcast"
                 and op.results and op.results[0] in state.types}
     offsets = {}
@@ -63,6 +69,11 @@ def lower_offsets(state):
             extended = arith.ExtSIOp(rhs, lhs.type)
             added.append(extended)
             rhs = extended.result
+        if scales.get(op, 1) != 1:
+            factor = arith.ConstantOp(builtin.DenseIntOrFPElementsAttr.from_list(lhs.type, [scales[op]])) if isinstance(lhs.type, TensorType) else arith.ConstantOp.from_int_and_width(scales[op], builtin.i64)
+            scaled = arith.MuliOp(rhs, factor.result)
+            added.extend((factor, scaled))
+            rhs = scaled.result
         result = arith.AddiOp(lhs, rhs)
         added.append(result)
         for emitted in added:
@@ -70,10 +81,12 @@ def lower_offsets(state):
         Rewriter.replace_op(op, added)
 
 
-def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False):
+def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None):
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS
-    from .pointer_views import compatible, normalize as normalize_word_views
+    from .pointer_views import compatible, element as pointer_element, normalize as normalize_word_views
+    if byte_order is not None and byte_order not in ("little", "big"):
+        raise ValueError("byte-buffer views require explicit little or big byte order")
 
     original = list(module.walk())
     controls = [op for op in original if opcode(op) in ("scf.if", "scf.while", "scf.for", "arith.select",
@@ -165,13 +178,24 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
             bases[user].update(bases[value])
             if len(bases[user]) != previous:
                 pending.append(user)
+    byte_roots = set()
     for value in values:
         owner = value.block.parent_op() if isinstance(value, BlockArgument) else value.owner
         if not bases[value]:
             refuse(owner, "pointer control has no established source-entry base")
         element = value.type.element_type if isinstance(value.type, TensorType) else value.type
         if any(element != base.type and not compatible(element, base.type) for base in bases[value]):
-            refuse(owner, "pointer views require equal byte-aligned element widths without address-space changes")
+            if byte_order is None:
+                refuse(owner, "pointer views require equal byte-aligned element widths without address-space changes")
+            try:
+                width = pointer_element(element).bitwidth
+                byte_buffers = all(pointer_element(base.type) == builtin.i8 for base in bases[value])
+            except (ValueError, ParseError):
+                # Source diagnostics stay at the actual pointer operation.
+                refuse(owner, "byte-buffer views require supported scalar types and the same logical address space")
+            if not byte_buffers or width not in (8, 16, 32, 64):
+                refuse(owner, "different-width views currently require declared i8 allocation roots")
+            byte_roots.update(bases[value])
         for use in value.uses:
             op, position = use.operation, use.index
             name = opcode(op)
@@ -193,7 +217,14 @@ def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed
             if not isinstance(rhs, IntegerType) or not 1 <= rhs.width.data <= 64:
                 refuse(op, "pointer control requires integer element offsets no wider than i64")
 
-    state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges, {})
+    state = PointerState(tuple(original), tuple(controls), entry, functions[0], tuple(values), types, bases, edges, {}, frozenset(byte_roots))
+    if byte_roots:
+        from .byte_memory import expand_byte_events
+        expanded = expand_byte_events(state, source_ids, byte_order)
+        if expanded:
+            return expanded + normalize_pointer_control(module, source_ids, isolate_memory=True,
+                typed_atomics=typed_atomics, byte_order=byte_order)
+        isolate_memory = True
     views = normalize_word_views(state, source_ids, typed_atomics=typed_atomics)
     if any(len(roots) > 1 for roots in bases.values()):
         from .pointer_select import normalize_selected

@@ -1165,7 +1165,7 @@ class SharedTensorResult:
         return text(self.module)
 
 
-def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None, byte_order=None):
     """Reuse actual upstream passes, then functionalize qualified tensor memory.
 
     ``work`` is a new diagnostic directory, retained on both success and refusal.
@@ -1180,6 +1180,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if address_policy not in ("structured", "source-words"):
         raise ValueError("address policy must be explicitly structured or source-words")
     source_words = address_policy == "source-words"
+    if byte_order is not None and (byte_order not in ("little", "big") or memory_profile != "guarded-buffer" or not source_words):
+        raise ValueError("byte-buffer views require explicit little/big byte order and guarded source-word memory")
     if effect_profile not in ("ordinary", "atomics", "typed-atomics"):
         raise ValueError("effect profile must be explicitly ordinary, atomics or typed-atomics")
     atomics = effect_profile in ("atomics", "typed-atomics")
@@ -1270,9 +1272,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     isolated_events = False
     if source_words:
         from .pointer_control import normalize_pointer_control
-        from .word_events import needs_isolation
-        isolated_events = needs_isolation(middle_module)
-        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics)
+        from .word_events import MEMORY_EVENTS, needs_isolation
+        isolated_events = needs_isolation(middle_module) or (byte_order is not None and any(
+            opcode(op) in MEMORY_EVENTS for op in middle_module.walk()))
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics, byte_order=byte_order)
         from .atomic_word_views import bind_source
         bind_source(records, pointer_control_reports)
     scan_reports = expand_scans(middle_module, _source_ids)
@@ -1420,6 +1423,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                                "semantic_gate": "executable-guarded-memory-admission" if admission is not None else "existing-source-tensor-initialization-bounds-and-ownership-analysis",
                                "launcher": "internal-counts-xyz-then-ids-xyz; public-tensor-scalar-ABI"})
     word_views = [r for r in transformations if r.get("kind") in ("logical-pointer-word-view", "logical-atomic-word-view")]
+    byte_views = [r for r in transformations if r.get("kind") == "logical-byte-buffer-word-event"]
+    if byte_views:
+        next(iter(result.ops)).attributes["prov.logical_byte_views"] = StringAttr(json.dumps(byte_views, sort_keys=True))
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
     emitted = []
