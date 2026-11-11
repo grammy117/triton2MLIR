@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -576,20 +577,39 @@ def main(argv=None):
                 raise FileExistsError(args.out)
             work = args.out.with_name(args.out.name + ".work")
             work.mkdir(parents=True, exist_ok=False)
-            bindings = []
+            bindings,implementations = [],{}
             for i, item in enumerate(configuration["kernels"]):
                 abi = item["abi"]
                 if isinstance(abi, str):
                     abi = json.loads((args.bindings.parent / abi).read_text())
-                implementation = convert_shared(args.bindings.parent / item["ttir"], TensorABI.from_dict(abi),
-                                                work / f"kernel-{i}", optimizer=args.optimizer,
-                                                memory_profile=item.get("memory_profile", args.memory_profile),
-                                                address_policy=item.get("address_policy", args.address_policy),
-                                                effect_profile=item.get("effect_profile", args.effect_profile),
-                                                fp8_overflow=item.get("fp8_overflow", args.fp8_overflow))
+                options = dict(optimizer=args.optimizer,memory_profile=item.get("memory_profile",args.memory_profile),
+                    address_policy=item.get("address_policy",args.address_policy),effect_profile=item.get("effect_profile",args.effect_profile),
+                    fp8_overflow=item.get("fp8_overflow",args.fp8_overflow))
+                allocation = None
+                if "allocation_bindings" in item:
+                    from .allocation_bindings import arguments_from_dict,convert_allocations
+                    allocation = item["allocation_bindings"]
+                    if isinstance(allocation,str):
+                        allocation = json.loads((args.bindings.parent / allocation).read_text())
+                    entry,arguments = arguments_from_dict(allocation)
+                source = args.bindings.parent / item["ttir"]
+                spec = TensorABI.from_dict(abi)
+                source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+                key = (str(source.resolve()),source_sha256,json.dumps(spec.as_dict(),sort_keys=True),
+                       json.dumps(options,sort_keys=True,default=str),json.dumps(allocation,sort_keys=True))
+                if key not in implementations:
+                    if allocation is not None:
+                        implementation = convert_allocations(source,spec,arguments,work / f"kernel-{i}",source_entry=entry,**options)
+                    else:
+                        implementation = convert_shared(source,spec,work / f"kernel-{i}",**options)
+                    original = implementation.trace.get("source_argument_binding",{}).get("original_source_sha256",implementation.trace["source_sha256"])
+                    if original != source_sha256:
+                        raise ValueError("kernel source changed during model conversion")
+                    implementations[key] = implementation
+                implementation = implementations[key]
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
                                                results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {}),
-                                               runtime_arguments=item.get("runtime_arguments", {})))
+                                               runtime_arguments=item.get("runtime_arguments", {}),tensor_views=item.get("tensor_views")))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
                                merlin_root=args.merlin_root, merlin_python=args.merlin_python,
                                merlin_host=args.merlin_host, merlin_clang=args.merlin_clang,

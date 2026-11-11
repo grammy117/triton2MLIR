@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Dense model tensor views](model_tensor_views.md) now bridge allocation roots
+to real i64 and f32/f16/BF16 captured model values while retaining shared updates,
+source K reuse, learned parameters and complete tuple results. The explicit v2
+contract independently binds caller types/counts, captured scalars and scratch
+in Merlin. Thirty-two focused cases, 71 legacy model/binding regressions and
+267 staging checks pass. Physical/non-dense views, mutation and broader
+numeric/effect/alias/target closure remain separate requirements.
+The visible BF16 model verifies 11 parent and 81 bound artifacts. Its explicit
+41-package report at `out/allocation-model-view-coverage/coverage.json` retains
+31/50 observed definitions and 27 in host-qualified captures.
+
 [Explicit allocation state](allocation_state.md) now qualifies writable source
 pointer sharing, including runtime offsets, read-after-write loops and one
 returned root. Seven real Merlin libraries cover i64 updates and f32/f16/BF16

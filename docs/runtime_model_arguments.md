@@ -7,6 +7,10 @@ distinct; missing mappings and mismatched types, extents, results or bounds
 refuse. No input archive, shape sample, golden or evaluator digest supplies
 compiler facts.
 
+The explicit [dense tensor view profile](model_tensor_views.md) additionally
+admits equal-count row-major value reshapes under binding schema v2. The
+default exact-shape contract and typed captured scalar requirements remain.
+
 The binder materializes captured Boolean/integer/floating attributes as typed
 SSA constants. Integers must fit their source width and declared range;
 Booleans remain distinct from integers. F32 runtime floats use an explicit

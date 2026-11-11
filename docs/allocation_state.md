@@ -151,3 +151,6 @@ python -m t2m qualify-merlin out/allocation-state-bfloat \
 `allocation-state-dot` and `allocation-state-half-dot` select f32/f16 inputs.
 This is measured alias/state composition coverage. The full
 [completion plan](completion_plan.md) remains active.
+An [explicit dense model value bridge](model_tensor_views.md) now additionally
+joins these roots to matrix-shaped model2MLIR calls with original weights and
+all result references retained. It grants no physical view or mutation semantics.

@@ -14,8 +14,10 @@ untouched output word and rejects conflicting stores. [Readonly aliases](docs/re
 now prepare independent logical input values, and aliased scalar carriers retain
 their by-value semantics through Merlin. [Allocation-state bindings](docs/allocation_state.md)
 now express writable source aliases with runtime offsets and one returned root,
-including shared C/output GEMM. Mixed-type alias groups, independently strided
-C, model view adapters and target handling remain open.
+including shared C/output GEMM. [Dense model value adapters](docs/model_tensor_views.md)
+now bind those roots to actual matrix-shaped model calls with independently
+checked v2 shape/count records. Mixed-type aliases, physical model views,
+independently strided C, mutation and target handling remain open.
 [Pure external math](docs/external_math.md) now reuses shared conversions for
 52 f32/f64 default-library declarations, with typed/purity/library checks and
 standard math through Merlin. Arbitrary libraries and effects remain separate.

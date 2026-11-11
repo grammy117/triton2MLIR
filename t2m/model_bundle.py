@@ -212,6 +212,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "model.mlir has relative weights path and no unresolved registered kernel calls",
                           "consumer compiler staging retains its input receipt separately from the final augmented receipt",
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
+                          *(["t2m.model-kernel-binding.v2 explicitly selects dense row-major tensor value reshapes with standard collapse/expand operations; source roots retain their exact element type/count and independent compiler shape/scratch checks; this grants no physical layout, alias, mutation or numerical permission; older binding readers refuse v2"]
+                            if bound.trace.get("tensor_view_binding_profile") == "t2m.captured-dense-tensor-views.v1" else []),
                           *(["t2m.captured-runtime-arguments.v1 materializes captured kernel scalar attributes as typed constants, with explicit RTNE f64-to-f32 rounding when declared; checked tensor/result shape casts preserve the original static model ABI and parent bytes; guarded scratch is derived independently for every original typed call; no evaluator archive supplies compiler values"]
                             if bound.trace.get("argument_binding_profile") == "t2m.captured-runtime-arguments.v1" else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
@@ -277,6 +279,8 @@ def verify_model_bundle(out):
         if destination not in receipt["artifacts"] or _record(out / destination) != parent["artifacts"][old_name]:
             raise ValueError("parent artifact relation failed: " + old_name)
     trace = json.loads((out / "kernel-bindings.json").read_text())
+    from .model_tensor_views import validate_profile
+    validate_profile(trace)
     execution = json.loads((out / "execution.json").read_text())
     model_hash = _record(out / "model.mlir")["sha256"]
     if trace["mlir_sha256"] != model_hash or execution["input_sha256"] != model_hash or execution["reference_comparison"] != "passed":
@@ -302,6 +306,8 @@ def verify_model_bundle(out):
         raise ValueError("BF16 model lacks unchanged parent word witnesses")
     from .shared_tensor import parse_shared
     module = parse_shared((out / "model.mlir").read_text())
+    if module.attributes.get("prov.kernel_binding") != StringAttr(trace["schema"]):
+        raise ValueError("model tensor binding profile differs from its payload declaration")
     entries = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
     if len(entries) != 1 or len(entries[0].function_type.outputs) != result_count:
         raise ValueError("result witnesses differ from the typed model result count")

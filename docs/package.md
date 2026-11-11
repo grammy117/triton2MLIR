@@ -49,6 +49,14 @@ features. This changes neither the public tensor ABI nor compiler input custody.
 
 ## Shared tensor profile (`t2m.capture-receipt.v2`)
 
+Derived model bindings may explicitly select `dense-row-major-v1` tensor
+value views under `t2m.model-kernel-binding.v2`. Static caller types and captured
+dimensions must establish exact element type/count before standard reshapes
+and dynamic kernel shape casts. Core model ABI/data/reference files stay
+unchanged. Merlin independently reopens the original calls and scratch facts;
+unknown/older binding readers refuse the new version. This supplies no physical
+layout or mutation permission. See [dense model tensor views](model_tensor_views.md).
+
 Typed input preparation accepts overlapping readonly tensors by copying their
 exact logical values before serialization. Runtime scalar carriers are captured
 by value even when their backing bytes overlap tensor storage. The trace names

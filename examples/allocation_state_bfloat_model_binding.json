@@ -1,0 +1,105 @@
+{
+  "schema": "t2m.kernel-bindings.v1",
+  "kernels": [
+    {
+      "kernel": "t2m_demo::allocation_dot",
+      "ttir": "../out/allocation-state-bfloat.work/capture/source.ttir",
+      "abi": "../out/allocation-state-bfloat/spec.json",
+      "allocation_bindings": "allocation_dot_source_arguments.json",
+      "tensor_views": "dense-row-major-v1",
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "operands": {
+        "x": "x",
+        "y": "weight",
+        "state": "state"
+      },
+      "scalar_arguments": {
+        "m": 17,
+        "n": 19,
+        "k": 37,
+        "a_row": 37,
+        "a_k": 1,
+        "b_k": 19,
+        "b_col": 1,
+        "a_base": 0,
+        "b_base": 0,
+        "a_count": 629,
+        "b_count": 703,
+        "out_row": 19,
+        "out_col": 1,
+        "out_base": 0,
+        "out_count": 323,
+        "c_origin": 0
+      },
+      "runtime_arguments": {
+        "m": "m",
+        "n": "n",
+        "k": "k",
+        "a_row": "a_row",
+        "a_k": "a_k",
+        "b_k": "b_k",
+        "b_col": "b_col",
+        "a_base": "a_base",
+        "b_base": "b_base",
+        "a_count": "a_count",
+        "b_count": "b_count",
+        "out_row": "out_row",
+        "out_col": "out_col",
+        "out_base": "out_base",
+        "out_count": "out_count",
+        "c_origin": "c_origin"
+      }
+    },
+    {
+      "kernel": "t2m_demo::allocation_dot",
+      "ttir": "../out/allocation-state-bfloat.work/capture/source.ttir",
+      "abi": "../out/allocation-state-bfloat/spec.json",
+      "allocation_bindings": "allocation_dot_source_arguments.json",
+      "tensor_views": "dense-row-major-v1",
+      "memory_profile": "guarded-buffer",
+      "address_policy": "source-words",
+      "operands": {
+        "x": "x",
+        "y": "weight",
+        "state": "state"
+      },
+      "scalar_arguments": {
+        "m": 17,
+        "n": 19,
+        "k": 0,
+        "a_row": 0,
+        "a_k": 1,
+        "b_k": 19,
+        "b_col": 1,
+        "a_base": 0,
+        "b_base": 0,
+        "a_count": 0,
+        "b_count": 0,
+        "out_row": 19,
+        "out_col": 1,
+        "out_base": 0,
+        "out_count": 323,
+        "c_origin": 0
+      },
+      "runtime_arguments": {
+        "m": "m",
+        "n": "n",
+        "k": "k",
+        "a_row": "a_row",
+        "a_k": "a_k",
+        "b_k": "b_k",
+        "b_col": "b_col",
+        "a_base": "a_base",
+        "b_base": "b_base",
+        "a_count": "a_count",
+        "b_count": "b_count",
+        "out_row": "out_row",
+        "out_col": "out_col",
+        "out_base": "out_base",
+        "out_count": "out_count",
+        "c_origin": "c_origin"
+      }
+    }
+  ]
+}

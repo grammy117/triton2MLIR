@@ -20,6 +20,7 @@ from .shared_tensor import SharedTensorResult, parse_shared
 from .memory_contract import GUARDED_PROFILES, validate_memory_evidence
 from .model_arguments import materialize_arguments, plan_arguments, runtime_constants
 from .scalar_abi import RuntimeScalar
+from .model_tensor_views import BINDING_SCHEMA, POLICY as VIEW_POLICY, PROFILE as VIEW_PROFILE, reshape
 
 
 def scalar_attribute(value):
@@ -50,8 +51,12 @@ class KernelBinding:
     scalar_arguments: dict = field(default_factory=dict)
     # Source runtime-scalar name -> captured prov.kernel_args schema name.
     runtime_arguments: dict[str, str] = field(default_factory=dict)
+    # Explicit logical row-major reshapes, never physical view/alias inference.
+    tensor_views: str | None = None
 
     def validate(self):
+        if self.tensor_views not in (None,VIEW_POLICY):
+            raise ValueError("unknown model tensor view policy")
         if len(self.qualname.split("::")) != 2 or not all(self.qualname.split("::")):
             raise ValueError("kernel identity must be namespace::name")
         result = self.implementation
@@ -177,6 +182,10 @@ def bind_model(model_mlir, bindings):
             emitted.append(cloned)
         result_map = dict(zip((b.name for b in binding.implementation.spec.outputs), returned, strict=True))
         for old, name in zip(call.results, output_names, strict=True):
+            if name in plan.result_views:
+                if result_map[name].type != plan.outputs[name]:
+                    result_map[name] = append_adapter(tensor.CastOp(result_map[name],plan.outputs[name]),"kernel-concrete-result-shape")
+                result_map[name] = reshape(result_map[name],old.type,append_adapter,role="kernel-to-caller-view")
             if result_map[name].type != old.type:
                 result_map[name] = append_adapter(tensor.CastOp(result_map[name], old.type), "kernel-to-caller-shape")
                 adaptations.append({"kind": "result-shape-cast", "name": name, "caller_type": str(old.type)})
@@ -193,13 +202,17 @@ def bind_model(model_mlir, bindings):
                         "argument_adaptations": adaptations, "runtime_scalar_bindings": plan.scalar_bindings,
                         "implementation_sha256": binding.implementation.trace["mlir_sha256"],
                         "source_sha256": binding.implementation.trace["source_sha256"]})
+        if binding.tensor_views is not None:
+            records[-1]["tensor_views"] = binding.tensor_views
     remaining_calls = {op.callee.root_reference.data for op in module.walk() if isinstance(op, func.CallOp)}
     for symbol, function in functions.items():
         if "prov.kernel" in function.attributes:
             if symbol not in used or symbol in remaining_calls:
                 raise ConversionError(f"unresolved kernel declaration @{symbol}")
             module.body.block.erase_op(function)
-    module.attributes["prov.kernel_binding"] = StringAttr("t2m.model-kernel-binding.v1")
+    view_binding = any(record.get("tensor_views") for record in records)
+    binding_schema = BINDING_SCHEMA if view_binding else "t2m.model-kernel-binding.v1"
+    module.attributes["prov.kernel_binding"] = StringAttr(binding_schema)
     if guard_storage:
         entries = [f for f in functions.values() if "prov.kernel" not in f.attributes and f.body.blocks]
         if len(entries) != 1:
@@ -209,7 +222,7 @@ def bind_model(model_mlir, bindings):
     selected = {r["implementation_sha256"] for r in records}
     kernels = {b.implementation.trace["mlir_sha256"]: b.implementation.trace for b in bindings
                if b.implementation.trace["mlir_sha256"] in selected}
-    report = {"schema": "t2m.model-kernel-binding.v1", "calls": records, "kernels": kernels,
+    report = {"schema": binding_schema, "calls": records, "kernels": kernels,
               "input_model_sha256": hashlib.sha256(model_mlir.encode()).hexdigest(),
               "mlir_sha256": hashlib.sha256(text(module).encode()).hexdigest(),
               "model_abi": "unchanged", "structural_verification": "passed",
@@ -218,4 +231,6 @@ def bind_model(model_mlir, bindings):
         report["guard_storage_bytes"] = guard_storage
     if any(record["runtime_scalar_bindings"] for record in records):
         report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
+    if view_binding:
+        report["tensor_view_binding_profile"] = VIEW_PROFILE
     return BoundModel(module, report)

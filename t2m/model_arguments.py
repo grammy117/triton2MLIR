@@ -6,12 +6,13 @@ concrete extent from the typed caller and captured scalar attributes. Neither
 reference archives nor evaluator input values participate in this adapter.
 """
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass, field
 
 from xdsl.dialects import arith, builtin, tensor
 
 from .diagnostics import ConversionError
+from .model_tensor_views import POLICY, compatible, reshape
 from .scalar_abi import RuntimeScalar
 
 
@@ -84,6 +85,8 @@ class ArgumentPlan:
     outputs: dict
     adaptations: list
     scalar_bindings: dict
+    input_views: dict = field(default_factory=dict)
+    result_views: dict = field(default_factory=dict)
 
 
 def plan_arguments(
@@ -91,7 +94,7 @@ def plan_arguments(
 ):
     spec = binding.implementation.spec
     constants, values = runtime_constants(spec, binding.runtime_arguments, attributes)
-    arguments, adaptations = [], []
+    arguments, adaptations, input_views = [], [], {}
     for index, (source, target) in enumerate(
         zip(spec.inputs, function.function_type.inputs, strict=True)
     ):
@@ -114,10 +117,15 @@ def plan_arguments(
             )
         else:
             value = by_name[operand_names[source.name]]
-            if value.type != concrete_type(source, values):
-                return None
+            concrete = concrete_type(source,values)
+            if value.type != concrete:
+                if binding.tensor_views != POLICY or not compatible(value.type,concrete):
+                    return None
+                input_views[index] = concrete
+                adaptations.append({"kind":"dense-tensor-input-view","argument":index,"name":source.name,
+                    "caller_type":str(value.type),"concrete_kernel_type":str(concrete),"policy":POLICY})
             arguments.append((value, target))
-            if value.type != target:
+            if concrete != target:
                 adaptations.append(
                     {
                         "kind": "tensor-shape-cast",
@@ -128,8 +136,16 @@ def plan_arguments(
                     }
                 )
     outputs = {buffer.name: concrete_type(buffer, values) for buffer in spec.outputs}
-    if [outputs[name] for name in output_names] != list(result_types):
+    if len(output_names) != len(result_types):
         return None
+    result_views = {}
+    for name,target in zip(output_names,result_types,strict=True):
+        if outputs[name] != target:
+            if binding.tensor_views != POLICY or not compatible(outputs[name],target):
+                return None
+            result_views[name] = target
+            adaptations.append({"kind":"dense-tensor-result-view","name":name,"caller_type":str(target),
+                "concrete_kernel_type":str(outputs[name]),"policy":POLICY})
     return ArgumentPlan(
         arguments,
         outputs,
@@ -140,20 +156,23 @@ def plan_arguments(
                 "attribute": str(attributes.data[binding.runtime_arguments[name]]),
             }
             for name in constants
-        },
+        },input_views,result_views,
     )
 
 
 def materialize_arguments(plan, append):
     arguments = []
-    for value, target in plan.arguments:
+    for index,(value, target) in enumerate(plan.arguments):
         if isinstance(value, (builtin.IntegerAttr, builtin.FloatAttr)):
             value = append(arith.ConstantOp(value), "captured-runtime-scalar")
             if value.type != target:
                 value = append(
                     arith.TruncFOp(value, target), "captured-runtime-scalar-rounding"
                 )
-        elif value.type != target:
-            value = append(tensor.CastOp(value, target), "caller-to-kernel-shape")
+        else:
+            if index in plan.input_views:
+                value = reshape(value,plan.input_views[index],append,role="caller-to-kernel-view")
+            if value.type != target:
+                value = append(tensor.CastOp(value, target), "caller-to-kernel-shape")
         arguments.append(value)
     return arguments

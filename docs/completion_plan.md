@@ -91,6 +91,18 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Explicit dense model value views now bridge allocation roots to original
+matrix/scalar/empty caller values with standard reshapes and no dtype change.
+Four actual i64 and f32/f16/BF16 model captures retain shared updates, learned
+weights, zero K and every tuple result through native and Merlin execution.
+The API and CLI use v2 binding records; Merlin independently rederives original
+parent shapes/counts, scalar bounds and scratch, including static kernels.
+Thirty-two focused cases, 71 legacy model/binding checks and 267 consumer
+staging checks pass. See [the exact logical view boundary](model_tensor_views.md).
+Continue with physical/non-dense and mutating model views, mixed-type aliases,
+independently strided C, portable pre-wrapper custody and the broader E/F/G
+and applicable target gates. Logical reshaping supplies no alias/layout proof.
+
 Explicit allocation-state entries now bind aliased source pointers through real
 TTIR calls before upstream inlining. Seven actual Merlin libraries retain shared
 updates, runtime offsets, loops and full-allocation words; f32/f16/BF16 tiled GEMM

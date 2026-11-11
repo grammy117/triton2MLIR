@@ -1,0 +1,83 @@
+{
+  "schema": "t2m.source-allocation-arguments.v1",
+  "source_entry": "strided_output_dot",
+  "arguments": [
+    {
+      "kind": "pointer",
+      "allocation": "x"
+    },
+    {
+      "kind": "pointer",
+      "allocation": "y"
+    },
+    {
+      "kind": "pointer",
+      "allocation": "state",
+      "offset": "c_origin"
+    },
+    {
+      "kind": "pointer",
+      "allocation": "state"
+    },
+    {
+      "kind": "scalar",
+      "name": "m"
+    },
+    {
+      "kind": "scalar",
+      "name": "n"
+    },
+    {
+      "kind": "scalar",
+      "name": "k"
+    },
+    {
+      "kind": "scalar",
+      "name": "a_row"
+    },
+    {
+      "kind": "scalar",
+      "name": "a_k"
+    },
+    {
+      "kind": "scalar",
+      "name": "b_k"
+    },
+    {
+      "kind": "scalar",
+      "name": "b_col"
+    },
+    {
+      "kind": "scalar",
+      "name": "a_base"
+    },
+    {
+      "kind": "scalar",
+      "name": "b_base"
+    },
+    {
+      "kind": "scalar",
+      "name": "a_count"
+    },
+    {
+      "kind": "scalar",
+      "name": "b_count"
+    },
+    {
+      "kind": "scalar",
+      "name": "out_row"
+    },
+    {
+      "kind": "scalar",
+      "name": "out_col"
+    },
+    {
+      "kind": "scalar",
+      "name": "out_base"
+    },
+    {
+      "kind": "scalar",
+      "name": "out_count"
+    }
+  ]
+}

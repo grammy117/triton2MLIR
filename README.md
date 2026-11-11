@@ -28,6 +28,11 @@ with runtime offsets, shared updates and one returned root. The generic
 `shared-tensor --allocation-bindings` route records its signature/source differences;
 undeclared writable overlaps still refuse.
 
+[Dense model tensor views](docs/model_tensor_views.md) now bind matrix values
+to those roots with explicit standard reshapes. Actual i64 and f32/f16/BF16
+model captures retain shared updates, learned state, tiling and all results
+through Merlin; the v2 binding contract and remaining physical-view work are explicit.
+
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts
