@@ -11,6 +11,10 @@ open; these counts measure compositions, not universal operation support.
 branches/loops and five-result snapshots around ordinary kernel writes through
 actual Merlin libraries. The updated corpus has ten qualified cases and two
 located refusals; source assembly and packed grouping remain open.
+Selected-root map arguments, pointer results and mixed results additionally
+qualify through twelve libraries. Real i64/f32 model captures preserve learned
+state and every one of fourteen original results through Merlin; i64 also
+passes the public model CLI. See [the complete map contract](docs/memory_maps.md).
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their
 public dtype and shape while selected roots use executable internal byte planes.

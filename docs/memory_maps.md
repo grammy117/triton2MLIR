@@ -64,3 +64,27 @@ roots being empty on an inactive domain. Wide source words and every result
 remain exact. Thirty-four existing selector/shape/value regressions also pass.
 This extends measured base compositions; packed groups, broader numeric/forms
 and applicable targets remain open.
+
+## Complete model2MLIR captures
+
+`scripts/capture_memory_map_model.py` captures i64/f32 models with learned 4x8
+state, nonzero public inputs, two dependent kernel calls and an empty third call. Each kernel retains
+its original pair of read maps, intervening ordinary write, loop/predicate and
+five state/snapshot results. The public model returns fourteen original values.
+Independent CPU references use modular integer words or per-operation typed
+floating addition; they are never imported into compiler lowering.
+
+Both models qualify through native and actual Merlin execution. Every result
+retains its original dtype, shape and bytes. Weights, manifests, inputs and
+complete reference archives remain byte-identical to the parent capture. The
+existing explicit dense value-view policy maps each owning allocation back to
+the public matrix/empty shapes; the original model ABI remains unchanged.
+The i64 model additionally passes public `bind-model` CLI qualification.
+
+Verified development bundles at `out/memory-map-learned-i64/` and
+`out/memory-map-learned-f32/` each contain eighty receipt-bound artifacts. The
+combined report at `out/memory-map-learned-inventory/coverage.json` reopens 69
+packages, 46 standalone qualifications and the twelve-case product corpus.
+It retains 50 observed source definitions and 49 in native/Merlin-qualified
+captures. These model/base compositions broaden execution evidence without
+granting universal numeric/source equivalence or target support.

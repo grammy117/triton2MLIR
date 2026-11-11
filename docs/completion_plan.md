@@ -80,6 +80,11 @@ map and five-result snapshots around ordinary kernel writes across i32/i64/f32.
 Thirty-four map/memory regression checks and the refreshed maintained corpus
 pass. The pinned verifier forbids writes inside maps; source reads and ordinary
 writes outside those maps retain their actual effects and guard gates.
+Twelve further libraries now carry selected logical roots across map arguments,
+pointer results and mixed pointer/numeric results; 34 existing selector
+regressions pass. Two real i64/f32 model captures retain learned state and all
+fourteen results through Merlin; the i64 model also qualifies via public CLI.
+The [complete map contract](memory_maps.md) records the exact composition scope.
 
 ## Required evidence for every supported form
 

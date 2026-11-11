@@ -19,6 +19,16 @@ Nineteen corpus/registry regressions pass; the wheel contains the exact saved
 TTIR fixture and executable corpus modules. Earlier selections below retain
 their original scope and counts.
 
+[Selected mapped roots and complete model captures](memory_maps.md) now add
+twelve actual i32/i64/f32 libraries over five domains each, including unselected
+empty allocations, pointer results and mixed pointer/numeric results. Thirty-four
+existing selector regressions pass. Two real i64/f32 captures keep learned weights
+and all fourteen results through native and Merlin execution; i64 also passes
+public model CLI binding. The resulting 69-package/46-qualification/twelve-case
+report at `out/memory-map-learned-inventory/coverage.json` retains 50 source and
+49 native/host-observed definitions. This expands compositions, not the opcode
+denominator or universal type/attribute coverage.
+
 [Byte-backed integer atomics](byte_atomic_words.md) now reach native and actual
 Merlin packages with one word event, explicit logical byte order, old values
 and complete byte-state returns. All nine i32/i64 RMW kinds and i16/i32/i64 CAS
