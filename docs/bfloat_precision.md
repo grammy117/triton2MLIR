@@ -30,6 +30,19 @@ embedding. No NaN payload is inferred from a widened value archive.
 
 ## Reused arithmetic and native transport
 
+Merlin's explicit `emulate_bfloat_elementwise` host feature now also covers
+scalar BF16 add/subtract/multiply. Every source operation retains its own RNE
+truncate boundary and neutral cast flags; portable tensor storage stays BF16.
+This follows upstream `EmulateUnsupportedFloats.cpp` at LLVM
+`a47bddccec30255619bb8c37fa59700e661d4e66`, with strict casts in place of its
+`contract` flags. `tests/test_bfloat_arithmetic.py` compares all 65,536 BF16
+words against sixteen partners for three operations: 3,145,728 result checks
+against exact integer binary-rational arithmetic. Computed NaNs use a class
+check; every other result is word exact. Chained add/subtract and
+multiply/subtract tests check that intermediate BF16 rounding survives native
+lowering. Three checks pass; this supplies host arithmetic evidence, with
+transport, aliasing and target admission still checked separately.
+
 Meta triton-shared revision `17f0c234ce474bee334af36e351c62eca7852836`
 provides `FpToFpConverter` in
 `include/triton-shared/Conversion/TritonArithToLinalg/ConversionPatterns.hpp`.
