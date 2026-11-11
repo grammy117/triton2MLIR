@@ -91,6 +91,18 @@ verified evidence and unresolved requirements, not just intentions.
 
 ## Execution evidence and next handoff
 
+Different-width ordinary views of declared i8 roots now retain source-pointee
+units, explicit byte order, one byte-plane event per original word and standard
+pack/unpack with source intent. Native/Merlin evidence covers all seven supported
+16/32/64-bit integer/floating types in both orders, exact fill/NaN words,
+selected roots with while state, and original wide pointer/descriptor parameters
+bound to bytes. A real model2MLIR capture retains three calls, learned byte
+storage and all five results through both API and CLI. Sixty focused checks,
+132 additional runtime replays, 48 real guard refusals and 54 existing
+pointer/alias/descriptor regressions pass. See [byte aliases](byte_aliases.md).
+Typed-root packing, byte-backed indivisible atomics, broader numerical/effect
+closure, complete corpus evidence and applicable target materialization remain.
+
 Equal-width typed source arguments now bind one owning allocation before
 native inlining, with actual pointer casts and unchanged source-word offsets.
 Eight i16/f16, i16/BF16, i32/f32 and i64/f64 libraries retain current shared
@@ -149,7 +161,7 @@ Continue toward the full objective in this order, completing each vertical
 slice through the actual consumer rather than accepting opaque coverage:
 
 1. Extend the now-executable descriptor/root/model path to physical model
-   views/state, different-width byte aliases and independently strided contraction
+   views/state, typed-root byte packing, byte-backed atomics and independently strided contraction
    accumulators. Preserve source custody, original recurrences and guard gates.
 2. Close remaining numeric/effect combinations against the pinned TTIR types
    and attributes, retaining source recurrences, rounding and synchronization.

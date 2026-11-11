@@ -10,7 +10,15 @@ from .shared_tensor import TensorABI, TensorBuffer
 
 
 def convert(
-    work, *, width=32, storage="integer", bfloat=False, while_=True, optimizer=None
+    work,
+    *,
+    width=32,
+    storage="integer",
+    bfloat=False,
+    while_=True,
+    optimizer=None,
+    byte_storage=False,
+    byte_order=None,
 ):
     from .examples.allocation_word_kernels import allocation_word_updates
 
@@ -40,6 +48,10 @@ def convert(
         )
     )
     dtype = f"i{width}" if storage == "integer" else "bf16" if bfloat else f"f{width}"
+    if byte_storage:
+        if byte_order not in ("little", "big"):
+            raise ValueError("byte-root word demo requires explicit byte order")
+        dtype = "i8"
     abi = TensorABI(
         "allocation_word_state",
         (TensorBuffer("state", ("capacity",), "readwrite", dtype),),
@@ -66,6 +78,7 @@ def convert(
         optimizer=optimizer,
         memory_profile="guarded-buffer",
         address_policy="source-words",
+        byte_order=byte_order,
     )
 
 

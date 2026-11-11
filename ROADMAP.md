@@ -17,11 +17,13 @@ runtime strides/flags, block/indexed state and two-descriptor tiled f32/BF16 GEM
 [Descriptor allocation state](docs/descriptor_state.md) now retains nonzero
 runtime origins and shared writable roots, including a complete model2MLIR
 capture and independently checked portable original-source custody. Physical
-descriptor bytes, different-width byte aliases and applicable target handling remain open.
+descriptor bytes, typed-root byte packing and applicable target handling remain open.
 [Typed allocation aliases](docs/allocation_word_views.md) now retain equal-width
 integer/floating source arguments, descriptors and model calls on one owning
-root through Merlin. A [byte-alias plan](docs/byte_aliases.md) specifies the
-remaining address-unit, guard, atomic and target work from upstream evidence.
+root through Merlin. [Different-width byte-buffer views](docs/byte_aliases.md)
+now preserve pointee-scaled addresses, word events and byte-level guards,
+including selected roots, source fills, typed descriptor parameters and complete
+model calls. Typed-root packing, byte-backed atomics and target work remain open.
 [Runtime source-allocation strides](docs/strided_memory.md) now qualify padded,
 reversed, column-major and broadcast reads in tiled f32/f16/BF16 GEMM through
 Merlin. Original K reuse, typed accumulators and active bounds remain intact;

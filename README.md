@@ -49,7 +49,10 @@ undeclared writable overlaps still refuse.
 f16/BF16/f32/f64 and integer source arguments to one owning root, with actual
 read-after-write state through Merlin. Differently typed descriptors and a
 complete model2MLIR tuple capture use that same executable binding path.
-Different-width byte aliases retain a [source-backed implementation plan](docs/byte_aliases.md).
+[Different-width byte-buffer views](docs/byte_aliases.md) now retain typed word
+loads/stores, byte updates and explicit byte order through Merlin. Pointer and
+descriptor parameters can share one byte root; a real model capture keeps all
+five results. Typed-root packing, byte-backed atomics and targets remain open.
 
 [Dense model tensor views](docs/model_tensor_views.md) now bind matrix values
 to those roots with explicit standard reshapes. Actual i64 and f32/f16/BF16

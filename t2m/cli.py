@@ -35,6 +35,11 @@ def demo(out, *, size=1024, block=256, operation="add"):
 
 
 def shared_demo(out, *, kernel="softmax", optimizer=None, python=None, memory_profile="tensor", address_policy="structured", effect_profile="ordinary", f32_atomic_add=None, fp8_overflow=None):
+    if kernel in ("byte-buffer", "byte-buffer-big"):
+        from .byte_buffer_demo import demo
+        return demo(out, optimizer=optimizer, python=python,
+                    byte_order="big" if kernel.endswith("-big") else "little",
+                    memory_profile=memory_profile, address_policy=address_policy)
     if kernel == "allocation-word-state":
         from .allocation_word_demo import demo
         return demo(out, optimizer=optimizer, python=python,
@@ -486,6 +491,7 @@ def main(argv=None):
     tensor.add_argument("--address-policy", choices=("structured", "source-words"), default="structured",
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
     tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
+    tensor.add_argument("--byte-order", choices=("little", "big"), help="explicit logical byte-buffer word representation")
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 finite-overflow and infinity conversion contract")
     tensor.add_argument("--inputs", type=Path, help="optional NPZ with in0, in1, ...; requires --reference")
@@ -496,7 +502,7 @@ def main(argv=None):
     tensor.add_argument("--atol", type=float, default=0)
     sd = commands.add_parser("shared-demo", help="package source-captured tensor kernels after native execution")
     sd.add_argument("--out", type=Path, required=True)
-    sd.add_argument("--kernel", choices=("allocation-word-state", "descriptor-state", "descriptor-state-f32", "descriptor-state-bfloat", "external-descriptor-gather", "external-descriptor-scatter", "external-descriptor-reduce", "external-descriptor-load", "external-descriptor-store", "external-descriptor-matmul", "descriptor-gather", "descriptor-scatter", "descriptor-reduce", "allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot", "readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
+    sd.add_argument("--kernel", choices=("byte-buffer", "byte-buffer-big", "allocation-word-state", "descriptor-state", "descriptor-state-f32", "descriptor-state-bfloat", "external-descriptor-gather", "external-descriptor-scatter", "external-descriptor-reduce", "external-descriptor-load", "external-descriptor-store", "external-descriptor-matmul", "descriptor-gather", "descriptor-scatter", "descriptor-reduce", "allocation-state-dot", "allocation-state-half-dot", "allocation-state-bfloat-dot", "readonly-alias-dot", "readonly-alias-half-dot", "readonly-alias-bfloat-dot", "strided-output-dot", "strided-half-output-dot", "strided-bfloat-output-dot", "strided-dot", "strided-half-dot", "strided-bfloat-dot", "external-math", "external-math64", "tf32-dot", "tf32x3-dot", "bf16x3-dot", "bf16x6-dot", "scaled-dot-dynamic", "scaled-dot", "rounded-cast", "fp8-dot", "fp8-narrow", "fp8-widen", "fp8-transport", "precise-math", "checked-copy", "matrix-add", "softmax", "matmul", "bfloat-matmul", "bfloat-observe", "tiled-add", "tiled-matmul", "loop-matmul", "ragged-matmul", "blockptr-matmul", "descriptor-matmul", "scan", "tuple-scan", "indexed-gather", "runtime-affine", "runtime-prefix", "runtime-recurrence", "runtime-memory-loop", "pointer-while", "selected-memory", "online-attention", "histogram", "atomic-rmw", "atomic-exchange", "atomic-min", "atomic-max", "atomic-fadd", "atomic-fadd32", "atomic-cas", "atomic-word-cas16", "atomic-word-cas32", "atomic-word-cas64", "runtime-memory-store", "dynamic-count", "dynamic-matmul", "dynamic-gather", "masked-store", "masked-matrix", "indirect-store"), default="softmax")
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
@@ -603,7 +609,7 @@ def main(argv=None):
                     abi = json.loads((args.bindings.parent / abi).read_text())
                 options = dict(optimizer=args.optimizer,memory_profile=item.get("memory_profile",args.memory_profile),
                     address_policy=item.get("address_policy",args.address_policy),effect_profile=item.get("effect_profile",args.effect_profile),
-                    fp8_overflow=item.get("fp8_overflow",args.fp8_overflow))
+                    fp8_overflow=item.get("fp8_overflow",args.fp8_overflow),byte_order=item.get("byte_order"))
                 allocation = None
                 if "allocation_bindings" in item:
                     from .allocation_bindings import arguments_from_dict,convert_allocations
@@ -688,7 +694,7 @@ def main(argv=None):
             work = args.out.with_name(args.out.name + ".work")
             abi = TensorABI.from_dict(json.loads(args.abi.read_text()))
             options = dict(optimizer=args.optimizer,memory_profile=args.memory_profile,address_policy=args.address_policy,
-                           effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow)
+                           effect_profile=args.effect_profile,f32_atomic_add=args.f32_atomic_add,fp8_overflow=args.fp8_overflow,byte_order=args.byte_order)
             if args.allocation_bindings:
                 from .allocation_bindings import arguments_from_dict,convert_allocations
                 entry,bindings = arguments_from_dict(json.loads(args.allocation_bindings.read_text()))

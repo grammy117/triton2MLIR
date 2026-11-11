@@ -96,6 +96,15 @@ word views retain one state and the original public storage type. The source
 binding table records both types explicitly. This adds no ABI/receipt schema,
 byte-order choice, different-width alias or physical-pointer permission; see
 [typed allocation aliases](allocation_word_views.md).
+Different-width ordinary views may use declared i8 roots with explicit
+`byte_order="little"` or `big` (`shared-tensor --byte-order`, or a per-kernel
+`bind-model` configuration field). Original pointer/descriptor parameters bind
+byte origins before casts; original element strides retain their source units.
+One guarded byte plane and standard word pack/unpack preserve masks, fills,
+overlap checks and untouched storage. Original word/tile intent remains in
+provenance. Existing public ABI/receipt schemas stay unchanged; this supplies
+no typed-root byte packing, indivisible byte-backed atomic or physical target
+permission. See [the byte-buffer contract](byte_aliases.md).
 External descriptors use source-argument configuration v2 to bind shared roots,
 runtime origins and actual native logical fields before helper inlining.
 This adds an explicit compiler artifact roster, with independent Merlin validation,

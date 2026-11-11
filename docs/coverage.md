@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Different-width byte-buffer views](byte_aliases.md) now preserve complete
+word events, explicit byte order, source-pointee offset units and byte-level
+guards through native and Merlin execution. Sixty focused checks include
+16 typed update libraries, eight exact-fill libraries, selected while state,
+original typed pointer/descriptor parameter bindings, both public CLI routes
+and a real model2MLIR capture with every one of its five results. The same
+libraries replay 132 additional valid domains and refuse 48 actual byte-bound
+or overlap violations. Fifty-four existing regressions also pass. Typed-root
+packing, indivisible byte-backed atomics, broader effects and targets remain open.
+
 [Typed allocation aliases](allocation_word_views.md) now qualify distinct
 integer/floating source arguments over one owning root: eight actual libraries
 cover i16/f16, i16/BF16, i32/f32 and i64/f64 with both storage choices, retaining

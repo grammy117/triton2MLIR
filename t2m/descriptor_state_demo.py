@@ -9,7 +9,15 @@ from .scalar_abi import RuntimeScalar
 from .shared_tensor import TensorABI, TensorBuffer
 
 
-def convert(work, *, dtype="i64", optimizer=None, word_views=False):
+def convert(
+    work,
+    *,
+    dtype="i64",
+    optimizer=None,
+    word_views=False,
+    byte_storage=False,
+    byte_order=None,
+):
     from .examples.descriptor_state_kernels import descriptor_state_updates
 
     if word_views:
@@ -20,6 +28,10 @@ def convert(work, *, dtype="i64", optimizer=None, word_views=False):
         descriptor_state_updates = descriptor_word_updates
     elif dtype not in ("i64", "f32", "bf16"):
         raise ValueError("descriptor state demo requires i64, f32 or BF16 storage")
+    if byte_storage and (not word_views or byte_order not in ("little", "big")):
+        raise ValueError(
+            "byte descriptor word demo requires explicit byte order and word views"
+        )
     work = Path(work)
     work.mkdir(parents=True, exist_ok=False)
     ptr = {"i64": "i64", "i32": "i32", "f32": "fp32", "bf16": "bf16"}[dtype]
@@ -50,7 +62,11 @@ def convert(work, *, dtype="i64", optimizer=None, word_views=False):
     ]
     abi = TensorABI(
         "descriptor_allocation_state",
-        (TensorBuffer("state", ("capacity",), "readwrite", dtype),),
+        (
+            TensorBuffer(
+                "state", ("capacity",), "readwrite", "i8" if byte_storage else dtype
+            ),
+        ),
         grid=(GridExtent("m", 2), GridExtent("n", 16)),
         runtime_scalars=tuple(
             RuntimeScalar(name, type_, i, bounds=bounds)
@@ -89,6 +105,7 @@ def convert(work, *, dtype="i64", optimizer=None, word_views=False):
         optimizer=optimizer,
         memory_profile="guarded-buffer",
         address_policy="source-words",
+        byte_order=byte_order,
     )
 
 

@@ -58,8 +58,10 @@ Pointers sharing a root may also use equal-width byte-aligned scalar views.
 The wrapper applies offsets to the declared root and emits real pointer
 bitcasts before native inlining; existing [word-view normalization](pointer_views.md)
 then preserves one state version with register casts at each source event.
-Different-width byte aliases, sub-byte representations and automatic recovery
-of arbitrary NumPy view ownership remain open. The source entry must be void, contain one block and be accepted
+Explicit [byte-buffer bindings](byte_aliases.md) also admit wider source
+arguments from i8 roots with declared byte order. Typed-root byte packing,
+sub-byte representations and automatic recovery of arbitrary NumPy view
+ownership remain open. The source entry must be void, contain one block and be accepted
 by the installed shared source reader. Original helpers remain subject to complete inlining and
 operation/effect checks. Kernel/model view adapters and applicable target
 materialization remain separate completion gates.

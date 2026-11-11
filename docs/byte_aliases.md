@@ -72,6 +72,49 @@ No Triton-CPU backend or implicit upstream build is required.
 
 ## Execution order
 
+The byte-root portions of steps 1–4 now execute, including selected roots and
+while state. Eight additional native/Merlin fill libraries retain exact f16,
+BF16, f32 and f64 signaling-NaN and signed-zero fills in both byte orders.
+Together the qualified libraries replay 132 additional valid invocations;
+48 actual guard failures cover byte bounds and overlapping source events.
+Sixty focused checks and 54 existing pointer/alias/descriptor regressions pass.
+Typed-root storage adaptation, byte-backed atomic effects and target execution
+still require the remaining work below.
+
+## Public workflows and complete model capture
+
+```bash
+python -m t2m shared-demo --kernel byte-buffer \
+  --memory-profile guarded-buffer --address-policy source-words \
+  --out out/byte-buffer --python /path/to/native-env/bin/python
+python -m t2m qualify-merlin out/byte-buffer \
+  --out out/byte-buffer-merlin --merlin-root /path/to/merlin \
+  --merlin-python /path/to/merlin-env/bin/python \
+  --python /path/to/native-env/bin/python --merlin-clang /path/to/clang
+```
+
+`byte-buffer-big` selects the other byte order. Generic saved-source conversion
+uses `shared-tensor --byte-order little|big`; `bind-model` accepts a per-kernel
+`byte_order` field alongside `memory_profile` and `address_policy`. Both public
+demo and generic source CLI routes have actual native/Merlin evidence.
+
+`scripts/capture_byte_buffer_model.py` captures three real model2MLIR custom-op
+calls with learned byte storage, typed f32 source views, narrow byte updates
+and an empty domain. Both API and CLI binding preserve the public model ABI,
+original weights/data and all five results through native and Merlin host
+execution. Its CPU reference uses Python byte addresses and integer decoding;
+the script's GPU path is not device-qualified. Compiler staging receives no
+evaluator values or goldens.
+
+The visible little/big packages each verify 33 artifacts, their separate Merlin
+qualifications each verify 52, and `out/byte-buffer-model` verifies 80. The
+explicit report at `out/byte-buffer-coverage/coverage.json` retains 57 packages,
+40 standalone qualifications, 34/50 observed definitions and 30 represented
+in host-qualified captures. These are measured compositions, not universal
+opcode/type/attribute or accelerator coverage.
+
+## Remaining implementation order
+
 1. **Define the logical storage contract.** Keep public owning tensors and
    their original dtypes/shapes. Declare source byte order explicitly for
    width-changing observations. Derive byte capacity with checked extent/size
