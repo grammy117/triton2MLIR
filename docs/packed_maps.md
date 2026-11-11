@@ -118,6 +118,33 @@ hidden cross-slot guards/captures, lexical binders, result ordering, nested
 fastmath differences, producer/source-location preservation and unused loops.
 The 59 existing packed, unpacked and mapped-memory regressions also pass.
 
+Two real model2MLIR captures additionally retain learned weights, per-element
+input trip counts, two dependent calls and all four original results each. An
+i64 pack-four while model and an f32 pack-two for model pass native and actual
+Merlin host execution, then complete RISC-V images on Spike with all eight
+results compared bit for bit. The target selection is retained in
+`out/spike-packed-control-models/summary.json`. This qualifies those finite CPU
+compositions, without establishing accelerator execution or performance.
+
+`scripts/capture_packed_control_model.py` prepares the actual opaque model calls
+and independent PyTorch references in the model2MLIR environment. The standalone
+source is `t2m/examples/packed_control_kernels.py`; no Triton CPU backend supplies
+the reference. Model binding keeps the original archives/weights and existing
+dense tensor-value/scalar-specialization contract. Source kernel runtime ABI and
+static public model ABI remain distinct; no new public dynamic-model claim is
+made.
+
+The public `bind-model` CLI also qualifies the i64 model with all four results,
+followed by the public target qualifier. Its concrete model, binding
+configuration and target evidence live under `out/packed-control-model-demo/`.
+For example, reverify the retained target without recompilation:
+
+```bash
+python scripts/qualify_spike_model.py --verify \
+  --out out/packed-control-model-demo/target \
+  --merlin-root /path/to/merlin --python /path/to/merlin-python
+```
+
 This closes the qualified layout-independent scalar class, not arbitrary packed maps.
 Coupled/asymmetric slots need an established mapping from original register
 groups to logical coordinates, carried out of a supported layout IR as dataflow

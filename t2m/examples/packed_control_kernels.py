@@ -3,7 +3,12 @@
 import triton
 import triton.language as tl
 
-from .elementwise_map_kernels import _map_scalar, _map_scalar_while
+if __package__:
+    from .elementwise_map_kernels import _map_scalar, _map_scalar_while
+else:
+    # Source capture runs in the model2MLIR environment without importing the
+    # frontend package and its separate xDSL version.
+    from elementwise_map_kernels import _map_scalar, _map_scalar_while
 
 
 @triton.jit

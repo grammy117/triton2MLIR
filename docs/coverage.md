@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Structured packed maps](packed_maps.md) now retain scalar branches, for/while
+state, per-element loaded trip counts and original nested source correspondence.
+Fourteen actual libraries replay 56 additional domains; eleven direct proof
+checks and 59 existing map/memory regressions pass. Two real i64/f32 model
+captures retain learned weights, two dependent calls and all four results each
+through native/Merlin host and actual Spike execution. All eight target results
+match exact words; target evidence is separate from the package inventory.
+
+The current `out/packed-control-model-inventory/coverage.json` reopens
+**88 packages, 61 standalone qualifications and fourteen product cases**. All
+**50 pinned source definition names** still occur in native/Merlin-host-qualified
+captures under selected profiles. This broadens typed control/composition
+coverage, not the opcode denominator. Per-operation execution, universal
+type/attribute support and broader targets remain unestablished. Earlier
+selections below retain their original scope and counts.
+
 [Optional source assembly implementations](source_assembly.md) now qualify
 checked i32/i64 integer programs through standard arithmetic and parallel
 Linalg. Sixteen word-program libraries replay four additional runtime domains
@@ -9,7 +25,7 @@ i32/i64 model captures additionally retain learned words and all six original
 results; i64 also passes the public binding CLI. Their computed read roots
 qualify with the generic Merlin destination fix and retained lifetime gates.
 
-The current `out/source-assembly-model-inventory/coverage.json` reopens
+The prior `out/source-assembly-model-inventory/coverage.json` reopens
 **72 packages, 47 standalone qualifications and fourteen product cases**. All
 **50 pinned source definition names** occur in native/Merlin-host-qualified
 captures under selected profiles. This is not universal opcode/type/attribute,

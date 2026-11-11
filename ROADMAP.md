@@ -36,6 +36,10 @@ selected profiles, including the optional source implementation above. Proved
 while retaining packing intent. Fourteen additional libraries preserve scalar
 branches and for/while state with per-element loaded trip counts and runtime
 scalars; the same libraries pass 56 further runtime domains.
+Two real i64/f32 model captures also retain learned weights, dependent calls and
+all eight results through native/Merlin host and actual Spike execution with
+exact-word comparison. The refreshed explicit selection reopens 88 packages,
+61 standalone qualifications and fourteen product cases.
 Coupled/asymmetric packed maps, broader mapped
 forms, source assembly, typed compositions and targets stay open.
 [Byte-backed integer word atomics](docs/byte_atomic_words.md) now reach complete

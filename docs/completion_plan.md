@@ -45,8 +45,8 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/source-assembly-model-inventory/coverage.json` selection reopens
-**72 packages, 47 standalone qualifications and fourteen maintained product
+The current `out/packed-control-model-inventory/coverage.json` selection reopens
+**88 packages, 61 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -150,6 +150,12 @@ runtime replays. Eleven direct proof checks retain hidden capture/guard,
 lexical-binder, result-order, attribute and termination boundaries. Coupled or
 asymmetric slots still need source-backed logical grouping facts; packed memory,
 unretained control execution and applicable targets remain separate work.
+Two real packed-control models now additionally retain learned weights, loaded
+trip counts, dependent calls and all four results each through native/Merlin
+host and actual Spike execution. All eight target results match exact words;
+the separate selection is `out/spike-packed-control-models/summary.json`.
+This is finite CPU composition evidence. The 88-package inventory keeps broader
+type/attribute/composition and per-operation/target execution unestablished.
 
 ## Required evidence for every supported form
 

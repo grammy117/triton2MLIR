@@ -35,7 +35,12 @@ passes the public model CLI. See [the complete map contract](docs/memory_maps.md
 [Layout-independent packed maps](docs/packed_maps.md) now retain their original
 packing annotation while lowering proved slot-local arithmetic to parallel
 Linalg. Eight libraries cover pack two/four, i32/i64/f32 and runtime tiled
-recurrences. Coupled/asymmetric slots still require actual register-group facts;
+recurrences. Fourteen additional libraries preserve scalar branches and
+per-element for/while trip counts, with 56 further runtime replays. Two real
+model captures retain learned weights, dependent calls and all eight results
+through Merlin host and actual Spike execution with exact-word comparison.
+The current [coverage selection](docs/coverage.md) reopens 88 packages and 61
+standalone qualifications. Coupled/asymmetric slots still require actual register-group facts;
 the frontend never infers adjacency from tensor shape.
 
 [Typed owning tensors with byte views](docs/typed_storage.md) now preserve their

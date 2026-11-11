@@ -96,6 +96,14 @@ no projection retain their original input-file binding.
 
 ## Reproduce with existing tools
 
+Packed scalar control also reaches this unchanged target driver. Two real
+i64/f32 model captures preserve learned weights, two dependent calls and
+per-element for/while trip counts. All four results of each model match exact
+reference words, with original inputs observed readonly. Their reverified
+selection is `out/spike-packed-control-models/summary.json`; see the
+[packed control contract](packed_maps.md). This supplies no general physical
+grouping, shared/external effect or accelerator qualification.
+
 Select the existing tools through Merlin's normal environment variables:
 `MERLIN_COMPILER_PYTHON`, `MERLIN_CLANG`, `MERLIN_MLIR_INSTALL`,
 `MERLIN_RISCV_GCC`, `MERLIN_SPIKE` and `MERLIN_NM`. The metadata reader may be

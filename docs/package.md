@@ -44,6 +44,12 @@ element in standard parallel Linalg. The source graph, slot-independence
 evidence and source locations remain explicit; no register/lane mapping or
 caller-supplied proof tag is trusted. Public ABI and receipt schemas stay
 unchanged. Coupled/asymmetric packing still needs its original grouping facts.
+The structured extension records `typed-structured-ssa-congruence-v1` for pure
+scalar branches and for/while state. Complete bodies, lexical binders, captures
+and nested source correspondence remain executable/explicit. Two real captures
+preserve learned weights, both calls and every original result through Merlin
+host and functional RISC-V execution. Static public model ABI and source runtime
+scalar specialization keep their existing documented differences.
 
 [Changed-width source parameter bindings](typed_parameters.md) additionally
 retain original pointer/descriptor types on typed owning allocations. The
