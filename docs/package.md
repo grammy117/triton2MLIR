@@ -349,6 +349,16 @@ Producer replay reconstructs the complete pair; Merlin refuses a missing or
 inconsistent declaration. This adds no public/dummy argument, receipt schema,
 artifact name, physical alias or final opaque call.
 
+The byte-atomic template component has a separate additive declaration:
+`events.byte_order` and each binding's `byte_view` retain logical byte order,
+word width, alignment and byte/word address units. `input_types` keeps the
+actual i8 root while `template_input_types` declares the isolated integer-word
+formal. Producer replay checks native alignment, division, event operands and
+returned-old relations. **This component is not an admitted package variant**:
+the complete byte-ownership/payload relation and independent Merlin reader
+still require integration. It cannot inherit equal-width word-CAS permission.
+See [the current evidence and remaining gates](byte_atomic_words.md).
+
 Merlin checks/copies these compiler-only members for standalone and static derived
 models. Function/grid annotations retain original access intent through model
 inlining. Pointer branches/loops normalize region state to i64 offsets before

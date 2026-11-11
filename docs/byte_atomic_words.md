@@ -1,8 +1,9 @@
 # Byte-backed atomic words: verified mechanism and remaining intake work
 
 The standard-MLIR mechanism and Merlin host lowering now execute. **TTIR
-byte-atomic admission remains refused:** native word templates, full-word byte
-guards and source/payload accounting still need integration. These component
+byte-atomic admission remains refused:** pointer-control reconstruction, full-word
+byte guards and source/payload accounting still need integration. Isolated word
+templates now retain and check the byte-address boundary. These component
 tests do not increase TTIR opcode coverage or claim a runnable Triton package.
 
 ## Executable mechanism
@@ -70,14 +71,51 @@ remains standard MLIR. The present native helper requires the qualified default
 - Merlin's ownership/LLVM, adversarial borrowing and legacy atomic regressions
   pass independently. This supplies no TTIR/source-equivalence or device proof.
 
+## Checked source template boundary
+
+`word_events.templates(..., byte_order=...)` and `convert_events` now handle
+actual byte-address `tt.addptr` followed by integer-word `tt.bitcast` at RMW/CAS
+events. Native templates have a word pointer formal while their parent capture
+remains an i8 pointer. Source byte addresses stay signed i64. A standard SCF
+check asserts divisibility only on active lanes; standard scalar/linalg integer
+division then supplies word indices to the unchanged upstream pointer converter.
+No memory operation is split into byte effects or hoisted from its source region.
+
+The cast position establishes units from actual IR: an addptr after a word cast
+has word units and cannot inherit this byte-address recipe. Bindings separately
+retain actual and template types, byte order, word size and both address units.
+The parent cast is restored only at substitution. Reconstruction checks the
+complete current alignment/division prefix, source value/mask and native event
+index, plus the original returned-old-value relation. Native constant pooling
+may reorder literal definitions; their full typed values and all remaining SSA
+edges still have to match. Caller tags grant no permission.
+
+The source-word v2 component chain retains these actual template bytes and
+one consistent explicit byte order. Producer replay regenerates every template
+and substitutes the checked native output. Real Triton pointer kernels exercise
+both native event and arithmetic stages; altered capture types, divisions,
+alignment, masks, indices and old-value returns refuse. This is native source
+conversion/replay evidence, not complete byte ownership, source equivalence,
+consumer admission or runnable-kernel qualification. The main frontend and the
+independent Merlin reader retain their current refusal until the remaining
+integration gates below are implemented together.
+
+The focused run passes 57 source-boundary/alignment/replay cases and 100
+existing byte-refusal, region-event and word-CAS regressions (157 total), using
+the pinned shared optimizer and actual native/Merlin environments. Package
+coverage counts remain unchanged.
+
 ## Remaining source integration, in order
 
-1. Classify actual byte-backed TTIR atomics from finite roots and source types.
-   Keep byte offsets through active-lane alignment checks; derive word indices
-   only after exact divisibility. Preserve pointer selections and region state.
-2. Reuse native isolated word templates with an explicit, independently checked
-   byte-storage capture boundary. Retain original types, masks, scopes/orders
-   and source-word stage custody; never invent a native verification report.
+1. Connect the checked templates to pointer-control/finite-root reconstruction.
+   After lowering original pointer state to byte offsets, reconstruct a byte
+   addptr and then its word cast. A word addptr receiving a byte offset would
+   misrepresent source units even if a later converter happened to compensate.
+   Preserve pointer selections, original source integer arithmetic and region state.
+2. Extend the independent Merlin source-word reader for this explicit typed
+   byte-storage capture boundary. Preserve original primitive/order/scope and
+   exact stage custody. Producer replay already supports the component chain;
+   current consumer refusal is required until the byte effect relation is checked.
 3. Guard every byte of each word as one atomic participant event. Preserve
    initialization, returned-old semantics and ordinary/atomic conflicts.
    Several byte atomics cannot implement one source word atomic.

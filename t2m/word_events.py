@@ -67,7 +67,7 @@ def same_type(left, right):
         and isinstance(right, builtin.UnregisteredAttr) and left.parameters == right.parameters)
 
 
-def templates(module, source_ids):
+def templates(module, source_ids, *, byte_order=None):
     from .shared_tensor import _array, opcode
     function, = module.ops
     entry = function.regions[0].block
@@ -78,6 +78,12 @@ def templates(module, source_ids):
             raise ConversionError(message, opcode=opcode(op), source_id=next(iter(source_ids(op.location)), None))
         pointer = op.operands[0]
         address = pointer.owner
+        from .byte_atomic_events import boundary as byte_boundary
+        byte = byte_boundary(op, source_ids, byte_order)
+        if byte is not None:
+            address, byte_view = byte
+        else:
+            byte_view = None
         if not hasattr(address, "operands") or opcode(address) != "tt.addptr":
             refuse("isolated memory event requires normalized base plus signed i64 offset")
         base, offset = address.operands
@@ -85,7 +91,9 @@ def templates(module, source_ids):
             if not hasattr(base.owner, "operands") or opcode(base.owner) != "tt.splat":
                 refuse("isolated tensor memory needs a scalar logical entry base")
             base, = base.owner.operands
-        view_type, view = None, None
+        view_type = (pointer.type.element_type if isinstance(pointer.type, builtin.TensorType)
+                     else pointer.type) if byte_view else None
+        view = None
         if hasattr(base.owner, "operands") and opcode(base.owner) == "tt.bitcast":
             from .pointer_views import compatible, element
             cast = base.owner
@@ -126,7 +134,7 @@ def templates(module, source_ids):
             captures = [base, offset, *([mask] if mask is not None else [])]
         template_types = [v.type for v in captures]
         cas_view = view_type is not None and opcode(op) == "tt.atomic_cas"
-        if cas_view:
+        if cas_view or byte_view:
             # CAS already has its official descriptor. Present the logical
             # word base to the pointer pass and restore the storage cast at
             # substitution, so that pass does not rewrite a descriptor base
@@ -134,15 +142,19 @@ def templates(module, source_ids):
             template_types[0] = view_type
         body = Block(arg_types=template_types)
         local_base, local_offset = body.args[:2]
+        if byte_view:
+            from .byte_atomic_events import prefix
+            local_offset = prefix(body, byte_view["alignment_bytes"],
+                                  body.args[-1] if mask is not None else None, op.location)
         def emit(name, **kwargs):
             generated = builtin.UnregisteredOp.with_name(name).create(location=op.location, **kwargs)
             body.add_op(generated)
             return generated
-        if view_type is not None and not cas_view:
+        if view_type is not None and not cas_view and not byte_view:
             local_base = emit("tt.bitcast", operands=[local_base], result_types=[view_type]).results[0]
         if opcode(op) == "tt.atomic_cas":
             from .compare_exchange import template
-            returned = [template(body, op, [local_base, *body.args[1:]])]
+            returned = [template(body, op, [local_base, local_offset, *body.args[2:]])]
         else:
             if isinstance(pointer.type, builtin.TensorType):
                 local_base = emit("tt.splat", operands=[local_base], result_types=[pointer.type]).results[0]
@@ -173,7 +185,8 @@ def templates(module, source_ids):
                          "input_types": [str(v.type) for v in captures], "result_types": [str(v.type) for v in op.results],
                          "fill": "source-mask-select-after-zero-filled-load" if other is not None else "unchanged",
                          **({"word_view": view} if view else {}),
-                         **({"template_input_types": [str(t) for t in template_types]} if cas_view else {})})
+                         **({"byte_view": byte_view} if byte_view else {}),
+                         **({"template_input_types": [str(t) for t in template_types]} if cas_view or byte_view else {})})
         calls.append((op, captures, mask, other))
     if not events:
         raise ConversionError("isolated memory conversion requires source memory events")
@@ -200,12 +213,20 @@ def substitute(module, converted, bindings, calls):
             from .atomic_word_views import view_info
             pointer_type = original.operands[0].type
             viewed_type = pointer_type.element_type if isinstance(pointer_type, builtin.TensorType) else pointer_type
-            if (record["opcode"] != "tt.atomic_cas" or len(body.args) != len(captures)
+            byte_view = record.get("byte_view")
+            if byte_view:
+                from .byte_atomic_events import boundary as byte_boundary
+                from .shared_tensor import _source_ids
+                byte = byte_boundary(original, _source_ids, byte_view.get("byte_order"))
+                if byte is None or byte[1] != byte_view or "word_view" in record:
+                    raise ConversionError("isolated byte atomic changed its byte storage/view boundary")
+            if ((record["opcode"] != "tt.atomic_cas" and not byte_view) or len(body.args) != len(captures)
                     or record["input_types"] != [str(v.type) for v in captures]
                     or record["template_input_types"] != [str(v.type) for v in body.args]
                     or not same_type(body.args[0].type, viewed_type)
-                    or not compatible(captures[0].type, viewed_type)
-                    or record.get("word_view") != view_info(element(captures[0].type), element(viewed_type))):
+                    or (not byte_view and (not compatible(captures[0].type, viewed_type)
+                        or record.get("word_view") != view_info(element(captures[0].type), element(viewed_type))))
+                    or (byte_view and element(captures[0].type) != builtin.i8)):
                 raise ConversionError("isolated word CAS changed its typed storage/view boundary")
             cast = builtin.UnregisteredOp.with_name("tt.bitcast").create(operands=[captures[0]],
                 result_types=[viewed_type], location=original.location)
@@ -219,6 +240,9 @@ def substitute(module, converted, bindings, calls):
         if (len(memories) != 1 or opcode(memories[0]) != expected or opcode(operations[-1]) != "tt.return"
                 or any(opcode(op) in {*MEMORY_EVENTS.keys() - {"tt.atomic_cas"}, "tt.addptr", "tt.call"} for op in body.walk())):
             raise ConversionError("isolated event conversion did not retain exactly one memory observation")
+        if record.get("byte_view"):
+            from .byte_atomic_events import check_event
+            check_event(body, record["byte_view"], mask is not None, memories[0])
         if record["opcode"] in ("tt.atomic_rmw", "tt.atomic_cas"):
             def attribute(op, key):
                 return op.properties.get(key, op.attributes.get(key))
@@ -239,14 +263,15 @@ def substitute(module, converted, bindings, calls):
         Rewriter.replace_op(original, emitted, values)
 
 
-def convert_events(module, work, optimizer, source_ids):
+def convert_events(module, work, optimizer, source_ids, *, byte_order=None):
     from .shared_tensor import parse_shared
     work.mkdir(parents=True, exist_ok=False)
-    isolated, bindings, calls = templates(module, source_ids)
+    isolated, bindings, calls = templates(module, source_ids, byte_order=byte_order)
     event_input = print_ir(isolated)
     source = work / "events.mlir"
     source.write_text(event_input)
     report = lower_with_shared(source, work / "native", optimizer=optimizer, stage="source-word-events")
     event_output = (work / "native/lowered.mlir").read_text()
     substitute(module, parse_shared(event_output), bindings, calls)
-    return {"input": event_input, "output": event_output, "native_stage": report, "bindings": bindings}
+    return {"input": event_input, "output": event_output, "native_stage": report, "bindings": bindings,
+            **({"byte_order": byte_order} if any("byte_view" in binding for binding in bindings) else {})}

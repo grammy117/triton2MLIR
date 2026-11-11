@@ -49,6 +49,12 @@ def check_word_stage(stage, source, output):
             or not events["bindings"]):
         raise ValueError("source-word event conversion lacks its actual intermediate bytes")
     check_native(events["native_stage"], "source-word-events", POINTER_FLAGS, events["input"], events["output"])
+    byte_views = [binding["byte_view"] for binding in events["bindings"]
+                  if isinstance(binding, dict) and "byte_view" in binding]
+    if (("byte_order" in events) != bool(byte_views)
+            or byte_views and (events["byte_order"] not in ("little", "big")
+                or any(not isinstance(view, dict) or view.get("byte_order") != events["byte_order"] for view in byte_views))):
+        raise ValueError("source-word byte templates lack one explicit consistent byte order")
     check_native(compute["native_stage"], "source-word-compute", COMPUTE_FLAGS, compute["input"], output,
                  alternative_flags=(RSQRT_COMPUTE_FLAGS,))
     event_tool = events["native_stage"].get("optimizer", {}).get("sha256")
@@ -60,11 +66,11 @@ def replay_events(stage, source):
     """Reconstruct every typed event disposition from the retained parent IR."""
     if stage.get("schema") != "t2m.source-word-stages.v2":
         return
-    from .shared_tensor import parse_shared, _source_ids
+    from .shared_tensor import _source_ids, parse_shared
     from .word_events import print_ir, substitute, templates
     module = parse_shared(source.decode() if isinstance(source, bytes) else source)
-    isolated, bindings, calls = templates(module, _source_ids)
     events = stage["events"]
+    isolated, bindings, calls = templates(module, _source_ids, byte_order=events.get("byte_order"))
     if print_ir(isolated) != events["input"] or bindings != events["bindings"]:
         raise ValueError("source-word event templates differ from the complete typed source event inventory")
     substitute(module, parse_shared(events["output"]), bindings, calls)

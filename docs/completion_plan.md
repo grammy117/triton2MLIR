@@ -101,6 +101,14 @@ whole-word byte-guard and source/payload-evidence integration is complete;
 these are component checks, not new TTIR or accelerator coverage. Follow the
 concrete source-integration sequence in that document next.
 
+The isolated source templates now also check actual byte-address-to-word
+boundaries through both native stages and deterministic producer replay. Real
+Triton captures preserve separate byte/word formals, active alignment,
+source values/masks and returned-old words; adversarial current-body changes
+refuse. Main pointer-state reconstruction, byte ownership/payload admission
+and the independent consumer extension remain the required next integration.
+The broad numeric/effect/corpus/target requirements above remain unchanged.
+
 [Different-width source parameter bindings](typed_parameters.md) now retain
 original pointer/descriptor types on typed owning roots, with root origins
 applied before source casts and original element strides afterward. Wider and

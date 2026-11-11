@@ -8,8 +8,9 @@ The active [completion plan](docs/completion_plan.md) orders the remaining front
 compiler-staging, payload-materialization and coverage work with explicit evidence gates.
 [Byte-backed atomic word mechanisms](docs/byte_atomic_words.md) now execute
 through native and actual Merlin host libraries with byte order retained.
-TTIR event/template/guard accounting remains a required intake gate; the
-existing frontend refusal stays in place until that integration qualifies.
+Source templates also replay the byte/word boundary through actual native
+stages. Whole-word guards, payload accounting and independent consumer
+integration remain required intake gates; the frontend refusal stays in place.
 [Indexed descriptors](docs/indexed_descriptors.md) now reuse the installed upstream
 pointer expansion for gather/scatter/reducing stores, preserving loaded indices,
 source padding, state and atomic kinds through the existing checked memory path.
