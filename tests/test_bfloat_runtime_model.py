@@ -38,8 +38,11 @@ def test_real_bfloat_inputs_use_source_words_outside_compiler_staging(tmp_path, 
     original = (model / "capture_receipt.json").read_bytes()
     target = tmp_path / "target"
     comparison = "values" if mode == "observe" and not legacy else "words"
-    report = Q.qualify(model, target, merlin_root=MERLIN, python=python, comparison=comparison)
+    word_results = (0, 1, 3, 4) if comparison == "values" else ()
+    report = Q.qualify(model, target, merlin_root=MERLIN, python=python, comparison=comparison, word_results=word_results)
     assert report["evaluation"]["result_count"] == (6 if mode == "observe" else 1)
+    if word_results:
+        assert report["evaluation"]["word_results"] == list(word_results)
     assert Q.verify(target, merlin_root=MERLIN, python=python) == report
     assert (model / "capture_receipt.json").read_bytes() == original
     verify_bundle(model)

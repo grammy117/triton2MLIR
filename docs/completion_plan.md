@@ -138,6 +138,10 @@ Three complete model integrations retain thirteen results, covering exceptional
 observations, finite legacy recovery and a BF16-input contraction. The source
 package and compiler staging remain intact; general dynamic/alias/effect and
 target completion requirements above remain active.
+Mixed storage/computed result tuples can now record per-result exact-word
+comparison. The exceptional BF16 model pins both stored BF16 results and their
+integer observations while retaining the computed F32 NaN policy. This is an
+evaluation contract, not a change to source arithmetic or target lowering.
 
 ## Required evidence for every supported form
 

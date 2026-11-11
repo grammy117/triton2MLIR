@@ -73,11 +73,16 @@ model capture with that explicit archive projection now passes host and target
 execution with all six results, including exact BF16 selections and integer
 views. A finite legacy observation model and a BF16-input contraction also pass.
 The three complete-model tests retain thirteen results under
-`.scratch/pytest-bfloat-runtime-model/`.
+`.scratch/pytest-bfloat-runtime-mixed-policy/`.
+The public CLI qualification is retained at
+`out/spike-bfloat-input-model/qualification.json`; the three-model selection at
+`out/spike-runtime-input-models/summary.json` pins all thirteen results with
+eleven exact-word and two numeric-value comparisons.
 
 Computed F32 NaN payloads may differ between host and RISC-V under this numeric
 profile. The exceptional observation case uses value comparison for those
-computations and separately checks storage/word results exactly. Finite legacy
+computations and records exact storage/word results with
+`--word-result 0 --word-result 1 --word-result 3 --word-result 4`. Finite legacy
 and contraction cases pass the all-word policy. No source numeric permission is
 broadened to make a target result pass.
 
@@ -154,6 +159,11 @@ source-assembly and lifted-constant model tests document how to produce inputs.
    profiles. BF16 retains raw source-word archive storage. Empty tensors keep
    their original shapes. No reference policy changes compilation or source
    numeric permissions.
+   Under value comparison, repeatable `--word-result INDEX` additionally
+   requires exact bits for those particular results, including NaN payloads and
+   signed zeros. Floating tolerances still apply only to the other results.
+   Indices must be distinct and in range; this selection cannot accompany the
+   all-word policy. No evaluation selection is passed to the build worker.
 7. Publish `t2m.spike-model-qualification.v1` only after all gates pass. Pin the
    source receipt, compiler projection, tools, relevant consumer sources, ELF,
    raw output, observer records, output archive and references. A complete
@@ -171,6 +181,10 @@ The v1 qualification's additive evaluation field `comparison: words` records
 the stricter policy. Existing receipts without it retain their original value
 comparison; verification never silently upgrades historical evidence. Older
 readers that do not implement the stricter field refuse these qualifications.
+The additive `word_results` evaluation field similarly pins a sorted list of
+particular exact-word results under value comparison. Verification replays the
+recorded indices and tolerances; it never substitutes command-line choices for
+historical policy. Older readers lacking this field refuse the changed record.
 
 ## Remaining target work
 

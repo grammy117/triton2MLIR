@@ -18,6 +18,10 @@ The optional qualification evaluation field `comparison: words` additionally
 requires exact output bits and zero tolerances, including NaN payloads and signed
 zero. Existing receipts retain their value comparison; older readers may refuse
 the additive stricter policy. It changes no source numeric or memory permission.
+Alternatively, optional `word_results: [INDEX, ...]` pins exact bits for selected
+results alongside the existing value policy for other results. Indices are
+distinct, in range and recorded in sorted order; all-word and subset selections
+are mutually exclusive. This evaluator-only field is never a compiler option.
 Target execution may additionally emit `runtime-inputs.npz` and
 `runtime-inputs.json` (`t2m.runtime-input-projection.v1`) outside the compiler
 projection. These derive exact BF16 runtime input words from the existing parent

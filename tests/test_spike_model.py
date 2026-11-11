@@ -79,6 +79,35 @@ def test_word_policy_retains_nan_payload_and_signed_zero(tmp_path, monkeypatch):
     assert Q.compare(tmp_path, tmp_path, 0, 0, comparison="words")["comparison"] == "words"
     with pytest.raises(ValueError, match="zero tolerances"):
         Q.compare(tmp_path, tmp_path, 0.1, 0, comparison="words")
+    with pytest.raises(ValueError, match="word result indices"):
+        Q.compare(tmp_path, tmp_path, 0, 0, comparison="words", word_results=(0,))
+
+
+def test_mixed_results_keep_storage_exact_and_computed_nan_policy_explicit(tmp_path, monkeypatch):
+    (tmp_path / "compiler").mkdir()
+    Q.write_json(tmp_path / "compiler/signature.json", {"outputs": [
+        {"dtype": "bf16", "shape": [2]}, {"dtype": "f32", "shape": [2]}]})
+    original = np.array([0x7f81, 0x8000], np.uint16)
+    expected_value = np.array([0x7fc12345, 0x3f800000], np.uint32).view(np.float32)
+    value = np.array([0x7fc00000, 0x3f800001], np.uint32).view(np.float32)
+    monkeypatch.setattr(Q, "references", lambda _source: ([original, expected_value], {}))
+    np.savez(tmp_path / "outputs.npz", out0=np.array([0x7fc0, 0], np.uint16), out1=value)
+    assert Q.compare(tmp_path, tmp_path, 1e-5, 0)["reference_comparison"] == "passed"
+    with pytest.raises(ValueError, match="exact reference words"):
+        Q.compare(tmp_path, tmp_path, 1e-5, 0, word_results=(0,))
+    np.savez(tmp_path / "outputs.npz", out0=original, out1=value)
+    report = Q.compare(tmp_path, tmp_path, 1e-5, 0, word_results=(0,))
+    assert report["word_results"] == [0]
+    assert report["reference_comparison"] == "passed"
+    with pytest.raises(ValueError, match="result 1 differs from exact reference words"):
+        Q.compare(tmp_path, tmp_path, 1e-5, 0, word_results=(1, 0))
+
+
+@pytest.mark.parametrize("indices", [(True,), (-1,), (0, 0), (1,), (0.0,), ("0",), "0"])
+def test_word_result_selection_requires_actual_distinct_output_indices(tmp_path, monkeypatch, indices):
+    monkeypatch.setattr(Q, "references", lambda _source: ([np.zeros(1)], {}))
+    with pytest.raises(ValueError, match="word result indices"):
+        Q.compare(tmp_path, tmp_path, 0, 0, word_results=indices)
 
 
 def _change_frame(raw, name):
