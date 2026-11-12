@@ -4,6 +4,14 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Exact IEEE source literals](docs/ieee_literals.md) now retain original
+f16/BF16/f32/f64 NaN words through standard integer constants and bitcasts,
+including protected allocations and complete enclosing models. Sixteen libraries
+and four models pass native/Merlin host/Spike with 56 exact-word results and
+48 additional host runtime replays. The combined inventory reopens 161 packages
+and 120 standalone qualifications. Broader numeric/effect/shared-state and
+accelerator closure remains required.
+
 [Structured scan combiners](docs/scans.md#structured-combiner-qualification)
 now preserve scalar branches, actual for/while state, tuple order and uniform
 captures inside parallel stages. Ten libraries and two complete models retain
@@ -120,7 +128,7 @@ standard scalar/tensor computation with retained source/provider identities;
 hardware observations, broader instructions/effects/packing and applicable
 targets remain completion requirements.
 
-**Updated 2026-11-11.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-12.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.

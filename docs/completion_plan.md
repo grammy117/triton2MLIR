@@ -1,6 +1,6 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
-Updated 2026-11-11. **The full goal is active and incomplete.** Every valid
+Updated 2026-11-12. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
 algorithm retained, and applicable execution evidence. Host-only support,
@@ -35,6 +35,14 @@ Microsoft and Triton boundaries. Use the existing pinned tools; no implicit
 Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
+
+[Exact IEEE source literals](ieee_literals.md) now preserve f16/BF16/f32/f64
+NaN sign, payload and signaling bits through standard constants and bitcasts,
+protected allocation sources and complete enclosing models. Sixteen libraries
+and four models compare 56 exact-word results through native/Merlin host/Spike,
+with 48 additional unchanged-library host runtime invocations. The combined
+inventory reopens 161 packages and 120 standalone qualifications. Computed-NaN,
+broader numeric/effect/shared-state and accelerator closure remains open.
 
 [Structured scan combiners](scans.md#structured-combiner-qualification) now
 retain pure scalar branches and for/while state, including complete learned-state
@@ -138,8 +146,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/scan-control-inventory/coverage.json` selection reopens
-**141 packages, 104 standalone qualifications and fourteen maintained product
+The current `out/literal-word-inventory/coverage.json` selection reopens
+**161 packages, 120 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:

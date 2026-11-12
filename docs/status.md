@@ -1,6 +1,6 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
-Updated 2026-11-11. **The end-to-end pipeline works for a broad qualified
+Updated 2026-11-12. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
 model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
@@ -35,6 +35,13 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[Exact IEEE source literals](ieee_literals.md) now retain original NaN sign,
+payload and signaling bits in standard executable constants/bitcasts, including
+allocation wrappers and complete enclosing models. Sixteen libraries and four
+models compare 56 exact-word results through native/Merlin host/Spike, with
+48 additional unchanged-library runtime invocations. Broader numeric/effect,
+alias/shared-state and accelerator closure remains open.
+
 [Structured scan combiners](scans.md#structured-combiner-qualification) now
 retain scalar branches and actual for/while recurrences in parallel scan stages.
 Ten libraries and two complete learned-state models pass native/Merlin host/
@@ -58,8 +65,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/scan-control-inventory/coverage.json` reopens **141 packages,
-104 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/literal-word-inventory/coverage.json` reopens **161 packages,
+120 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

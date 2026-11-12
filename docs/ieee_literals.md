@@ -61,3 +61,42 @@ Generated compatibility metadata records both the standard bitcast representatio
 and the protected-source extension. BF16 retains its existing raw-word archives
 and model witnesses. There is no custom runtime dialect, literal attribute,
 calling convention, GPU instruction or opaque helper in the portable payload.
+
+## Execution evidence
+
+Sixteen reusable libraries pass native, Merlin host and actual Spike execution:
+four formats across all three memory profiles, plus four allocation-bound forms.
+The source retains masked tiles, scalar and dense sentinels, branches,
+loop-carried loaded state, reuse and snapshots. Forty-eight further invocations
+reuse unchanged host libraries across empty, singleton and ragged shapes and
+changed runtime loop counts. All comparisons use exact words.
+
+Four complete model2MLIR captures bind original supplied TTIR to a registered
+custom-call interface with an independent CPU word oracle. These are not Python
+Triton-JIT source captures and supply no GPU correspondence claim. Each model
+retains learned weights, dependent calls, an empty call, its original state and
+all six results through native/Merlin host/Spike. Original parent data and
+reference bytes remain unchanged. All 24 model results match exact words.
+
+`out/literal-words/summary.json` reopens twenty target receipts and 56 complete
+results, plus an original-source public CLI capture. The combined selection in
+`out/literal-word-inventory/coverage.json` reopens 161 packages, 120 standalone
+qualifications and fourteen product cases. It retains all fifty observed names
+under selected profiles; it does not establish universal kernel coverage.
+The focused native/source/allocation selection passes 141 checks. A further
+110-check memory-event/atomic/literal/refusal selection passes, as does Merlin's
+297-check reader selection. These overlapping selections are not unique coverage
+counts; target receipts and runtime replays retain their separate evidence.
+
+Reproduce with the configured existing tools:
+
+```bash
+python -m pytest -q tests/test_float_literal_words.py tests/test_literal_evidence.py \
+  tests/test_literal_state.py tests/test_literal_state_model.py \
+  --basetemp=.scratch/pytest-literal-words
+python scripts/capture_literal_state_model.py --dtype bf16 --out out/literal-parent
+```
+
+The model capture script uses model2MLIR's environment. Computed NaN payloads,
+arbitrary numeric/effect compositions, other floating formats, source versions
+and accelerator correctness/performance retain their separate requirements.

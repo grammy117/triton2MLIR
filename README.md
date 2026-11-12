@@ -3,10 +3,18 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Exact IEEE source literals](docs/ieee_literals.md) now preserve scalar/dense
+f16/BF16/f32/f64 NaN sign, payload and signaling bits through standard integer
+constants/bitcasts, allocation binding and complete models. Sixteen libraries
+and four models compare 56 exact-word results through native/Merlin host/Spike;
+48 further invocations reuse unchanged host libraries. The current combined
+inventory reopens 161 packages, 120 standalone qualifications and fourteen
+product cases. Arbitrary numeric/effect/kernel and accelerator coverage remains open.
+
 [Structured scan combiners](docs/scans.md#structured-combiner-qualification)
 now retain scalar branches and actual for/while state in standard parallel scan
 stages. Ten libraries and two complete models pass native/Merlin host/Spike
-with all thirty target results exact. The current combined inventory reopens
+with all thirty target results exact. That earlier combined inventory reopens
 141 packages, 104 standalone qualifications and fourteen product cases;
 arbitrary-kernel and accelerator coverage remain open.
 

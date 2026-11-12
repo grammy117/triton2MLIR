@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Exact IEEE source literals](ieee_literals.md) retain scalar/dense
+f16/BF16/f32/f64 NaN sign, payload and signaling bits through native/Merlin
+host/Spike, including allocation wrappers and complete enclosing models.
+Sixteen libraries and four models retain all 56 target results as exact words;
+48 additional runtime invocations reuse unchanged host libraries. Original
+TTIR fixtures and independent word oracles supply the source contract, without
+a Python-JIT or GPU correspondence claim. The twenty target receipts and public
+original-source CLI capture reopen in `out/literal-words/summary.json`.
+The current `out/literal-word-inventory/coverage.json` reopens **161 packages,
+120 standalone qualifications and fourteen product cases**, retaining all fifty
+observed names under selected profiles. The native/source/allocation regression
+selection passes 141 checks; a separate memory-event/atomic/literal/refusal
+selection passes 110 and independent Merlin readers 297. These selections can
+overlap. Computed NaN payloads, broader numeric/effect/shared-state, source versions
+and accelerator closure remain open. Earlier measurements retain their scope.
+
 [Structured scan combiners](scans.md#structured-combiner-qualification) now
 retain actual scalar branches, for/while state, mixed tuple types and uniform
 captures in parallel stages. Ten libraries qualify through native/Merlin host/
