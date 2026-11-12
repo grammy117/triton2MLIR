@@ -1220,16 +1220,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
     from .contractions import needs_dot_precision_expansion
-    if any(needs_dot_precision_expansion(op) for op in parsed.walk()):
+    if fp8_overflow != PER_CAST and any(needs_dot_precision_expansion(op) for op in parsed.walk()):
         # Check original effects/contracts before a greedy upstream pass can
         # fold them. Only selected composite precision is deferred to its pass.
-        initial_records = _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
+        _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
                    typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True,
                    assembly_provider=assembly_provider)
         validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
-        if fp8_overflow == PER_CAST:
-            raise ConversionError("per-cast FP8 contracts require expansion before composite dot normalization", opcode="tt.dot",
-                source_id=next(row["id"] for row in initial_records if row["opcode"] == "tt.dot"))
         pointer_report = expand_tensor_pointers(source, work / "precision-intake")
         original_inventory = json.loads((work / "precision-intake/inventory.json").read_text())
         if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
@@ -1238,7 +1235,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
-    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
+        allow_composite_dots=fp8_overflow == PER_CAST, assembly_provider=assembly_provider)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1249,7 +1247,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                 intent_by_source[source_id] = intent
     # Per-operation numeric choices must become executable before helper
     # inlining/canonicalization can fold source casts or discard attributes.
-    early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow) if fp8_overflow == PER_CAST else []
+    protected_inventory = None
+    if fp8_overflow == PER_CAST:
+        from .source_graph import inventory
+        protected_inventory = inventory(parsed, records)
+    early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow,
+        tensor_carrier="arith") if fp8_overflow == PER_CAST else []
     assembly_reports = []
     if assembly_provider is not None:
         from .source_assembly import expand_source_assembly
@@ -1266,12 +1269,34 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     annotated.write_text(stream.getvalue() + "\n")
     lower_with_shared(annotated, work / "inline", optimizer=optimizer, stage="inline")
     middle_source = work / "inline/lowered.mlir"
-    if not pointer_report and any(r["opcode"] in DESCRIPTOR_OPS for r in records):
+    protected_precision = fp8_overflow == PER_CAST and any(needs_dot_precision_expansion(op)
+        for op in parse_shared(middle_source.read_text()).walk())
+    if protected_precision or not pointer_report and any(r["opcode"] in DESCRIPTOR_OPS for r in records):
         pointer_report = expand_tensor_pointers(middle_source, work / "tensor-pointers")
         # Native generic/local-scope printing resolves debug-location aliases
         # for xDSL, which cannot read Triton's forward location aliases safely.
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         middle_source = work / "expanded-source/lowered.mlir"
+        if protected_precision:
+            # The original graph includes the actual FP8 casts. Native
+            # precision rewriting sees their already-executable arithmetic;
+            # re-inventory its partial contractions before accumulator repair.
+            original_inventory = protected_inventory
+            normalized = parse_shared(middle_source.read_text())
+            records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
+                typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+            intent_by_source = {}
+            for operation in normalized.walk():
+                intent = {key: value for key, value in operation.attributes.items()
+                    if key in ("prov.family", "prov.op", "prov.region_id") and isinstance(value, StringAttr)}
+                for source_id in _source_ids(operation.location):
+                    if intent: intent_by_source[source_id] = intent
+            stream = StringIO()
+            Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(normalized)
+            middle_source = work / "protected-normalized.ttir"
+            middle_source.write_text(stream.getvalue() + "\n")
+            for record in early_fp8_reports:
+                record["source_graph"] = "original"
     middle_module = parse_shared(middle_source.read_text())
     layout_maps, layout_witness = None, None
     if source_layout is not None:

@@ -120,7 +120,9 @@ def validate_fp8_casts(module, source_ids, *, overflow=None):
     _plans(module, source_ids, overflow)
 
 
-def expand_fp8_casts(module, source_ids, *, overflow=None):
+def expand_fp8_casts(module, source_ids, *, overflow=None, tensor_carrier="linalg"):
+    if tensor_carrier not in ("linalg", "arith"):
+        raise ValueError("FP8 conversion requires a standard tensor computation carrier")
     plans = _plans(module, source_ids, overflow)
     reports = []
     per_cast = overflow == PER_CAST
@@ -175,7 +177,29 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
             bits = emit(arith.ConstantOp.from_int_and_width(nan_word, builtin.i8))
             nan = emit(arith.BitcastOp(bits, target))
             narrowed = emit(arith.SelectOp(is_inf, nan, narrowed))
-        if shaped:
+        if shaped and tensor_carrier == "arith":
+            # Native TTIR normalizers load standard arith/math, but not Linalg.
+            # Tensorize the same scalar recipe before any of those passes.
+            # The later shared arithmetic conversion supplies parallel Linalg.
+            output = original.results[0].type
+            shape = output.get_shape()
+            mapper = {block.args[0]: original.operands[0]}
+            tensor_operations = []
+            for operation in operations:
+                type_ = builtin.TensorType(operation.results[0].type, shape)
+                properties = dict(operation.properties)
+                if isinstance(operation, arith.ConstantOp):
+                    value = properties["value"]
+                    properties["value"] = builtin.DenseIntOrFPElementsAttr.from_list(type_, [value.value.data])
+                converted = type(operation).create(operands=[mapper[value] for value in operation.operands],
+                    result_types=[type_], attributes=dict(operation.attributes), properties=properties,
+                    location=operation.location)
+                mapper[operation.results[0]] = converted.results[0]
+                tensor_operations.append(converted)
+            narrowed = mapper[narrowed]
+            operations = tensor_operations
+            root = narrowed.owner
+        elif shaped:
             terminal = YieldOp(narrowed)
             terminal.location = original.location
             block.add_ops([*operations, terminal])
@@ -234,6 +258,7 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
                 "computed_nan_payload": "unspecified",
                 "expansion": "standard-clamps-casts-and-exact-RTZ-correction",
                 "physical_mapping": "undecided",
+                **({"tensor_carrier": "standard-elementwise-arith"} if shaped and tensor_carrier == "arith" else {}),
                 **({"source_policy_profile": PROFILE, "source_policy_attribute": SOURCE_POLICY} if per_cast else {}),
             }
         )

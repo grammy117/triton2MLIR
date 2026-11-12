@@ -180,6 +180,7 @@ def register_fp8_float_constraints():
         "xdsl.dialects.arith",
         "xdsl.dialects.math",
         "xdsl.dialects.linalg.ops",
+        "xdsl.dialects.linalg.abstract_ops",
     ):
         module = import_module(name)
         if hasattr(module, "AnyFloat"):

@@ -4,7 +4,11 @@
 selection `fp8_overflow="per-cast"`. Each nonidentity TTIR-to-FP8 cast requires
 its own semantic `t2m.fp8_overflow` StringAttr; `prov.*` grants no choice.
 All source contracts validate and expand to standard computation before
-inlining/folding. The original source and per-cast reports remain byte-bound;
+inlining/folding. Protected composite-dot intake uses elementwise tensor
+arithmetic before the native normalizer, then preflights partial contractions
+separately. The v2 trace retains the complete typed original cast/dot graph and
+the normalized graph; source intent does not grant numerical equivalence.
+The original source and per-cast reports remain byte-bound;
 public tensor/scalar ABI and receipt schemas are unchanged. Older producers
 refuse this selection. Merlin consumes executable casts/clamps, with its fixed
 narrowing-before-widening source seam required for combined target lowering.

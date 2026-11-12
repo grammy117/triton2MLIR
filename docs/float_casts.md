@@ -309,7 +309,9 @@ explicit 27-package observation report still records 29/50 definitions
 observed and 25 in host-qualified captures. The new numeric combinations
 do not establish whole-opcode closure.
 `bind-model` accepts `--fp8-overflow` and per-binding `fp8_overflow` overrides.
-Broader FP8 arithmetic/contraction/scaled-dot compositions, per-cast contracts
-across earlier normalizers, model/effect profiles and applicable targets remain
-required. Selected mixed-policy source loops now have actual target evidence
-under the separate per-cast profile above.
+Protected per-cast expansion now also precedes composite F32 dot normalization,
+retaining original and normalized source graphs and correct partial accumulators.
+Broader FP8 arithmetic/contraction/scaled-dot compositions, initial descriptor/
+source-version intake, model/effect profiles and applicable targets remain
+required. Selected mixed-policy loops and composite precision now have actual
+target evidence under the separate per-cast profile above.

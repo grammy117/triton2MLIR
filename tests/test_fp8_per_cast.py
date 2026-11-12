@@ -39,6 +39,23 @@ def test_profile_expands_each_source_policy_without_using_provenance():
     assert expand_fp8_casts(module, _source_ids, overflow="per-cast") == []
 
 
+@pytest.mark.parametrize("target", ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ"))
+@pytest.mark.parametrize("mode", ("rtne", "rtz"))
+@pytest.mark.skipif(not CAST_NATIVE, reason="native verification of shaped arithmetic required")
+def test_standard_tensor_carrier_keeps_the_complete_recipe(target, mode):
+    from t2m.verify import verify_mlir
+    module = parse_shared(numeric_source(target, mode))
+    reports = expand_fp8_casts(module, _source_ids, overflow="per-cast", tensor_carrier="arith")
+    # xDSL's Cmpf result constraint is scalar-only; native MLIR defines the
+    # shaped result. Keep the native verifier authoritative at this seam.
+    assert verify_mlir(text(module), python=os.environ["T2M_NATIVE_PYTHON"])["native_mlir_verified"]
+    assert [row["overflow_policy"] for row in reports] == list(POLICIES)
+    assert all(row["tensor_carrier"] == "standard-elementwise-arith" for row in reports)
+    assert all(op.name != "linalg.generic" for op in module.walk())
+    parsed = parse_shared(text(module))
+    assert len(list(parsed.walk())) == len(list(module.walk()))
+
+
 @pytest.mark.parametrize("change", ("missing", "unknown", "wrong-type", "provenance", "unselected", "global",
     "identity", "standard", "other-target", "mixed-invalid"))
 def test_source_numeric_choices_require_complete_explicit_selection_before_edits(change):

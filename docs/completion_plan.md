@@ -40,9 +40,12 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 overflow/infinity policies in one kernel, expanded before helper inlining or
 folding. Eight format/mode cases retain 32 complete results through native,
 Merlin host and Spike, with 24 additional host-library replays. Merlin's source
-feature edits now preserve narrowing before widening. Earlier native-normalizer
-compositions, broader model captures and backend/accelerator correspondence
-remain required.
+feature edits preserve narrowing before widening. Protected composite-dot
+normalization additionally retains a complete original graph and independently
+preflighted partial contractions. Mixed cast policies qualify with BF16x3/x6
+and logical TF32/x3 through memory profiles and native/Merlin host/Spike.
+Initial pointer/descriptor source-version intake, broader model captures and
+backend/accelerator correspondence remain required.
 
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured
@@ -74,7 +77,7 @@ required.
 | Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering/reusable libraries, and selected complete RISC-V images executed on Spike. | Broader applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
 | Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars, explicit dense value reshapes and checked static transposed/stepped source views. | General physical/mutating model views, broader view/dynamic ABI forms, general value-returning TTIR entries/CFGs and runtime/alias compositions. |
 | Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
-| Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
+| Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
 The current `out/grouped-memory-model-inventory/coverage.json` selection reopens
@@ -255,10 +258,11 @@ memory fixture while leaving the missing families unexamined.
 2. **Close numeric and effect families.** Use the matrix to select actual
    implementation gaps, starting with packed/effectful maps, remaining numeric
    contracts, external/assembly implementations and physical observations.
-   Carry mixed per-cast FP8 contracts through a protected expansion before
-   earlier native descriptor/version/composite-dot normalization, then qualify
-   actual enclosing model captures. The current source-only seam explicitly
-   refuses those compositions; selected loop/target evidence does not close them.
+   Protected mixed FP8/composite-dot normalization now qualifies through the
+   consumer. Extend complete verified source serialization/attribute access to
+   original descriptor/block-pointer/version intake, then qualify actual
+   enclosing model captures. The initial source-parser seam still refuses
+   those forms; selected precision/loop/target evidence does not close them.
    Reuse official expansions where their semantics agree; preserve source
    width, rounding boundaries, accumulator order and recurrence. Implement
    unsupported behavior rather than hiding it behind provenance.
@@ -295,9 +299,9 @@ memory fixture while leaving the missing families unexamined.
   and external descriptor fields work today. Raw descriptor bytes, pointer
   integers or hardware observations need an explicit compatible address/state
   contract and real consumer implementation.
-- **Numeric backend contracts:** selected IEEE/FTZ/low-precision profiles are
-  explicit. One global cast profile does not establish heterogeneous per-cast
-  contracts or target equivalence. Reserved source enumerants with no defined
+- **Numeric backend contracts:** selected IEEE/FTZ/low-precision and per-cast
+  profiles are explicit. Protected mixed-cast/composite-dot qualifications do
+  not establish arbitrary source-version/backend equivalence. Reserved source enumerants with no defined
   format must remain identified rather than assigned invented semantics.
 - **Abstraction and performance:** preserve algorithmic tiling/reuse/recurrence
   even when physical placement is postponed. Do not serialize useful parallel

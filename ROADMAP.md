@@ -5,8 +5,12 @@ per-cast overflow/infinity semantics in one kernel. Standard expansions precede
 helper inlining/folding; eight format/mode cases execute through Merlin host
 and Spike with all 32 results and 24 additional host runtime replays. The
 consumer source-feature ordering fix preserves narrowing before widening.
-Earlier native-normalizer compositions, broader model captures and accelerator
-qualification remain open.
+Protected composite-dot normalization retains the original cast/dot graph
+and a separately inventoried normalized graph. BF16x3/x6 and logical TF32/x3
+compose with three source cast policies through the memory profiles and actual
+native/Merlin host/Spike execution: twelve target results and 36 runtime
+host-library replays. Original pointer/descriptor source-version
+intake, broader model captures and accelerator qualification remain open.
 
 [Source model tensor views](docs/model_source_views.md) now recover static
 transpose/stepped-slice coordinates from parent SSA and bind them to existing

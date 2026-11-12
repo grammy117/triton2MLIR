@@ -6,7 +6,14 @@ All 32 complete results reach actual native, Merlin host and Spike execution;
 24 additional empty/singleton/ragged invocations reuse their host libraries.
 The separate `out/spike-mixed-fp8/summary.json` selection retains source profile,
 individual target receipts and scope. It does not change the 106-package
-inventory or establish earlier-normalizer, model/backend or accelerator closure.
+inventory or establish initial source-version, model/backend or accelerator closure.
+Protected composite precision additionally retains the original casts and dot
+through official normalization and separate partial-contraction preflight.
+The BF16x3/x6 and logical TF32/x3 selection exercises all three memory profiles
+through native/Merlin host/Spike: twelve complete target results and 36
+unchanged-library runtime replays. Its independently reopened receipt selection
+is `out/spike-protected-fp8-precision/summary.json`.
+Initial descriptor/block-pointer source parsing remains a located refusal.
 
 [Source model views](model_source_views.md) add three real i64/f32/BF16
 captures with transposed and stepped-slice operands, dependent root updates,

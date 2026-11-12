@@ -28,10 +28,13 @@ without explicit per-cast selection refuses; a global policy cannot override
 it. Policies on identity casts, non-FP8 results or already-standard
 `arith.truncf` also refuse. A standard cast retains its own numeric semantics.
 
-The implementation reuses the existing FP8 expansion: one parallel
-`linalg.generic` per source tile contains executable standard clamps,
-selections, nearest casts and exact RTZ word correction. Source scalar casts
-retain scalar computation. No opaque helper, ISA instruction or physical lane
+The implementation reuses the existing FP8 scalar recipe for executable
+standard clamps, selections, nearest casts and exact RTZ word correction.
+Before native TTIR passes, shaped casts use standard elementwise tensor
+`arith`/`math`: those passes load these dialects without loading Linalg.
+The later shared arithmetic conversion supplies parallel Linalg. The ordinary
+late expansion can still build a parallel `linalg.generic` directly. Source
+scalar casts retain scalar computation. No opaque helper, ISA instruction or physical lane
 mapping implements the policy. Logical grids, loop-carried states, masks and
 each original narrowing boundary remain executable. Reports retain the actual
 source IDs, formats, mode, selected policy and source profile. Conflicting
@@ -69,6 +72,45 @@ marker. Both application orders produce the same pipeline; duplicates and
 moved markers still refuse. Source callbacks and loop destination planning
 retain their original seams and ownership checks. This changes no cast math.
 
+## Protected composite precision
+
+When the source-only parser accepts the original kernel, per-cast expansion
+now precedes the official F32 dot normalization too. The complete typed
+preflight graph is snapshotted before expansion, including original casts,
+semantic attributes, source intent, region/block edges and the original dot.
+Its matching SSA/types/fields are checked before copying the inventory.
+Native normalization sees executable standard arithmetic. Its partial
+contractions then receive a separate preflight with `normalized.ttir.op.*`
+IDs; accumulator repair uses those normalized contracts, rather than adding
+original C to every partial dot. The v2 trace retains both graphs. Original
+contraction intent also reaches the function and named matmuls.
+
+The integration selection combines independently selected FP8 casts on A, B
+and loop-carried C with residual F32 additions, a ragged runtime K loop, and
+BF16x3, BF16x6, logical TF32 or TF32x3. Residuals retain bits beyond BF16, so
+these cases exercise the composite precision boundary. Independent exact-rational
+FP8 palettes and ordered partial-dot references evaluate each original narrowing
+and loop step. Tensor, buffer and guarded/source-word routes exercise native,
+Merlin host and functional RISC-V/Spike execution. All twelve precision/profile
+cases pass, retaining twelve complete target results and 36 additional host
+invocations. Empty M, zero K and changed K domains replay the unchanged host
+library separately. The receipt selection and final producer byte replays live
+in `out/spike-protected-fp8-precision/summary.json`. This separate selection does
+not change the older 106-package inventory.
+
+Target qualification exposed two generic consumer gaps: the named-operation
+builder's captured float union omitted FP8, and attributed `tensor.yield`
+custom printing used an incompatible attribute order. Merlin extends the real
+float union and prints attributed tensor yields generically, preserving all
+source fields. Source-exact scalar contraction additionally introduces nested
+tensor-update loops; destination planning can copy their complete values after
+checking all nested operations, including unused/void effects. Original loop
+order, zero-trip behavior, ownership and lifetime gates remain intact.
+The additional source/carrier and existing cast/dot/reader regression selection
+passes 75 checks. Three negative cases prevent malformed original policies from
+reaching native normalization. Merlin's focused reader suite passes 46 checks;
+its destination-reuse suite passes 111 with all lifetime checks retained.
+
 ## Measured scope and remaining work
 
 The typed TTIR fixture in `t2m/examples/mixed_fp8.py` retains an original private
@@ -96,10 +138,14 @@ The separate target receipts and runtime replay records are reopened in
 observation selection. Source-profile/type/attribute/composition and applicable
 target closure remain in the full completion denominator.
 
-For now this profile requires the installed shared source parser to accept the
-original TTIR before transformations. Compositions requiring an earlier
-descriptor/block-pointer/version normalization or composite F32 dot expansion
-refuse before a pass could fold source casts without their semantics. They
-need a protected numeric expansion before that native normalization seam;
-refusal is incomplete coverage. Broader model captures, source backend
+This profile still requires the installed shared source parser to accept the
+original TTIR before transformations. The shared binary rejects the original
+block-pointer type and the installed Triton's older descriptor type syntax
+before it can produce generic source. Those initial-normalizer forms remain
+refused before a pass could fold numeric contracts. A bounded native helper
+experiment could import the same arithmetic recipe, but its typed getters
+could not account for every original cast attribute. It was not admitted as a
+production bridge. Closing this boundary requires a complete verified source
+serialization/attribute interface; refusal remains incomplete coverage.
+Broader model captures, source backend
 correspondence and accelerator execution also remain open.
