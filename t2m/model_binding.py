@@ -55,10 +55,14 @@ class KernelBinding:
     tensor_views: str | None = None
     # Semantic source-layout option -> original captured scalar argument.
     source_layout_arguments: dict[str, str] = field(default_factory=dict)
+    # Model view operand -> explicit source-root/coordinate argument binding.
+    source_views: dict = field(default_factory=dict)
 
     def validate(self):
         if self.tensor_views not in (None,VIEW_POLICY):
             raise ValueError("unknown model tensor view policy")
+        if not isinstance(self.source_views,dict) or any(not isinstance(name,str) for name in self.source_views):
+            raise ValueError("source model views require named explicit bindings")
         if len(self.qualname.split("::")) != 2 or not all(self.qualname.split("::")):
             raise ValueError("kernel identity must be namespace::name")
         result = self.implementation
@@ -136,16 +140,22 @@ def bind_model(model_mlir, bindings):
             raise ConversionError("kernel scalar arguments must be a typed dictionary", opcode="func.call")
         candidates = []
         for binding, function, operand_names, output_names, scalars in prepared:
-            if binding.qualname != identity.data or scalars != arguments or set(operand_names.values()) != set(by_name):
+            if (binding.qualname != identity.data or scalars != arguments
+                    or set(operand_names.values()) | set(binding.source_views) != set(by_name)):
                 continue
             plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
                                   [value.type for value in call.results])
             if plan is not None:
-                candidates.append((binding, function, plan, output_names))
+                candidates.append((binding, function, operand_names, plan, output_names))
         if len(candidates) != 1:
             raise ConversionError(f"{identity.data}: expected one matching typed/scalar specialization, found {len(candidates)}",
                                   opcode="func.call")
-        binding, function, plan, output_names = candidates[0]
+        binding, function, operand_names, plan, output_names = candidates[0]
+        source_views = None
+        if binding.source_views:
+            from .model_source_views import bind
+            _, values = runtime_constants(binding.implementation.spec, binding.runtime_arguments, arguments)
+            source_views = bind(binding.source_views, operand_names, by_name, values, binding.implementation.trace)
         if binding.implementation.trace.get("profile") in GUARDED_PROFILES:
             outputs = binding.implementation.spec.outputs
             cost = json.loads(binding.implementation.auxiliary_artifacts["memory-admission.json"])["guard_storage_bytes_per_output_element"]
@@ -175,6 +185,10 @@ def bind_model(model_mlir, bindings):
                 returned = [mapper[v] for v in source.arguments]
                 break
             cloned = source.clone(value_mapper=mapper)
+            if source_views:
+                from .model_source_views import PROFILE
+                cloned.attributes["prov.kernel_source_view_profile"] = StringAttr(PROFILE)
+                cloned.attributes["prov.kernel_view_arguments"] = ArrayAttr(StringAttr(name) for name in source_views)
             for op in cloned.walk():
                 op.attributes["prov.kernel_origin"] = identity
                 op.attributes["prov.kernel_callsite"] = StringAttr(callsite)
@@ -207,6 +221,8 @@ def bind_model(model_mlir, bindings):
                         "source_sha256": binding.implementation.trace["source_sha256"]})
         if binding.tensor_views is not None:
             records[-1]["tensor_views"] = binding.tensor_views
+        if source_views:
+            records[-1]["source_tensor_views"] = source_views
         if "source_layout_specialization" in binding.implementation.trace:
             from .model_source_layout import bind_arguments
             records[-1]["source_layout_bindings"] = bind_arguments(
@@ -219,6 +235,9 @@ def bind_model(model_mlir, bindings):
             module.body.block.erase_op(function)
     view_binding = any(record.get("tensor_views") for record in records)
     binding_schema = BINDING_SCHEMA if view_binding else "t2m.model-kernel-binding.v1"
+    if any(record.get("source_tensor_views") for record in records):
+        from .model_source_views import SCHEMA
+        binding_schema = SCHEMA
     module.attributes["prov.kernel_binding"] = StringAttr(binding_schema)
     if guard_storage:
         entries = [f for f in functions.values() if "prov.kernel" not in f.attributes and f.body.blocks]
@@ -240,6 +259,9 @@ def bind_model(model_mlir, bindings):
         report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
     if view_binding:
         report["tensor_view_binding_profile"] = VIEW_PROFILE
+    if any(record.get("source_tensor_views") for record in records):
+        from .model_source_views import PROFILE
+        report["source_tensor_view_binding_profile"] = PROFILE
     if any("source_layout_bindings" in record for record in records):
         from .model_source_layout import PROFILE
         report["source_layout_binding_profile"] = PROFILE

@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Source model views](model_source_views.md) add three real i64/f32/BF16
+captures with transposed and stepped-slice operands, dependent root updates,
+empty views and live original snapshots. All 21 model results match exact
+words through native, Merlin host and functional RISC-V/Spike execution.
+Independent source/captured-argument checks and rehashed producer/consumer
+refusals retain the explicit v3 binding contract. This separate model selection
+does not change the 106-package inventory below or establish arbitrary physical
+model views, public mutation, dynamic model ABI or accelerator performance.
+Its three exact-word target receipts are independently reopened in
+`out/spike-source-view-models/summary.json`; the focused 19-check and legacy
+103-check model suites pass.
+
 [Source effects on target](target_effects.md) now preserve actual void/result
 signatures, assertions, diagnostic bytes and complete tensors through ordinary
 Merlin/Spike execution. This adds target evidence for selected host profiles;

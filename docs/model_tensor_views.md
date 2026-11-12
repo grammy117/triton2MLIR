@@ -28,6 +28,10 @@ storage-offset, alias, ownership, mutation or target-layout permission.
 Encodings, dynamic caller dimensions, unequal counts and changed element types
 refuse. Without the explicit policy, the existing exact-shape binding applies.
 Physical model views and mutating operator schemas remain separate work.
+The separate [source-view profile](model_source_views.md) now recovers static
+transpose/positive stepped-slice relationships from parent SSA and binds them
+to actual source allocation pointers. It can coexist with these dense result
+reshapes under explicit binding v3; physical public alias/mutation remains open.
 
 Adapter operations have their own callsite provenance and binding roles.
 Original FX bytes remain under `parent/`; each kernel retains its TTIR,
@@ -42,6 +46,8 @@ Selecting this policy emits `t2m.model-kernel-binding.v2`, with
 view records. Legacy bindings retain v1. Old Merlin readers refuse v2 instead
 of ignoring the additional shape contract. Package verification rejects unknown
 profiles, schema downgrades and inconsistent payload declarations.
+Bindings that also select source tensor views emit v3 with both profiles;
+the dense shape checks below retain their original meaning.
 
 Merlin independently reopens the original parent call by ordinal. It checks
 identity, schema operands/results, captured scalar types/ranges, unencoded

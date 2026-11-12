@@ -36,6 +36,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Source model views](model_source_views.md) now bind static transposed/stepped
+tensor operands to owning state after independent parent-SSA and captured
+coordinate checks. Three complete i64/f32/BF16 models preserve all 21 results
+as exact words through native, Merlin host and actual Spike execution. The
+explicit v3 binding/profile retains the unchanged public model ABI. General
+physical alias/mutation, dynamic model interfaces and broader view/typed/kernel
+compositions remain completion requirements.
+
 [Source-effect target execution](target_effects.md) now retains real void and
 asserting entries, diagnostics and all mixed tensor results through actual
 Merlin/Spike images. Explicit call/outcome markers distinguish source assertions
@@ -56,7 +64,7 @@ required.
 |---|---|---|
 | Frontend and portable dataflow | Real shared conversion, logical grids, structured loops/branches, tiled contractions, reductions/scans and qualified shape/index operations. | Complete types/attributes/compositions and source versions; no generic arbitrary-kernel claim. |
 | Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering/reusable libraries, and selected complete RISC-V images executed on Spike. | Broader applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
-| Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars and explicit dense model value views. | Physical/non-dense/mutating model views, general value-returning TTIR entries/CFGs and broader runtime/alias compositions. |
+| Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars, explicit dense value reshapes and checked static transposed/stepped source views. | General physical/mutating model views, broader view/dynamic ABI forms, general value-returning TTIR entries/CFGs and runtime/alias compositions. |
 | Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
 | Numeric and effects | Qualified standard/FP8 casts, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, heterogeneous cast contracts, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |

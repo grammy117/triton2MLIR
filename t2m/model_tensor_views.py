@@ -19,11 +19,20 @@ def validate_profile(trace):
     if not isinstance(calls,list) or any(not isinstance(call,dict) for call in calls):
         raise ValueError("model binding requires complete call records")
     schema = trace.get("schema")
+    source_views = any("source_tensor_views" in call for call in calls)
+    if (source_views != ("source_tensor_view_binding_profile" in trace)
+            or source_views != (schema == "t2m.model-kernel-binding.v3")) or (
+            source_views != (trace.get("source_tensor_view_binding_profile") == "t2m.captured-source-tensor-views.v1")):
+        raise ValueError("source model views require their explicit v3 binding profile")
     if schema == "t2m.model-kernel-binding.v1":
         if "tensor_view_binding_profile" in trace or any("tensor_views" in call for call in calls):
             raise ValueError("dense model tensor views require binding schema v2")
         return False
-    if (schema != BINDING_SCHEMA or trace.get("tensor_view_binding_profile") != PROFILE
+    if schema == "t2m.model-kernel-binding.v3" and not any(call.get("tensor_views") for call in calls):
+        if "tensor_view_binding_profile" in trace:
+            raise ValueError("dense model tensor view profile lacks actual view adapters")
+        return False
+    if (schema not in (BINDING_SCHEMA,"t2m.model-kernel-binding.v3") or trace.get("tensor_view_binding_profile") != PROFILE
             or not any(call.get("tensor_views") == POLICY for call in calls)
             or any(call.get("tensor_views") not in (None,POLICY) for call in calls)):
         raise ValueError("unknown or incomplete model tensor view binding profile")

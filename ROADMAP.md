@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Source model tensor views](docs/model_source_views.md) now recover static
+transpose/stepped-slice coordinates from parent SSA and bind them to existing
+executable owning-root pointers. Three real i64/f32/BF16 models retain learned
+state, dependent updates, original snapshots and all 21 results through native,
+Merlin host and RISC-V/Spike execution. Binding v3 makes the additional source
+view contract explicit. General physical/mutating views, dynamic public model
+ABIs and arbitrary kernel/target closure remain open.
+
 [Observable target effects](docs/target_effects.md) now extend ordinary Merlin
 target execution to void entries, initially failing tensor entries and mixed
 diagnostic/result kernels. Calls, source bytes, independent outcomes, all

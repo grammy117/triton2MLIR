@@ -84,6 +84,15 @@ def test_bindings_cannot_drop_schema_operands_or_results(implementation):
         bind_model(model(), [KernelBinding("test::kernel", implementation, results=("unknown",))])
 
 
+@pytest.mark.parametrize("selected_first", (True, False))
+def test_selected_specialization_owns_its_operand_correspondence(implementation, selected_first):
+    selected = KernelBinding("test::kernel", implementation, scalar_arguments={"alpha": 1})
+    unrelated = KernelBinding("other::kernel", implementation, operands={"x": "y", "y": "x"}, scalar_arguments={"alpha": 1})
+    bindings = [selected, unrelated] if selected_first else [unrelated, selected]
+    bound = bind_model(model(two_calls=True), bindings)
+    assert [call["source_operand_bindings"] for call in bound.trace["calls"]] == [{"x": "x", "y": "y"}] * 2
+
+
 def test_guarded_scratch_counts_each_inlined_call_not_just_model_outputs(tmp_path, implementation):
     path = tmp_path / "source.ttir"
     path.write_text(implementation.source_ttir)

@@ -218,8 +218,10 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                           "optional consumer/host artifacts are explicit native-host compilation products; portable model.mlir remains the source",
                           *(["t2m.captured-source-layout.v1 binds every semantic source layout option to the original call's typed scalar attributes; both bundle verification and Merlin compiler staging reopen that call; this does not establish final GPU correspondence or grant consumer placement"]
                             if bound.trace.get("source_layout_binding_profile") == "t2m.captured-source-layout.v1" else []),
-                          *(["t2m.model-kernel-binding.v2 explicitly selects dense row-major tensor value reshapes with standard collapse/expand operations; source roots retain their exact element type/count and independent compiler shape/scratch checks; this grants no physical layout, alias, mutation or numerical permission; older binding readers refuse v2"]
+                          *(["t2m.captured-dense-tensor-views.v1 explicitly selects dense row-major tensor value reshapes with standard collapse/expand operations; source roots retain their exact element type/count and independent compiler shape/scratch checks; this grants no physical layout, alias, mutation or numerical permission; the binding schema explicitly names the selected profiles"]
                             if bound.trace.get("tensor_view_binding_profile") == "t2m.captured-dense-tensor-views.v1" else []),
+                          *(["t2m.model-kernel-binding.v3 requires t2m.captured-source-tensor-views.v1: original executable parent SSA proves static transpose/slice coordinates for extra schema tensor operands against a declared root; captured integer arguments must equal those coordinates and the actual allocation-bound source pointer; the kernel retains executable sharing and state; this grants no physical public model alias or mutation permission; older v1/v2 readers refuse v3"]
+                            if bound.trace.get("source_tensor_view_binding_profile") == "t2m.captured-source-tensor-views.v1" else []),
                           *(["t2m.captured-runtime-arguments.v1 materializes captured kernel scalar attributes as typed constants, with explicit RTNE f64-to-f32 rounding when declared; checked tensor/result shape casts preserve the original static model ABI and parent bytes; guarded scratch is derived independently for every original typed call; no evaluator archive supplies compiler values"]
                             if bound.trace.get("argument_binding_profile") == "t2m.captured-runtime-arguments.v1" else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
@@ -287,6 +289,9 @@ def verify_model_bundle(out):
     trace = json.loads((out / "kernel-bindings.json").read_text())
     from .model_tensor_views import validate_profile
     validate_profile(trace)
+    from .model_source_views import validate_model as validate_source_views
+    from .shared_tensor import parse_shared
+    validate_source_views(trace, parse_shared((out / "parent/model.mlir").read_text()))
     if ("source_layout_binding_profile" in trace
             or any("source_layout_specialization" in k for k in trace.get("kernels", {}).values())
             or any("source_layout_bindings" in c for c in trace["calls"])):

@@ -143,6 +143,12 @@ to those roots with explicit standard reshapes. Actual i64 and f32/f16/BF16
 model captures retain shared updates, learned state, tiling and all results
 through Merlin; the v2 binding contract and remaining physical-view work are explicit.
 
+[Source model views](docs/model_source_views.md) now bind actual transposed and
+stepped operands to an owning root after independent SSA/coordinate checks.
+Three i64/f32/BF16 models retain all seven results each through native, Merlin
+host and functional RISC-V/Spike execution. The explicit v3 binding profile
+preserves the public model ABI; general physical/mutating views remain open.
+
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts

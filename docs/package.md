@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Source model views](model_source_views.md) require
+`t2m.model-kernel-binding.v3` with
+`source_tensor_view_binding_profile: t2m.captured-source-tensor-views.v1`.
+Original parent SSA must establish each extra operand's static transpose/slice
+coordinates; captured typed scalars and the executable source root pointer
+binding must agree. Existing dense reshapes can coexist under their profile.
+Both producer verification and Merlin staging reopen these facts, including
+complete schema operand accounting. Older v1/v2 readers refuse v3. Public
+model ABI, data/reference bytes and receipt schemas remain unchanged. This
+profile grants no physical public alias/mutation or numeric permission.
+
 [Observable target effects](target_effects.md) add the external
 `t2m.spike-effect-qualification.v1` receipt with `matched-expected-outcome`.
 Actual void/result signatures and source capture/reference schemas stay

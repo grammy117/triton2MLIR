@@ -8,6 +8,11 @@ returned updated value; fresh write-only roots retain their complete initializat
 checks. This preserves source pointer sharing through the functional
 Merlin interface, including reads that observe earlier writes.
 
+[Captured source model views](model_source_views.md) now connect original
+transpose/stepped-slice tensor operands to these roots after independent
+coordinate and source-pointer checks. Model roots remain functional values;
+the explicit v3 binding supplies no physical public alias or mutation grant.
+
 ## Executable binding and hardware boundary
 
 The adapter builds a fresh public TTIR entry. It retains the original kernel
