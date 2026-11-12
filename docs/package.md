@@ -24,6 +24,16 @@ LLVM C API dependency. Public tensor/scalar ABI and receipt schemas are unchange
 older producers refuse this composition. Serialization supplies no numerical,
 effect, alias or source-equivalence permission.
 
+The complete native no-pass reader now precedes every shared source-parser
+fallback, including unselected/default profiles. Explicit global/per-cast FP8
+and selected assembly contracts become executable shaped arithmetic before
+pointer/descriptor/composite normalization or helper folding. Original and
+normalized graphs stay distinct. Assembly reports identify the arithmetic
+carrier; provider API, public ABI, source capsule and capture receipt schemas
+are unchanged. Older producers may refuse these compositions or lack their
+complete original audit. Hardware observations and unimplemented effects remain
+located refusals, including in unused private helpers.
+
 Original external descriptor arguments with per-cast policies additionally
 receive a source-only operation audit before their one-to-many field expansion.
 It grants no signature admission: the actual native field binding and full

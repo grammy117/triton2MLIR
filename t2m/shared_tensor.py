@@ -1211,57 +1211,36 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     optimizer = inspect_optimizer(optimizer)
     source_text = Path(source).read_bytes().decode("utf-8")
     pointer_report, original_inventory, native_source_print = None, None, None
+    protect_source = fp8_overflow is not None or assembly_provider is not None
     try:
         intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
         source_ir = work / "source/lowered.mlir"
-    except ConversionError as original_error:
-        if fp8_overflow == PER_CAST:
-            # Recover every source field before a greedy native pass can fold
-            # numeric contracts. This source-version printer runs no pass.
-            from .frontend import read_ttir_generic
-            native_source_print = read_ttir_generic(source, work / "native-source")
-            if native_source_print["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
-                raise ConversionError("original source changed during native source printing")
-            source_ir = work / "native-source/lowered.mlir"
-            intake = {"optimizer": optimizer.record}
-        else:
-            # Native Triton verifies source operations absent from this shared
-            # distribution before the bounded, source-inventoried intake adapter.
-            try:
-                pointer_report = expand_tensor_pointers(source, work / "tensor-pointers")
-            except ConversionError:
-                raise original_error
-            original_inventory = json.loads((work / "tensor-pointers/inventory.json").read_text())
-            if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
-                raise ConversionError("original source changed during tensor-pointer normalization")
-            intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
-            source_ir = work / "expanded-source/lowered.mlir"
+    except ConversionError:
+        # Every fallback needs the complete original audit before any native
+        # canonicalizer, including default/unselected source effects. A partial
+        # native inventory cannot validate fields that normalization discards.
+        from .frontend import read_ttir_generic
+        native_source_print = read_ttir_generic(source, work / "native-source")
+        if native_source_print["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
+            raise ConversionError("original source changed during native source printing")
+        source_ir = work / "native-source/lowered.mlir"
+        intake = {"optimizer": optimizer.record}
+        protect_source = True
     parsed = parse_shared(source_ir.read_text())
     from .contractions import needs_dot_precision_expansion
-    if fp8_overflow != PER_CAST and any(needs_dot_precision_expansion(op) for op in parsed.walk()):
-        # Check original effects/contracts before a greedy upstream pass can
-        # fold them. Only selected composite precision is deferred to its pass.
-        _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
-                   typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True,
-                   assembly_provider=assembly_provider)
-        validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
-        pointer_report = expand_tensor_pointers(source, work / "precision-intake")
-        original_inventory = json.loads((work / "precision-intake/inventory.json").read_text())
-        if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
-            raise ConversionError("original source changed during dot precision normalization")
-        intake = lower_with_shared(work / "precision-intake/lowered.mlir", work / "precision-source", optimizer=optimizer, stage="source")
-        parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
+    original_precision = any(needs_dot_precision_expansion(op) for op in parsed.walk())
+    protect_source = protect_source or original_precision
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     from .descriptor_arguments import has_parameters
-    deferred_descriptor_abi = native_source_print is not None and has_parameters({
+    deferred_descriptor_abi = protect_source and pointer_report is None and has_parameters({
         abi.entry: [str(type_) for operation in parsed.ops
                     if opcode(operation) == "tt.func" and operation.properties["sym_name"].data == abi.entry
                     for type_ in operation.properties["function_type"].inputs]})
     records = _preflight(parsed, None if deferred_descriptor_abi else abi,
         source_entry=abi.entry if deferred_descriptor_abi else None,
         id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
-        allow_composite_dots=fp8_overflow == PER_CAST, assembly_provider=assembly_provider)
+        allow_composite_dots=protect_source, assembly_provider=assembly_provider)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1273,17 +1252,18 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     # Per-operation numeric choices must become executable before helper
     # inlining/canonicalization can fold source casts or discard attributes.
     protected_inventory = None
-    if fp8_overflow == PER_CAST:
+    if protect_source:
         from .source_graph import inventory
         protected_inventory = inventory(parsed, records)
     early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow,
-        tensor_carrier="arith") if fp8_overflow == PER_CAST else []
+        tensor_carrier="arith") if protect_source else []
     assembly_reports = []
     if assembly_provider is not None:
         from .source_assembly import expand_source_assembly
         # Decode every original snippet before inlining or any greedy pass can
         # discard source operations based only on a caller's purity marker.
-        assembly_reports = expand_source_assembly(parsed, _source_ids, provider=assembly_provider)
+        assembly_reports = expand_source_assembly(parsed, _source_ids, provider=assembly_provider,
+            tensor_carrier="arith")
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1292,10 +1272,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     stream = StringIO()
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(parsed)
     annotated.write_text(stream.getvalue() + "\n")
-    if native_source_print is not None:
-        # Old pointer/descriptor types cannot reach shared's inliner yet.
-        # Casts are now executable standard arithmetic, so official version/
-        # pointer/dot normalization may safely precede that inliner.
+    if native_source_print is not None or deferred_descriptor_abi or original_precision:
+        # Source contracts are now executable standard arithmetic. Normalize
+        # old pointer/descriptor types and composite precision before shared's
+        # inliner can fold or discard the original source operations.
         pointer_report = expand_tensor_pointers(annotated, work / "tensor-pointers")
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         normalized = parse_shared((work / "expanded-source/lowered.mlir").read_text())
@@ -1315,11 +1295,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(normalized)
         annotated = work / "protected-native-normalized.ttir"
         annotated.write_text(stream.getvalue() + "\n")
-        for report in early_fp8_reports:
+        for report in [*early_fp8_reports, *assembly_reports]:
             report["source_graph"] = "original"
     lower_with_shared(annotated, work / "inline", optimizer=optimizer, stage="inline")
     middle_source = work / "inline/lowered.mlir"
-    protected_precision = fp8_overflow == PER_CAST and any(needs_dot_precision_expansion(op)
+    protected_precision = protect_source and any(needs_dot_precision_expansion(op)
         for op in parse_shared(middle_source.read_text()).walk())
     if protected_precision or not pointer_report and any(r["opcode"] in DESCRIPTOR_OPS for r in records):
         pointer_report = expand_tensor_pointers(middle_source, work / "tensor-pointers")
@@ -1345,7 +1325,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(normalized)
             middle_source = work / "protected-normalized.ttir"
             middle_source.write_text(stream.getvalue() + "\n")
-            for record in early_fp8_reports:
+            for record in [*early_fp8_reports, *assembly_reports]:
                 record["source_graph"] = "original"
     middle_module = parse_shared(middle_source.read_text())
     layout_maps, layout_witness = None, None

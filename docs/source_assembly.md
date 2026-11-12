@@ -3,7 +3,7 @@
 `shared-tensor --assembly-provider NAME` selects an installed optional source
 implementation from `triton2mlir.source_assembly.v1`. The provider decodes the
 complete selected snippet and returns executable standard scalar arithmetic or
-math. Tensor forms become parallel `linalg.generic` regions. Original tiles,
+math. Tensor forms become parallel Linalg computation. Original tiles,
 outer control flow, recurrence and result ordering remain visible to Merlin.
 The core pipeline contains no ISA instruction cases. Source language selection
 is independent of output hardware selection.
@@ -46,6 +46,41 @@ Public tensor/scalar ABI and receipt schemas are unchanged. Generated
 remaining effects/packing obligations. Original source IDs attribute the
 one-to-many standard expansion; `prov.composite_family="source_assembly"`
 retains the grouped computation on tensor regions.
+
+## Native normalization and the arithmetic carrier
+
+Stock Triton's descriptor/pointer normalizers do not register Tensor/Linalg.
+An actual descriptor load → decoded tensor program → descriptor store failed
+while parsing `tensor.empty`, before any descriptor rewrite. Protected source
+now lifts the same checked scalar recipe to shaped `arith`/`math`, dense
+constants and typed `tt.splat` broadcasts for captured scalars. The shared
+arithmetic pass later supplies parallel Linalg. Multiple inputs/results,
+predicate/select values, mixed integer widths and all original fields/SSA
+edges retain their meanings; no decoder or source numeric policy changes.
+
+The common `t2m.tensor_dag` carrier also serves early FP8 recipes. Explicit
+global/per-cast FP8 choices and source implementations expand before native
+normalization or helper folding. A complete source audit now precedes every
+source-parser fallback, including unselected/default effects. When shared's
+source-only parser rejects original types, the stock native no-pass reader
+retains every field first. Composite precision receives the same original
+snapshot and protected normalization before shared inlining. An unused private
+helper cannot hide an unimplemented hardware observation behind a purity flag.
+
+This reuses the existing upstream arithmetic conversion rather than a new
+arithmetic backend. Reviewed implementation/tests:
+
+- [Meta arithmetic conversion and legal dialects, 17f0c234](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/lib/Conversion/TritonArithToLinalg/TritonArithToLinalgPass.cpp).
+- [Meta typed splat/scalar conversion patterns](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/include/triton-shared/Conversion/TritonArithToLinalg/ConversionPatterns.hpp).
+- [Meta two-dimensional arithmetic fixture](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/test/Conversion/TritonArithToLinalg/convert_2d_elemwise_arith_binary.mlir).
+- [Archived Microsoft registration, 050b93ae](https://github.com/microsoft/triton-shared/blob/050b93ae9c737111f1ca425d793419b32427a971/lib/Conversion/TritonToLinalg/TritonToLinalg.cpp).
+
+Provider API v1, source profiles, public ABI and capsule/receipt schemas stay
+unchanged. Reports explicitly name `standard-elementwise-arith` where that
+carrier is used. Original operation IDs and `prov.composite_family` retain the
+algorithmic group; the source capsule/entry annotation retains complete original
+provider contracts. Hardware observations, memory/synchronization, broader
+packing/instructions and accelerator qualification remain open.
 
 ## Optional PTX integer profile
 

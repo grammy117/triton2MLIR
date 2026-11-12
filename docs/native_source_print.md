@@ -52,9 +52,11 @@ Primary implementation references:
 
 ## Package boundary and qualified scope
 
-The per-cast converter selects this reader when shared's source-only parser
-cannot accept the original source. It retains the complete original preflight
-graph, validates every source cast, and expands the existing arithmetic recipe.
+The converter selects this reader for every fallback when shared's source-only
+parser cannot accept the original source, including default/unselected profiles.
+It retains the complete original preflight graph and checks numeric/effect
+contracts before a native pass can discard fields or operations. Explicit
+FP8 and selected assembly recipes become standard shaped arithmetic first.
 Official pointer/descriptor normalization then precedes shared helper inlining.
 Normalized operations receive a separate preflight and ID namespace. Original
 descriptors, masks, logical grid and numerical intent remain explicit.
@@ -63,7 +65,7 @@ Compatibility metadata records the native reader separately from the shared
 optimizer. The native serialization report appears in provenance; the original
 source, complete typed graph and executable program remain receipt-bound.
 Public tensor/scalar ABI and package receipt schemas are unchanged. Older
-producers refuse these per-cast/source-version compositions. Serialization
+producers may refuse these source-version compositions. Serialization
 establishes a checked reader boundary, not numerical/source equivalence, memory
 permission or target qualification.
 

@@ -82,9 +82,11 @@ def load_provider(name):
     return load_provider(name)
 
 
-def expand_source_assembly(module, source_ids, *, provider):
+def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="linalg"):
     from .shared_tensor import opcode
 
+    if tensor_carrier not in ("linalg", "arith"):
+        raise ValueError("source assembly requires an explicit standard computation carrier")
     implementation, identity = load_provider(provider)
     reports = []
     for source in list(module.walk()):
@@ -151,7 +153,19 @@ def expand_source_assembly(module, source_ids, *, provider):
                 or any(v not in known for v in expansion.outputs) or not isinstance(expansion.contract, dict)):
             refuse("source assembly provider changed result types, arity or value custody")
         emitted = expansion.operations
-        if shapes:
+        if shapes and tensor_carrier == "arith":
+            from .tensor_dag import lift
+            try:
+                emitted, results = lift(emitted, dict(zip(arguments, operands, strict=True)), expansion.outputs, outputs[0])
+            except ValueError as error:
+                refuse(str(error))
+            if [value.type for value in results] != outputs:
+                refuse("source assembly tensor arithmetic changed its declared result interface")
+            for operation in emitted:
+                operation.location = source.location
+                operation.attributes["prov.composite_family"] = builtin.StringAttr("source_assembly")
+            Rewriter.replace_op(source, emitted, results)
+        elif shapes:
             body.add_ops(emitted)
             body.add_op(YieldOp(*expansion.outputs))
             empty = [tensor.EmptyOp([], t) for t in outputs]
@@ -169,6 +183,6 @@ def expand_source_assembly(module, source_ids, *, provider):
             "provider": identity, "assembly_sha256": hashlib.sha256(assembly.data.encode()).hexdigest(),
             "constraints": constraints.data, "packed_elements": 1, "contract": expansion.contract,
             "input_types": [str(t) for t in input_types], "output_types": [str(t) for t in output_types],
-            "expansion": "standard-scalar-dag-in-parallel-linalg" if shapes else "standard-scalar-dag",
+            "expansion": ("standard-elementwise-arith" if tensor_carrier == "arith" else "standard-scalar-dag-in-parallel-linalg") if shapes else "standard-scalar-dag",
             "physical_mapping": "undecided", "source_equivalence": "provider-specification-and-qualified-cases; not-universal-proof"})
     return reports

@@ -63,7 +63,7 @@ def protect(
         from .source_assembly import expand_source_assembly
 
         assembly = expand_source_assembly(
-            module, _source_ids, provider=assembly_provider
+            module, _source_ids, provider=assembly_provider, tensor_carrier="arith"
         )
     stream = StringIO()
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(

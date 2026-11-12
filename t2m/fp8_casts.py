@@ -181,23 +181,9 @@ def expand_fp8_casts(module, source_ids, *, overflow=None, tensor_carrier="linal
             # Native TTIR normalizers load standard arith/math, but not Linalg.
             # Tensorize the same scalar recipe before any of those passes.
             # The later shared arithmetic conversion supplies parallel Linalg.
-            output = original.results[0].type
-            shape = output.get_shape()
-            mapper = {block.args[0]: original.operands[0]}
-            tensor_operations = []
-            for operation in operations:
-                type_ = builtin.TensorType(operation.results[0].type, shape)
-                properties = dict(operation.properties)
-                if isinstance(operation, arith.ConstantOp):
-                    value = properties["value"]
-                    properties["value"] = builtin.DenseIntOrFPElementsAttr.from_list(type_, [value.value.data])
-                converted = type(operation).create(operands=[mapper[value] for value in operation.operands],
-                    result_types=[type_], attributes=dict(operation.attributes), properties=properties,
-                    location=operation.location)
-                mapper[operation.results[0]] = converted.results[0]
-                tensor_operations.append(converted)
-            narrowed = mapper[narrowed]
-            operations = tensor_operations
+            from .tensor_dag import lift
+            operations, (narrowed,) = lift(operations, {block.args[0]: original.operands[0]},
+                [narrowed], original.results[0].type)
             root = narrowed.owner
         elif shaped:
             terminal = YieldOp(narrowed)

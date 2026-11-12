@@ -45,6 +45,46 @@ def test_default_intake_still_refuses_undeclared_source_semantics(tmp_path):
     assert exc.value.opcode == "tt.elementwise_inline_asm" and exc.value.source_id
 
 
+@pytest.mark.skipif(not PROVIDER, reason="optional source provider required")
+@pytest.mark.parametrize("provider",[None,"ptx-integer-v1"])
+def test_unused_source_implementation_refuses_before_composite_dot_normalization(tmp_path,monkeypatch,provider):
+    from t2m import shared_tensor
+    from t2m.dynamic_abi import GridExtent
+    from t2m.examples.dot_precision_kernels import precision_tiled_dot
+    from t2m.frontend import capture_ttir
+    from t2m.ir import text
+    from t2m.scalar_abi import RuntimeScalar
+    from t2m.shared_tensor import opcode,parse_shared
+    from t2m.upstream import lower_with_shared
+    from xdsl.ir import Region
+
+    path = tmp_path / "source.ttir"
+    path.write_text(capture_ttir(precision_tiled_dot,
+        {name:"*fp32" if i < 4 else "i32" if i < 7 else "constexpr" for i,name in enumerate(precision_tiled_dot.arg_names)},
+        {"BM":16,"BN":16,"BK":32,"PRECISION":"bf16x3"}))
+    lower_with_shared(path,tmp_path / "generic",optimizer=OPT,stage="source")
+    module = parse_shared((tmp_path / "generic/lowered.mlir").read_text())
+    block = Block(arg_types=[builtin.i32])
+    asm = builtin.UnregisteredOp.with_name("tt.elementwise_inline_asm").create(
+        operands=[block.args[0]],result_types=[builtin.i32],properties={
+            "asm_string":builtin.StringAttr("mov.u32 $0, %clock;"),"constraints":builtin.StringAttr("=r,r"),
+            "pure":builtin.IntegerAttr.from_bool(True),"packed_element":builtin.IntegerAttr(1,builtin.i32)})
+    block.add_ops([asm,builtin.UnregisteredOp.with_name("tt.return").create(operands=list(asm.results))])
+    helper = builtin.UnregisteredOp.with_name("tt.func").create(properties={
+        "sym_name":builtin.StringAttr("unused_hardware_observation"),"sym_visibility":builtin.StringAttr("private"),
+        "function_type":builtin.FunctionType.from_lists([builtin.i32],[builtin.i32])},regions=[Region(block)])
+    module.body.block.add_op(helper)
+    assert any(opcode(op) == "tt.dot" for op in module.walk())
+    path.write_text(text(module))
+    abi = TensorABI("precision_tiled_dot",(TensorBuffer("x",("m","k")),TensorBuffer("y",("k","n")),
+        TensorBuffer("initial",("m","n")),TensorBuffer("out",("m","n"),"write")),
+        grid=(GridExtent("m",16),GridExtent("n",16)),runtime_scalars=tuple(RuntimeScalar(name,"i32",i,bounds=(0,65))
+            for i,name in enumerate(("m","n","k"),4)))
+    monkeypatch.setattr(shared_tensor,"expand_tensor_pointers",lambda *_a,**_kw:pytest.fail("source implementation reached normalization before decoding"))
+    with pytest.raises(ConversionError,match="qualified|hardware|instruction|operand|register"):
+        convert(path,abi,tmp_path / "translation",assembly_provider=provider)
+
+
 def test_missing_provider_cannot_become_an_opaque_success(tmp_path):
     path, abi = source(tmp_path)
     with pytest.raises(ValueError, match="exactly one installed"):
