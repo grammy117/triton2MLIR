@@ -39,6 +39,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 The [overall status](status.md) groups progress by end-goal milestones rather
 than the most recent fixture. The pipeline and model interface work end to end;
 full source/type/attribute/composition and applicable target coverage do not.
+[Closed pointer-integer displacement expressions](pointer_addresses.md) now
+recover actual logical bases and paired modular offsets through four typed
+native/Merlin host/Spike kernels. Scalar gather/scatter reuses the existing
+unit carrier in all memory profiles. Seven libraries replay 25 further domains;
+the combined inventory reopens 113 packages and 81 standalone qualifications,
+retaining all fifty observed names and the existing refusal denominator.
+Escaping physical observations and arbitrary integer-valued region/alias/effect
+compositions remain further work.
 Decoded descriptor arithmetic now retains six standalone kernels and two
 complete i32/i64 models through native/Merlin host/Spike, with all fourteen
 results exact and 26 additional host replays. The complete original audit now
@@ -336,8 +344,10 @@ memory fixture while leaving the missing families unexamined.
   or publication. Synchronization may disappear only after dependency proofs;
   difficult effects cannot simply be erased.
 - **Logical versus physical addresses/descriptors:** ordinary logical views
-  and external descriptor fields work today. Raw descriptor bytes, pointer
-  integers or hardware observations need an explicit compatible address/state
+  and external descriptor fields work today. Closed byte-displacement pointer
+  integers now re-raise without physical identity under checked use/divisibility
+  analysis. Raw descriptor bytes, escaping pointer integers or hardware
+  observations need an explicit compatible address/state
   contract and real consumer implementation.
 - **Numeric backend contracts:** selected IEEE/FTZ/low-precision and per-cast
   profiles are explicit. Protected mixed-cast/composite-dot qualifications do

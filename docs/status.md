@@ -16,7 +16,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Part of the goal | Working capability | Practical limit |
 |---|---|---|
 | Portable computation | Standard Linalg/Tensor/SCF/arith/math/cf; tiled contractions, runtime K reuse, reductions/scans, branches, loops and selected packed computation. | Every type, attribute, region and composition is not yet qualified. |
-| Memory and state | Masks/fills, signed runtime strides, selected pointers, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
+| Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
 | Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state and selected source tensor views. | General physical/mutating views, dynamic public model ABIs, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
@@ -38,8 +38,8 @@ fallback is not counted as portable success.
 ## What the measurements establish
 
 The maintained inventory at
-`out/grouped-memory-model-inventory/coverage.json` reopens **106 packages,
-74 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/closed-pointer-address-inventory/coverage.json` reopens **113 packages,
+81 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
@@ -61,6 +61,14 @@ The newest descriptor/assembly selection reopens six standalone kernels and two
 complete models: eight actual target images, fourteen exact-word results and
 26 additional host runtime replays. The [source assembly contract](source_assembly.md)
 records this finite selection; it does not establish arbitrary assembly/effects.
+
+[Closed pointer-integer arithmetic](pointer_addresses.md) now additionally
+recovers actual logical bases and proved byte displacements without materializing
+physical addresses. Four i8/i16/i32/i64 kernels pass native/Merlin host/Spike.
+Three scalar-memory libraries add all-profile mask/state handling; the seven
+libraries replay 25 additional runtime invocations. Escaping address values stay
+explicit refusals. This adds a portable implementation for another concrete
+semantic family, while general addresses/effects and target scope remain open.
 
 ## What still separates this from the end goal
 

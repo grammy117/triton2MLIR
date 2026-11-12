@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Closed pointer-integer expressions](pointer_addresses.md) are an equivalent
+logical representation under checked use closure and byte divisibility: original
+bases and modular offsets replace unobserved absolute integers. Source casts,
+widths, pairing and locations remain inventoried and annotated; physical address
+observations are not granted by this transformation. Scalar gather/scatter
+additionally reuses the existing one-element carrier in tensor/buffer profiles,
+retaining source masks/fills and all memory gates. Both changes are explicit in
+`compatibility.json`; public ABI, source capsule and receipt schemas are unchanged.
+
 [Per-cast FP8 semantics](per_cast_fp8.md) add the explicit software source
 selection `fp8_overflow="per-cast"`. Each nonidentity TTIR-to-FP8 cast requires
 its own semantic `t2m.fp8_overflow` StringAttr; `prov.*` grants no choice.

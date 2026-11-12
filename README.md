@@ -3,6 +3,13 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Closed pointer-integer expressions](docs/pointer_addresses.md) now recover
+logical bases and checked byte displacements without choosing physical addresses.
+Four integer widths pass native/Merlin host/Spike; scalar masks/state additionally
+qualify in all memory profiles. The current combined inventory reopens 113
+packages and 81 standalone qualifications; arbitrary address/effect/target
+coverage remains incomplete.
+
 [Decoded descriptor arithmetic](docs/source_assembly.md#native-normalization-and-the-arithmetic-carrier)
 now preserves selected source word programs through original descriptor fields,
 owning allocation state and complete learned-state model captures. Six kernels

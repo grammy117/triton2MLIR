@@ -4,6 +4,14 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Closed pointer-integer displacement expressions](docs/pointer_addresses.md)
+now re-raise modular address arithmetic into actual logical pointer bases and
+proved element offsets, preserving selections, tiling and source casts. Four
+i8/i16/i32/i64 kernels pass native/Merlin host/Spike. Three scalar-memory libraries
+also retain masks/state in all profiles, with 25 total additional host replays.
+The combined inventory reopens 113 packages and 81 standalone qualifications.
+Escaping addresses and general region/alias/effect/target closure remain open.
+
 [Decoded descriptor arithmetic](docs/source_assembly.md#native-normalization-and-the-arithmetic-carrier)
 now composes selected source word programs with original descriptor parameters,
 allocation-root recurrences and complete i32/i64 learned-state models. Six

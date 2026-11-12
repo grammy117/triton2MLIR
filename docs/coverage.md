@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Closed pointer-integer expressions](pointer_addresses.md) now retain original
+bases, modulo-i64 byte displacements and paired selections through native,
+Merlin host and actual Spike. Four i8/i16/i32/i64 target results match exact
+words. Three additional scalar-memory libraries preserve masked reads/writes
+in all memory profiles. The seven libraries replay 25 more runtime invocations;
+all twenty focused checks pass, including located physical escape, alignment,
+overflow and proof-budget refusals. Their receipts and a public i64 CLI capture
+reopen in `out/closed-pointer-addresses/summary.json`.
+The combined `out/closed-pointer-address-inventory/coverage.json` reopens
+**113 packages, 81 standalone qualifications and fourteen product cases**.
+All 50 pinned definition names remain observed in selected native/Merlin-host
+captures. Older selections below retain their historical scope. General
+address observations, source versions, region/alias/effect compositions and
+applicable targets remain unqualified.
+
 [Decoded descriptor word programs](source_assembly.md#native-normalization-and-the-arithmetic-carrier)
 now add six standalone kernels and two complete learned-state models through
 native, Merlin host and actual Spike. All fourteen complete target results

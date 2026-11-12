@@ -684,6 +684,8 @@ def _functionalize(module, abi):
             index = _integer(owner.inputs[0])
         elif isinstance(owner, arith.ConstantOp) and isinstance(owner.value, builtin.DenseIntOrFPElementsAttr):
             index = next(iter(owner.value.get_values()))
+        elif isinstance(owner, tensor.FromElementsOp) and len(owner.operands) == 1:
+            index = _integer(owner.operands[0])
         else:
             raise ConversionError("unit gather/scatter index is not established constant zero", opcode=opcode(op))
         type_ = op.operands[2].type if store else op.results[0].type
@@ -1328,6 +1330,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             for record in [*early_fp8_reports, *assembly_reports]:
                 record["source_graph"] = "original"
     middle_module = parse_shared(middle_source.read_text())
+    from .pointer_addresses import normalize_pointer_addresses
+    pointer_address_reports = normalize_pointer_addresses(middle_module, _source_ids)
     layout_maps, layout_witness = None, None
     if source_layout is not None:
         from .map_layout import prepare
@@ -1338,7 +1342,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if byte_order is not None:
         from .typed_storage import prepare
         abi, storage_transport = prepare(middle_module, abi, _source_ids, byte_order)
-    if boolean_reports:
+    if boolean_reports or pointer_address_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "boolean-intake.ttir"
@@ -1382,7 +1386,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports = expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
+    if storage_transport or pointer_address_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1430,6 +1434,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
             "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
+    transformations.extend(pointer_address_reports)
     transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
@@ -1462,6 +1467,14 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, byte_order=byte_order)
         result = witness = None
     else:
+        if any(opcode(op) in ("tts.gather", "tts.scatter") and not isinstance(op.operands[1].type, TensorType)
+                for op in lowered.walk()):
+            # Reuse the checked scalar-event carrier already used by guarded
+            # memory, including the independent native memory continuation.
+            from .guarded_memory import normalize_scalars
+            scalar_events = normalize_scalars(lowered, _source_ids)
+            transformations.append({"kind": "scalar-memory-unit-carrier", "events": scalar_events,
+                "expansion": "one-element-tensor-with-original-predicate-and-defined-fill"})
         result = witness = _functionalize(lowered, abi)
     auxiliary = {}
     if source_words:
@@ -1528,6 +1541,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         next(iter(result.ops)).attributes["prov.logical_byte_views"] = StringAttr(json.dumps(byte_views, sort_keys=True))
     if word_views:
         next(iter(result.ops)).attributes["prov.logical_word_views"] = StringAttr(json.dumps(word_views, sort_keys=True))
+    if pointer_address_reports:
+        next(iter(result.ops)).attributes["prov.closed_pointer_addresses"] = StringAttr(json.dumps(pointer_address_reports, sort_keys=True))
     emitted = []
     # The public function is rebuilt in standard-memory profiles as well as
     # tensor profiles. Keep the caller's description at that common boundary.

@@ -62,6 +62,9 @@ class TileFacts:
             if not isinstance(value.type, TensorType):
                 return node
             name = getattr(op, "name", "")
+            if name == "tensor.from_elements" and value.type.get_shape() == (1,) and len(op.operands) == 1:
+                node = Node(op.operands[0], bindings=node.bindings, indices=node.indices)
+                continue
             if name == "linalg.fill":
                 node = Node(op.inputs[0], bindings=node.bindings, indices=node.indices)
                 continue
