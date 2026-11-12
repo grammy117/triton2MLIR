@@ -60,6 +60,17 @@ templates, substituted at the original control location. The parent receives
 arithmetic conversion only. No source annotation or kernel name selects this
 path, and pointer conversion is not repeated on already converted events.
 
+Single rank-one offsets with runtime products now select that same event path.
+The whole-function pipeline had scalarized F32 runtime-stride pointers into
+generic Linalg before establishing structured state. The selector follows the
+actual pointer-offset DAG and reuses the native base/offset templates; it does
+not replace signed arithmetic, masks or original control positions. Static
+literal-stride offsets retain their existing route. Rank-one F32 load/store
+libraries preserve every output word and readonly input through native/Merlin
+host and actual Spike execution, including NaN words and source padding. Each
+host library also replays empty roots, changed strides and runtime rounding
+flags, and rejects invalid active bounds.
+
 The existing bounds, initialization, ordinary ownership/lane uniqueness and
 private atomic gates remain executable. Runtime field values drive actual
 loads, padding, stores and reducing operations. Non-contiguous tile transfers

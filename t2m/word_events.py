@@ -53,6 +53,34 @@ def needs_isolation(module):
 
     if any(opcode(op) == "tt.addptr" and nested_offset(op.operands[0]) for op in module.walk()):
         return True
+    # A single rank-one pointer update can also contain a runtime stride.
+    # Whole-function arithmetic conversion may scalarize that pointer into
+    # Linalg before it becomes structured state. Reuse native event templates
+    # for the actual offset DAG, preserving every signed product and mask.
+    def constant(value):
+        owner = value.owner
+        if not hasattr(owner, "operands"):
+            return False
+        name = opcode(owner)
+        if name == "arith.constant":
+            return True
+        return (name in ("tt.splat", "tt.broadcast", "tt.expand_dims", "tt.reshape", "tt.trans",
+                         "arith.extsi", "arith.extui", "arith.trunci", "arith.index_cast")
+                and len(owner.operands) == 1 and constant(owner.operands[0]))
+
+    def runtime_product(value, seen):
+        if value in seen:
+            return False
+        seen.add(value)
+        owner = value.owner
+        if not hasattr(owner, "operands"):
+            return False
+        if opcode(owner) == "arith.muli" and all(not constant(v) for v in owner.operands):
+            return True
+        return any(runtime_product(v, seen) for v in owner.operands)
+
+    if any(opcode(op) == "tt.addptr" and runtime_product(op.operands[1], set()) for op in module.walk()):
+        return True
     word_atomics = (any(opcode(op) == "tt.atomic_rmw" for op in module.walk())
         and any(opcode(op) == "tt.bitcast" and any(_pointer_type(v.type) for v in op.results) for op in module.walk()))
     mapped_pointers = any(opcode(op) == "tt.map_elementwise"
