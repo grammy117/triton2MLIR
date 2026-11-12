@@ -12,6 +12,9 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(item.get("kind") == "associative-scan-network" and item.get("combiner_control_flow")
+           for item in trace.get("transformations", [])):
+        differences.append("associative scan combiners retain complete pure scalar if/for/while regions and uniform captures in each standard parallel doubling stage; derived control counts and source IDs describe the original body while operand order, tuple types, per-event loop state and locations remain executable; source associativity is a premise, not a provenance grant or proof for surrounding arithmetic; all scan candidates validate before edits; public tensor/scalar ABI, receipt schemas and compiler artifact rosters are unchanged; memory/effectful combiners and accelerator implementation remain separate capabilities")
     if "control_flow_normalization" in trace:
         differences.append("multi-block TTIR uses a typed TT/function interface bridge to LLVM's official lift-cf-to-scf pass before memory conversion; the original source graph includes block arguments and successor edges while emitted IDs reference the separately preflighted structured graph; six additional compiler source artifacts bind the actual pass and source/normalized bytes; source custody grants no arithmetic/effect/source-equivalence authority, and public tensor/scalar ABI and receipt schemas are unchanged; consumer support is required to retain this additional CFG evidence")
     if any(item.get("kind") == "closed-pointer-integer-displacement" for item in trace.get("transformations", [])):

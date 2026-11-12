@@ -28,8 +28,23 @@ the source associative-scan operation; ordinary surrounding arithmetic is not
 given a reassociation permission.
 
 The current profile accepts equal positive static tensor shapes and inlined
-scalar `arith` / `math` combiners. Unsupported regions/effects receive located
-refusals. Tests execute f32/i32 sums, products and maxima, forward/reverse tails,
+pure scalar `arith` / `math` computation, including nested `scf.if`, `scf.for`
+and `scf.while` value regions. Every nested operation, block argument and captured
+value is checked structurally; unknown operations, tensors, pointers, memory,
+calls and observable effects receive located refusals, including unused effects
+inside an unselected branch or a one-element scan. All source scan candidates
+validate before any expansion is attached. Original loops and yields are cloned
+into each parallel stage, preserving per-invocation state and source locations.
+Direct uniform scalar return captures also remain executable.
+
+Structured combiners add derived `prov.scan_combiner_control` counts on each
+stage and `combiner_control_flow`/`combiner_source_ids` in the transformation
+record. These describe the actual source body and grant no associativity,
+numeric, memory or termination proof. The scan's associative contract remains
+the source premise; arbitrary surrounding arithmetic gets no reassociation.
+No loop is unrolled or replaced with a recognized mathematical function.
+
+Tests execute f32/i32 sums, products and maxima, forward/reverse tails,
 two-axis tuple scans with an associative noncommutative affine-composition
 combiner, and a single-element negative-zero case. Unit source dimensions may
 have structured stride zero; broadcast nonunit axes remain outside that rule.
@@ -40,3 +55,28 @@ general irregular-memory support from this rule.
 Actual model2MLIR sum/product and tuple-result scan models now pass complete
 native comparison against their unchanged PyTorch captures and optional Merlin
 interface/runtime generation. See [the model recipe](model_integration.md).
+
+## Structured combiner qualification
+
+The original real Triton segmented scan refused at its scalar `scf.if`.
+It now retains a noncommutative `(value, head)` combiner, mixed tuple types and
+source padding through all three memory profiles. Separate real kernels retain
+modular multiplication's actual shift/add `for` loop and Euclid's remainder/
+`while` recurrence. Both traversal directions execute correctly. No source
+operation is replaced by an opaque segment/product/GCD call.
+
+Fourteen native cases cover i32/i64 and selected exact f32 values, forward/reverse
+traversal, empty/singleton/ragged runtime domains, modular overflow and values
+above 2^53. Ten actual Merlin libraries and Spike images retain all sixteen
+standalone results as exact words; forty further host invocations reuse the same
+libraries. Thirteen direct contract cases check nested unused effects,
+all-candidate validation before edits and direct captured scalar returns. The
+existing scan/model/control and structured-state regression selection passes
+52 checks. Effectful combiners, arbitrary arithmetic/source-version compositions
+and accelerator correctness/performance remain open.
+
+The surveyed Meta and archived Microsoft converters register the same restricted
+`CumSumConverter`; their addition-only `cumsum.mlir` fixture remains the upstream
+reference. The structural-region extension uses existing standard SCF and Linalg
+cloning; it introduces no source dialect, target mapping or new runtime helper.
+Public ABI, receipt schemas and compiler artifact rosters are unchanged.
