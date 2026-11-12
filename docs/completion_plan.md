@@ -58,7 +58,14 @@ v2. Pointer and descriptor recurrences pass native/Merlin host/Spike and eight
 host replays. A complete model retains learned weights, dependent calls, an
 empty result and its live original snapshot across all four results through
 those execution boundaries. Broader contraction/numeric/effect/binding closure
-and applicable targets remain required.
+and applicable targets remain required. Allocated mixed FP8/composite contractions
+now also qualify pointer/descriptor BF16x3/x6 and TF32x3 libraries through native,
+Merlin host and Spike, with 24 unchanged-library runtime replays. Two complete
+models preserve ragged logical GEMM, padded owning inputs, dependent/zero-K calls
+and all eight results as exact words through those execution boundaries.
+Pre-wrapper precision and cast intent remain separate from bound/normalized
+graphs on the entry and named contractions. Broader typed/alias, external
+implementation, packed/effectful and applicable target compositions remain open.
 
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured
@@ -276,8 +283,10 @@ memory fixture while leaving the missing families unexamined.
    original block-pointer/local-descriptor forms before cast expansion and
    normalization. Source capsule v2 additionally protects allocation wrappers;
    selected pointer/descriptor recurrences and a complete enclosing model now
-   qualify. Extend contraction, typed/byte alias, external implementation and
-   effect combinations across that boundary, plus broader source versions;
+   qualify. Allocated BF16x3/x6 and TF32x3 contractions and two complete models
+   now additionally pass with original C, runtime tails and source intent retained.
+   Continue typed/byte alias, external implementation, packed/effectful and
+   broader contraction combinations across that boundary, plus source versions;
    finite pointer/precision/loop/model cases do not close those compositions.
    Reuse official expansions where their semantics agree; preserve source
    width, rounding boundaries, accumulator order and recurrence. Implement

@@ -43,6 +43,20 @@ allocation CLI capture. This is a separate finite selection, leaving the
 106-package inventory unchanged. Broader numeric/effect/binding and accelerator
 closure remain unqualified.
 
+[Allocated mixed-precision contractions](per_cast_fp8.md#allocated-tiled-contractions)
+add six pointer/descriptor BF16x3/x6 and TF32x3 libraries with shared C/output
+state, signed input/output strides and preserved K reuse. Six actual Spike
+results match every allocation word; 24 further host runtime domains reuse
+unchanged libraries. Invalid C bounds and original cast contracts refuse.
+Two complete learned-state models additionally retain padded owning inputs,
+ragged logical 17x5x37 GEMM, dependent calls, zero K and a live original C snapshot.
+All eight model results match exact words through native/Merlin host/Spike.
+Original source policies/precision remain separately annotated after descriptor
+normalization. The eight target receipts and fourteen complete results reopen
+in `out/spike-protected-allocation-contractions/summary.json`. This separate
+finite selection leaves the 106-package inventory unchanged and establishes
+no arbitrary numeric/effect/binding or accelerator closure.
+
 [Source model views](model_source_views.md) add three real i64/f32/BF16
 captures with transposed and stepped-slice operands, dependent root updates,
 empty views and live original snapshots. All 21 model results match exact

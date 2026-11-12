@@ -50,7 +50,14 @@ before initial normalization too, with explicit source capsule v2. Two pointer/
 descriptor libraries pass native/Merlin host/Spike and eight host runtime replays;
 a complete learned-state model retains three calls, dependent updates, all four results
 and a live original snapshot through those execution boundaries. Broader
-contraction/numeric/effect/binding compositions remain unqualified.
+numeric/effect/binding compositions remain unqualified. Allocated BF16x3/x6 and
+TF32x3 contractions now also pass six pointer/descriptor target cases and 24
+runtime host replays. Two complete models preserve ragged logical GEMM, padded
+owning inputs, dependent calls, zero K and all eight results as exact words
+through native/Merlin host/Spike. Pre-wrapper source precision stays annotated
+separately from the normalized partials. This expands finite composition
+evidence; broad effect, alias, packing, numeric and accelerator closure remains
+unfinished.
 
 ## What still separates this from the end goal
 

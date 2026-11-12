@@ -19,6 +19,12 @@ complete learned-state model. Pointer/descriptor recurrences and all four model
 results pass native/Merlin host/Spike. Broader source versions, binding/numeric/
 effect compositions and accelerator qualification remain open.
 
+[Allocated composite contractions](docs/per_cast_fp8.md#allocated-tiled-contractions)
+now also preserve BF16x3/x6 and TF32x3 with mixed cast policies, shared C/output
+state, signed strides and K reuse. Six source cases and two complete learned-state
+models pass native/Merlin host/Spike; all fourteen target results match exact
+words. Original precision remains separately annotated after descriptor expansion.
+
 [Source effects on the target](docs/target_effects.md) now preserve actual void
 entries, assertions, diagnostics and returning tensors through Merlin/Spike.
 Checked invocation/outcome markers and separate source-byte frames distinguish

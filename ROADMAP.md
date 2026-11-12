@@ -25,6 +25,14 @@ libraries pass native/Merlin host/Spike plus eight runtime host replays; the
 learned-state model retains all four results and its original snapshot through
 those execution boundaries. Broader source versions, binding/numeric/effect
 compositions and accelerator qualification remain open.
+[Allocated composite contractions](docs/per_cast_fp8.md#allocated-tiled-contractions)
+now additionally preserve BF16x3/x6 and TF32x3 across six pointer/descriptor
+libraries, actual Spike results and 24 further host runtime domains. Two
+complete models retain padded owning inputs, ragged logical GEMM, dependent/
+zero-K calls, a live original C snapshot and all eight results as exact words
+through native/Merlin host/Spike. Source numeric intent stays explicit after
+descriptor expansion; broader numeric/effect/alias/packing and target closure
+remains required.
 
 [Source model tensor views](docs/model_source_views.md) now recover static
 transpose/stepped-slice coordinates from parent SSA and bind them to existing

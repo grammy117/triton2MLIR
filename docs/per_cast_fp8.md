@@ -166,3 +166,52 @@ as exact words. The separate receipt selection is
 `out/spike-protected-fp8-allocations/summary.json`. Broader source versions,
 binding/numeric/effect compositions, source backend correspondence and
 accelerator execution remain in the completion denominator.
+
+## Allocated tiled contractions
+
+Actual pointer and external-descriptor kernels now combine three independent
+FP8 contracts with BF16x3, BF16x6 or logical TF32x3 inside a runtime K loop.
+The source private helper retains residual F32 additions on both inputs and
+the loop-carried accumulator before its dot. Shared C/output allocation state,
+16x16 output tiles, 32-element K reuse, masks and runtime signed strides remain
+executable. Official composite-dot passes supply the ordered partials; original
+C is added at its declared boundary, rather than once per partial.
+
+All six source/precision cases pass native, Merlin host and actual Spike
+execution with exact complete allocation-word references. Twenty-four further
+invocations reuse unchanged host libraries across reversed input strides,
+multi-program M/N tails, zero K and empty M. Invalid active C origins abort
+without a success receipt; invalid original cast policies refuse before native
+normalization. The eight focused checks pass. Independent rational cast palettes
+and ordered partial-dot arithmetic supply the references, with actual NumPy
+owning-buffer views establishing the signed addresses. These finite cases do
+not qualify unspecified GPU cast/Tensor Core behavior or accelerator performance.
+
+Descriptor normalization may expand the dot before allocation binding. New
+`prov.allocation_source_contracts` and `prov.allocation_original_dot_precisions`
+annotations retain the pre-wrapper hash, exact selected policies, original
+precision, operand types and caller intent separately from the bound graph.
+Entry and named contractions carry that source context without claiming a
+partial-to-original bijection or granting arithmetic semantics. ABI and existing
+capsule/receipt schemas stay unchanged.
+
+Two complete model2MLIR captures additionally qualify descriptor/BF16x3 and
+pointer/TF32x3 compositions. Each retains learned padded input roots, logical
+17x5x37 GEMM, two dependent full-K calls, a zero-K call and a live original C
+snapshot. All four results per model match exact words through native, Merlin
+host and actual Spike execution. Parent source/data/weights remain unchanged.
+Original typed precision-code and descriptor-choice arguments must match the
+selected call specialization; wrong choices refuse. Two distinct scalar
+specializations serve the three call sites, preserving the reusable source
+program rather than requiring one binding per call ordinal.
+
+Padding belongs to the example's owning inputs, making its original Python
+descriptor construction valid while retaining ragged logical K/N dimensions.
+The portable entry keeps logical signed strides; the standalone runtime cases
+also qualify nonaligned stride values under the explicit logical-field profile.
+No physical GPU descriptor ABI/alignment or target performance is inferred.
+All eight target images and fourteen complete results, the 24 host replays and
+a public original-source allocation CLI capture reopen separately in
+`out/spike-protected-allocation-contractions/summary.json`. The older 106-package
+inventory is unchanged; arbitrary type/attribute/effect/model and accelerator
+closure remain open.
