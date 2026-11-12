@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Decoded descriptor arithmetic](docs/source_assembly.md#native-normalization-and-the-arithmetic-carrier)
+now composes selected source word programs with original descriptor parameters,
+allocation-root recurrences and complete i32/i64 learned-state models. Six
+kernels and two models retain all fourteen exact-word results through native,
+Merlin host and actual Spike, with 26 additional unchanged-library host replays.
+Original source auditing precedes every normalization fallback, including
+default/unselected effects and unused helpers. Broader instructions, packing,
+shared/external effects and applicable targets remain completion requirements.
+
 [Mixed FP8 source policies](docs/per_cast_fp8.md) now retain independent
 per-cast overflow/infinity semantics in one kernel. Standard expansions precede
 helper inlining/folding; eight format/mode cases execute through Merlin host

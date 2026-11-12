@@ -3,6 +3,13 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Decoded descriptor arithmetic](docs/source_assembly.md#native-normalization-and-the-arithmetic-carrier)
+now preserves selected source word programs through original descriptor fields,
+owning allocation state and complete learned-state model captures. Six kernels
+and two models pass native/Merlin host/Spike with all fourteen results exact and
+26 additional host runtime replays. Complete source auditing precedes every
+native normalization fallback; broader effects/instructions/packing remain open.
+
 [Protected mixed-precision intake](docs/per_cast_fp8.md#protected-composite-precision)
 now expands per-cast FP8 contracts before official composite-dot normalization.
 Original and normalized graphs remain distinct, while standard MLIR retains

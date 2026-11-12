@@ -82,6 +82,27 @@ algorithmic group; the source capsule/entry annotation retains complete original
 provider contracts. Hardware observations, memory/synchronization, broader
 packing/instructions and accelerator qualification remain open.
 
+`tests/test_assembly_descriptor_intake.py` now qualifies six i32/i64 standalone
+kernels: four owning-allocation recurrences and two original external-descriptor
+field interfaces. The tuple programs retain mixed-width shift counts, signed
+predicates, initialized predicated updates, two ordered results and full-width
+word arithmetic. Runtime aliases, reversed strides, ragged/empty domains,
+zero steps and oversized/negative-as-unsigned counts replay unchanged libraries
+26 times. Unknown hardware observations refuse before native passes, including
+unused private helpers and the unselected/default source path.
+
+`scripts/capture_assembly_descriptor_model.py` and
+`tests/test_assembly_descriptor_model.py` additionally qualify genuine i32/i64
+model2MLIR captures. Learned word tensors, two dependent updates, an empty call
+and the live original snapshot retain all four model results each. Original
+weights, inputs, complete reference archives and source capsules remain
+byte-identical. All six kernels and both models execute through native, Merlin
+host and actual RISC-V/Spike; every one of the fourteen target results matches
+exact words. Independently reopened receipts and the public original-source
+allocation CLI capture are selected in `out/spike-assembly-descriptors/summary.json`.
+This finite selection leaves the older 106-package inventory unchanged and
+does not qualify broader instructions, effects, packing or accelerators.
+
 ## Optional PTX integer profile
 
 Semantics follow [NVIDIA PTX ISA 8.7](https://docs.nvidia.com/cuda/archive/12.8.0/parallel-thread-execution/index.html):

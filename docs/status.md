@@ -6,7 +6,12 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
-## Established paths
+## Progress against the end goal
+
+The project has passed the minimum demo and basic interface stages. Real
+kernels and enclosing model captures can already travel through the complete
+pipeline. The remaining work is to make that working path cover the full
+declared source and consumer scope, rather than establish another frontend.
 
 | Part of the goal | Working capability | Practical limit |
 |---|---|---|
@@ -16,6 +21,13 @@ executes correctly on each applicable qualified target.
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
 | Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state and selected source tensor views. | General physical/mutating views, dynamic public model ABIs, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
 | Consumer execution | Real native execution, reusable Merlin host libraries and selected complete model/kernel images executed on RISC-V/Spike. | Functional CPU execution does not qualify accelerators, hardware placement or preserved performance. |
+
+In roadmap terms, R0's minimum demo is delivered. R1–R5 have working
+end-to-end paths for tensor memory, tiled/control-flow kernels, reductions,
+online attention and model integration. Their qualified forms are documented;
+this does not close every variation. R6–R8 remain partial: irregular/dynamic
+compositions, general effects and arbitrary-kernel semantic coverage are the
+main completion work. Target correctness and performance remain separate gates.
 
 Useful tile structure, reuse and recurrence remain executable. The logical
 grid stays independent of warps, threads, cores and physical memory placement.
@@ -40,32 +52,22 @@ snapshots and every result through Merlin host and actual Spike execution.
 The [coverage record](coverage.md) links the concrete receipt selections and
 their limits.
 
-Most recently, precision-sensitive casts are protected before official pointer,
-descriptor and composite-dot normalization. Original external descriptor
-arguments now pass selected rank-one/two mixed-policy kernels through native,
-Merlin host and Spike, with changed fields and empty roots replaying unchanged
-host libraries. Source auditing and actual expanded-ABI validation remain
-separate mandatory gates. Allocation-root wrappers now protect source contracts
-before initial normalization too, with explicit source capsule v2. Two pointer/
-descriptor libraries pass native/Merlin host/Spike and eight host runtime replays;
-a complete learned-state model retains three calls, dependent updates, all four results
-and a live original snapshot through those execution boundaries. Broader
-numeric/effect/binding compositions remain unqualified. Allocated BF16x3/x6 and
-TF32x3 contractions now also pass six pointer/descriptor target cases and 24
-runtime host replays. Two complete models preserve ragged logical GEMM, padded
-owning inputs, dependent calls, zero K and all eight results as exact words
-through native/Merlin host/Spike. Pre-wrapper source precision stays annotated
-separately from the normalized partials. This expands finite composition
-evidence; broad effect, alias, packing, numeric and accelerator closure remains
-unfinished.
+Recent work closes a source-preservation gap across official normalization:
+casts, composite precision and selected assembly are audited and made executable
+before native rewrites or helper folding. Original and transformed graphs remain
+separate. Pointer/descriptor allocation state and complete learned-state models
+now compose with those contracts through native, Merlin host and Spike.
+The newest descriptor/assembly selection reopens six standalone kernels and two
+complete models: eight actual target images, fourteen exact-word results and
+26 additional host runtime replays. The [source assembly contract](source_assembly.md)
+records this finite selection; it does not establish arbitrary assembly/effects.
 
 ## What still separates this from the end goal
 
 1. **Close composition gaps.** Extend protected source contracts through
-   allocation wrappers and enclosing models beyond the newly qualified
-   pointer/descriptor recurrences, with an explicit custody chain.
-   Continue general view/mutation, runtime/alias, region/CFG and numeric/effect
-   combinations. Working individual operations do not establish their closure.
+   the remaining type/attribute, view/mutation, runtime/alias, region/CFG and
+   numeric/effect combinations. Allocation wrappers and enclosing models work
+   for qualified forms; individual operations do not establish their closure.
 2. **Give hardware-dependent observations concrete semantics.** General
    synchronization, physical addresses/descriptors, external implementations,
    broader assembly and shared effects need portable definitions or consumer
@@ -81,5 +83,10 @@ unfinished.
 
 The [completion plan](completion_plan.md) gives the execution order and gates.
 The [package contract](package.md) records explicit model2MLIR differences.
-The interface and abstraction decisions are established; the largest remaining
-work is semantic composition and consumer/target closure.
+The next milestone is to turn the opcode inventory into a maintained semantic
+matrix with concrete unsupported forms, then close those forms through the
+same package and consumer. Priority remains remaining effect/external/packed
+families, runtime/shared-state bindings and applicable targets. More passing
+variants of an already-qualified fixture cannot substitute for those gaps.
+There is no defensible arbitrary-kernel completion percentage yet: the
+50-name inventory measures a different denominator.

@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Decoded descriptor word programs](source_assembly.md#native-normalization-and-the-arithmetic-carrier)
+now add six standalone kernels and two complete learned-state models through
+native, Merlin host and actual Spike. All fourteen complete target results
+match exact words; 26 further host invocations reuse unchanged libraries across
+aliases, signed strides, runtime steps/shifts, tails and empty roots. Original
+source/weights/inputs/references and the model's four results remain intact.
+Every source-parser fallback now audits the complete source before native
+normalization, including default/unselected unknown effects and unused helpers.
+The separate `out/spike-assembly-descriptors/summary.json` reopens all eight
+target receipts and a public allocation CLI capture. It leaves the 106-package
+inventory unchanged; broader assembly, effects, packing and targets remain open.
+
 [Per-cast FP8 software contracts](per_cast_fp8.md) now qualify eight typed
 kernel cases covering each FP8 format/mode pair across selected memory routes.
 All 32 complete results reach actual native, Merlin host and Spike execution;

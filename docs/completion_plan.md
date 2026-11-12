@@ -36,6 +36,16 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+The [overall status](status.md) groups progress by end-goal milestones rather
+than the most recent fixture. The pipeline and model interface work end to end;
+full source/type/attribute/composition and applicable target coverage do not.
+Decoded descriptor arithmetic now retains six standalone kernels and two
+complete i32/i64 models through native/Merlin host/Spike, with all fourteen
+results exact and 26 additional host replays. The complete original audit now
+precedes every native source-parser fallback, so helper folding cannot hide
+unimplemented source effects. Broader source implementations/effects and
+runtime/alias/target combinations remain required.
+
 [Per-cast FP8 contracts](per_cast_fp8.md) now permit independent selected
 overflow/infinity policies in one kernel, expanded before helper inlining or
 folding. Eight format/mode cases retain 32 complete results through native,
@@ -285,6 +295,11 @@ memory fixture while leaving the missing families unexamined.
    selected pointer/descriptor recurrences and a complete enclosing model now
    qualify. Allocated BF16x3/x6 and TF32x3 contractions and two complete models
    now additionally pass with original C, runtime tails and source intent retained.
+   Decoded pure word programs now also compose with original external descriptors,
+   allocation wrappers and complete learned-state models through actual Spike.
+   Unknown hardware observations refuse before normalization on both default
+   and selected implementation paths. This closes that normalization gap;
+   remaining source instructions, effects and packing require real semantics.
    Continue typed/byte alias, external implementation, packed/effectful and
    broader contraction combinations across that boundary, plus source versions;
    finite pointer/precision/loop/model cases do not close those compositions.
