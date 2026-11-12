@@ -126,9 +126,40 @@ their separate `-merlin` qualifications each verify 52.
 standalone qualifications, observing 34/50 definitions and 30 in host-qualified
 captures. This is measured composition evidence, not universal coverage.
 
+## Original numeric contracts before field expansion
+
+With `fp8_overflow="per-cast"`, original descriptor parameters now pass through
+the complete native source reader before any descriptor or pointer rewriting.
+The first preflight audits the original entry, private helpers, operations,
+numeric contracts and effects against an explicit source entry. Its signature
+still contains descriptors, so it cannot yet be checked against the expanded
+tensor/scalar ABI. This source-only audit grants no ABI admission.
+
+After cast validation and standard arithmetic expansion, the official native
+pass supplies the actual descriptor field signature. The existing descriptor
+binder checks every field against the declared ABI, and a second mandatory
+preflight checks the complete normalized program against that ABI. Missing
+field bindings, wrong scalar widths and negative logical-shape bounds refuse.
+The source graph and normalized graph retain separate operation IDs; original
+source bytes still contain the descriptor parameters and semantic cast fields.
+Public ABI, package and receipt schemas are unchanged.
+
+Rank-one and rank-two F32 descriptor-load kernels combine three FP8 policies
+and mixed RTNE/RTZ modes. Both pass native, Merlin host and actual Spike
+execution against independent descriptor and exact-rational cast references.
+Each unchanged host library additionally replays three domains with changed
+padding/rounding flags, offsets and empty roots. Two malformed expanded ABIs
+refuse after normalization; an invalid original policy refuses before it.
+The five focused checks pass. Their receipts and the separate runtime-stride
+load/store results reopen in `out/spike-fp8-external-descriptors/summary.json`:
+four target results and twelve host runtime replays across the two selections.
+The older 106-package inventory is unchanged. Allocation-root source wrappers
+and enclosing-model per-cast compositions still require protection before their
+own initial normalization; direct field qualification does not establish them.
+
 ## Remaining full-coverage requirements
 
-[Descriptor allocation bindings](descriptor_state.md) now extend the field ABI
+[Descriptor allocation bindings](descriptor_state.md) extend the field ABI
 with nonzero runtime origins, shared writable roots, real derived-model captures
 and portable pre-wrapper source custody. Direct logical fields still start at
 element zero; the allocation wrapper supplies executable origin arithmetic.

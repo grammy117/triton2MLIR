@@ -301,9 +301,18 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None):
+def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None):
+    """Audit source operations independently of an eventual bound call ABI.
+
+    A source-only audit requires an explicit entry and grants no signature
+    admission. Normalized/bound programs still require their full TensorABI
+    preflight before tensorization or package emission.
+    """
+    if (abi is None and not source_entry) or (abi is not None and source_entry is not None):
+        raise ValueError("preflight requires either the actual ABI or an explicit source-only entry")
+    entry = abi.entry if abi is not None else source_entry
     functions = [op for op in module.ops if opcode(op) == "tt.func"]
-    entries = [op for op in functions if op.properties["sym_name"].data == abi.entry]
+    entries = [op for op in functions if op.properties["sym_name"].data == entry]
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
         raise ConversionError("expected the declared TTIR entry and optional private helpers")
     function = entries[0]
@@ -314,13 +323,14 @@ def _preflight(module, abi, *, id_prefix="ttir.op.", atomics=False, typed_atomic
     if len(function.regions[0].blocks) != 1:
         raise ConversionError("multiple entry blocks need an explicit CFG adapter")
     args = function.regions[0].block.args
-    if len(args) != len(abi.source_bindings):
-        raise ConversionError("source arguments differ from the declared pointer/runtime/specialized scalar bindings")
-    for arg, (kind, value) in zip(args, abi.source_bindings, strict=True):
-        if kind == "buffer" and str(arg.type) != f"!tt.ptr<{value.dtype}>":
-            raise ConversionError(f"pointer type differs from tensor ABI for {value.name}")
-        if kind == "runtime" and arg.type != value.type:
-            raise ConversionError(f"runtime scalar type differs from source for {value.name}")
+    if abi is not None:
+        if len(args) != len(abi.source_bindings):
+            raise ConversionError("source arguments differ from the declared pointer/runtime/specialized scalar bindings")
+        for arg, (kind, value) in zip(args, abi.source_bindings, strict=True):
+            if kind == "buffer" and str(arg.type) != f"!tt.ptr<{value.dtype}>":
+                raise ConversionError(f"pointer type differs from tensor ABI for {value.name}")
+            if kind == "runtime" and arg.type != value.type:
+                raise ConversionError(f"runtime scalar type differs from source for {value.name}")
     records, values = [], {}
     for op in module.walk():
         for region in op.regions:
@@ -1243,7 +1253,14 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         parsed = parse_shared((work / "precision-source/lowered.mlir").read_text())
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
-    records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
+    from .descriptor_arguments import has_parameters
+    deferred_descriptor_abi = native_source_print is not None and has_parameters({
+        abi.entry: [str(type_) for operation in parsed.ops
+                    if opcode(operation) == "tt.func" and operation.properties["sym_name"].data == abi.entry
+                    for type_ in operation.properties["function_type"].inputs]})
+    records = _preflight(parsed, None if deferred_descriptor_abi else abi,
+        source_entry=abi.entry if deferred_descriptor_abi else None,
+        id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
         allow_composite_dots=fp8_overflow == PER_CAST, assembly_provider=assembly_provider)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
@@ -1283,6 +1300,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
         normalized = parse_shared((work / "expanded-source/lowered.mlir").read_text())
         original_inventory = protected_inventory
+        descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion"), abi)
+        if deferred_descriptor_abi and descriptor_binding is None:
+            raise ConversionError("original descriptor arguments lack an actual normalized field binding")
         records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
             typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
         intent_by_source = {}

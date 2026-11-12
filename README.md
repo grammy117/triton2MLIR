@@ -1,5 +1,8 @@
 # triton2MLIR
 
+Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
+kernels reaching Merlin, current evidence and the remaining completion gates.
+
 [Protected mixed-precision intake](docs/per_cast_fp8.md#protected-composite-precision)
 now expands per-cast FP8 contracts before official composite-dot normalization.
 Original and normalized graphs remain distinct, while standard MLIR retains
@@ -8,7 +11,10 @@ selection covers BF16x3/x6 and logical TF32/x3 through native, Merlin host and
 functional Spike execution. A [complete native source reader](docs/native_source_print.md)
 also preserves original block-pointer/descriptor types and every cast attribute
 before normalization; six mixed-policy cases qualify through native/Merlin/Spike.
-Broader source versions, model compositions and accelerator qualification remain open.
+Direct external descriptor arguments also qualify selected mixed-policy kernels
+through those execution boundaries, retaining mandatory expanded-ABI validation.
+Broader source versions, allocation-root/model compositions and accelerator
+qualification remain open.
 
 [Source effects on the target](docs/target_effects.md) now preserve actual void
 entries, assertions, diagnostics and returning tensors through Merlin/Spike.

@@ -1,5 +1,9 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+The [overall status](docs/status.md) separates established end-to-end paths,
+remaining architectural work and evidence limits. Full arbitrary-kernel coverage
+is active and incomplete; observing all pinned opcode names is not completion.
+
 [Mixed FP8 source policies](docs/per_cast_fp8.md) now retain independent
 per-cast overflow/infinity semantics in one kernel. Standard expansions precede
 helper inlining/folding; eight format/mode cases execute through Merlin host
@@ -13,7 +17,9 @@ host-library replays. The [native source reader](docs/native_source_print.md)
 now preserves original pointer/descriptor types and complete cast fields before
 normalization. Six mixed-policy memory-profile cases and two ragged composite
 GEMMs also pass native/Merlin/Spike, retaining source K reuse and partial dots.
-Broader source versions, external descriptor/model compositions and
+Direct external descriptor parameters now also retain mixed policies through
+native/Merlin host/Spike, with full expanded-ABI validation after source auditing.
+Broader source versions, allocation-root/enclosing-model compositions and
 accelerator qualification remain open.
 
 [Source model tensor views](docs/model_source_views.md) now recover static

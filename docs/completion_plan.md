@@ -47,8 +47,14 @@ and logical TF32/x3 through memory profiles and native/Merlin host/Spike.
 The complete native source reader additionally retains all fields before initial
 pointer/local-descriptor normalization; six mixed-policy cases qualify across
 the memory profiles through native/Merlin/Spike. Broader source versions,
-external descriptor/model compositions and backend/accelerator correspondence
-remain required.
+allocation-root/enclosing-model compositions and backend/accelerator
+correspondence remain required. Direct original external descriptor parameters
+now qualify for rank-one/two mixed-policy kernels through native/Merlin host/
+Spike, with six additional host replays. A source-only audit grants no ABI
+permission; actual field binding and normalized full preflight remain mandatory.
+The next protected-composition boundary is allocation binding, whose initial
+normalization currently precedes the source-cast expansion. It needs an explicit
+original-to-protected-to-normalized custody chain before model qualification.
 
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured

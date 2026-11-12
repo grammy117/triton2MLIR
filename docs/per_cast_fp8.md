@@ -148,6 +148,13 @@ qualify through native/Merlin host/Spike with mixed RTNE/RTZ source policies.
 Two ragged GEMMs additionally retain source pointer tiles, K reuse and BF16x3/
 TF32x3 through those execution boundaries. All eight target receipts and the
 public descriptor CLI capture reopen in `out/spike-native-source-fp8/summary.json`.
-Broader source versions, external descriptor argument/binding compositions,
-enclosing models, source backend correspondence and accelerator execution remain
-in the completion denominator.
+Original external descriptor entry parameters additionally qualify for selected
+rank-one/two F32 loads with three policies and mixed modes through native/Merlin
+host/Spike. Their initial source-only audit grants no ABI admission: the real
+expanded field binding and normalized ABI preflight remain mandatory. Both
+host libraries replay three changed field/domain cases. Malformed original
+policies refuse before normalization, and wrong expanded widths/bounds refuse
+after it. See [the direct field contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
+Broader source versions, allocation-root/enclosing-model compositions, source
+backend correspondence and accelerator execution remain in the completion
+denominator.

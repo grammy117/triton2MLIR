@@ -83,7 +83,14 @@ semantic fields, reject missing exports/invalid native IR, and keep caller
 printing unchanged. Malformed casts refuse before any normalization. The fifteen
 reader/pointer/contraction cases and 55 source/cast/descriptor regressions pass.
 
-Broader source versions, external descriptor argument/binding compositions,
-enclosing model captures, general numeric/effect closure and accelerator
-correspondence remain requirements of the full completion plan. Logical
+Original external descriptor arguments additionally use a source-only operation
+audit before cast expansion and a mandatory complete ABI preflight after actual
+native field expansion. Rank-one/two mixed-policy kernels qualify through
+native/Merlin host/Spike and six changed host invocations; malformed original
+policies and expanded ABIs refuse. See [the field contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
+Their source/package ABI and receipt schemas remain unchanged.
+
+Broader source versions, allocation-root descriptor bindings, enclosing model
+per-cast captures, general numeric/effect closure and accelerator correspondence
+remain requirements of the full completion plan. Logical
 descriptor support supplies no physical descriptor bytes or hardware placement.

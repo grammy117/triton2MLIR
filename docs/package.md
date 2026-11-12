@@ -24,6 +24,15 @@ LLVM C API dependency. Public tensor/scalar ABI and receipt schemas are unchange
 older producers refuse this composition. Serialization supplies no numerical,
 effect, alias or source-equivalence permission.
 
+Original external descriptor arguments with per-cast policies additionally
+receive a source-only operation audit before their one-to-many field expansion.
+It grants no signature admission: the actual native field binding and full
+normalized TensorABI preflight are mandatory. Existing logical-descriptor
+records, public ABI and receipt schemas remain unchanged. This direct-field
+extension does not qualify allocation-root source capsules or enclosing-model
+per-cast normalization; those retain separate custody requirements. See
+[the descriptor contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
+
 [Source model views](model_source_views.md) require
 `t2m.model-kernel-binding.v3` with
 `source_tensor_view_binding_profile: t2m.captured-source-tensor-views.v1`.
