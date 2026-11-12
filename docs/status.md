@@ -35,6 +35,13 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[General reductions](reductions.md) now retain complete pure scalar bodies,
+coupled tuple order/types, captures and structured control with real source
+initialization. Twenty-four libraries and four complete models pass native,
+Merlin host and Spike, retaining all 80 complete target results as exact words
+and 96 further unchanged-library host invocations. Remaining scalar TTIR
+builtin/region compositions and memory/effect/backend forms remain open.
+
 [Exact IEEE source literals](ieee_literals.md) now retain original NaN sign,
 payload and signaling bits in standard executable constants/bitcasts, including
 allocation wrappers and complete enclosing models. Sixteen libraries and four
@@ -65,8 +72,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/literal-word-inventory/coverage.json` reopens **161 packages,
-120 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/general-reduction-inventory/coverage.json` reopens **189 packages,
+144 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
@@ -118,10 +125,13 @@ semantic family, while general addresses/effects and target scope remain open.
 
 The [completion plan](completion_plan.md) gives the execution order and gates.
 The [package contract](package.md) records explicit model2MLIR differences.
-The next milestone is to turn the opcode inventory into a maintained semantic
-matrix with concrete unsupported forms, then close those forms through the
-same package and consumer. Priority remains remaining effect/external/packed
-families, runtime/shared-state bindings and applicable targets. More passing
+The next milestone closes concrete semantic forms through the same package
+and consumer: scalar builtin expansions must compose inside maps, scans and
+reductions before their typed region checks; valid memory/external effects,
+runtime/shared-state bindings and applicable targets remain required. The pinned
+source verifier forbids map writes, atomics and volatile loads, so those are
+invalid-source refusals rather than missing portable map-store implementations.
+More passing
 variants of an already-qualified fixture cannot substitute for those gaps.
 There is no defensible arbitrary-kernel completion percentage yet: the
 50-name inventory measures a different denominator.

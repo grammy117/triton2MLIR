@@ -3,11 +3,20 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[General reductions](docs/reductions.md) now retain coupled tuples, actual
+first-element initialization and complete scalar branches/for/while bodies in
+standard Linalg. Twenty-four libraries and four complete models pass native,
+Merlin host and Spike with all 80 target results exact and 96 further host
+runtime replays. The combined inventory reopens 189 packages, 144 standalone
+qualifications and fourteen product cases. All fifty pinned TTIR names remain
+observed under selected profiles; arbitrary kernel and accelerator closure
+remains open.
+
 [Exact IEEE source literals](docs/ieee_literals.md) now preserve scalar/dense
 f16/BF16/f32/f64 NaN sign, payload and signaling bits through standard integer
 constants/bitcasts, allocation binding and complete models. Sixteen libraries
 and four models compare 56 exact-word results through native/Merlin host/Spike;
-48 further invocations reuse unchanged host libraries. The current combined
+48 further invocations reuse unchanged host libraries. That earlier combined
 inventory reopens 161 packages, 120 standalone qualifications and fourteen
 product cases. Arbitrary numeric/effect/kernel and accelerator coverage remains open.
 

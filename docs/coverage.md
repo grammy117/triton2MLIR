@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[General reductions](reductions.md) now retain first-element initialization,
+mixed/coupled tuples and actual structured scalar bodies through native,
+Merlin host and Spike. Twenty-four libraries and four complete learned-state
+models compare all 80 complete target results as exact words, with 96 further
+host runtime replays. Their 28 target receipts and public original-source CLI
+capture reopen in `out/general-reductions/summary.json`. The combined
+`out/general-reduction-inventory/coverage.json` reopens **189 packages,
+144 standalone qualifications and fourteen product cases**, retaining all
+fifty observed names in selected native/Merlin-host-qualified captures.
+The reduction/scan/shared selection passes 69 checks, original-combiner effect
+audit/refusal selection 43, and native Merlin destination selection 121. The
+numeric CFG packet, attention and maintained corpus regression selection passes
+24 checks. Counts overlap and establish their stated profiles only. Remaining
+scalar builtins in regions, memory/external effects, numeric/backend/source
+versions, runtime/alias compositions and applicable accelerators stay open.
+
 [Exact IEEE source literals](ieee_literals.md) retain scalar/dense
 f16/BF16/f32/f64 NaN sign, payload and signaling bits through native/Merlin
 host/Spike, including allocation wrappers and complete enclosing models.
@@ -8,7 +24,7 @@ Sixteen libraries and four models retain all 56 target results as exact words;
 TTIR fixtures and independent word oracles supply the source contract, without
 a Python-JIT or GPU correspondence claim. The twenty target receipts and public
 original-source CLI capture reopen in `out/literal-words/summary.json`.
-The current `out/literal-word-inventory/coverage.json` reopens **161 packages,
+The earlier `out/literal-word-inventory/coverage.json` reopens **161 packages,
 120 standalone qualifications and fourteen product cases**, retaining all fifty
 observed names under selected profiles. The native/source/allocation regression
 selection passes 141 checks; a separate memory-event/atomic/literal/refusal

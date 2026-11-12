@@ -75,6 +75,39 @@ control stays in place; a completed result may then feed the existing checked
 value copy/reuse path. Borrowing, bufferization and post-deallocation lifetime
 checks remain enabled. The 121-check native destination/refusal selection passes.
 
+## Complete kernel and model qualification
+
+Four real source combiners exercise unsigned GCD with a scalar while loop,
+bitwise AND, coupled affine composition modulo 64 bits and mixed f32/i32
+argmin with NaN/tie rules and a scalar branch. Both axes of a rank-two tile
+compose with runtime recurrences, tails and all three memory profiles. The
+24 configurations pass native, Merlin host and actual Spike; four further
+runtime domains per library retain the same compiled host library, including
+empty and zero-step invocations.
+
+Four real enclosing models cover coupled affine and mixed argmin on both axes.
+They retain learned weights, dependent calls, an empty call, live original
+snapshots and all eight model results, with independent reference computation.
+Every original package data/weight/reference file remains unchanged. Together,
+the 24 libraries and four models compare all 80 complete target results as
+exact words, with 96 additional host runtime invocations. This is a selected
+logical source/CPU qualification; GPU reduction-tree and accelerator arithmetic
+correspondence remain separate requirements.
+
+`out/general-reductions/summary.json` reopens the 28 target receipts and a
+public original-source guarded argmin CLI capture. The combined inventory at
+`out/general-reduction-inventory/coverage.json` reopens 189 packages,
+144 standalone qualifications and fourteen maintained product cases. All fifty
+pinned names remain observed; this does not establish arbitrary typed regions,
+kernel compositions or per-operation execution coverage.
+
+The reduction/scan/shared selection passes 69 checks; original-source effect
+audits and scan/shared refusals pass 43; the final kernel and model selections
+pass 24 and four respectively. Numeric CFG packet integrity, attention and
+the maintained corpus pass 24 checks after admitting the six already-declared
+CFG packet members in the numeric receipt reader. Exact receipt rosters and
+hash checks remain mandatory. These selections overlap.
+
 ## Valid source boundary
 
 Pinned Triton explicitly forbids memory writes inside `map_elementwise`, including

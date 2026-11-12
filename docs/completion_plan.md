@@ -36,11 +36,19 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[General reductions](reductions.md) now retain coupled tuples, first actual
+source-element initialization and complete scalar structured bodies in standard
+Linalg. Twenty-four libraries and four models compare 80 exact-word target
+results through native/Merlin host/Spike, with 96 further host invocations.
+The combined inventory reopens 189 packages and 144 standalone qualifications.
+Remaining scalar TTIR builtin/region compositions, memory/external effects,
+runtime/alias/source-version and applicable target closure remain open.
+
 [Exact IEEE source literals](ieee_literals.md) now preserve f16/BF16/f32/f64
 NaN sign, payload and signaling bits through standard constants and bitcasts,
 protected allocation sources and complete enclosing models. Sixteen libraries
 and four models compare 56 exact-word results through native/Merlin host/Spike,
-with 48 additional unchanged-library host runtime invocations. The combined
+with 48 additional unchanged-library host runtime invocations. That earlier
 inventory reopens 161 packages and 120 standalone qualifications. Computed-NaN,
 broader numeric/effect/shared-state and accelerator closure remains open.
 
@@ -143,11 +151,11 @@ required.
 | Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering/reusable libraries, and selected complete RISC-V images executed on Spike. | Broader applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
 | Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars, explicit dense value reshapes and checked static transposed/stepped source views. | General physical/mutating model views, broader view/dynamic ABI forms, general value-returning TTIR entries/CFGs and runtime/alias compositions. |
 | Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
-| Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
+| Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/literal-word-inventory/coverage.json` selection reopens
-**161 packages, 120 standalone qualifications and fourteen maintained product
+The current `out/general-reduction-inventory/coverage.json` selection reopens
+**189 packages, 144 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -322,8 +330,11 @@ memory fixture while leaving the missing families unexamined.
    memory effects or physical address observations. Keep upstream-only pass
    successes separate from actual package/consumer execution.
 2. **Close numeric and effect families.** Use the matrix to select actual
-   implementation gaps, starting with packed/effectful maps, remaining numeric
-   contracts, external/assembly implementations and physical observations.
+   implementation gaps, starting with scalar builtin expansions inside maps,
+   reductions and scans before their typed region checks, remaining numeric
+   contracts, valid memory/external effects and physical observations. Pinned
+   TTIR forbids map writes, atomics and volatile loads; preserve their native
+   invalid-source refusals rather than bypassing the verifier.
    Protected mixed FP8/composite-dot normalization now qualifies through the
    consumer. Complete verified native source serialization now also handles
    original block-pointer/local-descriptor forms before cast expansion and

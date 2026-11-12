@@ -4,11 +4,19 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[General reductions](docs/reductions.md) now retain coupled scalar state,
+source widths/order and actual first-element initialization in standard Linalg.
+Twenty-four libraries and four complete models pass native/Merlin host/Spike:
+80 exact-word results and 96 additional unchanged-library host invocations.
+The combined inventory reopens 189 packages and 144 standalone qualifications.
+Remaining scalar builtin/region compositions, memory/external effects, runtime
+and alias forms, source versions and applicable targets remain required.
+
 [Exact IEEE source literals](docs/ieee_literals.md) now retain original
 f16/BF16/f32/f64 NaN words through standard integer constants and bitcasts,
 including protected allocations and complete enclosing models. Sixteen libraries
 and four models pass native/Merlin host/Spike with 56 exact-word results and
-48 additional host runtime replays. The combined inventory reopens 161 packages
+48 additional host runtime replays. That earlier inventory reopens 161 packages
 and 120 standalone qualifications. Broader numeric/effect/shared-state and
 accelerator closure remains required.
 
