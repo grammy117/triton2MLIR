@@ -35,11 +35,18 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[Original multi-block CFGs](cfg_intake.md) now also reach the interface through
+LLVM's official structuralization, with original successor/block arguments
+retained and normalized IDs kept separate. Qualified early returns and numeric
+backedges/phi values execute through all memory profiles; a complete learned-state
+model preserves dependent updates and every original result. General CFG forms
+and value-returning public entries remain further work.
+
 ## What the measurements establish
 
 The maintained inventory at
-`out/closed-pointer-address-inventory/coverage.json` reopens **113 packages,
-81 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/cfg-intake-inventory/coverage.json` reopens **123 packages,
+90 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Original CFG intake](cfg_intake.md) now retains early returns and numeric
+backedges/phi values through official LLVM structuralization and the ordinary
+Merlin interface. Nine standalone libraries and one complete learned-state
+model qualify through native/Merlin host/Spike: ten actual target images,
+thirteen exact-word results and thirty additional host runtime replays.
+Original blocks/successors and six compiler custody files remain distinct
+from the normalized graph; both standalone and derived staging check them
+independently. The selection and public original-source CLI capture reopen in
+`out/cfg-intake/summary.json`. The final 54-check frontend/model/corpus/control
+suite and Merlin's 297 selected reader checks pass.
+The combined `out/cfg-intake-inventory/coverage.json` reopens **123 packages,
+90 standalone qualifications and fourteen product cases**, retaining all fifty
+observed names under selected native/Merlin-host profiles. General CFG,
+value-returning entries, alias/effect and applicable target closure remain open.
+Older measurements below retain their original scope.
+
 [Closed pointer-integer expressions](pointer_addresses.md) now retain original
 bases, modulo-i64 byte displacements and paired selections through native,
 Merlin host and actual Spike. Four i8/i16/i32/i64 target results match exact

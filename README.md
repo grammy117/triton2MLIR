@@ -3,6 +3,13 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Original CFG intake](docs/cfg_intake.md) now reuses LLVM's official CFG-to-SCF
+pass through a typed function bridge. Early returns and numeric backedges/phi
+values retain their original graph and structured executable computation through
+Merlin; a complete learned-state model keeps every result. Full ABI validation,
+source auditing and memory gates remain mandatory. General CFG/effect/target
+closure remains open.
+
 [Closed pointer-integer expressions](docs/pointer_addresses.md) now recover
 logical bases and checked byte displacements without choosing physical addresses.
 Four integer widths pass native/Merlin host/Spike; scalar masks/state additionally

@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if "control_flow_normalization" in trace:
+        differences.append("multi-block TTIR uses a typed TT/function interface bridge to LLVM's official lift-cf-to-scf pass before memory conversion; the original source graph includes block arguments and successor edges while emitted IDs reference the separately preflighted structured graph; six additional compiler source artifacts bind the actual pass and source/normalized bytes; source custody grants no arithmetic/effect/source-equivalence authority, and public tensor/scalar ABI and receipt schemas are unchanged; consumer support is required to retain this additional CFG evidence")
     if any(item.get("kind") == "closed-pointer-integer-displacement" for item in trace.get("transformations", [])):
         differences.append("closed i64 pointer-integer expressions become original logical bases plus byte displacements modulo 2^64; conversion to element offsets requires a structural divisibility proof, retains source integer arithmetic and bounds/ownership checks, and materializes no physical base address; source casts, selections, shapes and correspondence remain recorded under prov.closed_pointer_addresses; escaping address values and unsupported address algebra require an explicit address contract; public ABI and receipt schemas are unchanged")
     if any(item.get("kind") == "scalar-memory-unit-carrier" for item in trace.get("transformations", [])):

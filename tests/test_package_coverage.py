@@ -69,9 +69,12 @@ def test_actual_package_preserves_original_graph_without_promoting_native_to_mer
     expected = {row["opcode"] for row in trace["source_operations"] if row["opcode"].startswith("tt.")}
     assert {name for name,row in report["ttir"].items() if row["cases"]} == expected
     assert report["kernel_cases"][0]["normalized_operation_counts"]
-    original_form = next(row["forms"][0] for row in report["ttir"].values() if row["forms"])
-    assert original_form["attribute_evidence"] == "not-exposed-by-source-inventory; consult-exact-source"
-    assert original_form["attributes"] is original_form["properties"] is None
+    name, row = next((name, row) for name, row in report["ttir"].items() if row["forms"])
+    original_form = row["forms"][0]
+    original_op = next(op for op in trace["source_operations"] if op["opcode"] == name)
+    assert original_form["attribute_evidence"] == "recorded-source-dictionaries"
+    assert original_form["attributes"] == original_op["attributes"]
+    assert original_form["properties"] == original_op["properties"]
     assert main(["package-coverage",str(source),"--out",str(tmp_path / "report")]) == 0
     with pytest.raises(ValueError, match="duplicate package"):
         package_coverage([source,source])

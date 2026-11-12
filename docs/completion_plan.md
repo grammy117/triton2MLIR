@@ -39,6 +39,12 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 The [overall status](status.md) groups progress by end-goal milestones rather
 than the most recent fixture. The pipeline and model interface work end to end;
 full source/type/attribute/composition and applicable target coverage do not.
+[Original CFG intake](cfg_intake.md) now reuses official LLVM structuralization
+through equivalent typed function interfaces. Original early returns and numeric
+backedges/phi values retain source block/successor records, mandatory actual ABI
+validation and compiler-only custody in Merlin, including complete model binding.
+Remaining CFG forms, public value-returning entries and effect/alias/target
+compositions remain unqualified.
 [Closed pointer-integer displacement expressions](pointer_addresses.md) now
 recover actual logical bases and paired modular offsets through four typed
 native/Merlin host/Spike kernels. Scalar gather/scatter reuses the existing

@@ -46,7 +46,8 @@ def inventory(module, records):
         ):
             raise ValueError("typed source inventory disagrees with preflight")
         record.update(
-            block=blocks[op.parent_block()], regions=[regions[r] for r in op.regions]
+            block=blocks[op.parent_block()], regions=[regions[r] for r in op.regions],
+            successors=[blocks[block] for block in op.successors],
         )
         intent = {
             key: value.data

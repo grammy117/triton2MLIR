@@ -4,6 +4,14 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Original CFG intake](docs/cfg_intake.md) now retains early returns, successor
+edges, block arguments and numeric backedges through official CFG-to-SCF
+normalization. Current pointer types normalize before the older shared parser;
+original source auditing precedes all rewriting. Native/Merlin host/Spike
+qualification and a complete learned-state model retain the actual computation.
+General value-returning entries, remaining CFG/alias/effect forms and applicable
+targets remain completion requirements.
+
 [Closed pointer-integer displacement expressions](docs/pointer_addresses.md)
 now re-raise modular address arithmetic into actual logical pointer bases and
 proved element offsets, preserving selections, tiling and source casts. Four

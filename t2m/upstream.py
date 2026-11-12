@@ -27,6 +27,8 @@ class Stage:
 
 STAGES = {
     "source": Stage((), "native-verified source IR, without transformations"),
+    "control-flow": Stage(("--canonicalize", "--lift-cf-to-scf", "--canonicalize"),
+                          "official LLVM CFG-to-SCF conversion through standard function interfaces; no memory or arithmetic lowering"),
     "inline": Stage(("--inline", "--symbol-dce"),
                     "source helper inlining; isolated from downstream dialect extensions"),
     "tensor-ir": Stage(("--triton-to-structured=use-unsafe-mask=false", "--cse",

@@ -320,9 +320,9 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
         raise ConversionError("kernel entry return values need an explicit ABI binding")
     if any(op is not function and op.properties.get("sym_visibility") != StringAttr("private") for op in functions):
         raise ConversionError("additional public entry functions are unsupported")
-    if len(function.regions[0].blocks) != 1:
+    if not function.regions[0].blocks or abi is not None and len(function.regions[0].blocks) != 1:
         raise ConversionError("multiple entry blocks need an explicit CFG adapter")
-    args = function.regions[0].block.args
+    args = next(iter(function.regions[0].blocks)).args
     if abi is not None:
         if len(args) != len(abi.source_bindings):
             raise ConversionError("source arguments differ from the declared pointer/runtime/specialized scalar bindings")
@@ -1231,7 +1231,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     parsed = parse_shared(source_ir.read_text())
     from .contractions import needs_dot_precision_expansion
     original_precision = any(needs_dot_precision_expansion(op) for op in parsed.walk())
-    protect_source = protect_source or original_precision
+    from .cfg_intake import required as requires_cfg
+    has_cfg = requires_cfg(parsed)
+    protect_source = protect_source or original_precision or has_cfg
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     from .descriptor_arguments import has_parameters
@@ -1239,8 +1241,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         abi.entry: [str(type_) for operation in parsed.ops
                     if opcode(operation) == "tt.func" and operation.properties["sym_name"].data == abi.entry
                     for type_ in operation.properties["function_type"].inputs]})
-    records = _preflight(parsed, None if deferred_descriptor_abi else abi,
-        source_entry=abi.entry if deferred_descriptor_abi else None,
+    records = _preflight(parsed, None if deferred_descriptor_abi or has_cfg else abi,
+        source_entry=abi.entry if deferred_descriptor_abi or has_cfg else None,
         id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
         allow_composite_dots=protect_source, assembly_provider=assembly_provider)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
@@ -1266,6 +1268,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         # discard source operations based only on a caller's purity marker.
         assembly_reports = expand_source_assembly(parsed, _source_ids, provider=assembly_provider,
             tensor_carrier="arith")
+    cfg_artifacts, cfg_report = {}, None
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -1274,15 +1277,28 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     stream = StringIO()
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(parsed)
     annotated.write_text(stream.getvalue() + "\n")
-    if native_source_print is not None or deferred_descriptor_abi or original_precision:
+    if native_source_print is not None or deferred_descriptor_abi or original_precision or has_cfg:
         # Source contracts are now executable standard arithmetic. Normalize
         # old pointer/descriptor types and composite precision before shared's
         # inliner can fold or discard the original source operations.
-        pointer_report = expand_tensor_pointers(annotated, work / "tensor-pointers")
-        lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
+        normalization_source = annotated
+        if native_source_print is not None or deferred_descriptor_abi or original_precision:
+            pointer_report = expand_tensor_pointers(annotated, work / "tensor-pointers")
+            normalization_source = work / "tensor-pointers/lowered.mlir"
+        lower_with_shared(normalization_source, work / "expanded-source", optimizer=optimizer, stage="source")
         normalized = parse_shared((work / "expanded-source/lowered.mlir").read_text())
+        if has_cfg:
+            from .cfg_intake import normalize
+            normalized, cfg_artifacts, cfg_report = normalize(normalized, work / "control-flow", optimizer=optimizer,
+                source_sha256=hashlib.sha256(source_text.encode()).hexdigest(), source_graph=protected_inventory, entry=abi.entry)
+            # Verify the restored TT interfaces too; the official lifter itself
+            # operates on standard functions and may have normalized old types.
+            cfg_source = work / "structured-cfg.ttir"
+            cfg_source.write_text(cfg_artifacts["cfg-output.ttir"])
+            lower_with_shared(cfg_source, work / "cfg-source", optimizer=optimizer, stage="source")
+            normalized = parse_shared((work / "cfg-source/lowered.mlir").read_text())
         original_inventory = protected_inventory
-        descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion"), abi)
+        descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
         if deferred_descriptor_abi and descriptor_binding is None:
             raise ConversionError("original descriptor arguments lack an actual normalized field binding")
         records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
@@ -1476,7 +1492,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             transformations.append({"kind": "scalar-memory-unit-carrier", "events": scalar_events,
                 "expansion": "one-element-tensor-with-original-predicate-and-defined-fill"})
         result = witness = _functionalize(lowered, abi)
-    auxiliary = {}
+    auxiliary = dict(cfg_artifacts)
     if source_words:
         auxiliary.update({"word-input.mlir": word_input,
             "word-tensor.mlir": (work / "tensor-ir/lowered.mlir").read_text(),
@@ -1641,6 +1657,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                      source_operations=original_inventory["operations"], original_blocks=original_inventory["blocks"],
                      original_attributes=original_inventory["attributes"],
                      correspondence="original-native-verified-typed-graph; emissions-and-memory-facts-reference-normalized-graph; original-source-locations-retained")
+    if cfg_report:
+        trace["control_flow_normalization"] = cfg_report
+        trace["abi_difference"] += "; original multi-block control flow uses official CFG-to-SCF normalization through typed function interfaces"
     if storage_transport:
         trace["typed_storage_transport"] = storage_transport
         trace["abi_difference"] += "; typed owning tensors use explicit bit-preserving internal byte planes for width-changing views"

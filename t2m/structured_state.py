@@ -42,7 +42,11 @@ def data_control_report(module, source_ids):
             and all(len(region.blocks) == 1 and all(_numeric(arg.type) for arg in region.block.args)
                     for region in op.regions))
 
-    controls = [op for op in module.walk() if opcode(op) in {"scf.for", "scf.if", "scf.while"}]
+    # A result-free conditional carries no boxed pointer/numeric state. Its
+    # memory operations still pass through the original pointer conversion.
+    # Inspect any stateful control nested inside it independently.
+    controls = [op for op in module.walk() if opcode(op) in {"scf.for", "scf.if", "scf.while"}
+                and (op.results or opcode(op) != "scf.if")]
     if not controls or not any(isinstance(v.type, builtin.TensorType)
             and isinstance(v.type.element_type, builtin.IntegerType)
             for op in controls for v in (*op.operands, *op.results)):

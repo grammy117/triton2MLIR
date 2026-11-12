@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Original CFG normalization](cfg_intake.md) adds six byte-bound compiler source
+artifacts under the optional `t2m.control-flow-normalization.v1` profile. Typed
+function interfaces bridge to the official LLVM pass; original block/successor
+and SSA records remain separate from the normalized graph. Merlin independently
+checks/copies the fixed stage and artifact roster in standalone and derived
+models. Public ABI and receipt schemas are unchanged; older readers need this
+additional source-custody support. Provenance and custody grant no source
+equivalence, memory/effect or target permission.
+
 [Closed pointer-integer expressions](pointer_addresses.md) are an equivalent
 logical representation under checked use closure and byte divisibility: original
 bases and modular offsets replace unobserved absolute integers. Source casts,

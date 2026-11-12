@@ -32,7 +32,7 @@ def record(raw):
     return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
 
 
-def members(trace):
+def _allocation_members(trace):
     binding = trace.get("source_argument_binding", {})
     capsule = binding.get("source_capsule")
     if capsule is None:
@@ -58,10 +58,17 @@ def members(trace):
     return expected
 
 
+def members(trace):
+    from .cfg_intake import members as control_members
+    return _allocation_members(trace) | control_members(trace)
+
+
 def validate(trace, artifacts, source):
     from .map_layout import validate_trace
     validate_trace(trace)
-    names = members(trace)
+    from .cfg_intake import validate as validate_control_flow
+    validate_control_flow(trace, artifacts, source)
+    names = _allocation_members(trace)
     if not names:
         return
     if not names <= set(artifacts):
