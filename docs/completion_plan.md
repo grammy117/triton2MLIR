@@ -36,6 +36,13 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Structured scan combiners](scans.md#structured-combiner-qualification) now
+retain pure scalar branches and for/while state, including complete learned-state
+model composition. Ten libraries and two models compare thirty exact-word target
+results through native/Merlin host/Spike. The combined inventory reopens 141
+packages and 104 standalone qualifications. Memory/effectful combiners and
+broader numeric/alias/source-version/accelerator closure remain open.
+
 [IEEE f16/BF16 atomic addition](half_atomics.md) now retains exact old words,
 gradual underflow, per-event nearest-even rounding and explicit computed-NaN
 quieting through native/Merlin host/Spike. Four libraries and two complete models
@@ -131,8 +138,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/half-atomic-inventory/coverage.json` selection reopens
-**129 packages, 94 standalone qualifications and fourteen maintained product
+The current `out/scan-control-inventory/coverage.json` selection reopens
+**141 packages, 104 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:

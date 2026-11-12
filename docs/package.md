@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Structured scan combiners](scans.md#structured-combiner-qualification) retain
+pure scalar if/for/while bodies and uniform captures in standard parallel scan
+stages. Original control locations and derived counts remain annotated; tuple
+types, operand order and per-combination loop state stay executable. All scan
+candidates validate before expansion, including nested unused effects. Public
+ABI, receipts and compiler artifact rosters are unchanged. Compatibility metadata
+records the representation; annotations grant no associativity, effect, numeric
+or target permission. Two complete models additionally retain all fourteen
+original results through native/Merlin host/Spike with exact words.
+
 [IEEE f16/BF16 atomic addition](half_atomics.md) extends the v4 typed-atomic
 profile with format-specific nearest-even/quiet-NaN contracts. Standard generic
 atomic regions retain source storage, masks, numeric updates and old values.

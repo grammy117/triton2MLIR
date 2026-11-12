@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Structured scan combiners](scans.md#structured-combiner-qualification) now
+retain actual scalar branches, for/while state, mixed tuple types and uniform
+captures in parallel stages. Ten libraries qualify through native/Merlin host/
+Spike, retaining all sixteen standalone results as exact words; forty additional
+host invocations reuse unchanged libraries. Two complete learned-state models
+retain dependent scans, empty results, overflow, original snapshots and all
+fourteen model results as exact words through those execution boundaries.
+`out/scan-control/summary.json` reopens twelve target receipts and thirty complete
+results, plus a public original-source CLI capture. Fourteen native cases,
+thirteen direct contract cases and the 52-check scan/model/control regression
+selection pass. The current `out/scan-control-inventory/coverage.json` reopens
+**141 packages, 104 standalone qualifications and fourteen product cases**,
+retaining all fifty observed names under selected native/Merlin-host profiles.
+Effectful combiners, broader numeric/alias/source-version and accelerator
+compositions remain open. Earlier measurements below retain their scope.
+
 [IEEE f16/BF16 atomic addition](half_atomics.md) retains rounded updates,
 masks, subnormals, quiet computed NaNs and exact old words. Four scalar/tensor
 libraries pass native/Merlin host/Spike, with sixteen further host invocations.

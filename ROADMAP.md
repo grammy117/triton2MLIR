@@ -4,6 +4,14 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Structured scan combiners](docs/scans.md#structured-combiner-qualification)
+now preserve scalar branches, actual for/while state, tuple order and uniform
+captures inside parallel stages. Ten libraries and two complete models retain
+thirty exact-word results through native/Merlin host/Spike, with forty further
+host runtime replays. The combined inventory reopens 141 packages and 104
+standalone qualifications. Effectful combiners, broader numeric/alias/source
+versions and accelerator compositions remain completion requirements.
+
 [IEEE f16/BF16 atomic addition](docs/half_atomics.md) now preserves subnormals,
 per-event rounding, quiet computed NaNs and exact old words through standard
 atomic regions and actual native/Merlin host/Spike. Four libraries replay sixteen

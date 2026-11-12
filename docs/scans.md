@@ -80,3 +80,21 @@ The surveyed Meta and archived Microsoft converters register the same restricted
 reference. The structural-region extension uses existing standard SCF and Linalg
 cloning; it introduces no source dialect, target mapping or new runtime helper.
 Public ABI, receipt schemas and compiler artifact rosters are unchanged.
+
+Two additional complete model2MLIR captures now retain learned integer weights,
+dependent segmented/loop scans, forward/reverse tuple results, an empty-domain
+call and the original input-derived snapshot. A value above 2^62 exercises
+modular product overflow and negative intermediate results. Both the `for`
+product and `while` GCD models retain all seven original results, unchanged
+weights/inputs/goldens and exact words through native/Merlin host/Spike.
+
+`out/scan-control/summary.json` independently reopens twelve target receipts,
+thirty complete exact-word results and forty additional host runtime replays,
+alongside a public original-source CLI capture. The combined inventory at
+`out/scan-control-inventory/coverage.json` reopens 141 packages, 104 standalone
+qualifications and fourteen product cases. All fifty pinned operation names
+remain observed under selected native/Merlin-host profiles; this does not prove
+every type, attribute, kernel composition or applicable target. Reproduce the
+whole-model checks with `tests/test_scan_control_model.py`, or capture a parent
+model using `scripts/capture_scan_control_model.py` in model2MLIR's environment
+(`--gcd` selects the while model).

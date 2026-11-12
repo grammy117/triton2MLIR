@@ -35,6 +35,13 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[Structured scan combiners](scans.md#structured-combiner-qualification) now
+retain scalar branches and actual for/while recurrences in parallel scan stages.
+Ten libraries and two complete learned-state models pass native/Merlin host/
+Spike, retaining thirty complete target results as exact words. Effectful
+combiners, broader numeric/alias/source-version compositions and accelerator
+coverage remain open.
+
 [IEEE f16/BF16 atomic addition](half_atomics.md) additionally closes the missing
 half arithmetic profile through native/Merlin host and actual Spike. Four
 libraries and two complete models retain twenty target results, including twelve
@@ -51,8 +58,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/half-atomic-inventory/coverage.json` reopens **129 packages,
-94 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/scan-control-inventory/coverage.json` reopens **141 packages,
+104 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
@@ -70,7 +77,7 @@ casts, composite precision and selected assembly are audited and made executable
 before native rewrites or helper folding. Original and transformed graphs remain
 separate. Pointer/descriptor allocation state and complete learned-state models
 now compose with those contracts through native, Merlin host and Spike.
-The newest descriptor/assembly selection reopens six standalone kernels and two
+The descriptor/assembly selection reopens six standalone kernels and two
 complete models: eight actual target images, fourteen exact-word results and
 26 additional host runtime replays. The [source assembly contract](source_assembly.md)
 records this finite selection; it does not establish arbitrary assembly/effects.

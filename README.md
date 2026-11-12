@@ -3,10 +3,17 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Structured scan combiners](docs/scans.md#structured-combiner-qualification)
+now retain scalar branches and actual for/while state in standard parallel scan
+stages. Ten libraries and two complete models pass native/Merlin host/Spike
+with all thirty target results exact. The current combined inventory reopens
+141 packages, 104 standalone qualifications and fourteen product cases;
+arbitrary-kernel and accelerator coverage remain open.
+
 [IEEE f16/BF16 atomic addition](docs/half_atomics.md) now reaches native,
 Merlin host and actual Spike with original storage, subnormals and exact old
 words retained. Four libraries and two complete models compare twenty target
-results. The current combined inventory reopens 129 packages, 94 standalone
+results. That earlier combined selection reopens 129 packages, 94 standalone
 qualifications and fourteen product cases; universal kernel coverage remains open.
 
 [Original CFG intake](docs/cfg_intake.md) now reuses LLVM's official CFG-to-SCF
