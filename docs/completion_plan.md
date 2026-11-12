@@ -44,8 +44,11 @@ feature edits preserve narrowing before widening. Protected composite-dot
 normalization additionally retains a complete original graph and independently
 preflighted partial contractions. Mixed cast policies qualify with BF16x3/x6
 and logical TF32/x3 through memory profiles and native/Merlin host/Spike.
-Initial pointer/descriptor source-version intake, broader model captures and
-backend/accelerator correspondence remain required.
+The complete native source reader additionally retains all fields before initial
+pointer/local-descriptor normalization; six mixed-policy cases qualify across
+the memory profiles through native/Merlin/Spike. Broader source versions,
+external descriptor/model compositions and backend/accelerator correspondence
+remain required.
 
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured
@@ -259,10 +262,11 @@ memory fixture while leaving the missing families unexamined.
    implementation gaps, starting with packed/effectful maps, remaining numeric
    contracts, external/assembly implementations and physical observations.
    Protected mixed FP8/composite-dot normalization now qualifies through the
-   consumer. Extend complete verified source serialization/attribute access to
-   original descriptor/block-pointer/version intake, then qualify actual
-   enclosing model captures. The initial source-parser seam still refuses
-   those forms; selected precision/loop/target evidence does not close them.
+   consumer. Complete verified native source serialization now also handles
+   original block-pointer/local-descriptor forms before cast expansion and
+   normalization. Extend external descriptor/argument bindings, broader source
+   versions and actual enclosing model captures; the selected pointer/precision/
+   loop/target cases do not close those compositions.
    Reuse official expansions where their semantics agree; preserve source
    width, rounding boundaries, accumulator order and recurrence. Implement
    unsupported behavior rather than hiding it behind provenance.

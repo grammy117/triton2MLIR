@@ -86,6 +86,12 @@ It never builds a native toolchain or uses triton-cpu/the reference CPU driver.
 
 ## Qualification and next integration
 
+The [native source serialization adapter](native_source_print.md) now recovers
+complete stock-Triton source fields when this shared distribution rejects old
+pointer/descriptor type spellings. It runs no pass; per-cast validation and
+standard arithmetic expansion precede official normalization and shared
+inlining. Native/shared library identities and source graphs remain distinct.
+
 ### A bounded prebuilt toolchain
 
 `scripts/fetch_shared_opt.py --out .scratch/shared-opt` downloads a content-pinned

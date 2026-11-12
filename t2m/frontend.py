@@ -124,6 +124,112 @@ def inspect_ttir(source, work):
     return json.loads(inventory.read_text())
 
 
+SOURCE_PRINT_FLAGS = ("--mlir-print-op-generic", "--mlir-print-local-scope", "--mlir-print-debuginfo")
+SOURCE_PRINT_SCHEMA = "t2m.native-source-print.v1"
+
+
+def _enable_generic_source_print(library):
+    """Worker-only, pin-probed printer options in the already loaded library.
+
+    LLVM's C API parses the fixed MLIR printer flags. The no-argument MLIR
+    registration has the pinned Linux/Itanium exported name; no native object
+    layouts or pointers cross ctypes. Missing exports/flags fail in this child.
+    """
+    import ctypes
+
+    try:
+        native = ctypes.CDLL(str(library))
+        register = getattr(native, "_ZN4mlir27registerAsmPrinterCLOptionsEv")
+        parse = native.LLVMParseCommandLineOptions
+    except (OSError, AttributeError) as error:
+        raise ConversionError("the pinned native source printer exports are unavailable") from error
+    register.argtypes, register.restype = [], None
+    parse.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_char_p), ctypes.c_char_p]
+    parse.restype = None
+    register()
+    args = [b"t2m-source-printer", *(flag.encode() for flag in SOURCE_PRINT_FLAGS)]
+    parse(len(args), (ctypes.c_char_p * len(args))(*args), b"verified TTIR source printing")
+
+
+def _print_ttir_generic(source, output, report_path):
+    import resource
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
+    ir, context = _context()
+    from triton._C import libtriton
+
+    module = ir.parse_mlir_module(str(Path(source).resolve()), context)
+    if not module.verify():
+        raise ConversionError("native source printer rejected the original TTIR")
+    count = [0]
+    def count_operation(_operation):
+        count[0] += 1
+        if count[0] > 200_000:
+            raise ConversionError("generic source exceeds its operation budget")
+    module.walk(count_operation)
+    library = Path(libtriton.__file__)
+    _enable_generic_source_print(library)
+    generic = module.str()
+    if not generic.lstrip().startswith('"builtin.module"'):
+        raise ConversionError("native printer did not honor generic source flags")
+    Path(output).write_text(generic)
+    # No pass runs. Reparse the complete native serialization, including all
+    # properties, attributes, regions, types and exact constant spellings.
+    restored = ir.parse_mlir_module(str(Path(output).resolve()), context)
+    if not restored.verify() or not module.verify() or restored.str() != generic:
+        raise ConversionError("native generic source did not round-trip exactly")
+    digest = hashlib.sha256()
+    with library.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    report = {"schema": SOURCE_PRINT_SCHEMA, "triton_version": PINNED_TRITON,
+        "flags": list(SOURCE_PRINT_FLAGS), "operations": count[0], "normalization": "not-performed", "target_backend": "not-invoked",
+        "native_source_verified": True, "native_generic_roundtrip_verified": True, "grants_semantics": False,
+        "source_sha256": hashlib.sha256(Path(source).read_bytes()).hexdigest(),
+        "output_sha256": hashlib.sha256(Path(output).read_bytes()).hexdigest(),
+        "implementation": {"binary_sha256": digest.hexdigest(), "binary_bytes": library.stat().st_size,
+            "printer_options": "MLIR-registerAsmPrinterCLOptions; LLVM-C-LLVMParseCommandLineOptions",
+            "source_reference_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "source_reference_is_build_receipt": False}}
+    Path(report_path).write_text(json.dumps(report, indent=2) + "\n")
+
+
+def read_ttir_generic(source, work):
+    """Read complete verified source before any source-version normalization.
+
+    Printer options are process-global in LLVM, so only an isolated bounded
+    child may select them. The caller's Triton/MLIR printers remain untouched.
+    """
+    source, work = Path(source), Path(work)
+    if not source.is_file() or not 0 < source.stat().st_size <= 4 * 1024 * 1024:
+        raise ConversionError("generic source input must be nonempty and at most 4MiB")
+    data = source.read_bytes()
+    work.mkdir(parents=True, exist_ok=False)
+    saved, output, report_path = work / "source.ttir", work / "lowered.mlir", work / "print.json"
+    saved.write_bytes(data)
+    command = [sys.executable, "-c", "import sys; sys.path.insert(0,sys.argv[1]); "
+        "from t2m.frontend import _print_ttir_generic; _print_ttir_generic(*sys.argv[2:])",
+        str(Path(__file__).resolve().parents[1]), str(saved.resolve()), str(output.resolve()), str(report_path.resolve())]
+    with (work / "stdout.log").open("xb") as stdout, (work / "stderr.log").open("xb") as stderr:
+        try:
+            process = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=30, check=False,
+                env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(work.resolve())))
+        except subprocess.TimeoutExpired as error:
+            raise ConversionError("native generic source printing exceeded 30 seconds") from error
+    if process.returncode or not report_path.is_file() or not output.is_file():
+        raise ConversionError("native generic source printing failed; inspect " + str(work / "stderr.log"))
+    report = json.loads(report_path.read_text())
+    if (saved.read_bytes() != data or report.get("schema") != SOURCE_PRINT_SCHEMA
+            or report.get("flags") != list(SOURCE_PRINT_FLAGS)
+            or report.get("native_source_verified") is not True
+            or report.get("native_generic_roundtrip_verified") is not True
+            or report.get("normalization") != "not-performed" or report.get("grants_semantics") is not False
+            or report.get("source_sha256") != hashlib.sha256(data).hexdigest()
+            or report.get("output_sha256") != hashlib.sha256(output.read_bytes()).hexdigest()):
+        raise ConversionError("native generic source differs from its verified source/print records")
+    return report
+
+
 def _expand_tensor_pointers(path, inventory_path):
     """Worker-only checked intake rewrites; never invoke a target backend."""
     import resource

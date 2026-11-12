@@ -14,6 +14,16 @@ refuse this selection. Merlin consumes executable casts/clamps, with its fixed
 narrowing-before-widening source seam required for combined target lowering.
 This profile does not claim an unspecified backend's overflow behavior.
 
+[Native source serialization](native_source_print.md) additionally preserves
+original pointer/descriptor types when shared's source-only parser rejects them.
+The `t2m.native-source-print.v1` provenance report binds fixed printer flags,
+actual stock-library identity, source/output hashes and exact native generic
+round-trip verification. Cast validation/expansion precedes official normalization
+and shared inlining. Compatibility metadata names the Linux/Itanium export and
+LLVM C API dependency. Public tensor/scalar ABI and receipt schemas are unchanged;
+older producers refuse this composition. Serialization supplies no numerical,
+effect, alias or source-equivalence permission.
+
 [Source model views](model_source_views.md) require
 `t2m.model-kernel-binding.v3` with
 `source_tensor_view_binding_profile: t2m.captured-source-tensor-views.v1`.

@@ -138,14 +138,16 @@ The separate target receipts and runtime replay records are reopened in
 observation selection. Source-profile/type/attribute/composition and applicable
 target closure remain in the full completion denominator.
 
-This profile still requires the installed shared source parser to accept the
-original TTIR before transformations. The shared binary rejects the original
-block-pointer type and the installed Triton's older descriptor type syntax
-before it can produce generic source. Those initial-normalizer forms remain
-refused before a pass could fold numeric contracts. A bounded native helper
-experiment could import the same arithmetic recipe, but its typed getters
-could not account for every original cast attribute. It was not admitted as a
-production bridge. Closing this boundary requires a complete verified source
-serialization/attribute interface; refusal remains incomplete coverage.
-Broader model captures, source backend
-correspondence and accelerator execution also remain open.
+The [complete native source reader](native_source_print.md) now handles original
+block-pointer and descriptor type spellings rejected by shared's source parser.
+It prints the entire native-verified graph without normalization, preserving
+every attribute before the ordinary cast expansion. Official pointer/descriptor
+rewriting then runs before shared inlining; normalized preflight and accumulator
+repair retain their own graph. Six pointer/descriptor and memory-profile cases
+qualify through native/Merlin host/Spike with mixed RTNE/RTZ source policies.
+Two ragged GEMMs additionally retain source pointer tiles, K reuse and BF16x3/
+TF32x3 through those execution boundaries. All eight target receipts and the
+public descriptor CLI capture reopen in `out/spike-native-source-fp8/summary.json`.
+Broader source versions, external descriptor argument/binding compositions,
+enclosing models, source backend correspondence and accelerator execution remain
+in the completion denominator.

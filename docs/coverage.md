@@ -13,7 +13,14 @@ The BF16x3/x6 and logical TF32/x3 selection exercises all three memory profiles
 through native/Merlin host/Spike: twelve complete target results and 36
 unchanged-library runtime replays. Its independently reopened receipt selection
 is `out/spike-protected-fp8-precision/summary.json`.
-Initial descriptor/block-pointer source parsing remains a located refusal.
+The [native source reader](native_source_print.md) additionally closes the
+initial block-pointer/local-descriptor parsing gap for selected per-cast forms.
+Six mixed-policy cases span all memory profiles and native/Merlin host/Spike;
+two ragged BF16x3/TF32x3 GEMMs additionally retain source K reuse and partial
+contractions. All eight target receipts and a public descriptor CLI capture
+reopen in `out/spike-native-source-fp8/summary.json`.
+Complete fields survive source-only native round trips before any normalization;
+broader versions, external descriptor/model compositions and targets remain open.
 
 [Source model views](model_source_views.md) add three real i64/f32/BF16
 captures with transposed and stepped-slice operands, dependent root updates,

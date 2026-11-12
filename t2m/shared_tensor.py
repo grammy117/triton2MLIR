@@ -1200,24 +1200,32 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     work.mkdir(parents=True, exist_ok=False)
     optimizer = inspect_optimizer(optimizer)
     source_text = Path(source).read_bytes().decode("utf-8")
-    pointer_report, original_inventory = None, None
+    pointer_report, original_inventory, native_source_print = None, None, None
     try:
         intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
         source_ir = work / "source/lowered.mlir"
     except ConversionError as original_error:
         if fp8_overflow == PER_CAST:
-            raise ConversionError("per-cast FP8 source requires verification before intake normalization; no numeric contract may be folded first") from original_error
-        # Native Triton verifies source operations absent from this shared
-        # distribution before the bounded, source-inventoried intake adapter.
-        try:
-            pointer_report = expand_tensor_pointers(source, work / "tensor-pointers")
-        except ConversionError:
-            raise original_error
-        original_inventory = json.loads((work / "tensor-pointers/inventory.json").read_text())
-        if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
-            raise ConversionError("original source changed during tensor-pointer normalization")
-        intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
-        source_ir = work / "expanded-source/lowered.mlir"
+            # Recover every source field before a greedy native pass can fold
+            # numeric contracts. This source-version printer runs no pass.
+            from .frontend import read_ttir_generic
+            native_source_print = read_ttir_generic(source, work / "native-source")
+            if native_source_print["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
+                raise ConversionError("original source changed during native source printing")
+            source_ir = work / "native-source/lowered.mlir"
+            intake = {"optimizer": optimizer.record}
+        else:
+            # Native Triton verifies source operations absent from this shared
+            # distribution before the bounded, source-inventoried intake adapter.
+            try:
+                pointer_report = expand_tensor_pointers(source, work / "tensor-pointers")
+            except ConversionError:
+                raise original_error
+            original_inventory = json.loads((work / "tensor-pointers/inventory.json").read_text())
+            if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
+                raise ConversionError("original source changed during tensor-pointer normalization")
+            intake = lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
+            source_ir = work / "expanded-source/lowered.mlir"
     parsed = parse_shared(source_ir.read_text())
     from .contractions import needs_dot_precision_expansion
     if fp8_overflow != PER_CAST and any(needs_dot_precision_expansion(op) for op in parsed.walk()):
@@ -1267,6 +1275,28 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     stream = StringIO()
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(parsed)
     annotated.write_text(stream.getvalue() + "\n")
+    if native_source_print is not None:
+        # Old pointer/descriptor types cannot reach shared's inliner yet.
+        # Casts are now executable standard arithmetic, so official version/
+        # pointer/dot normalization may safely precede that inliner.
+        pointer_report = expand_tensor_pointers(annotated, work / "tensor-pointers")
+        lower_with_shared(work / "tensor-pointers/lowered.mlir", work / "expanded-source", optimizer=optimizer, stage="source")
+        normalized = parse_shared((work / "expanded-source/lowered.mlir").read_text())
+        original_inventory = protected_inventory
+        records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
+            typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+        intent_by_source = {}
+        for operation in normalized.walk():
+            intent = {key: value for key, value in operation.attributes.items()
+                if key in ("prov.family", "prov.op", "prov.region_id") and isinstance(value, StringAttr)}
+            for source_id in _source_ids(operation.location):
+                if intent: intent_by_source[source_id] = intent
+        stream = StringIO()
+        Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(normalized)
+        annotated = work / "protected-native-normalized.ttir"
+        annotated.write_text(stream.getvalue() + "\n")
+        for report in early_fp8_reports:
+            report["source_graph"] = "original"
     lower_with_shared(annotated, work / "inline", optimizer=optimizer, stage="inline")
     middle_source = work / "inline/lowered.mlir"
     protected_precision = fp8_overflow == PER_CAST and any(needs_dot_precision_expansion(op)
@@ -1387,6 +1417,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             report["source_ids"] = ids
             print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
+    if native_source_print is not None:
+        transformations.append({"kind": "native-verified-source-serialization", **native_source_print,
+            "source_graph": "original", "scope": "complete-source-serialization; no-normalization-or-source-equivalence-grant"})
     if data_control:
         transformations.append(data_control)
     if print_reports:

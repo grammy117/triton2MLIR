@@ -9,8 +9,12 @@ Protected composite-dot normalization retains the original cast/dot graph
 and a separately inventoried normalized graph. BF16x3/x6 and logical TF32/x3
 compose with three source cast policies through the memory profiles and actual
 native/Merlin host/Spike execution: twelve target results and 36 runtime
-host-library replays. Original pointer/descriptor source-version
-intake, broader model captures and accelerator qualification remain open.
+host-library replays. The [native source reader](docs/native_source_print.md)
+now preserves original pointer/descriptor types and complete cast fields before
+normalization. Six mixed-policy memory-profile cases and two ragged composite
+GEMMs also pass native/Merlin/Spike, retaining source K reuse and partial dots.
+Broader source versions, external descriptor/model compositions and
+accelerator qualification remain open.
 
 [Source model tensor views](docs/model_source_views.md) now recover static
 transpose/stepped-slice coordinates from parent SSA and bind them to existing
