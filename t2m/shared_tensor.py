@@ -1379,9 +1379,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports = expand_float_casts(middle_module, _source_ids)
     from .scalar_builtins import expand_scalar_builtins
     scalar_builtin_reports = expand_scalar_builtins(middle_module, _source_ids)
+    from .scalar_tile_reads import expand_scalar_tile_reads
+    lookup_guards = set()
+    scalar_tile_reports = expand_scalar_tile_reads(middle_module, _source_ids, generated_guards=lookup_guards)
     from .reductions import expand_reductions
-    reduction_reports = expand_reductions(middle_module, _source_ids)
-    scan_reports = expand_scans(middle_module, _source_ids)
+    reduction_reports = expand_reductions(middle_module, _source_ids, generated_guards=lookup_guards)
+    scan_reports = expand_scans(middle_module, _source_ids, generated_guards=lookup_guards)
     from .elementwise_map import expand_elementwise_maps
     map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events, layouts=layout_maps)
     from .tile_gather import expand_tile_gathers
@@ -1393,7 +1396,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports += expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports:
+    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports or scalar_tile_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1447,6 +1450,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
     transformations.extend(scalar_builtin_reports)
+    transformations.extend(scalar_tile_reports)
     transformations.extend(reduction_reports)
     transformations.extend(scan_reports)
     transformations.extend(pointer_control_reports)

@@ -75,6 +75,6 @@ widening check and another current-package target invocation. This overlaps
 earlier selections and does not qualify every builtin, composition or target.
 
 General effectful combiners, remaining scalar builtin families and tensor
-captures, external participants, alias/runtime/source-version combinations and
+intermediate/capture forms, external participants, alias/runtime/source-version combinations and
 accelerator arithmetic/performance remain part of the full completion goal.
 The pinned source verifier still forbids map writes, atomics and volatile loads.

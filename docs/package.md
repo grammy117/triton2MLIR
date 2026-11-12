@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Captured tensor lookups](scalar_tile_reads.md) retain immutable SSA snapshots
+inside reductions/scans as guarded standard element reads. Shared projections
+reuse one value at the original gather position. Shape/axis/source-layout intent
+is annotated separately from effects and ownership; source tags cannot recreate
+the compiler's internal generated-guard admission. Merlin may construct a
+separate proved initial-state copy, including closed padding values. Public ABI,
+artifact rosters and receipt schemas remain unchanged; compatibility metadata
+records the representation.
+
 [Scalar region composition](scalar_regions.md) expands checked TTIR scalar
 math, clamps, casts, numeric bitcasts and existing pure external prototypes in
 their original control position before lifting maps/reductions/scans. Existing

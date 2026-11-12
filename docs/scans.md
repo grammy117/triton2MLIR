@@ -1,5 +1,10 @@
 # Portable associative scans
 
+[Captured tensor lookups](scalar_tile_reads.md) now retain immutable table
+snapshots in the original scalar body, including guarded element reads and
+runtime recurrence after source table mutation. Source assertions and direct
+pointer-memory effects keep their separate audit and effect requirements.
+
 `tt.scan` / `tt.scan.return` now expand after native helper inlining and before
 the shared tensor passes. The [TTIR scan definition](https://github.com/triton-lang/triton/blob/v3.7.1/include/triton/Dialect/Triton/IR/TritonOps.td)
 declares an associative combiner. The expansion preserves operand order within
@@ -30,7 +35,7 @@ given a reassociation permission.
 The current profile accepts equal positive static tensor shapes and inlined
 pure scalar `arith` / `math` computation, including nested `scf.if`, `scf.for`
 and `scf.while` value regions. Every nested operation, block argument and captured
-value is checked structurally; unknown operations, tensors, pointers, memory,
+value is checked structurally; unknown operations, unqualified tensor values, pointers, memory,
 calls and observable effects receive located refusals, including unused effects
 inside an unselected branch or a one-element scan. All source scan candidates
 validate before any expansion is attached. Original loops and yields are cloned

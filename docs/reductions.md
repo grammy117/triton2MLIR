@@ -1,5 +1,11 @@
 # General reductions at the model2MLIR/Merlin boundary
 
+[Captured tensor lookups](scalar_tile_reads.md) now also preserve immutable
+table snapshots across source mutation, guarded scalar reads and runtime
+recurrences. The 24 i32/i64 reduction/scan state cases pass native/Merlin host/
+Spike with all 48 complete results exact. Original direct pointer-memory effects
+still require their separate executable contract; annotations grant no stability.
+
 `tt.reduce` now retains general pure scalar combiners, including coupled tuples,
 numeric captures, branches and for/while state. Inputs keep their source widths
 and actual initial values. The portable payload uses standard Tensor/Linalg/SCF,
@@ -45,7 +51,7 @@ The scalar checker is shared with [scans](scans.md). It permits pure registered
 arithmetic/math and complete numeric structured control. The narrow xDSL
 unsigned-remainder trait omission is handled by its exact arithmetic class,
 without a speculation or nonzero-divisor grant. Memory, calls, unknown effects,
-tensor captures and remaining unexpanded TTIR scalar builtins still need their
+remaining tensor intermediates/capture forms and unexpanded TTIR scalar builtins need their
 own supported semantics. These are actual remaining forms, not opaque successes.
 
 Original reduction/scan regions also receive an effect audit before any

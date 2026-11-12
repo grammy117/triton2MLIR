@@ -6,7 +6,7 @@ preserves the general source combiner, tuple results, axis and traversal order.
 No identity is invented and no physical lane/warp mapping is selected.
 """
 
-from xdsl.dialects import arith, builtin, scf, tensor
+from xdsl.dialects import arith, builtin, cf, scf, tensor
 from xdsl.dialects.builtin import AffineMapAttr, IntegerAttr, StringAttr, TensorType
 from xdsl.dialects.linalg.attrs import IteratorTypeAttr
 from xdsl.dialects.linalg.ops import GenericOp, YieldOp
@@ -82,13 +82,19 @@ def audit_source_combiners(module, source_ids):
                     visit(child, set())
 
 
-def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
+def _scalar_combiner(
+    block, terminal, refuse, source_ids, *, family="scan", generated_guards=()
+):
     """Check complete scalar execution, including nested controls and captures.
 
     Only exact SCF value regions have recursive-effect permission. Inspect every
     nested operation, including unused effects. No loop is unrolled, reordered
     or discarded here; source termination and per-call state remain executable.
+    Immutable tensor reads/literals and exact pass-generated bounds guards
+    retain their explicit checks; serialized provenance grants no admission.
     """
+    from .scalar_tile_reads import numeric_tile, scalar_tensor_read
+
     controls, ids, control_ops = {}, [], []
     for child in block.walk():
         ids.extend(i for i in source_ids(child.location) if i not in ids)
@@ -96,6 +102,13 @@ def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
             continue
         control = isinstance(child, (scf.IfOp, scf.ForOp, scf.WhileOp))
         end = isinstance(child, (scf.YieldOp, scf.ConditionOp))
+        read = scalar_tensor_read(child)
+        literal = isinstance(child, arith.ConstantOp) and numeric_tile(
+            child.result.type
+        )
+        # Only exact guards made by the checked scalar lookup expansion gain
+        # this admission. Source attributes/locations cannot grant it.
+        guard = isinstance(child, cf.AssertOp) and child in generated_guards
         arithmetic = (
             child.name.split(".")[0] in ("arith", "math")
             and not child.regions
@@ -107,7 +120,7 @@ def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
                 or isinstance(child, (arith.ExtSIOp, arith.RemUIOp))
             )
         )
-        if not (control or end or arithmetic):
+        if not (control or end or arithmetic or read or literal or guard):
             name = (
                 child.op_name.data
                 if child.name == "builtin.unregistered"
@@ -128,7 +141,8 @@ def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
             ),
         ]
         if not all(
-            isinstance(
+            (read and value is child.tensor or literal and value is child.result)
+            or isinstance(
                 value.type, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat)
             )
             for value in values
@@ -137,6 +151,14 @@ def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
                 f"{family} combiner cannot capture tensors, addresses or memory state",
                 opcode=child.name,
             )
+        if read or literal or guard:
+            try:
+                child.verify()
+            except VerifyException as error:
+                refuse(
+                    f"{family} tensor read or guard fails verification: " + str(error),
+                    opcode=child.name,
+                )
         if control:
             if any(len(region.blocks) != 1 for region in child.regions):
                 refuse(
@@ -157,7 +179,7 @@ def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
     return controls, ids
 
 
-def expand_scans(module, source_ids):
+def expand_scans(module, source_ids, *, generated_guards=()):
     reports, plans = [], []
 
     def name(op):
@@ -212,7 +234,7 @@ def expand_scans(module, source_ids):
         ):
             refuse("scan tuple elements must be scalar numeric values")
         controls, combiner_ids = _scalar_combiner(
-            combiner, terminator, refuse, source_ids
+            combiner, terminator, refuse, source_ids, generated_guards=generated_guards
         )
         if not all(
             isinstance(

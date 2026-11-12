@@ -1,5 +1,11 @@
 # Pinned TTIR operation denominator
 
+[Captured tensor reads](scalar_tile_reads.md) additionally qualify selected
+`gather`/`unsplat` compositions inside reductions/scans, preserving loaded table
+snapshots across mutation and runtime recurrence through Merlin/Spike. This
+extends semantic compositions within the existing denominator; all types,
+attributes, memory effects and arbitrary kernels remain unqualified.
+
 Triton **v3.7.1**, commit `f797708c0626e5f9840ca5b0a98790e2c7cb09ad`,
 defines **50 `tt` operations**. This is a source-definition count, not a claim
 that 50 operations, every attribute/type combination or arbitrary kernels are

@@ -33,7 +33,7 @@ def _slice(source, offsets, sizes, result_type):
     )
 
 
-def expand_reductions(module, source_ids):
+def expand_reductions(module, source_ids, *, generated_guards=()):
     from .shared_tensor import opcode
 
     plans = []
@@ -98,7 +98,12 @@ def expand_reductions(module, source_ids):
                 "reduction combiner must consume and return every original tuple component"
             )
         controls, body_ids = _scalar_combiner(
-            combiner, end, refuse, source_ids, family="reduction"
+            combiner,
+            end,
+            refuse,
+            source_ids,
+            family="reduction",
+            generated_guards=generated_guards,
         )
         plans.append(
             (
