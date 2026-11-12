@@ -155,6 +155,14 @@ expanded field binding and normalized ABI preflight remain mandatory. Both
 host libraries replay three changed field/domain cases. Malformed original
 policies refuse before normalization, and wrong expanded widths/bounds refuse
 after it. See [the direct field contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
-Broader source versions, allocation-root/enclosing-model compositions, source
-backend correspondence and accelerator execution remain in the completion
-denominator.
+[Allocation-root bindings](descriptor_state.md#protected-contracts-before-allocation-normalization)
+now protect the same source choices before their initial normalization too.
+Source capsule v2 retains complete original generic IR, native printer identity,
+the typed original graph and executable protected TTIR. Pointer/descriptor
+recurrences pass native/Merlin host/Spike and eight host-library replays; a
+complete learned-state model preserves three calls, dependent updates and all four
+results through those execution boundaries, with its original snapshot checked
+as exact words. The separate receipt selection is
+`out/spike-protected-fp8-allocations/summary.json`. Broader source versions,
+binding/numeric/effect compositions, source backend correspondence and
+accelerator execution remain in the completion denominator.

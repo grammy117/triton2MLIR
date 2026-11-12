@@ -19,8 +19,12 @@ normalization. Six mixed-policy memory-profile cases and two ragged composite
 GEMMs also pass native/Merlin/Spike, retaining source K reuse and partial dots.
 Direct external descriptor parameters now also retain mixed policies through
 native/Merlin host/Spike, with full expanded-ABI validation after source auditing.
-Broader source versions, allocation-root/enclosing-model compositions and
-accelerator qualification remain open.
+Protected source capsule v2 additionally carries original contracts through
+allocation wrappers and a complete enclosing model. Two pointer/descriptor
+libraries pass native/Merlin host/Spike plus eight runtime host replays; the
+learned-state model retains all four results and its original snapshot through
+those execution boundaries. Broader source versions, binding/numeric/effect
+compositions and accelerator qualification remain open.
 
 [Source model tensor views](docs/model_source_views.md) now recover static
 transpose/stepped-slice coordinates from parent SSA and bind them to existing

@@ -47,14 +47,18 @@ and logical TF32/x3 through memory profiles and native/Merlin host/Spike.
 The complete native source reader additionally retains all fields before initial
 pointer/local-descriptor normalization; six mixed-policy cases qualify across
 the memory profiles through native/Merlin/Spike. Broader source versions,
-allocation-root/enclosing-model compositions and backend/accelerator
-correspondence remain required. Direct original external descriptor parameters
+broader binding/model compositions and backend/accelerator correspondence
+remain required. Direct original external descriptor parameters
 now qualify for rank-one/two mixed-policy kernels through native/Merlin host/
 Spike, with six additional host replays. A source-only audit grants no ABI
 permission; actual field binding and normalized full preflight remain mandatory.
-The next protected-composition boundary is allocation binding, whose initial
-normalization currently precedes the source-cast expansion. It needs an explicit
-original-to-protected-to-normalized custody chain before model qualification.
+Allocation binding now expands contracts before initial normalization and
+retains an explicit original/generic/protected/normalized chain in source capsule
+v2. Pointer and descriptor recurrences pass native/Merlin host/Spike and eight
+host replays. A complete model retains learned weights, dependent calls, an
+empty result and its live original snapshot across all four results through
+those execution boundaries. Broader contraction/numeric/effect/binding closure
+and applicable targets remain required.
 
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured
@@ -270,9 +274,11 @@ memory fixture while leaving the missing families unexamined.
    Protected mixed FP8/composite-dot normalization now qualifies through the
    consumer. Complete verified native source serialization now also handles
    original block-pointer/local-descriptor forms before cast expansion and
-   normalization. Extend external descriptor/argument bindings, broader source
-   versions and actual enclosing model captures; the selected pointer/precision/
-   loop/target cases do not close those compositions.
+   normalization. Source capsule v2 additionally protects allocation wrappers;
+   selected pointer/descriptor recurrences and a complete enclosing model now
+   qualify. Extend contraction, typed/byte alias, external implementation and
+   effect combinations across that boundary, plus broader source versions;
+   finite pointer/precision/loop/model cases do not close those compositions.
    Reuse official expansions where their semantics agree; preserve source
    width, rounding boundaries, accumulator order and recurrence. Implement
    unsupported behavior rather than hiding it behind provenance.

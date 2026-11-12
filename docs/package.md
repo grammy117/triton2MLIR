@@ -29,9 +29,21 @@ receive a source-only operation audit before their one-to-many field expansion.
 It grants no signature admission: the actual native field binding and full
 normalized TensorABI preflight are mandatory. Existing logical-descriptor
 records, public ABI and receipt schemas remain unchanged. This direct-field
-extension does not qualify allocation-root source capsules or enclosing-model
-per-cast normalization; those retain separate custody requirements. See
+extension retains separate allocation-root custody requirements. Protected
+allocation source capsule v2 now qualifies selected pointer/descriptor recurrences
+and a complete enclosing model without changing the public model ABI. See
 [the descriptor contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
+
+[Protected allocation source](descriptor_state.md#protected-contracts-before-allocation-normalization)
+uses `t2m.source-allocation-capsule.v2` when an FP8 overflow selection or source
+assembly provider requires expansion before allocation normalization/inlining.
+Four additional compiler files bind complete native generic source and printer
+identity, executable protected TTIR and original typed contracts. Normalization
+must consume the protected source; without normalization, the shared source-only
+stage consumes it directly. Producer verification and independent Merlin staging
+check the exact roster and byte chain. V1 remains supported, while v1-only
+readers refuse v2. Tensor/scalar/model ABI and capture receipt schemas remain
+unchanged; custody grants no arithmetic, effects, aliases or source equivalence.
 
 [Source model views](model_source_views.md) require
 `t2m.model-kernel-binding.v3` with

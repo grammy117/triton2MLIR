@@ -90,7 +90,10 @@ native/Merlin host/Spike and six changed host invocations; malformed original
 policies and expanded ABIs refuse. See [the field contract](external_descriptors.md#original-numeric-contracts-before-field-expansion).
 Their source/package ABI and receipt schemas remain unchanged.
 
-Broader source versions, allocation-root descriptor bindings, enclosing model
-per-cast captures, general numeric/effect closure and accelerator correspondence
-remain requirements of the full completion plan. Logical
+[Protected allocation bindings](descriptor_state.md#protected-contracts-before-allocation-normalization)
+now additionally retain the original/generic/protected chain in source capsule
+v2 before wrapper normalization. Pointer and descriptor recurrences plus a
+complete model pass native/Merlin host/Spike, including all four model results.
+Broader source versions, binding/numeric/effect compositions and accelerator
+correspondence remain requirements of the full completion plan. Logical
 descriptor support supplies no physical descriptor bytes or hardware placement.

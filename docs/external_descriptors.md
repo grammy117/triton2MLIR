@@ -154,8 +154,9 @@ The five focused checks pass. Their receipts and the separate runtime-stride
 load/store results reopen in `out/spike-fp8-external-descriptors/summary.json`:
 four target results and twelve host runtime replays across the two selections.
 The older 106-package inventory is unchanged. Allocation-root source wrappers
-and enclosing-model per-cast compositions still require protection before their
-own initial normalization; direct field qualification does not establish them.
+now additionally use [protected source capsule v2](descriptor_state.md#protected-contracts-before-allocation-normalization).
+Selected pointer/descriptor recurrences and a complete enclosing model qualify
+separately; direct field evidence does not establish arbitrary binding closure.
 
 ## Remaining full-coverage requirements
 

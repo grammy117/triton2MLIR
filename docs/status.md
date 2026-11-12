@@ -45,13 +45,18 @@ descriptor and composite-dot normalization. Original external descriptor
 arguments now pass selected rank-one/two mixed-policy kernels through native,
 Merlin host and Spike, with changed fields and empty roots replaying unchanged
 host libraries. Source auditing and actual expanded-ABI validation remain
-separate mandatory gates. Allocation-root/enclosing-model per-cast compositions
-still need protection before their own initial normalization.
+separate mandatory gates. Allocation-root wrappers now protect source contracts
+before initial normalization too, with explicit source capsule v2. Two pointer/
+descriptor libraries pass native/Merlin host/Spike and eight host runtime replays;
+a complete learned-state model retains three calls, dependent updates, all four results
+and a live original snapshot through those execution boundaries. Broader
+contraction/numeric/effect/binding compositions remain unqualified.
 
 ## What still separates this from the end goal
 
 1. **Close composition gaps.** Extend protected source contracts through
-   allocation wrappers and enclosing models, with an explicit custody chain.
+   allocation wrappers and enclosing models beyond the newly qualified
+   pointer/descriptor recurrences, with an explicit custody chain.
    Continue general view/mutation, runtime/alias, region/CFG and numeric/effect
    combinations. Working individual operations do not establish their closure.
 2. **Give hardware-dependent observations concrete semantics.** General

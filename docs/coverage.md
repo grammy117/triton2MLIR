@@ -20,8 +20,8 @@ two ragged BF16x3/TF32x3 GEMMs additionally retain source K reuse and partial
 contractions. All eight target receipts and a public descriptor CLI capture
 reopen in `out/spike-native-source-fp8/summary.json`.
 Complete fields survive source-only native round trips before any normalization;
-broader versions, allocation-root/enclosing-model compositions and targets remain
-open. Direct original descriptor parameters now additionally qualify for two
+broader versions, binding/model compositions and targets remain open. Direct
+original descriptor parameters now additionally qualify for two
 mixed-policy rank-one/two kernels through native/Merlin host/Spike and six host
 runtime replays. Two rank-one F32 runtime-stride load/store kernels additionally
 retain exact words through those execution boundaries and six host replays.
@@ -29,6 +29,19 @@ The four target receipts reopen in
 `out/spike-fp8-external-descriptors/summary.json`. Source policy and actual
 expanded-ABI refusals retain separate validation stages. This finite selection
 does not change the 106-package inventory below.
+
+[Protected allocation source capsule v2](descriptor_state.md#protected-contracts-before-allocation-normalization)
+now retains cast contracts before wrapper normalization/inlining. Two actual
+pointer/descriptor libraries pass native/Merlin host/Spike and eight additional
+runtime replays with aliases, signed strides, tails and empty/zero-step roots.
+A real learned-state model additionally retains three calls, dependent updates, all four
+results and the live original snapshot through those execution boundaries.
+Its source/data/weights remain unchanged; target result three has an explicit
+exact-word policy. The three target images and six complete results reopen in
+`out/spike-protected-fp8-allocations/summary.json`, alongside the original-source
+allocation CLI capture. This is a separate finite selection, leaving the
+106-package inventory unchanged. Broader numeric/effect/binding and accelerator
+closure remain unqualified.
 
 [Source model views](model_source_views.md) add three real i64/f32/BF16
 captures with transposed and stepped-slice operands, dependent root updates,

@@ -13,8 +13,11 @@ also preserves original block-pointer/descriptor types and every cast attribute
 before normalization; six mixed-policy cases qualify through native/Merlin/Spike.
 Direct external descriptor arguments also qualify selected mixed-policy kernels
 through those execution boundaries, retaining mandatory expanded-ABI validation.
-Broader source versions, allocation-root/model compositions and accelerator
-qualification remain open.
+[Protected allocation source](docs/descriptor_state.md#protected-contracts-before-allocation-normalization)
+now also retains the original/generic/protected chain through wrappers and a
+complete learned-state model. Pointer/descriptor recurrences and all four model
+results pass native/Merlin host/Spike. Broader source versions, binding/numeric/
+effect compositions and accelerator qualification remain open.
 
 [Source effects on the target](docs/target_effects.md) now preserve actual void
 entries, assertions, diagnostics and returning tensors through Merlin/Spike.
