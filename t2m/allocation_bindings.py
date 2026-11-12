@@ -284,8 +284,31 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     result.trace["source_argument_binding"] = report
     result.auxiliary_artifacts.update(capsule)
     result.trace["abi_difference"] += "; explicit allocation-state entry binds source pointers before inlining; updated roots returned once"
+    if protected_artifacts:
+        # These are the pre-wrapper contracts, distinct from the bound source
+        # inspected by convert_shared. Descriptor normalization may already
+        # have expanded the original dot before that converter sees it.
+        protection = json.loads(protected_artifacts["allocation-protection.json"])
+        entry = next(iter(result.module.ops))
+        entry.attributes["prov.allocation_source_contracts"] = builtin.StringAttr(json.dumps({
+            "schema": protection["schema"], "source_entry": source_entry,
+            "source_sha256": report["original_source_sha256"],
+            "fp8_conversions": protection["fp8_conversions"],
+            "assembly_conversions": protection["assembly_conversions"],
+            "grants_semantics": False}, sort_keys=True))
+        precisions = {operation["id"]: {**operation["dot_precision"],
+            "inputs": operation["inputs"], "input_types": operation["input_types"],
+            "intent": operation.get("intent", {})}
+            for operation in protection["source_graph"]["operations"] if "dot_precision" in operation}
+        if precisions:
+            intent = builtin.StringAttr(json.dumps({"source_entry": source_entry,
+                "source_sha256": report["original_source_sha256"], "contractions": precisions,
+                "grants_semantics": False}, sort_keys=True))
+            for operation in result.module.walk():
+                if operation is entry or operation.name in ("linalg.matmul", "linalg.batch_matmul"):
+                    operation.attributes["prov.allocation_original_dot_precisions"] = intent
+        result.trace["abi_difference"] += "; original allocation numeric intent remains separately annotated; source contracts execute as standard arithmetic"
     if descriptor_bindings:
-        from .ir import text
         entry = next(iter(result.module.ops))
         entry.attributes["prov.kernel_descriptor_state_bindings"] = builtin.StringAttr(json.dumps(descriptor_bindings, sort_keys=True))
         original_operations = (json.loads(protected_artifacts["allocation-protection.json"])["source_graph"]["operations"]
@@ -294,7 +317,9 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
                                 if operation["opcode"].startswith("tt.descriptor_") or operation["opcode"] == "tt.make_tensor_descriptor"]
         entry.attributes["prov.kernel_original_descriptors"] = builtin.StringAttr(json.dumps(
             {"source_sha256": report["original_source_sha256"], "operations": original_descriptors, "grants_semantics": False}, sort_keys=True))
-        result.trace["mlir_sha256"] = hashlib.sha256(text(result.module).encode()).hexdigest()
         result.trace["abi_difference"] += "; original descriptors bind declared root origins and logical fields after native normalization"
+    if protected_artifacts or descriptor_bindings:
+        from .ir import text
+        result.trace["mlir_sha256"] = hashlib.sha256(text(result.module).encode()).hexdigest()
     validate(result.trace, result.auxiliary_artifacts, result.source_ttir)
     return result

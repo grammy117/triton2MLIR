@@ -44,6 +44,11 @@ stage consumes it directly. Producer verification and independent Merlin staging
 check the exact roster and byte chain. V1 remains supported, while v1-only
 readers refuse v2. Tensor/scalar/model ABI and capture receipt schemas remain
 unchanged; custody grants no arithmetic, effects, aliases or source equivalence.
+Additive `prov.allocation_source_contracts` and
+`prov.allocation_original_dot_precisions` annotations retain pre-wrapper numeric
+intent on the entry/named contractions after descriptor expansion. They name
+the original source hash and graph separately from bound/normalized records,
+grant no semantics, and do not change public ABI or receipt schemas.
 
 [Source model views](model_source_views.md) require
 `t2m.model-kernel-binding.v3` with

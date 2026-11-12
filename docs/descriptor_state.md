@@ -105,6 +105,18 @@ casts removed by executable expansion, separately from the bound graph. The
 source descriptor provenance likewise uses the original pre-expansion graph.
 Numeric and effect semantics come from the payload, never those annotations.
 
+Protected allocation entries additionally retain `prov.allocation_source_contracts`
+with the pre-wrapper cast/provider records and original source hash. The entry
+and named contractions retain `prov.allocation_original_dot_precisions`, scoped
+to that same original graph. This matters when descriptor normalization expands
+a composite dot before binding: the later bound graph only contains partial
+contractions. Its records and ordinary `prov.kernel_original_dot_precisions`
+stay separate from the pre-wrapper intent. These are whole-kernel source
+contexts, not an asserted bijection between original dots and emitted partials.
+The annotations are attached after computation lowering and grant no rewrite,
+numeric, alias or target permission. Public ABI and capsule/receipt schemas
+remain unchanged.
+
 ## Reproducible demonstrations and evidence
 
 ```bash
