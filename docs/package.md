@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[General reductions](reductions.md) retain complete pure scalar combiners,
+coupled tuple order/types and structured control in standard Linalg. Each tuple
+component starts from its first actual source element; singleton axes project
+the original words without executing a combiner. Original reduction/scan helper
+effects are audited before normalization or folding. Derived initialization/
+body provenance grants no associativity, effects, termination or GPU arithmetic
+equivalence. Dynamic state uses Merlin's verified numeric-control destination
+path with ordinary lifetime gates. Public ABI, receipts and compiler artifact
+rosters are unchanged; compatibility metadata records the representation.
+
 [Exact IEEE source literals](ieee_literals.md) retain scalar/dense
 f16/BF16/f32/f64 NaN sign, payload and signaling bits through standard integer
 constants and `arith.bitcast`. Original word/type/shape records and primitive

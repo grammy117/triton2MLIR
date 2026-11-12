@@ -18,7 +18,71 @@ from xdsl.utils.exceptions import VerifyException
 from .diagnostics import ConversionError
 
 
-def _scalar_combiner(block, terminal, refuse, source_ids):
+def audit_source_combiners(module, source_ids):
+    """Reject unimplemented combiner effects before inlining or folding.
+
+    Follow complete original helper bodies, including unused effects. Native
+    Pure on a parent reduction is not permission to discard its nested reads
+    or diagnostics. This source audit grants no scalar-operation admission;
+    the complete inlined body still passes the later typed combiner checker.
+    """
+    from .shared_tensor import opcode
+
+    functions = {
+        operation.properties["sym_name"].data: operation
+        for operation in module.ops
+        if opcode(operation) == "tt.func"
+    }
+    checked = set()
+
+    def visit(operation, active):
+        name = opcode(operation)
+        if (
+            name
+            in {
+                "tt.load",
+                "tt.store",
+                "tt.atomic_rmw",
+                "tt.atomic_cas",
+                "tt.print",
+                "tt.assert",
+                "cf.assert",
+            }
+            or name.startswith(("tt.descriptor_", "memref."))
+            or name == "func.call"
+        ):
+            raise ConversionError(
+                "source reduction/scan combiner effects require an executable region contract before normalization",
+                opcode=name,
+                source_id=next(iter(source_ids(operation.location)), None),
+            )
+        if name == "tt.call":
+            callee = operation.properties.get("callee")
+            symbol = (
+                callee.root_reference.data
+                if isinstance(callee, builtin.SymbolRefAttr)
+                and not callee.nested_references
+                else None
+            )
+            if symbol not in functions or symbol in active:
+                raise ConversionError(
+                    "source reduction/scan combiner requires a complete nonrecursive helper body",
+                    opcode=name,
+                    source_id=next(iter(source_ids(operation.location)), None),
+                )
+            if symbol not in checked:
+                for child in functions[symbol].regions[0].walk():
+                    visit(child, active | {symbol})
+                checked.add(symbol)
+
+    for operation in module.walk():
+        if opcode(operation) in ("tt.reduce", "tt.scan"):
+            for region in operation.regions:
+                for child in region.walk():
+                    visit(child, set())
+
+
+def _scalar_combiner(block, terminal, refuse, source_ids, *, family="scan"):
     """Check complete scalar execution, including nested controls and captures.
 
     Only exact SCF value regions have recursive-effect permission. Inspect every
@@ -35,7 +99,13 @@ def _scalar_combiner(block, terminal, refuse, source_ids):
         arithmetic = (
             child.name.split(".")[0] in ("arith", "math")
             and not child.regions
-            and (is_side_effect_free(child) or isinstance(child, arith.ExtSIOp))
+            # xDSL 0.68 omits the standard no-memory-effect trait on these
+            # exact arithmetic classes. Their original control position is
+            # retained; this grants no speculation or divisor validity.
+            and (
+                is_side_effect_free(child)
+                or isinstance(child, (arith.ExtSIOp, arith.RemUIOp))
+            )
         )
         if not (control or end or arithmetic):
             name = (
@@ -44,7 +114,7 @@ def _scalar_combiner(block, terminal, refuse, source_ids):
                 else child.name
             )
             refuse(
-                "scan combiner requires pure scalar arithmetic and structured value control",
+                f"{family} combiner requires pure scalar arithmetic and structured value control",
                 opcode=name,
             )
         values = [
@@ -64,13 +134,13 @@ def _scalar_combiner(block, terminal, refuse, source_ids):
             for value in values
         ):
             refuse(
-                "scan combiner cannot capture tensors, addresses or memory state",
+                f"{family} combiner cannot capture tensors, addresses or memory state",
                 opcode=child.name,
             )
         if control:
             if any(len(region.blocks) != 1 for region in child.regions):
                 refuse(
-                    "scan combiner controls require single-block structured regions",
+                    f"{family} combiner controls require single-block structured regions",
                     opcode=child.name,
                 )
             controls[child.name] = controls.get(child.name, 0) + 1
@@ -80,7 +150,8 @@ def _scalar_combiner(block, terminal, refuse, source_ids):
             child.verify()
         except VerifyException as error:
             refuse(
-                "scan combiner structured control fails verification: " + str(error),
+                f"{family} combiner structured control fails verification: "
+                + str(error),
                 opcode=child.name,
             )
     return controls, ids

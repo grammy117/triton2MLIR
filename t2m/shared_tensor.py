@@ -365,6 +365,8 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
         if name == "tt.dot_scaled":
             from .scaled_dot import contract
             records[-1]["scaled_dot_numeric"] = contract(op, source_id)
+    from .scans import audit_source_combiners
+    audit_source_combiners(module, _source_ids)
     return records
 
 
@@ -1366,6 +1368,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             byte_atomics=typed_atomics and byte_order is not None)
         from .atomic_word_views import bind_source
         bind_source(records, pointer_control_reports)
+    from .reductions import expand_reductions
+    reduction_reports = expand_reductions(middle_module, _source_ids)
     scan_reports = expand_scans(middle_module, _source_ids)
     from .elementwise_map import expand_elementwise_maps
     map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events, layouts=layout_maps)
@@ -1383,7 +1387,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports = expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or pointer_address_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
+    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1436,6 +1440,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
+    transformations.extend(reduction_reports)
     transformations.extend(scan_reports)
     transformations.extend(pointer_control_reports)
     transformations.extend(gather_reports)
