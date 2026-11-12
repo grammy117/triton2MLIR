@@ -225,7 +225,12 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     configuration = arguments_as_dict(source_entry, bindings)
     normalized, intake, inventory = None, None, None
     normalization_source, protected_artifacts = saved, {}
-    if options.get("fp8_overflow") is not None or options.get("assembly_provider") is not None:
+    protect_source = options.get("fp8_overflow") is not None or options.get("assembly_provider") is not None
+    if not protect_source:
+        from .source_protection import needs_literal_protection
+        protect_source = needs_literal_protection(saved, work / "original-audit", optimizer=optimizer, source_entry=source_entry,
+            **{key: options[key] for key in ("effect_profile", "f32_atomic_add") if key in options})
+    if protect_source:
         from .source_protection import protect
         normalization_source, protected_artifacts, _ = protect(saved, work / "protection", source_entry=source_entry,
             **{key: options[key] for key in ("fp8_overflow", "effect_profile", "f32_atomic_add", "assembly_provider") if key in options})
@@ -295,6 +300,7 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
             "source_sha256": report["original_source_sha256"],
             "fp8_conversions": protection["fp8_conversions"],
             "assembly_conversions": protection["assembly_conversions"],
+            **({"literal_conversions": protection["literal_conversions"]} if "literal_conversions" in protection else {}),
             "grants_semantics": False}, sort_keys=True))
         precisions = {operation["id"]: {**operation["dot_precision"],
             "inputs": operation["inputs"], "input_types": operation["input_types"],

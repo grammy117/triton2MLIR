@@ -29,7 +29,10 @@ def parse_memory(source):
     ctx.load_dialect(Dialect("bufferization", [MaterializeInDestinationOp if op is bufferization.MaterializeInDestinationOp
         else ToTensorOp if op is bufferization.ToTensorOp else op for op in bufferization.Bufferization.operations], []))
     ctx.allow_unregistered = True
-    module = SharedParser(ctx, source).parse_module()
+    parser = SharedParser(ctx, source)
+    module = parser.parse_module()
+    from .float_literals import materialize
+    materialize(module, parser.literal_words(module))
     from .arith_compat import normalize_truncation_defaults
     normalize_truncation_defaults(module, _source_ids)
     for op in module.walk():

@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Exact IEEE source literals](ieee_literals.md) retain scalar/dense
+f16/BF16/f32/f64 NaN sign, payload and signaling bits through standard integer
+constants and `arith.bitcast`. Original word/type/shape records and primitive
+spelling are independently checked in producer verification and Merlin staging.
+All parser continuations restore words before executable serialization. Existing
+allocation source capsule v2 optionally includes nonempty `literal_conversions`
+in its protection report and original entry intent; older strict report readers
+refuse that additive field. Original allocation auditing precedes normalization,
+including unused helpers. Public ABIs, receipt schemas and artifact rosters are
+unchanged. This supplies no computed-NaN or accelerator arithmetic policy.
+
 [Structured scan combiners](scans.md#structured-combiner-qualification) retain
 pure scalar if/for/while bodies and uniform captures in standard parallel scan
 stages. Original control locations and derived counts remain annotated; tuple

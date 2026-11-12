@@ -74,5 +74,29 @@ def replay_events(stage, source):
     if print_ir(isolated) != events["input"] or bindings != events["bindings"]:
         raise ValueError("source-word event templates differ from the complete typed source event inventory")
     substitute(module, parse_shared(events["output"]), bindings, calls)
-    if print_ir(module) != stage["compute"]["input"]:
+    if not same_computation(module, stage["compute"]["input"]):
         raise ValueError("source-word event reconstruction differs from the actual computation input")
+
+
+def same_computation(module, expected):
+    """Compare complete replay bodies across exact literal reification only.
+
+    Older byte-bound stages may contain canonical dense NaNs. The executable
+    parser now restores those literals as integer constants and bitcasts, so
+    replay has that same representation. Reify only exact captured words in
+    the retained expected body; no folding, dead-code removal, or other edit
+    is permitted. All properties, attributes, locations and effects remain.
+    Native stage input/output custody is checked separately before replay.
+    """
+    from .float_literals import materialize
+    from .shared_tensor import parse_shared_source
+    from .word_events import print_ir
+
+    actual = print_ir(module)
+    if actual == expected:
+        return True
+    original, literals = parse_shared_source(expected)
+    if not literals:
+        return False
+    materialize(original, literals)
+    return actual == print_ir(original)

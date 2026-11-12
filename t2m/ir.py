@@ -39,7 +39,10 @@ def context():
 
 def parse(text_):
     from .shared_tensor import SharedParser
-    module = SharedParser(context(), text_).parse_module()
+    parser = SharedParser(context(), text_)
+    module = parser.parse_module()
+    from .float_literals import materialize
+    materialize(module, parser.literal_words(module))
     module.verify()
     return module
 

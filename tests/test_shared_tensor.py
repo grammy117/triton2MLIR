@@ -1,7 +1,6 @@
 """Source capture -> actual shared passes -> functional tensor IR -> native JIT."""
 
 import os
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -39,8 +38,8 @@ def test_dense_hex_constants_are_ieee_bits_and_preserve_signed_zero():
         module = parse_shared(f'module {{ %0 = arith.constant dense<{literal}> : tensor<4xf32> }}')
         value = next(iter(module.ops)).value.get_values()[0]
         assert value == expected and np.signbit(value) == np.signbit(expected)
-    with pytest.raises(Exception, match="NaN constant payload"):
-        parse_shared('module { %0 = arith.constant dense<0x7FC00001> : tensor<4xf32> }')
+    module = parse_shared('module { %0 = arith.constant dense<0x7FC00001> : tensor<4xf32> }')
+    assert next(iter(module.ops)).value.data.data == bytes.fromhex("0100c07f") * 4
 
 
 def test_tensor_abi_does_not_silently_serialize_parallel_writes():
@@ -61,7 +60,15 @@ def test_real_source_to_functional_tensor_and_native_results(tmp_path, name):
     if name == "row_softmax":
         assert {"tt.call", "tt.reduce"} <= original_names  # Private combiner helpers are captured too.
         assert "linalg.reduce" in names and "tensor.pad" in names
-    assert any(e["source_ids"] for e in result.trace["emitted_operations"])
+    if result.trace["schema"] == "t2m.shared-tensor-provenance.v2":
+        assert result.trace["original_blocks"]
+        graph, edge = result.trace["normalized_operations"], "normalized_ids"
+        assert not any("source_ids" in e for e in result.trace["emitted_operations"])
+    else:
+        graph, edge = result.trace["source_operations"], "source_ids"
+    known = {record["id"] for record in graph}
+    assert any(e[edge] for e in result.trace["emitted_operations"])
+    assert all(set(e[edge]) <= known for e in result.trace["emitted_operations"])
     assert result.trace["numeric_equivalence"] == "requires-qualification-against-source"
     if not NATIVE:
         return  # IR conversion is separately measured from optional host execution.

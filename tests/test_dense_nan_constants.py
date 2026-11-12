@@ -33,7 +33,7 @@ def test_canonical_nan_hex_and_encoded_bytes_round_trip(dtype, width, nan):
 
 @pytest.mark.parametrize("dtype,width,nan", FORMATS)
 @pytest.mark.parametrize("change", ("payload", "signaling", "negative"))
-def test_unqualified_nan_payloads_still_refuse_including_encoded_bytes(
+def test_nan_payloads_become_exact_integer_words_including_encoded_bytes(
     dtype, width, nan, change
 ):
     word = (
@@ -42,12 +42,17 @@ def test_unqualified_nan_payloads_still_refuse_including_encoded_bytes(
         else (nan - 1 if change == "signaling" else nan | (1 << (width - 1)))
     )
     for literal in (hex(word), '"0x' + word.to_bytes(width // 8, "little").hex() + '"'):
-        with pytest.raises(
-            Exception, match="NaN constant payload preservation is not qualified"
-        ):
-            parse_shared(
-                f"module {{ %0 = arith.constant dense<{literal}> : tensor<4x{dtype}> }}"
-            )
+        module = parse_shared(
+            f"module {{ %0 = arith.constant dense<{literal}> : tensor<4x{dtype}> }}"
+        )
+        module.verify()
+        constant, restored = tuple(module.ops)
+        assert restored.name == "arith.bitcast"
+        assert str(restored.results[0].type) == f"tensor<4x{dtype}>"
+        data = constant.value.data.data
+        assert data == word.to_bytes(width // 8, "little") * (len(data) // (width // 8))
+        roundtrip = parse_shared(text(module))
+        assert next(iter(roundtrip.ops)).value.data.data == data
 
 
 @pytest.mark.skipif(

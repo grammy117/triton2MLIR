@@ -18,7 +18,6 @@ from xdsl.dialects.builtin import (ArrayAttr, DenseArrayBase, DYNAMIC_INDEX, Ind
 from xdsl.dialects.linalg.ops import GenericOp, TransposeOp
 from xdsl.ir import Block, Region
 from xdsl.ir.affine import AffineMap
-from xdsl.parser import Parser
 
 from .diagnostics import ConversionError
 from .dynamic_abi import GridExtent, shape_contract, validate_dimensions
@@ -43,27 +42,14 @@ from .upstream import inspect_optimizer, lower_with_shared
 from .views import axis_permutation, inverse_permutation
 from .standard_floats import _FP8_BY_NAME
 from .input_storage import READONLY_SNAPSHOTS
+from .float_literals import LiteralParser, materialize as materialize_literal_words, properties as literal_properties
 
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
 DTYPES.update(_FP8_BY_NAME)
-_CANONICAL_NAN_WORDS = {"f16": 0x7E00, "bf16": 0x7FC0, "f32": 0x7FC00000, "f64": 0x7FF8000000000000}
 
 
-class SharedParser(Parser):
-    def parse_dense_int_or_fp_elements_attr(self, type):
-        attribute = super().parse_dense_int_or_fp_elements_attr(type)
-        element = attribute.type.element_type
-        if element.name in _CANONICAL_NAN_WORDS:
-            width = element.compile_time_size
-            data = attribute.data.data
-            canonical = _CANONICAL_NAN_WORDS[element.name].to_bytes(width, "little")
-            for index, value in enumerate(element.iter_unpack(data)):
-                if host_math.isnan(value) and (data[index * width:(index + 1) * width] != canonical
-                                               or element.pack([value]) != canonical):
-                    self.raise_error("NaN constant payload preservation is not qualified")
-        return attribute
-
+class SharedParser(LiteralParser):
     def _parse_optional_builtin_attr(self):
         attribute = super()._parse_optional_builtin_attr()
         # Native MLIR escapes non-ASCII UTF-8 bytes in string attributes.
@@ -76,29 +62,19 @@ class SharedParser(Parser):
                 pass
         return attribute
 
-    # xDSL 0.68 parses dense<0xFF800000> : tensor<...xf32> as the
-    # numeric integer 4286578688. MLIR uses IEEE *bits* here. Adapt the
-    # typed token conversion, not printed IR lines or operation semantics.
-    class _TensorLiteralElement(Parser._TensorLiteralElement):
-        def to_type(self, parser, type_):
-            if isinstance(type_, builtin.AnyFloat) and self.span.text.lower().startswith("0x"):
-                import math as host_math
-                raw = int(self.span.text, 16).to_bytes(type_.compile_time_size, "little")
-                number = next(type_.iter_unpack(raw))
-                from .standard_floats import FP8_TYPE_NAMES
-                if host_math.isnan(number) and type_.name not in FP8_TYPE_NAMES:
-                    canonical = _CANONICAL_NAN_WORDS.get(type_.name)
-                    if canonical is None or int.from_bytes(raw, "little") != canonical or type_.pack([number]) != raw:
-                        parser.raise_error("NaN constant payload preservation is not qualified", at_position=self.span)
-                return number
-            return super().to_type(parser, type_)
-
 
 def opcode(op):
     return op.op_name.data if op.name == "builtin.unregistered" else op.name
 
 
 def parse_shared(source):
+    module, literals = parse_shared_source(source)
+    materialize_literal_words(module, literals)
+    return module
+
+
+def parse_shared_source(source):
+    """Retain exact source literal facts until its complete operation audit."""
     ctx = context()
     ctx.allow_unregistered = True  # Only intake; output is checked separately.
     ctx.load_dialect(math.Math)
@@ -107,7 +83,9 @@ def parse_shared(source):
     from .standard_bufferization import bufferization_dialect
     ctx.load_dialect(memref_dialect())
     ctx.load_dialect(bufferization_dialect())
-    return SharedParser(ctx, source).parse_module()
+    parser = SharedParser(ctx, source)
+    module = parser.parse_module()
+    return module, parser.literal_words(module)
 
 
 @dataclass(frozen=True)
@@ -301,7 +279,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None):
+def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None, literal_words=None):
     """Audit source operations independently of an eventual bound call ABI.
 
     A source-only audit requires an explicit entry and grants no signature
@@ -347,7 +325,7 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
                         "inputs": [values[v] for v in op.operands], "outputs": [values[v] for v in op.results],
                         "input_types": [str(v.type) for v in op.operands],
                         "output_types": [str(v.type) for v in op.results],
-                        "properties": {k: str(v) for k, v in op.properties.items()},
+                        "properties": literal_properties(op, literal_words),
                         "attributes": {k: str(v) for k, v in op.attributes.items() if k != "op_name"}})
         op.location = NameLoc(StringAttr(source_id), op.location)
         if name in ("tt.assert", "cf.assert"):
@@ -374,8 +352,10 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
                 raise ConversionError("volatile observations cannot become stable tensor reads", source_id=source_id, opcode=name)
         if name == "arith.constant":
             value = op.properties.get("value")
-            if isinstance(value, builtin.FloatAttr) and host_math.isnan(value.value.data):
+            if isinstance(value, builtin.FloatAttr) and host_math.isnan(value.value.data) and op not in (literal_words or {}):
                 raise ConversionError("NaN constant payload preservation is not qualified", source_id=source_id, opcode=name)
+            if op in (literal_words or {}):
+                records[-1]["floating_literal_words"] = literal_words[op].record()
         if name == "tt.dot":
             from .contractions import dot_contract, zero_accumulator
             records[-1]["dot_numeric"] = dot_contract(op, source_id, allow_composite=allow_composite_dots)
@@ -1228,12 +1208,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         source_ir = work / "native-source/lowered.mlir"
         intake = {"optimizer": optimizer.record}
         protect_source = True
-    parsed = parse_shared(source_ir.read_text())
+    parsed, literal_words = parse_shared_source(source_ir.read_text())
     from .contractions import needs_dot_precision_expansion
     original_precision = any(needs_dot_precision_expansion(op) for op in parsed.walk())
     from .cfg_intake import required as requires_cfg
     has_cfg = requires_cfg(parsed)
-    protect_source = protect_source or original_precision or has_cfg
+    protect_source = protect_source or original_precision or has_cfg or bool(literal_words)
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     from .descriptor_arguments import has_parameters
@@ -1244,7 +1224,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     records = _preflight(parsed, None if deferred_descriptor_abi or has_cfg else abi,
         source_entry=abi.entry if deferred_descriptor_abi or has_cfg else None,
         id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
-        allow_composite_dots=protect_source, assembly_provider=assembly_provider)
+        allow_composite_dots=protect_source, assembly_provider=assembly_provider, literal_words=literal_words)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1258,7 +1238,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     protected_inventory = None
     if protect_source:
         from .source_graph import inventory
-        protected_inventory = inventory(parsed, records)
+        protected_inventory = inventory(parsed, records, literal_words=literal_words)
+    literal_reports = materialize_literal_words(parsed, literal_words, source_ids=_source_ids)
     early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow,
         tensor_carrier="arith") if protect_source else []
     assembly_reports = []
@@ -1450,6 +1431,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
             "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
+    transformations.extend(literal_reports)
     transformations.extend(pointer_address_reports)
     transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults

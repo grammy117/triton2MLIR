@@ -5,7 +5,7 @@ from copy import deepcopy
 from xdsl.dialects.builtin import StringAttr, UnregisteredOp
 
 
-def inventory(module, records):
+def inventory(module, records, *, literal_words=None):
     """Use the same SSA enumeration as preflight, with explicit block edges.
 
     The source has already passed the native source-only stage. This is a
@@ -26,6 +26,7 @@ def inventory(module, records):
         raise ValueError(
             "source inventory no longer matches the preflight operation roster"
         )
+    from .float_literals import properties
     result = deepcopy(records)
     for op, record in zip(ops, result, strict=True):
         name = op.op_name.data if isinstance(op, UnregisteredOp) else op.name
@@ -36,7 +37,7 @@ def inventory(module, records):
             or record["input_types"] != [str(v.type) for v in op.operands]
             or record["output_types"] != [str(v.type) for v in op.results]
             or record["properties"]
-            != {key: str(value) for key, value in op.properties.items()}
+            != properties(op, literal_words)
             or record["attributes"]
             != {
                 key: str(value)

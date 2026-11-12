@@ -64,6 +64,8 @@ def members(trace):
 
 
 def validate(trace, artifacts, source):
+    from .float_literals import validate_trace as validate_literal_trace
+    validate_literal_trace(trace)
     from .map_layout import validate_trace
     validate_trace(trace)
     from .cfg_intake import validate as validate_control_flow

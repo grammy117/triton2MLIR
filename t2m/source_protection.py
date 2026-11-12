@@ -20,6 +20,29 @@ FILES = frozenset(
 )
 
 
+def needs_literal_protection(source, work, *, optimizer, source_entry, effect_profile="ordinary", f32_atomic_add=None):
+    """Audit original allocation source before any native normalizer can fold it."""
+    from .frontend import read_ttir_generic
+    from .shared_tensor import _preflight, parse_shared_source
+    from .upstream import lower_with_shared
+    work = Path(work)
+    work.mkdir(parents=True, exist_ok=False)
+    try:
+        lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
+        generic = work / "source/lowered.mlir"
+    except ConversionError:
+        read_ttir_generic(source, work / "native")
+        generic = work / "native/lowered.mlir"
+    module, literals = parse_shared_source(generic.read_text())
+    _preflight(module, source_entry=source_entry, atomics=effect_profile in ("atomics", "typed-atomics"),
+        typed_atomics=effect_profile == "typed-atomics", f32_atomic_add=f32_atomic_add,
+        allow_composite_dots=True, literal_words=literals)
+    from .fp8_casts import validate_fp8_casts
+    from .shared_tensor import _source_ids
+    validate_fp8_casts(module, _source_ids)
+    return bool(literals)
+
+
 def protect(
     source,
     work,
@@ -33,7 +56,8 @@ def protect(
     """Audit the original source without granting its eventual wrapper ABI."""
     from .fp8_casts import expand_fp8_casts, validate_fp8_casts
     from .frontend import read_ttir_generic
-    from .shared_tensor import _preflight, _source_ids, parse_shared
+    from .shared_tensor import _preflight, _source_ids, parse_shared_source
+    from .float_literals import materialize
     from .source_graph import inventory
 
     work = Path(work)
@@ -43,7 +67,7 @@ def protect(
     if native["source_sha256"] != record(original)["sha256"]:
         raise ConversionError("original allocation source changed before protection")
     generic = (work / "native/lowered.mlir").read_text()
-    module = parse_shared(generic)
+    module, literals = parse_shared_source(generic)
     records = _preflight(
         module,
         source_entry=source_entry,
@@ -52,9 +76,11 @@ def protect(
         f32_atomic_add=f32_atomic_add,
         allow_composite_dots=True,
         assembly_provider=assembly_provider,
+        literal_words=literals,
     )
     validate_fp8_casts(module, _source_ids, overflow=fp8_overflow)
-    graph = inventory(module, records)
+    graph = inventory(module, records, literal_words=literals)
+    literal_reports = materialize(module, literals, source_ids=_source_ids)
     casts = expand_fp8_casts(
         module, _source_ids, overflow=fp8_overflow, tensor_carrier="arith"
     )
@@ -84,6 +110,8 @@ def protect(
         "assembly_conversions": assembly,
         "grants_semantics": False,
     }
+    if literal_reports:
+        report["literal_conversions"] = literal_reports
     artifacts = {
         "allocation-generic.mlir": generic,
         "allocation-native-print.json": json.dumps(native, indent=2) + "\n",
@@ -101,7 +129,7 @@ def validate(artifacts, original, source_entry):
     report = json.loads(artifacts["allocation-protection.json"])
     native = json.loads(artifacts["allocation-native-print.json"])
     if (
-        set(report)
+        set(report) - {"literal_conversions"}
         != {
             "schema",
             "source_entry",
@@ -130,10 +158,13 @@ def validate(artifacts, original, source_entry):
         or not isinstance(report["source_graph"]["blocks"], list)
         or not isinstance(report.get("fp8_conversions"), list)
         or not isinstance(report.get("assembly_conversions"), list)
+        or "literal_conversions" in report and (not isinstance(report["literal_conversions"], list) or not report["literal_conversions"])
     ):
         raise ValueError(
             "allocation source protection differs from its original/generic/protected custody"
         )
+    from .float_literals import validate_reports
+    validate_reports(report["source_graph"]["operations"], report.get("literal_conversions", []))
     if (
         set(native)
         != {
