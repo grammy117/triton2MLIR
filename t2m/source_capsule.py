@@ -8,6 +8,7 @@ import hashlib
 import json
 
 SCHEMA = "t2m.source-allocation-capsule.v1"
+PROTECTED_SCHEMA = "t2m.source-allocation-capsule.v2"
 BASE = frozenset(
     {
         "allocation-original.ttir",
@@ -42,12 +43,16 @@ def members(trace):
         return frozenset()
     if (
         not isinstance(capsule, dict)
-        or capsule.get("schema") != SCHEMA
+        or set(capsule) != {"schema", "normalized", "artifacts", "grants_semantics"}
+        or capsule.get("schema") not in (SCHEMA, PROTECTED_SCHEMA)
         or type(capsule.get("normalized")) is not bool
         or capsule.get("grants_semantics") is not False
     ):
         raise ValueError("unknown or authority-granting source capsule profile")
     expected = BASE | (NORMALIZED if capsule["normalized"] else frozenset())
+    if capsule["schema"] == PROTECTED_SCHEMA:
+        from .source_protection import FILES
+        expected |= FILES
     if set(capsule.get("artifacts", {})) != expected:
         raise ValueError("source capsule lacks its complete compiler artifact roster")
     return expected
@@ -77,6 +82,10 @@ def validate(trace, artifacts, source):
             artifacts[name]
         ):
             raise ValueError("source capsule artifact mismatch: " + name)
+    protected = capsule["schema"] == PROTECTED_SCHEMA
+    if protected:
+        from .source_protection import validate as validate_protection
+        validate_protection(artifacts, artifacts["allocation-original.ttir"], binding["source_entry"])
     arguments = json.loads(artifacts["allocation-arguments.json"])
     if (
         arguments.get("schema")
@@ -105,7 +114,7 @@ def validate(trace, artifacts, source):
     input_name = (
         "allocation-normalized.ttir"
         if capsule["normalized"]
-        else "allocation-original.ttir"
+        else "allocation-protected.ttir" if protected else "allocation-original.ttir"
     )
     stage = json.loads(artifacts["allocation-source-stage.json"])
     expected = {
@@ -174,7 +183,7 @@ def validate(trace, artifacts, source):
             or intake.get("schema") != "t2m.intake-pass.v1"
             or intake.get("target_backend") != "not-invoked"
             or intake.get("source_sha256")
-            != record(artifacts["allocation-original.ttir"])["sha256"]
+            != record(artifacts["allocation-protected.ttir" if protected else "allocation-original.ttir"])["sha256"]
             or intake.get("output_sha256")
             != record(artifacts["allocation-normalized.ttir"])["sha256"]
             or inventory.get("normalization_passes") != intake.get("pipeline")

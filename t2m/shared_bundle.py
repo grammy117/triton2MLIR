@@ -12,6 +12,7 @@ from .bundle import _json, _record
 from .native import execute_native
 from .shared_tensor import TensorABI
 from .source_capsule import BASE as SOURCE_BASE, NORMALIZED as SOURCE_NORMALIZED, members as source_members, validate as validate_source_capsule
+from .source_protection import FILES as PROTECTED_SOURCE_FILES
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
@@ -107,7 +108,7 @@ def verify_shared_bundle(out):
     profile = receipt.get("profile", TENSOR_PROFILE)
     if (receipt.get("schema") != "t2m.capture-receipt.v2" or profile not in PROFILE_FILES
             or not REQUIRED | PROFILE_FILES[profile] <= set(receipt.get("artifacts", {}))
-            or not set(receipt.get("artifacts", {})) <= REQUIRED | PROFILE_FILES[profile] | SOURCE_BASE | SOURCE_NORMALIZED):
+            or not set(receipt.get("artifacts", {})) <= REQUIRED | PROFILE_FILES[profile] | SOURCE_BASE | SOURCE_NORMALIZED | PROTECTED_SOURCE_FILES):
         raise ValueError("not a complete shared tensor capture receipt")
     for name, record in receipt["artifacts"].items():
         path = out / name

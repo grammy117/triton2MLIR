@@ -224,17 +224,22 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     bindings = tuple(bindings)
     configuration = arguments_as_dict(source_entry, bindings)
     normalized, intake, inventory = None, None, None
+    normalization_source, protected_artifacts = saved, {}
+    if options.get("fp8_overflow") is not None or options.get("assembly_provider") is not None:
+        from .source_protection import protect
+        normalization_source, protected_artifacts, _ = protect(saved, work / "protection", source_entry=source_entry,
+            **{key: options[key] for key in ("fp8_overflow", "effect_profile", "f32_atomic_add", "assembly_provider") if key in options})
 
     def normalize():
         from .frontend import expand_tensor_pointers
-        report = expand_tensor_pointers(saved, work / "intake")
+        report = expand_tensor_pointers(normalization_source, work / "intake")
         return work / "intake/lowered.mlir", report, json.loads((work / "intake/inventory.json").read_text())
 
     source_stage_dir = work / "source"
     if any(isinstance(binding, DescriptorArgument) for binding in bindings):
         normalized, intake, inventory = normalize()
     try:
-        source_stage = lower_with_shared(normalized or saved, source_stage_dir, optimizer=optimizer, stage="source")
+        source_stage = lower_with_shared(normalized or normalization_source, source_stage_dir, optimizer=optimizer, stage="source")
     except ConversionError as original_error:
         if normalized is not None:
             raise
@@ -257,7 +262,7 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
                   bound_source_sha256=hashlib.sha256(bound.read_bytes()).hexdigest())
     if descriptor_bindings:
         report["descriptor_bindings"] = descriptor_bindings
-    from .source_capsule import SCHEMA, record, validate
+    from .source_capsule import SCHEMA, PROTECTED_SCHEMA, record, validate
     source_custody = {"schema": "t2m.source-stage-custody.v1", "source_stage_schema": source_stage["schema"],
                       "stage": source_stage["stage"], "stage_completed": source_stage["stage_completed"],
                       "flags": source_stage["command"][1:-1], "artifacts": source_stage["artifacts"],
@@ -271,7 +276,8 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
         capsule.update({"allocation-normalized.ttir": normalized.read_text(),
                         "allocation-intake.json": (work / "intake/report.json").read_text(),
                         "allocation-inventory.json": (work / "intake/inventory.json").read_text()})
-    report["source_capsule"] = {"schema": SCHEMA, "normalized": normalized is not None,
+    capsule.update(protected_artifacts)
+    report["source_capsule"] = {"schema": PROTECTED_SCHEMA if protected_artifacts else SCHEMA, "normalized": normalized is not None,
                                 "artifacts": {name: record(data) for name, data in capsule.items()}, "grants_semantics": False}
     (work / "bindings.json").write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
     result = convert_shared(bound,abi,work / "translate",optimizer=optimizer,**options)
@@ -282,7 +288,9 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
         from .ir import text
         entry = next(iter(result.module.ops))
         entry.attributes["prov.kernel_descriptor_state_bindings"] = builtin.StringAttr(json.dumps(descriptor_bindings, sort_keys=True))
-        original_descriptors = [operation for operation in inventory["operations"]
+        original_operations = (json.loads(protected_artifacts["allocation-protection.json"])["source_graph"]["operations"]
+                               if protected_artifacts else inventory["operations"])
+        original_descriptors = [operation for operation in original_operations
                                 if operation["opcode"].startswith("tt.descriptor_") or operation["opcode"] == "tt.make_tensor_descriptor"]
         entry.attributes["prov.kernel_original_descriptors"] = builtin.StringAttr(json.dumps(
             {"source_sha256": report["original_source_sha256"], "operations": original_descriptors, "grants_semantics": False}, sort_keys=True))

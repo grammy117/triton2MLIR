@@ -72,6 +72,39 @@ byte custody, **not source equivalence**, alias permission or target admission;
 capsule remain readable; descriptor-origin records require the complete capsule.
 Older readers may refuse the added artifact inventory explicitly.
 
+## Protected contracts before allocation normalization
+
+An explicit FP8 overflow selection or source-assembly provider now selects
+`t2m.source-allocation-capsule.v2`. Source-only native serialization exposes
+the complete original graph before any normalization. A source-entry preflight
+audits operations, numeric contracts and effects without admitting a wrapper
+ABI. Existing FP8 and selected assembly recipes then emit standard executable
+arithmetic. Native descriptor/pointer/dot passes consume that protected source;
+the complete allocation binding and final TensorABI preflight remain mandatory.
+
+V2 adds exactly four compiler artifacts to the existing roster:
+
+| Artifact | Bytes retained |
+|---|---|
+| `allocation-generic.mlir` | Complete native generic original source, before annotations/expansion |
+| `allocation-native-print.json` | Source/generic hashes, verified no-pass round trip and actual printer identity |
+| `allocation-protected.ttir` | Executable arithmetic expansion before allocation normalization |
+| `allocation-protection.json` | Original typed graph, selected cast/provider records and original/generic/protected byte links |
+
+The producer and independent Merlin reader check the entire chain. With native
+normalization, its input hash must name `allocation-protected.ttir`. Without
+normalization, the shared source-only stage consumes that protected file
+directly. Existing original/bound/generic links still apply. Evaluator fields,
+missing files, profile downgrades, changed links and authority grants refuse
+even when outer artifact hashes are updated. V1 remains supported; v1-only
+readers explicitly refuse v2. Public tensor/scalar/model ABI and capture receipt
+schemas are unchanged. Custody still supplies no source-equivalence proof.
+
+Coverage observes the original graph in `allocation-protection.json`, including
+casts removed by executable expansion, separately from the bound graph. The
+source descriptor provenance likewise uses the original pre-expansion graph.
+Numeric and effect semantics come from the payload, never those annotations.
+
 ## Reproducible demonstrations and evidence
 
 ```bash

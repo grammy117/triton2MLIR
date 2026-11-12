@@ -164,13 +164,16 @@ def package_coverage(bundles, *, qualifications=(), corpora=()):
             original_inventory = {}
             if capsule:
                 source_graph = "allocation-bound-source-operations"
-                if capsule["normalized"]:
+                if capsule["normalized"] or capsule["schema"] == "t2m.source-allocation-capsule.v2":
                     # verify_bundle has checked both receipt and capsule byte links.
                     # Native pre-wrapper inventory stays distinct from bound operations.
-                    operations = _json(base / "allocation-inventory.json")["operations"]
+                    protected = capsule["schema"] == "t2m.source-allocation-capsule.v2"
+                    inventory_name = "allocation-protection.json" if protected else "allocation-inventory.json"
+                    original = _json(base / inventory_name)
+                    operations = original["source_graph"]["operations"] if protected else original["operations"]
                     source_graph = "pre-wrapper-original-source-operations"
                     source_sha256 = _record(base / "allocation-original.ttir")["sha256"]
-                    original_inventory = {"original_inventory": _record(base / "allocation-inventory.json"),
+                    original_inventory = {"original_inventory": _record(base / inventory_name),
                         "bound_source_sha256": trace["source_sha256"],
                         "allocation_bound_operation_counts": dict(Counter(op["opcode"] for op in trace["source_operations"]))}
             cases.append({"id": pin["sha256"] + ":" + (directory or "kernel"), "package_receipt": pin,
