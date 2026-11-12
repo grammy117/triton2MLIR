@@ -4,11 +4,18 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Scalar region composition](docs/scalar_regions.md) now applies checked shared
+scalar mappings and exact rounding/high-product expansions before region lifting.
+Twenty-four further libraries pass native/Merlin host/Spike with 24 complete
+results and 96 further host invocations. The latest combined inventory reopens
+213 packages and 168 standalone qualifications. General regions/effects,
+runtime/alias/source-version combinations and applicable targets remain required.
+
 [General reductions](docs/reductions.md) now retain coupled scalar state,
 source widths/order and actual first-element initialization in standard Linalg.
 Twenty-four libraries and four complete models pass native/Merlin host/Spike:
 80 exact-word results and 96 additional unchanged-library host invocations.
-The combined inventory reopens 189 packages and 144 standalone qualifications.
+That earlier inventory reopens 189 packages and 144 standalone qualifications.
 Remaining scalar builtin/region compositions, memory/external effects, runtime
 and alias forms, source versions and applicable targets remain required.
 

@@ -36,6 +36,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Scalar region composition](scalar_regions.md) now applies checked scalar
+shared mappings and exact rounding/high-product expansions before container
+admission. Twenty-four further libraries pass native/Merlin host/Spike with all
+24 results checked and 96 additional unchanged-library host invocations.
+The latest combined inventory reopens 213 packages and 168 standalone
+qualifications. Remaining region/builtin/effect, runtime/alias/source-version
+and applicable target closure stay required.
+
 [General reductions](reductions.md) now retain coupled tuples, first actual
 source-element initialization and complete scalar structured bodies in standard
 Linalg. Twenty-four libraries and four models compare 80 exact-word target
@@ -154,8 +162,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/general-reduction-inventory/coverage.json` selection reopens
-**189 packages, 144 standalone qualifications and fourteen maintained product
+The current `out/scalar-region-inventory/coverage.json` selection reopens
+**213 packages, 168 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -330,9 +338,10 @@ memory fixture while leaving the missing families unexamined.
    memory effects or physical address observations. Keep upstream-only pass
    successes separate from actual package/consumer execution.
 2. **Close numeric and effect families.** Use the matrix to select actual
-   implementation gaps, starting with scalar builtin expansions inside maps,
-   reductions and scans before their typed region checks, remaining numeric
-   contracts, valid memory/external effects and physical observations. Pinned
+   implementation gaps in remaining region/builtin forms and tensor captures,
+   numeric contracts, valid memory/external effects and physical observations.
+   Checked scalar mappings now compose before map/reduction/scan admission;
+   their source types, policies and actual controls remain executable. Pinned
    TTIR forbids map writes, atomics and volatile loads; preserve their native
    invalid-source refusals rather than bypassing the verifier.
    Protected mixed FP8/composite-dot normalization now qualifies through the

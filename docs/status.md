@@ -35,6 +35,12 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[Scalar TTIR region composition](scalar_regions.md) additionally closes the
+conversion-order gap for checked precise math, clamps, casts, numeric bitcasts
+and existing pure external mappings. Twenty-four floating/integer libraries
+pass native/Merlin host/Spike and 96 further host invocations. BF16-to-f64 uses
+an exact standard f32 bridge; region/control/effect checks remain mandatory.
+
 [General reductions](reductions.md) now retain complete pure scalar bodies,
 coupled tuple order/types, captures and structured control with real source
 initialization. Twenty-four libraries and four complete models pass native,
@@ -72,8 +78,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/general-reduction-inventory/coverage.json` reopens **189 packages,
-144 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/scalar-region-inventory/coverage.json` reopens **213 packages,
+168 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
@@ -125,13 +131,12 @@ semantic family, while general addresses/effects and target scope remain open.
 
 The [completion plan](completion_plan.md) gives the execution order and gates.
 The [package contract](package.md) records explicit model2MLIR differences.
-The next milestone closes concrete semantic forms through the same package
-and consumer: scalar builtin expansions must compose inside maps, scans and
-reductions before their typed region checks; valid memory/external effects,
-runtime/shared-state bindings and applicable targets remain required. The pinned
-source verifier forbids map writes, atomics and volatile loads, so those are
+The next milestone closes remaining region forms, tensor captures, valid
+memory/external effects, runtime/shared-state bindings and applicable targets
+through the same package and consumer. Checked scalar arithmetic now expands
+before region admission; arbitrary builtin/effect bodies retain their separate
+requirements. The pinned source verifier forbids map writes, atomics and volatile loads, so those are
 invalid-source refusals rather than missing portable map-store implementations.
-More passing
-variants of an already-qualified fixture cannot substitute for those gaps.
+More passing variants of an already-qualified fixture cannot substitute for those gaps.
 There is no defensible arbitrary-kernel completion percentage yet: the
 50-name inventory measures a different denominator.

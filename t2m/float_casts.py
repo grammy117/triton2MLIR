@@ -1,10 +1,13 @@
 """Portable exact expansions for shared's rounding/equal-width cast gaps.
 
 Meta 17f0c234 FpToFpConverter rejects RTZ and emits an invalid extension
-for equal-width formats. Keep its ordinary RTNE conversions; expand only
-the missing forms through standard scalar casts inside elementwise generics.
+for equal-width formats. Ordinary tensor RTNE conversions stay upstream-owned;
+the same scalar casts compose before region lifting. Missing forms use exact
+standard scalar casts inside elementwise generics when the input is a tensor.
 The f64-to-16-bit routes jam an inexact f32 intermediate to odd before RTNE,
 avoiding double rounding and unsupported direct narrow runtime helpers.
+BF16-to-f64 widens exactly through f32 so existing standard BF16/F32
+legalization handles the source without residual LLVM BF16 arithmetic.
 """
 
 from xdsl.dialects import arith, builtin, math, tensor
@@ -26,17 +29,17 @@ def expand_float_casts(module, source_ids):
     plans = []
     for op in module.walk():
         name = opcode(op)
-        if name not in ("tt.fp_to_fp", "arith.truncf"):
+        if name not in ("tt.fp_to_fp", "arith.truncf", "arith.extf"):
             continue
         ids = source_ids(op.location)
 
-        def refuse(message):
+        def refuse(message, *, name=name, ids=ids):
             raise ConversionError(message, opcode=name, source_id=next(iter(ids), None))
 
         if len(op.operands) != 1 or len(op.results) != 1:
             refuse("floating conversion requires one operand and result")
         source, target = op.operands[0].type, op.results[0].type
-        if name == "arith.truncf":
+        if name != "tt.fp_to_fp":
             src_element = (
                 source.element_type
                 if isinstance(source, builtin.TensorType)
@@ -47,7 +50,14 @@ def expand_float_casts(module, source_ids):
                 if isinstance(target, builtin.TensorType)
                 else target
             )
-            if str(src_element) != "f64" or str(dst_element) not in ("f16", "bf16"):
+            if not (
+                name == "arith.truncf"
+                and str(src_element) == "f64"
+                and str(dst_element) in ("f16", "bf16")
+                or name == "arith.extf"
+                and str(src_element) == "bf16"
+                and str(dst_element) == "f64"
+            ):
                 continue
         shaped = isinstance(source, builtin.TensorType)
         if shaped != isinstance(target, builtin.TensorType):
@@ -59,19 +69,19 @@ def expand_float_casts(module, source_ids):
             refuse("floating source tiles require matching static shapes")
         sf, tf = (type_.element_type if shaped else type_ for type_ in (source, target))
         src, dst = str(sf), str(tf)
-        if name == "arith.truncf":
-            if src != "f64" or dst not in ("f16", "bf16"):
-                continue
+        if name != "tt.fp_to_fp":
             if any(
                 key not in ("fastmath",) and not key.startswith("prov.")
                 for key in (*op.attributes, *op.properties)
             ):
-                refuse("f64/16-bit conversion has an unqualified arithmetic property")
+                refuse(
+                    "standard floating conversion has an unqualified arithmetic property"
+                )
             flags = op.properties.get("fastmath", op.attributes.get("fastmath"))
             if flags is not None and (
                 not isinstance(flags, arith.FastMathFlagsAttr) or flags.data
             ):
-                refuse("f64/16-bit conversion requires neutral floating flags")
+                refuse("standard floating conversion requires neutral floating flags")
             mode = "rtne"
         else:
             if any(
@@ -111,6 +121,7 @@ def expand_float_casts(module, source_ids):
                     mode == "rtne"
                     and WIDTHS[src] != WIDTHS[dst]
                     and not (src == "f64" and dst in ("f16", "bf16"))
+                    and not (src == "bf16" and dst == "f64")
                 ):
                     continue  # Existing standard RTNE conversions remain upstream-owned.
         plans.append((op, sf, tf, mode, ids))
@@ -119,8 +130,8 @@ def expand_float_casts(module, source_ids):
     for original, source, target, mode, ids in plans:
         generated = []
 
-        def emit(op):
-            op.location = original.location
+        def emit(op, *, location=original.location, generated=generated):
+            op.location = location
             generated.append(op)
             return op.results[0]
 
@@ -160,6 +171,9 @@ def expand_float_casts(module, source_ids):
         value = block.args[0] if shaped else original.operands[0]
         if source == target:
             result = emit(arith.BitcastOp(value, target))
+        elif str(source) == "bf16" and str(target) == "f64":
+            intermediate = emit(arith.ExtFOp(value, builtin.f32))
+            result = emit(arith.ExtFOp(intermediate, target))
         elif str(source) in FP8_TYPE_NAMES or WIDTHS[str(source)] < WIDTHS[str(target)]:
             result = emit(arith.ExtFOp(value, target))
         elif WIDTHS[str(source)] == WIDTHS[str(target)]:
@@ -210,6 +224,8 @@ def expand_float_casts(module, source_ids):
         expansion = (
             "same-format-word-identity"
             if source == target
+            else "exact-f32-widening-bridge"
+            if str(source) == "bf16" and str(target) == "f64"
             else "standard-exact-extension"
             if str(source) in FP8_TYPE_NAMES
             or WIDTHS[str(source)] < WIDTHS[str(target)]

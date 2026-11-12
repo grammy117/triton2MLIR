@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Scalar region composition](scalar_regions.md) expands checked TTIR scalar
+math, clamps, casts, numeric bitcasts and existing pure external prototypes in
+their original control position before lifting maps/reductions/scans. Existing
+exact rounding/high-product expansions precede region admission; unknown effects
+and source properties still refuse. BF16-to-f64 widening uses an exact f32
+bridge. Transformation/compatibility records describe the representation; public
+ABI, artifact rosters and receipt schemas remain unchanged.
+
 [General reductions](reductions.md) retain complete pure scalar combiners,
 coupled tuple order/types and structured control in standard Linalg. Each tuple
 component starts from its first actual source element; singleton axes project

@@ -1368,6 +1368,17 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             byte_atomics=typed_atomics and byte_order is not None)
         from .atomic_word_views import bind_source
         bind_source(records, pointer_control_reports)
+    # Normalize scalar TTIR before scalar-container admission. Existing exact
+    # expansions keep source rounding/word semantics; tensor forms retain their
+    # usual parallel expansions. Nothing moves across its source control.
+    from .integer_products import expand_high_products
+    product_reports = expand_high_products(middle_module, _source_ids)
+    fp8_reports = early_fp8_reports + expand_fp8_casts(middle_module, _source_ids,
+        overflow=None if fp8_overflow == PER_CAST else fp8_overflow)
+    from .float_casts import expand_float_casts
+    cast_reports = expand_float_casts(middle_module, _source_ids)
+    from .scalar_builtins import expand_scalar_builtins
+    scalar_builtin_reports = expand_scalar_builtins(middle_module, _source_ids)
     from .reductions import expand_reductions
     reduction_reports = expand_reductions(middle_module, _source_ids)
     scan_reports = expand_scans(middle_module, _source_ids)
@@ -1377,17 +1388,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
     from .histogram import expand_histograms
     histogram_reports = expand_histograms(middle_module, _source_ids)
-    from .integer_products import expand_high_products
-    product_reports = expand_high_products(middle_module, _source_ids)
-    fp8_reports = early_fp8_reports + expand_fp8_casts(middle_module, _source_ids,
-        overflow=None if fp8_overflow == PER_CAST else fp8_overflow)
     from .scaled_dot import expand_scaled_dots
     scaled_reports = expand_scaled_dots(middle_module, _source_ids)
-    from .float_casts import expand_float_casts
-    cast_reports = expand_float_casts(middle_module, _source_ids)
+    cast_reports += expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports:
+    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1440,6 +1446,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
+    transformations.extend(scalar_builtin_reports)
     transformations.extend(reduction_reports)
     transformations.extend(scan_reports)
     transformations.extend(pointer_control_reports)

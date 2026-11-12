@@ -3,11 +3,19 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Scalar region composition](docs/scalar_regions.md) now carries checked precise
+math, clamps, casts and pure external math through maps, reductions and scans;
+integer maps retain unsigned high products. Twenty-four further libraries pass
+native/Merlin host/Spike and 96 unchanged-library runtime invocations. The latest
+combined inventory reopens 213 packages, 168 standalone qualifications and
+fourteen product cases. Broader effects, runtime/alias/source-version combinations
+and applicable accelerators remain completion requirements.
+
 [General reductions](docs/reductions.md) now retain coupled tuples, actual
 first-element initialization and complete scalar branches/for/while bodies in
 standard Linalg. Twenty-four libraries and four complete models pass native,
 Merlin host and Spike with all 80 target results exact and 96 further host
-runtime replays. The combined inventory reopens 189 packages, 144 standalone
+runtime replays. That earlier inventory reopens 189 packages, 144 standalone
 qualifications and fourteen product cases. All fifty pinned TTIR names remain
 observed under selected profiles; arbitrary kernel and accelerator closure
 remains open.

@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Scalar TTIR region composition](scalar_regions.md) now qualifies 24 further
+libraries through native, Merlin host and actual Spike, with all 24 complete
+results and 96 additional unchanged-library host invocations checked. Eighteen
+floating cases retain IEEE numeric comparisons and six integer cases exact
+word comparisons. The 24 target receipts reopen in
+`out/scalar-regions/summary.json`; the latest combined
+`out/scalar-region-inventory/coverage.json` reopens **213 packages,
+168 standalone qualifications and fourteen product cases**, retaining all fifty
+observed names under selected native/Merlin-host profiles. The 66 direct scalar
+prototype/policy/refusal checks and 24 kernel cases pass. Two additional native
+bitcast maps retain exact original exceptional f32/f64 words. The 335-check
+cast/math/combiner/map/memory/corpus regression selection also passes; counts
+overlap. General builtin/region,
+effect/runtime/alias/source-version and accelerator closure remains open.
+
 [General reductions](reductions.md) now retain first-element initialization,
 mixed/coupled tuples and actual structured scalar bodies through native,
 Merlin host and Spike. Twenty-four libraries and four complete learned-state

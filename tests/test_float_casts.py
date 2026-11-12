@@ -22,6 +22,7 @@ MERLIN = (
     )
 )
 PAIRS = [
+    ("bf16", "f64"),
     ("f32", "f16"),
     ("f32", "bf16"),
     ("f64", "f32"),
@@ -30,6 +31,22 @@ PAIRS = [
     ("f16", "bf16"),
     ("bf16", "f16"),
 ]
+
+
+@pytest.mark.skipif(not NATIVE, reason="native SDK required")
+def test_standard_bfloat_widening_retains_every_finite_word_through_f32(tmp_path):
+    from t2m.native import execute_native
+
+    words = np.arange(65536, dtype=np.uint16)
+    module = parse_shared('''module {func.func @cast(%x:tensor<65536xbf16>)->tensor<65536xf64> {
+      %out=arith.extf %x:tensor<65536xbf16> to tensor<65536xf64>
+      return %out:tensor<65536xf64>
+    }}''')
+    reports = expand_float_casts(module, _source_ids)
+    assert reports[0]["expansion"] == "exact-f32-widening-bridge"
+    actual, _ = execute_native(text(module), [words], tmp_path / "native", python=NATIVE)
+    expected = reference(words, "bf16", "f64", "rtne")
+    assert_ieee_words(actual[0], expected, "f64")
 
 
 def probe_source(source, target, mode, n):

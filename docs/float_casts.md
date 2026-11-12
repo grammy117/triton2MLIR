@@ -80,6 +80,15 @@ without requesting an unsupported direct integer-to-FP8 numeric cast.
 
 ## Executable widening
 
+BF16-to-f64 also uses an exact f32 widening bridge for scalar/tensor TTIR casts
+and neutral standard `arith.extf`. Direct native extension had left unsupported
+LLVM BF16 arithmetic in a nested f64 region. Both wider formats represent every
+finite BF16 input exactly, so this adds no rounding boundary or numeric
+approximation. The standard BF16/F32 expansion remains authoritative; unknown
+flags/properties still refuse. `test_standard_bfloat_widening_retains_every_finite_word_through_f32`
+checks all 65,536 source encodings against the independent rational oracle,
+including signed zeros, infinities and the separately declared computed NaNs.
+
 FP8 widening now reaches actual native and Merlin execution for all four
 formats and f16/BF16/f32/f64 destinations. Portable MLIR retains standard
 `arith.extf`, original FP8 tensors, tile structure, source loops and provenance.
