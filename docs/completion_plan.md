@@ -36,11 +36,20 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Captured tensor lookups](scalar_tile_reads.md) now preserve immutable table
+captures across source mutation and runtime recurrence in reductions/scans.
+Twenty-four libraries pass native/Merlin host/Spike with 48 exact-word results
+and 96 additional host invocations. The latest combined inventory reopens
+237 packages and 192 standalone qualifications. General tensor intermediates,
+further numeric/capture/packing forms, direct memory/effectful combiners,
+runtime/alias/source-version combinations and applicable accelerators remain open.
+The [review handoff](handoff.md) records current evidence and next actions.
+
 [Scalar region composition](scalar_regions.md) now applies checked scalar
 shared mappings and exact rounding/high-product expansions before container
 admission. Twenty-four further libraries pass native/Merlin host/Spike with all
 24 results checked and 96 additional unchanged-library host invocations.
-The latest combined inventory reopens 213 packages and 168 standalone
+That earlier combined inventory reopens 213 packages and 168 standalone
 qualifications. Remaining region/builtin/effect, runtime/alias/source-version
 and applicable target closure stay required.
 
@@ -162,8 +171,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/scalar-region-inventory/coverage.json` selection reopens
-**213 packages, 168 standalone qualifications and fourteen maintained product
+The current `out/tile-lookup-inventory/coverage.json` selection reopens
+**237 packages, 192 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -338,7 +347,7 @@ memory fixture while leaving the missing families unexamined.
    memory effects or physical address observations. Keep upstream-only pass
    successes separate from actual package/consumer execution.
 2. **Close numeric and effect families.** Use the matrix to select actual
-   implementation gaps in remaining region/builtin forms and tensor captures,
+   implementation gaps in remaining region/builtin forms and tensor intermediates/captures,
    numeric contracts, valid memory/external effects and physical observations.
    Checked scalar mappings now compose before map/reduction/scan admission;
    their source types, policies and actual controls remain executable. Pinned

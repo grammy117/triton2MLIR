@@ -4,10 +4,17 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Captured tensor lookups](docs/scalar_tile_reads.md) now retain original table
+values across source writes and runtime reduction/scan recurrence. Twenty-four
+libraries pass native/Merlin host/Spike with 48 complete exact-word results and
+96 additional unchanged-library invocations. The latest inventory reopens
+237 packages and 192 standalone qualifications. The [review handoff](docs/handoff.md)
+records the implementation, evidence and remaining full-coverage requirements.
+
 [Scalar region composition](docs/scalar_regions.md) now applies checked shared
 scalar mappings and exact rounding/high-product expansions before region lifting.
 Twenty-four further libraries pass native/Merlin host/Spike with 24 complete
-results and 96 further host invocations. The latest combined inventory reopens
+results and 96 further host invocations. That earlier combined inventory reopens
 213 packages and 168 standalone qualifications. General regions/effects,
 runtime/alias/source-version combinations and applicable targets remain required.
 

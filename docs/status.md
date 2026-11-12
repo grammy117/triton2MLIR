@@ -35,6 +35,13 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[Captured tensor lookups](scalar_tile_reads.md) now retain loaded immutable
+table values across intervening source writes, scalar lookup bounds and runtime
+reduction/scan recurrence. Twenty-four i32/i64 libraries pass native/Merlin host/
+Spike with all 48 results exact and 96 additional host invocations. Actual
+existing-library bounds aborts and provenance-independent outcomes are checked.
+See the [review handoff](handoff.md) for reproduction and remaining limits.
+
 [Scalar TTIR region composition](scalar_regions.md) additionally closes the
 conversion-order gap for checked precise math, clamps, casts, numeric bitcasts
 and existing pure external mappings. Twenty-four floating/integer libraries
@@ -78,8 +85,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/scalar-region-inventory/coverage.json` reopens **213 packages,
-168 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/tile-lookup-inventory/coverage.json` reopens **237 packages,
+192 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
@@ -131,7 +138,7 @@ semantic family, while general addresses/effects and target scope remain open.
 
 The [completion plan](completion_plan.md) gives the execution order and gates.
 The [package contract](package.md) records explicit model2MLIR differences.
-The next milestone closes remaining region forms, tensor captures, valid
+The next milestone closes remaining region forms, tensor intermediates/captures, valid
 memory/external effects, runtime/shared-state bindings and applicable targets
 through the same package and consumer. Checked scalar arithmetic now expands
 before region admission; arbitrary builtin/effect bodies retain their separate

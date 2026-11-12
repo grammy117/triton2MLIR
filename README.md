@@ -3,10 +3,17 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Captured tensor lookups](docs/scalar_tile_reads.md) now preserve loaded table
+snapshots across source mutation and runtime reduction/scan recurrence. Twenty-four
+libraries pass native/Merlin host/Spike with all 48 results exact and 96 further
+host invocations. The latest combined inventory reopens 237 packages,
+192 standalone qualifications and fourteen product cases. Full arbitrary-kernel
+and accelerator coverage remains incomplete. See the [review handoff](docs/handoff.md).
+
 [Scalar region composition](docs/scalar_regions.md) now carries checked precise
 math, clamps, casts and pure external math through maps, reductions and scans;
 integer maps retain unsigned high products. Twenty-four further libraries pass
-native/Merlin host/Spike and 96 unchanged-library runtime invocations. The latest
+native/Merlin host/Spike and 96 unchanged-library runtime invocations. That earlier
 combined inventory reopens 213 packages, 168 standalone qualifications and
 fourteen product cases. Broader effects, runtime/alias/source-version combinations
 and applicable accelerators remain completion requirements.

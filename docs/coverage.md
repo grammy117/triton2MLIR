@@ -1,11 +1,22 @@
 # Measured coverage and remaining boundaries
 
+[Captured tensor lookups](scalar_tile_reads.md) now add 24 native/Merlin-host/
+Spike libraries with all 48 complete target results as exact words and
+96 additional unchanged-library host invocations. Their target receipts reopen
+in `out/tile-lookup-state/summary.json`. The latest combined
+`out/tile-lookup-inventory/coverage.json` reopens **237 packages,
+192 standalone qualifications and fourteen product cases**, retaining all fifty
+observed source names under selected profiles. The 177-check combiner/gather/
+memory/corpus selection and final 21-check guard/current-target/failure selection
+pass; counts overlap. This is typed TTIR and functional CPU evidence, with no
+Python AST capture, GPU correspondence or universal type/effect/target claim.
+
 [Scalar TTIR region composition](scalar_regions.md) now qualifies 24 further
 libraries through native, Merlin host and actual Spike, with all 24 complete
 results and 96 additional unchanged-library host invocations checked. Eighteen
 floating cases retain IEEE numeric comparisons and six integer cases exact
 word comparisons. The 24 target receipts reopen in
-`out/scalar-regions/summary.json`; the latest combined
+`out/scalar-regions/summary.json`; that earlier combined
 `out/scalar-region-inventory/coverage.json` reopens **213 packages,
 168 standalone qualifications and fourteen product cases**, retaining all fifty
 observed names under selected native/Merlin-host profiles. The 66 direct scalar
