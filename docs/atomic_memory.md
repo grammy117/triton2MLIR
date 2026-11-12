@@ -1,5 +1,11 @@
 # Private-invocation atomic memory through the tensor interface
 
+[IEEE f16/BF16 addition](half_atomics.md) now extends the existing typed profile
+with nearest-even updates, subnormals, quiet computed NaNs and exact old words.
+Standard atomic regions, private invocation state and the public tensor/scalar
+ABI remain intact; native helpers use integer half call transport. Four real
+libraries and two complete models qualify through native/Merlin host/Spike.
+
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
 and the separately selected typed profile with bitwise f32/f64 exchange and
 integer-word RMWs on f32/f64 storage (including Triton floating min/max),

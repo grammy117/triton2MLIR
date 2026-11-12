@@ -1,4 +1,4 @@
-"""Executable IEEE f32/f64 and FTZ f32 addition with explicit NaN quieting.
+"""Executable IEEE f16/BF16/f32/f64 and FTZ f32 atomic addition.
 
 Meta 17f0c234's unstructured atomic conversion supplies the typed parallel
 event, mask and old value. This adapter supplies the missing numeric policy
@@ -17,15 +17,30 @@ PAYLOAD = "standard-memref-generic-f32-ftz-add-with-original-returned-old-value"
 IEEE_PAYLOAD = "standard-memref-generic-f32-quiet-add-with-original-returned-old-value"
 F64_CONTRACT = "ieee-f64-rne-add-quiet-nans"
 F64_PAYLOAD = "standard-memref-generic-f64-quiet-add-with-original-returned-old-value"
+HALF_CONTRACTS = {
+    "f16": "ieee-f16-rne-add-quiet-nans",
+    "bf16": "ieee-bf16-rne-add-quiet-nans",
+}
+HALF_PAYLOADS = {
+    name: f"standard-memref-generic-{name}-quiet-add-with-original-returned-old-value"
+    for name in HALF_CONTRACTS
+}
 
 
 def flush(value, *, quiet=False, ftz=True):
     """Zero exponent means zero/subnormal; retaining only sign preserves zero signs."""
     element = value.type
-    if element not in (builtin.f32, builtin.f64) or ftz and element != builtin.f32:
-        raise ConversionError("floating atomic regions require IEEE f32/f64 or FTZ f32")
-    integer = builtin.i32 if element == builtin.f32 else builtin.i64
-    exponent_bits, fraction_bits = (0x7f800000, 23) if element == builtin.f32 else (0x7ff0000000000000, 52)
+    formats = {
+        builtin.f16: (builtin.i16, 0x7C00, 10),
+        builtin.bf16: (builtin.i16, 0x7F80, 7),
+        builtin.f32: (builtin.i32, 0x7F800000, 23),
+        builtin.f64: (builtin.i64, 0x7FF0000000000000, 52),
+    }
+    if element not in formats or ftz and element != builtin.f32:
+        raise ConversionError(
+            "floating atomic regions require a qualified IEEE type or FTZ f32"
+        )
+    integer, exponent_bits, fraction_bits = formats[element]
     bits = arith.BitcastOp(value, integer)
     exponent = arith.ConstantOp.from_int_and_width(exponent_bits, integer)
     zero = arith.ConstantOp.from_int_and_width(0, integer)
@@ -39,8 +54,12 @@ def flush(value, *, quiet=False, ftz=True):
         operations.extend([sign, field, small, signed_zero, selected])
         word = selected.result
     if quiet:
-        fraction = arith.ConstantOp.from_int_and_width((1 << fraction_bits) - 1, integer)
-        quiet_bit = arith.ConstantOp.from_int_and_width(1 << (fraction_bits - 1), integer)
+        fraction = arith.ConstantOp.from_int_and_width(
+            (1 << fraction_bits) - 1, integer
+        )
+        quiet_bit = arith.ConstantOp.from_int_and_width(
+            1 << (fraction_bits - 1), integer
+        )
         word_field = arith.AndIOp(word, exponent.result)
         all_exponent = arith.CmpiOp(word_field.result, exponent.result, "eq")
         mantissa = arith.AndIOp(word, fraction.result)
@@ -48,25 +67,64 @@ def flush(value, *, quiet=False, ftz=True):
         nan = arith.AndIOp(all_exponent.result, nonzero.result)
         quiet_word = arith.OrIOp(word, quiet_bit.result)
         quieted = arith.SelectOp(nan.result, quiet_word.result, word)
-        operations.extend([fraction, quiet_bit, word_field, all_exponent, mantissa, nonzero, nan, quiet_word, quieted])
+        operations.extend(
+            [
+                fraction,
+                quiet_bit,
+                word_field,
+                all_exponent,
+                mantissa,
+                nonzero,
+                nan,
+                quiet_word,
+                quieted,
+            ]
+        )
         word = quieted.result
     result = arith.BitcastOp(word, element)
     return [*operations, result], result.result
 
 
 def materialize(op, *, ftz=True):
-    """Refine the admitted upstream f32 add event, retaining its exact placement."""
-    if (not isinstance(op, memref.AtomicRMWOp) or op.kind.value.data != 0
-            or op.results[0].type not in (builtin.f32, builtin.f64)
-            or op.operands[0].type != op.results[0].type or ftz and op.results[0].type != builtin.f32):
-        raise ConversionError("floating addition requires the original standard typed atomic add")
+    """Refine the admitted upstream typed add event, retaining its placement."""
+    if (
+        not isinstance(op, memref.AtomicRMWOp)
+        or op.kind.value.data != 0
+        or op.results[0].type
+        not in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
+        or op.operands[0].type != op.results[0].type
+        or ftz
+        and op.results[0].type != builtin.f32
+    ):
+        raise ConversionError(
+            "floating addition requires the original standard typed atomic add"
+        )
     outside, value = flush(op.operands[0]) if ftz else ([], op.operands[0])
     body = Block(arg_types=[op.results[0].type])
     current_ops, current = flush(body.args[0]) if ftz else ([], body.args[0])
-    updated = arith.AddfOp(current, value)
+    arithmetic = []
+    if current.type == builtin.bf16:
+        lhs, rhs = arith.ExtFOp(current, builtin.f32), arith.ExtFOp(value, builtin.f32)
+        summed = arith.AddfOp(lhs.result, rhs.result)
+        updated = arith.TruncFOp(summed.result, builtin.bf16)
+        arithmetic.extend((lhs, rhs, summed))
+    else:
+        updated = arith.AddfOp(current, value)
     result_ops, result = flush(updated.result, quiet=True, ftz=ftz)
-    body.add_ops([*current_ops, updated, *result_ops, AtomicYieldOp.create(operands=[result])])
-    atomic = GenericAtomicRMWOp.create(operands=[*op.operands[1:]], result_types=[op.results[0].type], regions=[Region(body)])
+    body.add_ops(
+        [
+            *current_ops,
+            *arithmetic,
+            updated,
+            *result_ops,
+            AtomicYieldOp.create(operands=[result]),
+        ]
+    )
+    atomic = GenericAtomicRMWOp.create(
+        operands=[*op.operands[1:]],
+        result_types=[op.results[0].type],
+        regions=[Region(body)],
+    )
     for outer in [*outside, atomic]:
         for nested in outer.walk():
             nested.location = op.location

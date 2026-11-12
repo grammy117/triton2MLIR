@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[IEEE f16/BF16 atomic addition](half_atomics.md) extends the v4 typed-atomic
+profile with format-specific nearest-even/quiet-NaN contracts. Standard generic
+atomic regions retain source storage, masks, numeric updates and old values.
+BF16 rounds after each widened addition; native checked load/CAS retry helpers
+use i16 captures/results and retain full bodies through ownership/liveness.
+Public ABI, receipts and artifact rosters are unchanged. Compatibility metadata
+names the extension; older readers lacking these numeric forms refuse. Private
+invocation state grants no external publication, physical synchronization or
+accelerator implementation.
+
 [Original CFG normalization](cfg_intake.md) adds six byte-bound compiler source
 artifacts under the optional `t2m.control-flow-normalization.v1` profile. Typed
 function interfaces bridge to the official LLVM pass; original block/successor

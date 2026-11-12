@@ -12,7 +12,7 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
-from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT
+from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT, HALF_CONTRACTS, HALF_PAYLOADS
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
@@ -24,11 +24,15 @@ ORDERS = {1: "relaxed", 2: "acquire", 3: "release", 4: "acq_rel"}
 SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bitwise-exchange",),
                    ("fadd", "f64"): (F64_CONTRACT, "ieee-f64-rne-add"), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
+FLOAT_CONTRACTS.update({("fadd", dtype): (contract,) for dtype, contract in HALF_CONTRACTS.items()})
+FLOAT_WIDTHS = {"f16": 16, "bf16": 16, "f32": 32, "f64": 64}
 
 
 def payload(info):
     if "byte_view" in info:
         return "standard-byte-backed-word-atomic-with-original-returned-old-value"
+    if info.get("numeric_contract") in HALF_CONTRACTS.values():
+        return HALF_PAYLOADS[info["value_dtype"]]
     if info.get("numeric_contract") == F64_CONTRACT:
         from .atomic_float_add import F64_PAYLOAD
         return F64_PAYLOAD
@@ -64,7 +68,7 @@ def validate_evidence(admission, memory, records, buffers):
         info = access.get("atomic")
         buffer = buffers[access["buffer"]]
         candidates = [source[s] for s in access["source_ids"] if s in source]
-        floating = isinstance(info, dict) and info.get("value_dtype") in ("f32", "f64")
+        floating = isinstance(info, dict) and info.get("value_dtype") in FLOAT_WIDTHS
         dtype = info.get("value_dtype") if floating else "i" + str(info.get("word_bits")) if isinstance(info, dict) else None
         word = isinstance(info, dict) and "word_view" in info
         # A callee's typed primitive is shared; storage views belong to uses.
@@ -92,20 +96,21 @@ def validate_evidence(admission, memory, records, buffers):
                     or access.get("guard_tile") != [*access.get("tile", []), expected_byte["alignment_bytes"]]):
                 raise ValueError("byte atomic evidence differs from its complete word/byte ownership contract")
             dtype = "i8"
-        if (not isinstance(info, dict) or not candidates or any(c != info and c != primitive for c in candidates)
+        if (not isinstance(info, dict) or type(info.get("word_bits")) is not int
+                or not candidates or any(c != info and c != primitive for c in candidates)
                 or buffer.get("dtype") != dtype
                 or word and (profile != TYPED_EFFECT_PROFILE or floating
                     or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64)) or info["word_view"] != expected_view)
                 or floating and (profile != TYPED_EFFECT_PROFILE
                     or (info.get("operation"), dtype) not in FLOAT_CONTRACTS
-                    or dtype != "f" + str(info.get("word_bits"))
+                    or info.get("word_bits") != FLOAT_WIDTHS[dtype]
                     or info.get("numeric_contract") not in FLOAT_CONTRACTS.get((info.get("operation"), dtype), ()))
                 or not floating and info.get("operation") == "fadd"
                 or floating and info.get("operation") == "fadd" and dtype == "f32"
                     and (admission.get("f32_atomic_add") != memory.get("f32_atomic_add")
                          or info.get("numeric_contract") != {"ieee": "ieee-f32-rne-add", "ftz": F32_ADD_CONTRACT}.get(admission.get("f32_atomic_add")))
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
-                or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64))
+                or info.get("word_bits") not in ((16, 32, 64) if floating or info.get("operation") == "cas" else (32, 64))
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
                 or access.get("opcode") != ("tt.atomic_cas" if info["operation"] == "cas" else "tts.unstructured_atomic_rmw")
                 or any(opcodes[s] != ("tt.atomic_cas" if info["operation"] == "cas" else "tt.atomic_rmw") for s in access["source_ids"] if s in source)
@@ -133,7 +138,7 @@ def contract(op, source_ids, *, typed=False, f32_atomic_add=None):
     type_ = op.results[0].type if len(op.results) == 1 else None
     element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
     cas = opcode(op) in ("tt.atomic_cas", "tts.atomic_cas")
-    floating = element in (builtin.f32, builtin.f64)
+    floating = element in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
     if not (typed and floating and not cas) and element not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
         if cas:
             refuse("atomic CAS needs a qualified integer i16/i32/i64 numeric profile")
@@ -238,7 +243,7 @@ def adapt_payload(module, abi, admission, source_ids):
         observed[index] += 1
         access = accesses[index]
         info = access["atomic"]
-        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add", F64_CONTRACT):
+        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add", F64_CONTRACT, *HALF_CONTRACTS.values()):
             from .atomic_float_add import materialize
             op = materialize(op, ftz=info["numeric_contract"] == F32_ADD_CONTRACT)
         ancestor = generic

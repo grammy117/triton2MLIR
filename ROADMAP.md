@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[IEEE f16/BF16 atomic addition](docs/half_atomics.md) now preserves subnormals,
+per-event rounding, quiet computed NaNs and exact old words through standard
+atomic regions and actual native/Merlin host/Spike. Four libraries replay sixteen
+further runtime domains; two complete models retain dependent calls, original
+snapshots and all twelve model results as exact words. Six target images compare
+twenty complete results. The combined inventory reopens 129 packages and 94
+standalone qualifications. Broader numeric/effect/shared-state and accelerator
+compositions remain completion requirements.
+
 [Original CFG intake](docs/cfg_intake.md) now retains early returns, successor
 edges, block arguments and numeric backedges through official CFG-to-SCF
 normalization. Current pointer types normalize before the older shared parser;

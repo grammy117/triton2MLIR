@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[IEEE f16/BF16 atomic addition](half_atomics.md) retains rounded updates,
+masks, subnormals, quiet computed NaNs and exact old words. Four scalar/tensor
+libraries pass native/Merlin host/Spike, with sixteen further host invocations.
+Two complete learned-state models retain dependent calls, an empty call, original
+snapshots and all twelve results as exact words through those execution boundaries.
+Six target receipts and twenty complete results reopen in
+`out/half-atomics/summary.json`, alongside a public original-source CLI capture.
+Native collisions check legal old-value histories separately. The selected
+frontend native/evidence regressions pass 110 checks; Merlin's atomic/BF16/runtime
+suite passes 269. The refreshed `out/half-atomic-inventory/coverage.json` reopens
+**129 packages, 94 standalone qualifications and fourteen product cases**,
+retaining all fifty observed names under selected native/Merlin-host profiles.
+Broader numeric/effect/alias/shared-state and accelerator closure remain open.
+Older measurements below retain their scope.
+
 [Original CFG intake](cfg_intake.md) now retains early returns and numeric
 backedges/phi values through official LLVM structuralization and the ordinary
 Merlin interface. Nine standalone libraries and one complete learned-state

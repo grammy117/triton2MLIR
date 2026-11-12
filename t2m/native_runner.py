@@ -145,7 +145,7 @@ def main(work):
             from merlin.llvmlower import atomic_compare_exchange
             namespace = {"ir": ir, "print": compiler_diagnostic}
             exec(atomic_compare_exchange.SUPPORT, namespace)
-            word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "f32", "f64")
+            word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "bf16", "f32", "f64")
                 for op in operations(module.operation))
             count = namespace["_cas_rewrite"](context, module, word_views=word_views, integer_regions=integer_regions)
             prepared = work / ("prepared-integer-atomic-regions.mlir" if integer_regions else "prepared-atomic-word-views.mlir" if word_views else "prepared-compare-exchange.mlir")

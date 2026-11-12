@@ -38,7 +38,7 @@ def select_features(module):
         from merlin.llvmlower.atomic_integer_regions import ensure_registered
         ensure_registered()
         features.add("lower_integer_atomic_regions")
-    if any(str(op.results[0].type) in ("f16", "f32", "f64") for op in regions):
+    if any(str(op.results[0].type) in ("f16", "bf16", "f32", "f64") for op in regions):
         features.add("lower_atomic_word_views")
     elif regions and not integer_regions:
         features.add("lower_integer_compare_exchange")

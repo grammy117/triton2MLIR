@@ -3,6 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[IEEE f16/BF16 atomic addition](docs/half_atomics.md) now reaches native,
+Merlin host and actual Spike with original storage, subnormals and exact old
+words retained. Four libraries and two complete models compare twenty target
+results. The current combined inventory reopens 129 packages, 94 standalone
+qualifications and fourteen product cases; universal kernel coverage remains open.
+
 [Original CFG intake](docs/cfg_intake.md) now reuses LLVM's official CFG-to-SCF
 pass through a typed function bridge. Early returns and numeric backedges/phi
 values retain their original graph and structured executable computation through
@@ -13,7 +19,7 @@ closure remains open.
 [Closed pointer-integer expressions](docs/pointer_addresses.md) now recover
 logical bases and checked byte displacements without choosing physical addresses.
 Four integer widths pass native/Merlin host/Spike; scalar masks/state additionally
-qualify in all memory profiles. The current combined inventory reopens 113
+qualify in all memory profiles. That earlier combined selection reopens 113
 packages and 81 standalone qualifications; arbitrary address/effect/target
 coverage remains incomplete.
 
@@ -101,7 +107,7 @@ model captures retain learned weights, dependent calls and all eight results
 through Merlin host and actual Spike execution with exact-word comparison.
 Coupled/asymmetric slots
 now have an explicit [source-specialized grouping path](docs/source_grouping.md)
-through seven additional Merlin libraries. The current
+through seven additional Merlin libraries. That milestone's
 [coverage selection](docs/coverage.md) reopens 106 packages and 74 standalone
 qualifications. The frontend never infers
 adjacency from tensor shape or assigns consumer hardware placement.
@@ -302,6 +308,12 @@ and i16/i32/i64 CAS through actual Merlin execution, retaining old values,
 selected-buffer effects and source recurrences. `shared-demo --kernel atomic-cas`
 and a real model2MLIR tuple-result demo are described in
 [atomic memory](docs/atomic_memory.md), including native-toolchain requirements.
+The typed profile also supports [IEEE f16/BF16 atomic addition](docs/half_atomics.md),
+retaining subnormals, per-event rounding and exact old words through standard
+atomic regions. Four libraries and two complete models qualify through native,
+Merlin host and actual Spike execution. Remaining numeric/effect and accelerator
+compositions stay open.
+
 The separate `--effect-profile typed-atomics` adds bitwise f32/f64 exchange;
 `shared-demo --kernel atomic-exchange` produces a working floating example
 with guarded-buffer/source-words memory and the unchanged public tensor ABI.

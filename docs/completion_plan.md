@@ -36,6 +36,13 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[IEEE f16/BF16 atomic addition](half_atomics.md) now retains exact old words,
+gradual underflow, per-event nearest-even rounding and explicit computed-NaN
+quieting through native/Merlin host/Spike. Four libraries and two complete models
+retain twenty target results; all twelve model results match exact words.
+The combined inventory now reopens 129 packages and 94 standalone qualifications.
+Broader numeric/effect/shared-state/alias and accelerator closure remains open.
+
 The [overall status](status.md) groups progress by end-goal milestones rather
 than the most recent fixture. The pipeline and model interface work end to end;
 full source/type/attribute/composition and applicable target coverage do not.
@@ -124,8 +131,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners/maps, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/grouped-memory-model-inventory/coverage.json` selection reopens
-**106 packages, 74 standalone qualifications and fourteen maintained product
+The current `out/half-atomic-inventory/coverage.json` selection reopens
+**129 packages, 94 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -144,7 +151,7 @@ allocation and native lifetime semantics; four real Merlin libraries and the
 39-case allocation/guarded-memory suite pass. Nineteen corpus/registry checks
 exercise actual success/refusal/failure, effects, reuse and changed evidence.
 
-Latest implementation: [byte-backed atomic words](byte_atomic_words.md) retain
+Implemented [byte-backed atomic words](byte_atomic_words.md) retain
 all nine i32/i64 RMW kinds and i16/i32/i64 CAS, both logical byte orders,
 whole-word bounds/alignment, per-byte guards and old values through Merlin.
 Selected roots and for/while pointer state qualify in 40 cases. Old-value tensor

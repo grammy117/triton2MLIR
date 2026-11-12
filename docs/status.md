@@ -35,6 +35,12 @@ Source-language assembly implementations are explicit optional adapters with
 standard expansions. Unknown semantics produce located refusals; an opaque
 fallback is not counted as portable success.
 
+[IEEE f16/BF16 atomic addition](half_atomics.md) additionally closes the missing
+half arithmetic profile through native/Merlin host and actual Spike. Four
+libraries and two complete models retain twenty target results, including twelve
+exact-word model results. Remaining numeric/effect/shared-state and accelerator
+forms stay open.
+
 [Original multi-block CFGs](cfg_intake.md) now also reach the interface through
 LLVM's official structuralization, with original successor/block arguments
 retained and normalized IDs kept separate. Qualified early returns and numeric
@@ -45,8 +51,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/cfg-intake-inventory/coverage.json` reopens **123 packages,
-90 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/half-atomic-inventory/coverage.json` reopens **129 packages,
+94 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.
