@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Mixed FP8 source policies](docs/per_cast_fp8.md) now retain independent
+per-cast overflow/infinity semantics in one kernel. Standard expansions precede
+helper inlining/folding; eight format/mode cases execute through Merlin host
+and Spike with all 32 results and 24 additional host runtime replays. The
+consumer source-feature ordering fix preserves narrowing before widening.
+Earlier native-normalizer compositions, broader model captures and accelerator
+qualification remain open.
+
 [Source model tensor views](docs/model_source_views.md) now recover static
 transpose/stepped-slice coordinates from parent SSA and bind them to existing
 executable owning-root pointers. Three real i64/f32/BF16 models retain learned

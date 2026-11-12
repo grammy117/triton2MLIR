@@ -36,6 +36,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Per-cast FP8 contracts](per_cast_fp8.md) now permit independent selected
+overflow/infinity policies in one kernel, expanded before helper inlining or
+folding. Eight format/mode cases retain 32 complete results through native,
+Merlin host and Spike, with 24 additional host-library replays. Merlin's source
+feature edits now preserve narrowing before widening. Earlier native-normalizer
+compositions, broader model captures and backend/accelerator correspondence
+remain required.
+
 [Source model views](model_source_views.md) now bind static transposed/stepped
 tensor operands to owning state after independent parent-SSA and captured
 coordinate checks. Three complete i64/f32/BF16 models preserve all 21 results
@@ -247,6 +255,10 @@ memory fixture while leaving the missing families unexamined.
 2. **Close numeric and effect families.** Use the matrix to select actual
    implementation gaps, starting with packed/effectful maps, remaining numeric
    contracts, external/assembly implementations and physical observations.
+   Carry mixed per-cast FP8 contracts through a protected expansion before
+   earlier native descriptor/version/composite-dot normalization, then qualify
+   actual enclosing model captures. The current source-only seam explicitly
+   refuses those compositions; selected loop/target evidence does not close them.
    Reuse official expansions where their semantics agree; preserve source
    width, rounding boundaries, accumulator order and recurrence. Implement
    unsupported behavior rather than hiding it behind provenance.

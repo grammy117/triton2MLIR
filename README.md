@@ -149,6 +149,12 @@ Three i64/f32/BF16 models retain all seven results each through native, Merlin
 host and functional RISC-V/Spike execution. The explicit v3 binding profile
 preserves the public model ABI; general physical/mutating views remain open.
 
+[Per-cast FP8 contracts](docs/per_cast_fp8.md) now allow IEEE and both saturation
+policies in the same source kernel. Independent standard expansions retain
+source loops and helper correspondence; every format/mode pair has selected
+native/Merlin/Spike evidence, with earlier normalization and broader model
+compositions still open.
+
 The [shared tensor frontend](docs/shared_tensor.md) now reuses those passes for 2-D add,
 masked softmax, IEEE matmul and general pure associative scans, emitting functional tensor/linalg IR. Its packages are checked
 by **native LLVM host execution** against independent NumPy references. It currently accepts

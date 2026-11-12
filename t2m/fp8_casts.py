@@ -17,6 +17,10 @@ from .diagnostics import ConversionError
 from .standard_floats import FP8_TYPE_NAMES
 
 POLICIES = ("ieee", "satfinite", "satfinite-nan-inf")
+PER_CAST = "per-cast"
+SELECTIONS = (*POLICIES, PER_CAST)
+SOURCE_POLICY = "t2m.fp8_overflow"
+PROFILE = "t2m.per-cast-fp8.v1"
 FORMATS = {
     "f8E4M3FN": (448.0, 127),
     "f8E4M3FNUZ": (240.0, 128),
@@ -26,16 +30,22 @@ FORMATS = {
 STANDARD = {"f16", "bf16", "f32", "f64"}
 
 
-def expand_fp8_casts(module, source_ids, *, overflow=None):
+def _plans(module, source_ids, overflow):
     from .shared_tensor import opcode
 
-    if overflow not in (None, *POLICIES):
+    if overflow not in (None, *SELECTIONS):
         raise ValueError(
-            "FP8 overflow policy must be ieee, satfinite or satfinite-nan-inf"
+            "FP8 overflow policy must be ieee, satfinite, satfinite-nan-inf or per-cast"
         )
     plans = []
     for op in module.walk():
         name = opcode(op)
+        semantic = op.attributes.get(SOURCE_POLICY, op.properties.get(SOURCE_POLICY))
+        if semantic is not None and (overflow != PER_CAST or name != "tt.fp_to_fp"):
+            raise ConversionError("source FP8 policy requires the explicit per-cast profile on tt.fp_to_fp",
+                opcode=name, source_id=next(iter(source_ids(op.location)), None))
+        if semantic is not None and (len(op.results) != 1 or SOURCE_POLICY in op.attributes and SOURCE_POLICY in op.properties):
+            raise ConversionError("source FP8 policy requires one result and one unambiguous attribute", opcode=name)
         # Standard arith.truncf already has its own numeric contract. A TTIR
         # profile must never reinterpret it as a saturating source cast.
         if name != "tt.fp_to_fp" or len(op.results) != 1:
@@ -46,6 +56,8 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
         )
         dst = str(target)
         if dst not in FORMATS:
+            if semantic is not None:
+                raise ConversionError("source FP8 policy is attached to a non-FP8 conversion", opcode=name)
             continue
         ids = source_ids(op.location)
 
@@ -61,6 +73,8 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
             else source_type
         )
         if source == target:
+            if semantic is not None:
+                refuse("identity conversions cannot acquire overflow or infinity semantics")
             continue
         if str(source) not in STANDARD | set(FP8_TYPE_NAMES):
             refuse("FP8 conversion requires a declared standard floating format")
@@ -73,10 +87,15 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
             or any(n < 0 for n in output.get_shape())
         ):
             refuse("FP8 source tiles require matching static shapes")
-        if overflow is None:
+        selected = semantic.data if isinstance(semantic, builtin.StringAttr) else None
+        if overflow == PER_CAST and selected not in POLICIES:
+            refuse("each source FP8 conversion needs its own explicit valid numeric policy")
+        if overflow != PER_CAST:
+            selected = overflow
+        if selected is None:
             refuse("FP8 conversion requires an explicit overflow/infinity policy")
         if any(
-            key not in ("op_name", "op_name__", "rounding")
+            key not in ("op_name", "op_name__", "rounding", SOURCE_POLICY)
             and not key.startswith("prov.")
             for key in (*op.attributes, *op.properties)
         ):
@@ -92,9 +111,21 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
             mode = "rtz" if rounding.value.data == 0 else "rtne"
         else:
             refuse("FP8 narrowing requires the pinned explicit RTNE/RTZ mode")
-        plans.append((op, source, target, mode, ids))
+        plans.append((op, source, target, mode, ids, selected))
+    return plans
+
+
+def validate_fp8_casts(module, source_ids, *, overflow=None):
+    """Validate every source choice before inlining/folding can discard it."""
+    _plans(module, source_ids, overflow)
+
+
+def expand_fp8_casts(module, source_ids, *, overflow=None):
+    plans = _plans(module, source_ids, overflow)
     reports = []
-    for original, source, target, mode, ids in plans:
+    per_cast = overflow == PER_CAST
+    for original, source, target, mode, ids, selected in plans:
+        overflow = selected
         operations = []
 
         def emit(op):
@@ -203,6 +234,7 @@ def expand_fp8_casts(module, source_ids, *, overflow=None):
                 "computed_nan_payload": "unspecified",
                 "expansion": "standard-clamps-casts-and-exact-RTZ-correction",
                 "physical_mapping": "undecided",
+                **({"source_policy_profile": PROFILE, "source_policy_attribute": SOURCE_POLICY} if per_cast else {}),
             }
         )
     return reports

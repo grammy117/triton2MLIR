@@ -242,6 +242,10 @@ and [source tests](https://github.com/triton-lang/triton/blob/f797708c0626e5f984
 One selected profile applies to the conversion invocation. Arbitrary kernels
 with different per-cast backend policies still require explicit mixed-policy
 binding rather than treating a global profile as universal source equivalence.
+The new explicit [per-cast software source profile](per_cast_fp8.md) now
+permits all three policies within one kernel. It expands each selected source
+cast before inlining/folding; backend correspondence and earlier native
+normalization compositions retain their separate requirements.
 
 The portable tensor tile uses one elementwise `linalg.generic` containing
 standard clamps, selections and casts. f16/BF16/FP8 sources extend exactly to
@@ -305,5 +309,7 @@ explicit 27-package observation report still records 29/50 definitions
 observed and 25 in host-qualified captures. The new numeric combinations
 do not establish whole-opcode closure.
 `bind-model` accepts `--fp8-overflow` and per-binding `fp8_overflow` overrides.
-FP8 arithmetic/contractions/scaled dot, heterogeneous per-cast policies,
-broader model/effect profiles and applicable target execution remain required.
+Broader FP8 arithmetic/contraction/scaled-dot compositions, per-cast contracts
+across earlier normalizers, model/effect profiles and applicable targets remain
+required. Selected mixed-policy source loops now have actual target evidence
+under the separate per-cast profile above.

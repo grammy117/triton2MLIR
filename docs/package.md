@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Per-cast FP8 semantics](per_cast_fp8.md) add the explicit software source
+selection `fp8_overflow="per-cast"`. Each nonidentity TTIR-to-FP8 cast requires
+its own semantic `t2m.fp8_overflow` StringAttr; `prov.*` grants no choice.
+All source contracts validate and expand to standard computation before
+inlining/folding. The original source and per-cast reports remain byte-bound;
+public tensor/scalar ABI and receipt schemas are unchanged. Older producers
+refuse this selection. Merlin consumes executable casts/clamps, with its fixed
+narrowing-before-widening source seam required for combined target lowering.
+This profile does not claim an unspecified backend's overflow behavior.
+
 [Source model views](model_source_views.md) require
 `t2m.model-kernel-binding.v3` with
 `source_tensor_view_binding_profile: t2m.captured-source-tensor-views.v1`.

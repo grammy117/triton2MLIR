@@ -55,9 +55,9 @@ llvm-tblgen --dump-json include/triton/Dialect/Triton/IR/TritonOps.td \
 The [package observation registry](package_coverage.md) now joins all 50
 definitions to typed source forms and receipt-bound package/native/Merlin
 outcomes, retaining unmeasured definitions, unknown TTIR and other dialects.
-The [combined maintained selection](product_corpus.md) now observes all 50
-source definitions and 49 in native/Merlin-qualified captures; only source
-assembly lacks a qualified host capture. This is composition evidence, not
+The [current maintained selection](coverage.md) now observes all 50
+source definitions in native/Merlin-host-qualified captures under selected
+profiles, including explicitly implemented source assembly. This is composition evidence, not
 universal type/attribute or per-operation execution coverage.
 Source dispositions, a maintained full kernel/refusal corpus and applicable
 target evidence remain open. An observation in one composition is not a

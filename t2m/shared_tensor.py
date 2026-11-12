@@ -1176,9 +1176,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     """
     if memory_profile not in ("tensor", "buffer", "guarded-buffer"):
         raise ValueError("memory profile must be explicitly tensor, buffer or guarded-buffer")
-    from .fp8_casts import POLICIES, expand_fp8_casts
-    if fp8_overflow not in (None, *POLICIES):
-        raise ValueError("FP8 overflow policy must be ieee, satfinite or satfinite-nan-inf")
+    from .fp8_casts import SELECTIONS, PER_CAST, expand_fp8_casts, validate_fp8_casts
+    if fp8_overflow not in (None, *SELECTIONS):
+        raise ValueError("FP8 overflow policy must be ieee, satfinite, satfinite-nan-inf or per-cast")
     if address_policy not in ("structured", "source-words"):
         raise ValueError("address policy must be explicitly structured or source-words")
     source_words = address_policy == "source-words"
@@ -1205,6 +1205,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         intake = lower_with_shared(source, work / "source", optimizer=optimizer, stage="source")
         source_ir = work / "source/lowered.mlir"
     except ConversionError as original_error:
+        if fp8_overflow == PER_CAST:
+            raise ConversionError("per-cast FP8 source requires verification before intake normalization; no numeric contract may be folded first") from original_error
         # Native Triton verifies source operations absent from this shared
         # distribution before the bounded, source-inventoried intake adapter.
         try:
@@ -1221,9 +1223,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if any(needs_dot_precision_expansion(op) for op in parsed.walk()):
         # Check original effects/contracts before a greedy upstream pass can
         # fold them. Only selected composite precision is deferred to its pass.
-        _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
+        initial_records = _preflight(parsed, abi, id_prefix="original.ttir.op.", atomics=atomics,
                    typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, allow_composite_dots=True,
                    assembly_provider=assembly_provider)
+        validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
+        if fp8_overflow == PER_CAST:
+            raise ConversionError("per-cast FP8 contracts require expansion before composite dot normalization", opcode="tt.dot",
+                source_id=next(row["id"] for row in initial_records if row["opcode"] == "tt.dot"))
         pointer_report = expand_tensor_pointers(source, work / "precision-intake")
         original_inventory = json.loads((work / "precision-intake/inventory.json").read_text())
         if pointer_report["source_sha256"] != hashlib.sha256(source_text.encode()).hexdigest():
@@ -1233,6 +1239,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     records = _preflight(parsed, abi, id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+    validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
     for op in parsed.walk():
         intent = {key: value for key, value in op.attributes.items()
@@ -1240,6 +1247,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         for source_id in _source_ids(op.location):
             if intent:
                 intent_by_source[source_id] = intent
+    # Per-operation numeric choices must become executable before helper
+    # inlining/canonicalization can fold source casts or discard attributes.
+    early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow) if fp8_overflow == PER_CAST else []
     assembly_reports = []
     if assembly_provider is not None:
         from .source_assembly import expand_source_assembly
@@ -1309,7 +1319,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     histogram_reports = expand_histograms(middle_module, _source_ids)
     from .integer_products import expand_high_products
     product_reports = expand_high_products(middle_module, _source_ids)
-    fp8_reports = expand_fp8_casts(middle_module, _source_ids, overflow=fp8_overflow)
+    fp8_reports = early_fp8_reports + expand_fp8_casts(middle_module, _source_ids,
+        overflow=None if fp8_overflow == PER_CAST else fp8_overflow)
     from .scaled_dot import expand_scaled_dots
     scaled_reports = expand_scaled_dots(middle_module, _source_ids)
     from .float_casts import expand_float_casts

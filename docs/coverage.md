@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Per-cast FP8 software contracts](per_cast_fp8.md) now qualify eight typed
+kernel cases covering each FP8 format/mode pair across selected memory routes.
+All 32 complete results reach actual native, Merlin host and Spike execution;
+24 additional empty/singleton/ragged invocations reuse their host libraries.
+The separate `out/spike-mixed-fp8/summary.json` selection retains source profile,
+individual target receipts and scope. It does not change the 106-package
+inventory or establish earlier-normalizer, model/backend or accelerator closure.
+
 [Source model views](model_source_views.md) add three real i64/f32/BF16
 captures with transposed and stepped-slice operands, dependent root updates,
 empty views and live original snapshots. All 21 model results match exact
