@@ -66,6 +66,12 @@ already separates original and normalized graphs. Older readers need the new
 custody support to retain this evidence. The [package contract](package.md)
 and generated compatibility metadata record the difference explicitly.
 
+The numeric shared-bundle reader also admits these six known compiler files
+before checking the exact declared source roster and every byte link. Unknown,
+missing, undeclared and rehashed inconsistent files still refuse. This matches
+the existing writer and effect/model readers without changing a receipt schema
+or artifact profile; earlier numeric readers rejected such valid CFG packets.
+
 The early-return probe also exposed a pointer-state prepass issue: a result-free
 outer condition caused the existing numeric-loop proof to reject an otherwise
 pure integer recurrence. Such a condition carries no boxed state. Stateful
