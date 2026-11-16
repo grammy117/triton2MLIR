@@ -6,6 +6,16 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
+now close a reproduced subtraction refusal at the logical/physical boundary.
+Only actual common SSA roots and matched lane paths can cancel; source integer
+widths, byte units, selected pointers, runtime loads/loops and bounds stay
+executable. Seven native/Merlin-host/Spike libraries retain eleven exact-word
+results, with 32 further unchanged-library invocations. Four invalid active
+addresses abort through the actual compiled guards. Twelve focused contracts
+and the 27-case address regression selection pass. Absolute observations,
+unproved region/alias/effect compositions and applicable accelerators remain open.
+
 [Numeric region builtins](numeric_regions.md) now close the reproduced mapped
 histogram/dot refusals through the existing converters and original contracts.
 Nested logical queries capture actual program indices/counts from their own
@@ -45,7 +55,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Part of the goal | Working capability | Practical limit |
 |---|---|---|
 | Portable computation | Standard Linalg/Tensor/SCF/arith/math/cf; tiled contractions, runtime K reuse, reductions/scans, branches, loops and selected packed computation. | Every type, attribute, region and composition is not yet qualified. |
-| Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
+| Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements and same-base byte differences, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
 | Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state and selected source tensor views. | General physical/mutating views, dynamic public model ABIs, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
@@ -114,8 +124,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/numeric-region-model-inventory/coverage.json` reopens **297 packages,
-240 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/pointer-difference-inventory/coverage.json` reopens **304 packages,
+247 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

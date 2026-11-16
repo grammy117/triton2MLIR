@@ -6,6 +6,15 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
+now retain cancelling SSA roots, source byte units and runtime memory/control.
+Seven native/Merlin-host/Spike libraries retain eleven exact-word results, with
+32 further host invocations and four actual bounds aborts. The latest
+`out/pointer-difference-inventory/coverage.json` reopens 304 packages and 247
+standalone qualifications. Twelve focused difference contracts and the 27-case
+address selection pass. Unproved absolute/root/region/effect and applicable
+target forms remain in the completion plan.
+
 [Local tensor regions](tensor_regions.md) and complete learned-state models
 now retain functional tensor intermediates, for/while state and mixed nested
 containers through native/Merlin host/Spike. Merlin's
@@ -23,7 +32,7 @@ tolerance-qualified math results, with 120 further host replays. The frontend
 change is `2aca8b92b56ed2abaf4881e5ee3a8f7418adbc34`. Six complete numeric-region
 models additionally retain all 39 original results as exact words through
 native/Merlin host/Spike, with parameters, dependent calls and snapshots intact.
-The latest `out/numeric-region-model-inventory/coverage.json` reopens 297 packages, 240 standalone
+That earlier `out/numeric-region-model-inventory/coverage.json` reopens 297 packages, 240 standalone
 qualifications and fourteen product cases. The 32 focused contract and 187
 runtime/grid/external/original-effect regression selections pass.
 

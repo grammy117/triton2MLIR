@@ -345,6 +345,15 @@ establish universal source equivalence or `source_closure_verified`.
 
 ## Remaining work and execution order
 
+The [same-base difference extension](pointer_addresses.md#same-base-byte-differences)
+now closes a reproduced runtime-memory refusal: pointer integers can expose
+ordinary byte deltas only after actual SSA proves a cancelling base and matching
+lane paths. It preserves source-width increments, modular arithmetic and all
+memory guards. Seven real libraries/Spike images retain eleven exact-word
+results, with 32 further host replays and four observed bounds aborts. Continue
+with broader integer-address region state, alias/shared-state and runtime/model
+bindings; cross-root and physical observations still require real semantics.
+
 The [local tensor-region extension](tensor_regions.md) now closes the previously
 reproduced make-range/tensor-state/nested-reduction refusal for real bitset source
 combiners and nested maps; six complete model configurations now qualify those

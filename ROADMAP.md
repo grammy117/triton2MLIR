@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
+now expose ordinary byte deltas only after actual SSA proves the shared base
+and lane correspondence. Source-width arithmetic, strided reads, selected
+pointers and runtime loops remain executable. Seven native/Merlin-host/Spike
+libraries retain eleven exact-word results and 32 further host replays; four
+actual bounds failures stay refused. The latest inventory reopens 304 packages
+and 247 standalone qualifications. General region/alias/effect/source and
+applicable target scope remain completion requirements.
+
 [Numeric region builtins](docs/numeric_regions.md) now reuse the existing
 histogram, contraction, local-gather and math converters inside checked scalar
 regions. Nested program-ID/count queries capture values from their enclosing
@@ -11,7 +20,7 @@ logical invocation; original control/effects stay in place and mapping stays
 undecided. Thirty native/Merlin-host/Spike configurations retain 24 exact-word
 and six tolerance-qualified results, with 120 unchanged-library host replays.
 Six complete parameterized models additionally retain all 39 original results
-as exact words through those execution boundaries. The latest inventory reopens
+as exact words through those execution boundaries. That earlier inventory reopens
 297 packages and 240 standalone qualifications.
 Broader region/type/effect/runtime/source and applicable target work remains.
 

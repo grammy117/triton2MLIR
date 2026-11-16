@@ -49,3 +49,32 @@ def scalar_displacement(x, out, offset):
 def masked_scalar_memory(x, out, offset, destination, active):
     value = tl.load(x + offset, active, other=-17)
     tl.store(out + destination, value, active)
+
+
+@triton.jit
+def relative_words(x, out, distance, n, origin, stride, capacity, steps,
+                   B: tl.constexpr, WIDTH: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    base = x + origin.to(tl.int64)
+    value = tl.full((B,), -17, x.dtype.element_ty)
+    difference = tl.full((B,), 0, tl.int64)
+    for step in range(steps):
+        offset = lane.to(tl.int64) * stride.to(tl.int64) + step.to(tl.int64)
+        pointer = tl.where(lane % 2 == 0, base + offset, base - offset)
+        difference = (pointer.to(tl.uint64) - base.to(tl.uint64)).to(tl.int64)
+        index = origin.to(tl.int64) + difference // (WIDTH // 8)
+        value = tl.load(x + index, lane < n, other=-17)
+    tl.store(out + lane, value, lane < n)
+    tl.store(distance + lane, difference, lane < n)
+
+
+@triton.jit
+def relative_byte_words(x, left, right, out, n, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    a = tl.load(left + lane, lane < n, other=0)
+    b = tl.load(right + lane, lane < n, other=0)
+    # The additions are full-width unsigned byte arithmetic and may wrap.
+    first = x.to(tl.uint64) + a.to(tl.uint64)
+    second = x.to(tl.uint64) + b.to(tl.uint64)
+    difference = (first - second).to(tl.int64)
+    tl.store(out + lane, difference, lane < n)

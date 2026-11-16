@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
+now retain the actual shared SSA base proof, source-width increments, byte units,
+selected pointer offsets and runtime load/loop computation. Seven actual
+native/Merlin-host/Spike libraries retain eleven exact-word results and 32
+unchanged-library host replays. Four invalid active accesses still abort through
+the compiled guard. `out/pointer-differences/summary.json` reopens those receipts;
+the current `out/pointer-difference-inventory/coverage.json` reopens **304 packages,
+247 standalone qualifications and fourteen product cases**. All fifty names
+remain observed under selected native/Merlin-host profiles. Twelve focused
+contracts and the overlapping 27-case address selection pass. Broader region/
+alias/effect/source combinations and applicable targets remain incomplete.
+
 [Numeric region builtins](numeric_regions.md) now retain existing histogram,
 dot/scaled-dot, local-gather and mapped-math conversions inside scalar bodies.
 Nested program-ID/count values reach their actual enclosing logical invocation,
@@ -18,7 +30,7 @@ Six complete numeric-region model configurations now also retain all 39
 original results as exact words through native/Merlin host/Spike. The f32/i64
 models retain parameters, dependent calls, empty results and original snapshots;
 all parent data/reference archives remain byte-identical. Their receipts reopen
-in `out/numeric-region-models/summary.json`; the current combined
+in `out/numeric-region-models/summary.json`; that earlier combined
 `out/numeric-region-model-inventory/coverage.json` reopens **297 packages, 240
 standalone qualifications and fourteen product cases**. The public model ABI
 remains static; finite dyadic dot references grant no general GPU precision,

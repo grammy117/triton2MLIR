@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
+add `closed-pointer-integer-difference` transformations under the existing
+`prov.closed_pointer_addresses` correspondence. Only actual common SSA roots
+and matched lane paths cancel into ordinary modular i64 byte subtraction.
+Each addptr keeps its original narrow arithmetic before signed widening and
+pointee-byte scaling. Source widths, selections, casts and source identities
+remain represented; bounds/ownership and complete source-use checks stay enabled.
+Generated compatibility metadata names the cancellation separately from pointer
+reconstruction. Public ABI, artifact rosters and receipt schemas are unchanged.
+Cross-root/absolute observations and unproved region/effect forms still refuse.
+
 [Numeric region builtins](numeric_regions.md) retain the existing source
 contracts and converters inside scalar containers. Nested exact i32 logical
 launch queries capture values from their own structured program entry; actual

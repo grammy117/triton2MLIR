@@ -3,6 +3,14 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
+now cancel the actual common SSA base into standard modular byte arithmetic.
+Runtime strides, selected pointers, loops, exact byte results and memory guards
+remain executable. Seven native/Merlin-host/Spike libraries retain eleven exact
+results and 32 additional host replays; four invalid accesses still abort.
+The latest inventory reopens 304 packages and 247 standalone qualifications.
+Cross-root/absolute observations and full arbitrary-kernel/target scope remain open.
+
 [Numeric region builtins](docs/numeric_regions.md) now retain histogram,
 dot/scaled-dot, local gather, mapped math and logical queries through the
 existing converters and source numeric/effect contracts. Uniform program
@@ -10,7 +18,7 @@ queries capture actual logical grid values without choosing hardware placement.
 Thirty native/Merlin-host/Spike configurations retain 24 exact-word and six
 tolerance-qualified results, with 120 further host replays. Six complete
 parameterized model configurations also retain all 39 original results as exact
-words through native/Merlin host/Spike. The latest inventory reopens 297 packages,
+words through native/Merlin host/Spike. That earlier inventory reopens 297 packages,
 240 standalone qualifications and fourteen product cases.
 Full arbitrary-kernel and accelerator coverage remains incomplete.
 

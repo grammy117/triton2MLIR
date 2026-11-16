@@ -1,8 +1,15 @@
-# Closed pointer-integer displacement expressions
+# Closed pointer-integer displacements and differences
+
+The latest [same-base difference](#same-base-byte-differences) selection has
+seven actual native/Merlin-host/Spike libraries with eleven exact-word results,
+32 further host replays and four real bounds aborts. Its combined inventory
+reopens 304 packages and 247 standalone qualifications. Absolute observations,
+broader region/alias/effect forms and applicable accelerator scope remain open.
 
 TTIR `ptr_to_int` and `int_to_ptr` no longer imply an unavoidable physical
-address observation. A closed expression that only computes a displaced pointer
-can be re-raised without choosing or materializing its base address. The
+address observation. A closed expression that computes a displaced pointer or
+cancels the same established base can be re-raised without materializing that
+base address. The
 original source and typed casts remain in the inventory; executable output is
 the same standard tensor/memory computation used by other logical pointers.
 
@@ -27,7 +34,7 @@ displacements. No root address, base alignment or absence of unsigned address
 wrap is assumed by this identity. Actual access bounds, initialization, view
 compatibility and ownership still require the existing memory gates.
 
-The whole address-use closure is validated before mutation. Escaping integers,
+The whole address-use closure is validated before mutation. Escaping absolute integers,
 address comparisons/diagnostics, mixed integer/address selection, arbitrary
 integer-created pointers, unsupported address algebra and poison-producing
 overflow flags refuse with source locations. Reorderable address reshapes need
@@ -36,6 +43,60 @@ displacements. Integer-valued region-carried addresses remain further work;
 pointer-valued region state uses the existing pointer-control adapter.
 Divisibility proof is limited to 8,192 SSA nodes and depth 128; an expression
 retains at most 4,096 source IDs. Unproved cases are explicit refusals.
+
+## Same-base byte differences
+
+A real source pattern derives a logical coordinate from two pointer integers:
+
+```python
+base = x + origin.to(tl.int64)
+pointer = tl.where(lane % 2 == 0, base + offset, base - offset)
+distance = (pointer.to(tl.uint64) - base.to(tl.uint64)).to(tl.int64)
+index = origin.to(tl.int64) + distance // word_bytes
+value = tl.load(x + index, lane < n, other=-17)
+```
+
+This previously refused at `arith.subi`, even though the base cancels. For any
+64-bit P, including wrapped source addresses, `(P + D1) - (P + D2)` equals
+`D1 - D2` modulo 2^64. Only the byte difference becomes an ordinary integer;
+the absolute pointer integers remain closed and disappear from executable IR.
+
+`pointer_differences.py` establishes the common anchor from actual pointer SSA.
+It retains each source addptr increment, signed-widens it only after its
+original integer computation and scales it by that addptr's pointee byte width.
+Pointer bitcasts retain the accumulated bytes. Matched source shape operations
+transform the byte offsets; scalar anchors are uniform across those lanes.
+Nonuniform anchors require the same actual value and shape-operation path.
+Same-anchor pointer selection retains its real condition and both displacements.
+An otherwise opaque pointer value may cancel only against that same SSA value
+and matching lane path. Names, provenance, sample addresses and independently
+declared allocations establish no root equality.
+
+The new terminal is a standard modular i64 subtraction. Its consumers retain
+their original signed/unsigned arithmetic, divides, masks and memory operations.
+The full source-use check still rejects absolute observations, unproved
+cross-root subtraction, poison-producing flags and unsupported source fields.
+Failure after an earlier prepared difference leaves the entire original module
+and SSA use graph intact. Analysis has the existing depth/node/source budgets
+and a 32,768-operation per-difference recipe budget. Provenance and field order
+do not alter a valid matched-lane proof.
+
+This reuses the Meta/shared base/offset boundary. Its current PtrToInt handling
+re-materializes scalar pointers and refuses tensor pointer integers, so merely
+running that pass does not produce the needed portable cancellation. Ascend
+`8f0ade66580245e30ad97093526a4018e4e18fc7`,
+`TritonMemoryAccess/PtrAnalysisRules/CommonPtrRules.cpp` (`parseAddPtr`,
+`parseBitcast`) and `unittest/Analysis/PtrAnalysisBitcastTest.cpp` supply the
+per-increment byte-unit rule and independent byte-address interpretation.
+The narrow cancellation adapter leaves actual memory conversion with shared;
+it introduces no target address space, launcher ABI or physical pointer value.
+
+`closed-pointer-integer-difference` records join the existing
+`prov.closed_pointer_addresses` correspondence. Generated compatibility metadata
+names byte cancellation separately from pointer reconstruction. Public ABI,
+source capsule and receipt schemas are unchanged. General absolute integer
+region state, unproved region/lane correspondences, physical observations,
+external synchronization and accelerator qualification remain further work.
 
 ## Reuse and scalar memory
 
@@ -102,3 +163,32 @@ packages with the previous inventory: 113 packages, 81 standalone qualifications
 and fourteen maintained product cases. All 50 pinned definition names remain
 observed in selected native/Merlin-host-qualified captures. This is typed
 composition evidence, not per-operation execution or arbitrary-kernel coverage.
+
+## Same-base difference qualification
+
+`tests/test_pointer_differences.py` captures i8/i16/i32/i64 pointers selected
+within one root, converts their byte differences back into runtime load
+coordinates and returns both loaded words and original signed byte differences.
+Its source K-independent loop, signed stride, masks and logical grid stay
+executable. Their runtime replays cover empty domains, zero trips with an
+unobserved invalid origin, both stride signs and multiple logical programs.
+Three i64 byte-displacement cases additionally retain arbitrary full-width
+modular words in tensor, buffer and guarded-source-word profiles. Their
+references use independent Python integer arithmetic and allocation indices.
+
+The seven libraries and actual Spike images retain **eleven complete results
+as exact words**, with **32 additional unchanged-library host invocations**.
+Four actual guard invocations reject active addresses beyond the allocation;
+no successful receipt or output archive is produced. Bounds, initialization,
+write ownership and lifetime gates remain enabled.
+`out/pointer-differences/summary.json` reopens each receipt/replay and the observed guard outcomes.
+The combined `out/pointer-difference-inventory/coverage.json` reopens **304
+packages, 247 standalone qualifications and fourteen product cases**, with all
+fifty names observed under selected native/Merlin-host profiles.
+
+Twelve focused difference contracts pass, including actual-root equality,
+source-width wrap before byte scaling, unchanged source/use graphs on refusal,
+poison flags, unmatched lane permutations, provenance/field-order independence
+and bounded analysis. The 27-case address selection also passes; it includes
+the seven new libraries and the twenty earlier source/native/address tests.
+Those checks overlap and do not establish universal address or target coverage.

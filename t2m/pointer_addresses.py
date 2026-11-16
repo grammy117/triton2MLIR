@@ -2,8 +2,9 @@
 
 The pinned TT casts use i64. A value here denotes P + D modulo 2**64,
 where P is an actual source pointer and D is executable integer arithmetic.
-Only conversion back to a pointer may consume that absolute integer. Physical
-observations and unproved byte-to-element conversions remain located refusals.
+Conversion back to a pointer or cancellation against the same established
+logical base may consume that absolute integer. Physical observations and
+unproved byte-to-element conversions remain located refusals.
 Shared's base/offset and memory conversions still own the resulting pointers.
 """
 
@@ -149,6 +150,7 @@ def normalize_pointer_addresses(module, source_ids):
             sources = frozenset(source_ids(op.location)).union(
                 *(states[v].sources for v in affected)
             )
+            terminal = name == "tt.int_to_ptr"
             if len(sources) > 4096:
                 refuse(op, "pointer integer expression exceeds its 4096-source budget")
             if name == "tt.ptr_to_int":
@@ -235,28 +237,51 @@ def normalize_pointer_addresses(module, source_ids):
                 )
             elif name in {"arith.addi", "arith.subi"}:
                 neutral(op)
-                if (
-                    len(affected) != 1
-                    or len(op.operands) != 2
-                    or len(op.results) != 1
-                    or name == "arith.subi"
-                    and op.operands[0] not in states
-                ):
-                    refuse(
-                        op,
-                        "pointer integer arithmetic requires one base with an independent displacement",
+                if name == "arith.subi" and len(affected) == 2:
+                    from .pointer_differences import difference
+
+                    def emit(created, emitted=emitted):
+                        if len(emitted) >= 32768:
+                            created.drop_all_references()
+                            raise ValueError("pointer difference exceeds its bounded recipe budget")
+                        emitted.append(created)
+                        return created.results[0]
+
+                    try:
+                        _, extra_sources = difference(*(states[v] for v in op.operands), emit, source_ids)
+                    except (ValueError, ParseError) as error:
+                        refuse(op, str(error))
+                    sources = sources.union(extra_sources)
+                    if len(sources) > 4096:
+                        refuse(op, "pointer integer expression exceeds its 4096-source budget")
+                    terminal = True
+                    reports.append({"kind": "closed-pointer-integer-difference", "source_ids": sorted(sources),
+                                    "address_bits": 64, "units": "bytes", "arithmetic": "modulo-2^64",
+                                    "expansion": "same-logical-base-cancelled; difference-of-executable-byte-displacements",
+                                    "physical_address": "unobserved; no base integer materialized"})
+                else:
+                    if (
+                        len(affected) != 1
+                        or len(op.operands) != 2
+                        or len(op.results) != 1
+                        or name == "arith.subi"
+                        and op.operands[0] not in states
+                    ):
+                        refuse(
+                            op,
+                            "pointer integer arithmetic requires one base with an independent displacement",
+                        )
+                    address = states[affected[0]]
+                    operands = [
+                        states[v].displacement if v in states else v for v in op.operands
+                    ]
+                    result = (arith.AddiOp if name == "arith.addi" else arith.SubiOp)(
+                        *operands
                     )
-                address = states[affected[0]]
-                operands = [
-                    states[v].displacement if v in states else v for v in op.operands
-                ]
-                result = (arith.AddiOp if name == "arith.addi" else arith.SubiOp)(
-                    *operands
-                )
-                emitted.append(result)
-                states[op.results[0]] = Address(
-                    address.pointer, result.result, sources, address.origin
-                )
+                    emitted.append(result)
+                    states[op.results[0]] = Address(
+                        address.pointer, result.result, sources, address.origin
+                    )
             elif name == "arith.select":
                 if op.operands[0] in states or any(
                     v not in states for v in op.operands[1:]
@@ -343,7 +368,7 @@ def normalize_pointer_addresses(module, source_ids):
                     ),
                     builtin.NoneAttr(),
                 )
-            plans.append((op, emitted, name == "tt.int_to_ptr"))
+            plans.append((op, emitted, terminal))
         # Absolute integers disappear only after all of their users are checked.
         for op, emitted, terminal in plans:
             op.parent.insert_ops_before(emitted, op)
