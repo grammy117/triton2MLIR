@@ -348,12 +348,15 @@ establish universal source equivalence or `source_closure_verified`.
 The [local tensor-region extension](tensor_regions.md) now closes the previously
 reproduced make-range/tensor-state/nested-reduction refusal for real bitset source
 combiners and nested maps; six complete model configurations now qualify those
-forms through all memory profiles and the actual consumer. Real mapped histogram
-and nonzero-accumulator dot callbacks still reproduce refusals at their coarse
-TTIR operation. Extend numeric region admission using the existing converters
-and original numeric/effect contracts, preserving the actual histogram state,
-contraction accumulator and source computation. The implementation retains shared
-shape conversion and supplies
+forms through all memory profiles and the actual consumer. The
+[numeric region extension](numeric_regions.md) now closes the reproduced mapped
+histogram and nonzero-accumulator dot refusals using the existing converters and
+original contracts. Thirty native/Merlin-host/Spike configurations retain actual
+histogram state, contraction accumulators, local gather and mapped math; nested
+logical queries capture the actual runtime grid without changing surrounding
+control/effects. All thirty complete results match their declared policies and
+120 further host invocations reuse the libraries. The implementation retains
+shared shape conversion and supplies
 independent captured destinations only at native materialization. Continue with
 remaining tensor operations/dynamic intermediates, source effects, broader
 bindings and applicable targets; these functional cases do not close that scope.

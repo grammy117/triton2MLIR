@@ -1,10 +1,24 @@
 # Measured coverage and remaining boundaries
 
+[Numeric region builtins](numeric_regions.md) now retain existing histogram,
+dot/scaled-dot, local-gather and mapped-math conversions inside scalar bodies.
+Nested program-ID/count values reach their actual enclosing logical invocation,
+including dynamic grids and scalar branches/zero-trip loops. Thirty real source
+captures pass native/Merlin host/Spike, retaining 24 exact-word results and six
+tolerance-qualified standard-math results, plus 120 further host invocations.
+`out/numeric-regions/summary.json` reopens the target/replay receipts; the current
+`out/numeric-region-inventory/coverage.json` reopens **291 packages, 240 standalone
+qualifications and fourteen product cases**. All fifty names remain observed
+under selected native/Merlin-host profiles. The 32 focused region/query contracts
+and 187 existing runtime-grid/external/original-effect regressions pass; counts
+overlap. This does not close arbitrary region/type/attribute/effect/source
+compositions or accelerator correctness/performance.
+
 Six complete [tensor-region model configurations](tensor_regions.md) now retain
 all 42 original results as exact words through native/Merlin host/Spike. The two
 i32/i64 source models run in three memory profiles, retaining parameters, five
 dependent/empty calls, original snapshots and byte-identical parent archives.
-`out/tensor-region-models/summary.json` reopens the target receipts; the current
+`out/tensor-region-models/summary.json` reopens the target receipts; that earlier
 `out/tensor-region-model-inventory/coverage.json` reopens **261 packages, 210
 standalone qualifications and fourteen product cases**. All fifty source names
 remain observed under selected native/Merlin-host profiles. General tensor/

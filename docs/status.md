@@ -6,6 +6,17 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Numeric region builtins](numeric_regions.md) now close the reproduced mapped
+histogram/dot refusals through the existing converters and original contracts.
+Nested logical queries capture actual program indices/counts from their own
+logical invocation, including runtime grids and scalar branches/zero-trip loops.
+Thirty native/Merlin-host/Spike configurations retain 24 exact-word and six
+tolerance-qualified math results, with 120 additional unchanged-library host
+invocations. Original accumulators, histogram state and source control stay
+executable. Unknown properties/effects still refuse; physical mapping stays
+undecided. The 32 focused contracts and 187 runtime/grid/external/effect
+regressions pass. Broader region/type/effect/source and target closure is open.
+
 [Local tensor regions](tensor_regions.md) now retain tensor intermediates,
 tensor for/while state and nested maps/reductions/scans from real source captures.
 One detached postorder expansion keeps mixed nesting and complete refusals
@@ -99,8 +110,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/tensor-region-model-inventory/coverage.json` reopens **261 packages,
-210 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/numeric-region-inventory/coverage.json` reopens **291 packages,
+240 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

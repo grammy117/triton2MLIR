@@ -26,7 +26,7 @@ def tensor_computation(operation):
     only admission to the existing shared conversion, never a new definition
     of a TTIR shape operation or permission for unknown source properties.
     """
-    from .shared_tensor import opcode
+    from .shared_tensor import _source_ids, opcode
 
     standard = isinstance(
         operation,
@@ -62,8 +62,31 @@ def tensor_computation(operation):
         "tt.join": set(),
         "tt.split": set(),
         "tt.cat": {"can_reorder"},
+        # Pinned TritonOps.td declares these numeric/domain operations Pure.
+        # Original preflight and the existing converters retain their complete
+        # numeric/property contracts. Admission here supplies no new expansion,
+        # memory effect, physical layout or source precision policy.
+        "tt.dot": {"inputPrecision", "maxNumImpreciseAcc"},
+        "tt.dot_scaled": {"a_elem_type", "b_elem_type", "fastMath", "lhs_k_pack",
+                          "rhs_k_pack", "operandSegmentSizes"},
+        "tt.histogram": set(),
+        "tt.gather": {"axis", "efficient_layout"},
+        "tt.bitcast": set(),
+        "tt.fp_to_fp": {"rounding"},
+        "tt.precise_divf": set(),
+        "tt.precise_sqrt": set(),
+        "tt.clampf": {"propagateNan"},
+        "tt.mulhiui": set(),
+        "tt.get_program_id": {"axis"},
+        "tt.get_num_programs": {"axis"},
+        "tt.extern_elementwise": {"pure", "symbol", "libname", "libpath"},
     }
     allowed = fields.get(opcode(operation))
+    if allowed is not None and opcode(operation) == "tt.extern_elementwise":
+        # Externals have conditional effects rather than a Pure trait. Retain
+        # the established library/type/prototype gate, including unused calls.
+        from .external_math import contract
+        contract(operation, next(iter(_source_ids(operation.location)), None))
     return (
         allowed is not None
         and not operation.regions
@@ -97,6 +120,7 @@ def expand_value_regions(
     from .elementwise_map import expand_elementwise_maps
     from .reductions import expand_reductions
     from .region_integer_casts import expand_region_integer_casts
+    from .region_launch_queries import normalize_region_launch_queries
     from .scans import expand_scans
     from .shared_tensor import opcode
 
@@ -106,6 +130,7 @@ def expand_value_regions(
         for original, copy in zip(module.walk(), prepared.walk(), strict=True)
         if original in generated_guards
     }
+    launch_reports = normalize_region_launch_queries(prepared, source_ids)
     expand_region_integer_casts(prepared, source_ids)
     reductions, scans, maps, tensors = [], [], [], []
     containers = [operation for operation in prepared.walk()
@@ -149,4 +174,4 @@ def expand_value_regions(
     for block in list(module.body.blocks):
         module.body.erase_block(block, safe_erase=False)
     prepared.body.move_blocks(module.body)
-    return reductions, scans, maps, tensors
+    return reductions, scans, maps, [*launch_reports, *tensors]

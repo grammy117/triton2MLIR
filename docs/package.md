@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Numeric region builtins](numeric_regions.md) retain the existing source
+contracts and converters inside scalar containers. Nested exact i32 logical
+launch queries capture values from their own structured program entry; actual
+grid expressions/induction variables supply their standard expansion. Original
+query locations/source identities remain represented, surrounding control and
+effects stay in place, and the detached expansion publishes only after every
+candidate succeeds. `uniform-region-launch-query` records and generated
+compatibility metadata name this representation. No physical mapping or six-arg
+launcher ABI is introduced; public ABIs, artifact rosters and receipt schemas
+are unchanged. Source external purity/prototype checks remain mandatory.
+
 [Local tensor regions](tensor_regions.md) retain checked numeric tensor
 intermediates, structured tensor state and mixed nested maps/reductions/scans.
 One detached postorder expansion preserves complete refusals; shared remains

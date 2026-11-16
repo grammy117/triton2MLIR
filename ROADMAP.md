@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Numeric region builtins](docs/numeric_regions.md) now reuse the existing
+histogram, contraction, local-gather and math converters inside checked scalar
+regions. Nested program-ID/count queries capture values from their enclosing
+logical invocation; original control/effects stay in place and mapping stays
+undecided. Thirty native/Merlin-host/Spike configurations retain 24 exact-word
+and six tolerance-qualified results, with 120 unchanged-library host replays.
+The latest inventory reopens 291 packages and 240 standalone qualifications.
+Broader region/type/effect/runtime/source and applicable target work remains.
+
 [Local tensor regions](docs/tensor_regions.md) extend scalar container bodies
 with functional tensor intermediates/state and one transactional postorder for
 mixed nested maps/reductions/scans. Real source bitset kernels retain the actual
@@ -12,7 +21,7 @@ captured values independent without copying ordinary readonly captures. Eighteen
 libraries/Spike images retain 18 exact-word results and 72 additional host replays.
 Six complete i32/i64 model configurations also retain all 42 original results
 through native/Merlin host/Spike, including dependent calls and original snapshots.
-The latest inventory reopens 261 packages and 210 standalone qualifications. Broader
+That earlier inventory reopens 261 packages and 210 standalone qualifications. Broader
 tensor/numeric/effect/model and applicable target scope remain required.
 
 [Captured tensor lookups](docs/scalar_tile_reads.md) now retain original table

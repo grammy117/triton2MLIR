@@ -3,6 +3,15 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Numeric region builtins](docs/numeric_regions.md) now retain histogram,
+dot/scaled-dot, local gather, mapped math and logical queries through the
+existing converters and source numeric/effect contracts. Uniform program
+queries capture actual logical grid values without choosing hardware placement.
+Thirty native/Merlin-host/Spike configurations retain 24 exact-word and six
+tolerance-qualified results, with 120 further host replays. The latest inventory
+reopens 291 packages, 240 standalone qualifications and fourteen product cases.
+Full arbitrary-kernel and accelerator coverage remains incomplete.
+
 [Local tensor regions](docs/tensor_regions.md) now retain tensor intermediates,
 for/while state and nested map/reduction/scan computation from real Triton
 sources. Shared supplies the shape/elementwise conversion; Merlin protects
@@ -10,7 +19,7 @@ captured writable destinations at native materialization. Public interfaces stay
 unchanged. Eighteen libraries/Spike images retain all 18 results as exact words
 and 72 further host replays. Six complete model configurations additionally
 retain all 42 original results as exact words, with parameters and snapshots
-preserved. The combined inventory reopens 261 packages,
+preserved. That earlier combined inventory reopens 261 packages,
 210 standalone qualifications and fourteen product cases. Full arbitrary-kernel
 and accelerator coverage remains incomplete.
 

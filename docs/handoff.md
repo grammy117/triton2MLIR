@@ -1,8 +1,34 @@
-# Review handoff — 2026-11-12
+# Review handoff — updated 2026-11-15
 
 The source-to-package-to-Merlin pipeline works for the qualified selections.
 **Full arbitrary-Triton-kernel coverage remains incomplete.** This is a review
 boundary requested by the user, not a completion claim.
+
+## Follow-through since the November 12 review boundary
+
+[Local tensor regions](tensor_regions.md) and complete learned-state models
+now retain functional tensor intermediates, for/while state and mixed nested
+containers through native/Merlin host/Spike. Merlin's
+`56b938a9196728bc249fd51b4f5efe1971e1cadc` protects captured writable destinations
+at its actual native seam. Triton2MLIR commits `05cda56`, `7dd011b` and `dbbfdf4`
+retain the frontend and complete-model qualification; the original 42 model
+results match exact words across six configurations.
+
+[Numeric region builtins](numeric_regions.md) additionally close mapped
+histogram/dot refusals through the existing numeric converters and contracts.
+Uniform logical queries reach the actual enclosing runtime grid without
+choosing physical placement or moving surrounding effects. Thirty standalone
+configurations pass native/Merlin host/Spike: 24 exact-word and six
+tolerance-qualified math results, with 120 further host replays. The latest
+`out/numeric-region-inventory/coverage.json` reopens 291 packages, 240 standalone
+qualifications and fourteen product cases. The 32 focused contract and 187
+runtime/grid/external/original-effect regression selections pass.
+
+Current branches remain `main` for triton2MLIR and `ttir-experiment-grammy` for
+Merlin/model2MLIR. Remaining tensor/type/effect/runtime/shared-state/model and
+applicable target work follows [the completion plan](completion_plan.md).
+The sections below retain the original November 12 slice and its evidence;
+their counts and commit table are historical.
 
 ## Repositories and publication
 
