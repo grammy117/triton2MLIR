@@ -124,6 +124,26 @@ def main(work):
             adapters.append({"name":"readonly-functional-tensor-inputs","arguments":readonly_count,
                 "upstream_contract":"bufferization.writable=false"})
         restore_atomics = None
+        # The pinned Linalg bufferizer does not mark scalar bodies repetitive.
+        # Protect captured writable destinations, at the actual native seam;
+        # immutable lookup/read captures and portable source MLIR stay intact.
+        from native_tensor_regions import needs_region_state_protection
+        if needs_region_state_protection(module.operation, ir):
+            root = os.environ.get("T2M_MERLIN_ROOT")
+            if not root:
+                raise ValueError("nested tensor region state requires the explicit T2M_MERLIN_ROOT compiler support path")
+            sys.path.insert(0, str(Path(root).resolve() / "src"))
+            from merlin.llvmlower.loop_tensor_destinations import PRELUDE
+            namespace = {"ir": ir, "print": compiler_diagnostic, "_run_stages": None}
+            exec(PRELUDE, namespace)
+            preparation = "builtin.module(scf-forall-to-for,canonicalize,cse)"
+            passmanager.PassManager.parse(preparation).run(module.operation)
+            count = namespace["_ltd_protect_region_destinations"](context, module)
+            import hashlib
+            adapters.append({"name": "independent-captured-region-destinations", "allocations": count,
+                             "support_form": "embedded-native-python-prelude",
+                             "preparation_pipeline": preparation,
+                             "support_sha256": hashlib.sha256(PRELUDE.encode()).hexdigest()})
         integer_regions = False
         feature_file = work / "native-features.json"
         if feature_file.exists():

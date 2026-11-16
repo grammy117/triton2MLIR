@@ -27,7 +27,6 @@ from .ir import context, text
 from .initialization import DefiniteWrites
 from .loop_domains import bounded_loop, require_signed_loop
 from .launch_domains import launch_domains
-from .scans import expand_scans
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
 from .shape_lowering import affine_index
@@ -1382,11 +1381,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .scalar_tile_reads import expand_scalar_tile_reads
     lookup_guards = set()
     scalar_tile_reports = expand_scalar_tile_reads(middle_module, _source_ids, generated_guards=lookup_guards)
-    from .reductions import expand_reductions
-    reduction_reports = expand_reductions(middle_module, _source_ids, generated_guards=lookup_guards)
-    scan_reports = expand_scans(middle_module, _source_ids, generated_guards=lookup_guards)
-    from .elementwise_map import expand_elementwise_maps
-    map_reports = expand_elementwise_maps(middle_module, _source_ids, memory_events=source_words and isolated_events, layouts=layout_maps)
+    from .value_regions import expand_value_regions
+    reduction_reports, scan_reports, map_reports, region_tensor_reports = expand_value_regions(
+        middle_module, _source_ids, generated_guards=lookup_guards,
+        memory_events=source_words and isolated_events, layouts=layout_maps,
+    )
     from .tile_gather import expand_tile_gathers
     gather_reports = expand_tile_gathers(middle_module, _source_ids)
     from .histogram import expand_histograms
@@ -1451,6 +1450,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))
     transformations.extend(scalar_builtin_reports)
     transformations.extend(scalar_tile_reports)
+    transformations.extend(region_tensor_reports)
     transformations.extend(reduction_reports)
     transformations.extend(scan_reports)
     transformations.extend(pointer_control_reports)

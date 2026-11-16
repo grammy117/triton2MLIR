@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Local tensor regions](tensor_regions.md) retain checked numeric tensor
+intermediates, structured tensor state and mixed nested maps/reductions/scans.
+One detached postorder expansion preserves complete refusals; shared remains
+responsible for source shape and elementwise conversion. Exact shaped integer
+casts use the upstream scalar-in-parallel-Linalg pattern before xDSL's recursive
+verification. Updated native/Merlin support gives captured writable destinations
+independent invocation storage, preserving used initial values and avoiding data
+copies for unused initialization. Ordinary readonly captures and portable MLIR
+stay intact. Compatibility metadata records the updated consumer requirement;
+public ABI, artifact rosters and receipt schemas remain unchanged.
+
 [Captured tensor lookups](scalar_tile_reads.md) retain immutable SSA snapshots
 inside reductions/scans as guarded standard element reads. Shared projections
 reuse one value at the original gather position. Shape/axis/source-layout intent

@@ -33,11 +33,11 @@ def _slice(source, offsets, sizes, result_type):
     )
 
 
-def expand_reductions(module, source_ids, *, generated_guards=()):
+def expand_reductions(module, source_ids, *, generated_guards=(), operations=None):
     from .shared_tensor import opcode
 
     plans = []
-    for original in list(module.walk()):
+    for original in list(module.walk()) if operations is None else operations:
         if opcode(original) != "tt.reduce":
             continue
         ids = source_ids(original.location)
@@ -162,7 +162,8 @@ def expand_reductions(module, source_ids, *, generated_guards=()):
                 for index, value in enumerate(combiner.args)
             }
             for child in list(combiner.ops)[:-1]:
-                body.add_op(child.clone(value_mapper=mapping))
+                from .value_regions import clone_body_operation
+                body.add_op(clone_body_operation(child, mapping, generated_guards))
             terminal = YieldOp(*(mapping.get(value, value) for value in end.operands))
             terminal.location = end.location
             body.add_op(terminal)

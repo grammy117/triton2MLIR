@@ -28,7 +28,6 @@ def scan(
         "func.call @unknown() : () -> ()",
         "%read=memref.load %p[%zero]:memref<8xi64>",
         '%unknown="arith.unknown"(%a):(i64)->i64',
-        "%tensor=tensor.empty():tensor<1xi64>",
     ],
 )
 @pytest.mark.parametrize("count", [1, 8])
@@ -52,6 +51,26 @@ def test_nested_unused_effects_refuse_before_any_scan_is_expanded(effect, count)
     with pytest.raises(ConversionError, match="ttir.op.2222"):
         expand_scans(module, _source_ids)
     assert str(module) == before
+
+
+@pytest.mark.parametrize("count", [1, 8])
+def test_unused_local_tensor_values_keep_their_numeric_control_contract(count):
+    nested = '''%condition=arith.cmpi slt,%a,%b:i64
+      %sum=scf.if %condition -> (i64) {
+        %tensor=tensor.empty():tensor<1xi64>
+        scf.yield %a:i64
+      } else {scf.yield %b:i64}'''
+    operation = scan(nested, count=count)
+    module = parse_shared(f'''module {{func.func @f(%x:tensor<{count}xi64>)->tensor<{count}xi64> {{
+      {operation}
+      return %out:tensor<{count}xi64>
+    }} }}''')
+    reports = expand_scans(module, _source_ids)
+    module.verify()
+    assert len(reports) == 1 and reports[0]["combiner_control_flow"] == {"scf.if": 1}
+    if count > 1:
+        assert any(op.name == "scf.if" for op in module.walk())
+        assert any(op.name == "tensor.empty" for op in module.walk())
 
 
 @pytest.mark.skipif(

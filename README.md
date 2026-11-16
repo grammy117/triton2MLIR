@@ -3,6 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Local tensor regions](docs/tensor_regions.md) now retain tensor intermediates,
+for/while state and nested map/reduction/scan computation from real Triton
+sources. Shared supplies the shape/elementwise conversion; Merlin protects
+captured writable destinations at native materialization. Public interfaces stay
+unchanged. Full arbitrary-kernel and accelerator coverage remains incomplete.
+
 [Captured tensor lookups](docs/scalar_tile_reads.md) now preserve loaded table
 snapshots across source mutation and runtime reduction/scan recurrence. Twenty-four
 libraries pass native/Merlin host/Spike with all 48 results exact and 96 further

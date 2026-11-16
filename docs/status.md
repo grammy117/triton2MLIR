@@ -1,10 +1,17 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
-Updated 2026-11-12. **The end-to-end pipeline works for a broad qualified
+Updated 2026-11-15. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
 model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
+
+[Local tensor regions](tensor_regions.md) now retain tensor intermediates,
+tensor for/while state and nested maps/reductions/scans from real source captures.
+One detached postorder expansion keeps mixed nesting and complete refusals
+transactional. Native materialization gives captured writable destinations real
+independent storage; readonly captures and the portable payload stay intact.
+Remaining tensor/effect/numeric/model and applicable accelerator scope is open.
 
 ## Progress against the end goal
 

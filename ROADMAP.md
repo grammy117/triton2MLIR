@@ -4,6 +4,13 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Local tensor regions](docs/tensor_regions.md) extend scalar container bodies
+with functional tensor intermediates/state and one transactional postorder for
+mixed nested maps/reductions/scans. Real source bitset kernels retain the actual
+chunk loops and inner reductions. Merlin's native destination preparation keeps
+captured values independent without copying ordinary readonly captures. Broader
+tensor/numeric/effect/model and applicable target scope remain required.
+
 [Captured tensor lookups](docs/scalar_tile_reads.md) now retain original table
 values across source writes and runtime reduction/scan recurrence. Twenty-four
 libraries pass native/Merlin host/Spike with 48 complete exact-word results and

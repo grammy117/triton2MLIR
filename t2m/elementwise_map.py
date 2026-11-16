@@ -175,10 +175,11 @@ def _independent_packing(source, end, pack, refuse, source_ids):
     return representatives, selected, equivalents, proof
 
 
-def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=None):
+def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=None,
+                            generated_guards=(), operations=None):
     from .shared_tensor import _pointer_type, opcode
     reports = []
-    for op in list(module.walk()):
+    for op in list(module.walk()) if operations is None else operations:
         if opcode(op) != "tt.map_elementwise":
             continue
         ids = source_ids(op.location)
@@ -210,7 +211,15 @@ def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=
                 or [v.type for v in end.operands] != [t for t in output_elements for _ in range(pack)]):
             refuse("elementwise map scalar signature differs from its tensor elements")
         controls = {"scf.if", "scf.for", "scf.while", "scf.yield", "scf.condition"}
-        for child in source.walk():
+        if not has_memory:
+            from .scans import _scalar_combiner
+
+            def combiner_refuse(message, *, opcode=None):
+                raise ConversionError(message, opcode=opcode, source_id=next(iter(ids), None))
+
+            _scalar_combiner(source, end, combiner_refuse, source_ids,
+                             family="elementwise map", generated_guards=generated_guards)
+        for child in source.walk() if has_memory else ():
             name = opcode(child)
             if child is end:
                 continue
@@ -241,7 +250,8 @@ def expand_elementwise_maps(module, source_ids, *, memory_events=False, layouts=
         body = Block(arg_types=input_elements + output_elements)
         mapping = {arg: body.args[i // pack] for i, arg in enumerate(source.args)}
         for child in children:
-            cloned = child.clone(value_mapper=mapping)
+            from .value_regions import clone_body_operation
+            cloned = clone_body_operation(child, mapping, generated_guards)
             for original, copy in zip(child.walk(), cloned.walk(), strict=True):
                 copy.location = locations.get(original, original.location)
             body.add_op(cloned)

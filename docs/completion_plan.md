@@ -333,6 +333,13 @@ establish universal source equivalence or `source_closure_verified`.
 
 ## Remaining work and execution order
 
+The [local tensor-region extension](tensor_regions.md) now closes the previously
+reproduced make-range/tensor-state/nested-reduction refusal for real bitset source
+combiners and nested maps. It retains shared shape conversion and supplies
+independent captured destinations only at native materialization. Continue with
+remaining tensor operations/dynamic intermediates, source effects, broader
+bindings and applicable targets; these functional cases do not close that scope.
+
 Finish coherent source-to-consumer slices and commit each. Keep the full
 workstreams below active; do not indefinitely extend one already-qualified
 memory fixture while leaving the missing families unexamined.

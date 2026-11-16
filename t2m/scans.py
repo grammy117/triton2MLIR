@@ -85,7 +85,7 @@ def audit_source_combiners(module, source_ids):
 def _scalar_combiner(
     block, terminal, refuse, source_ids, *, family="scan", generated_guards=()
 ):
-    """Check complete scalar execution, including nested controls and captures.
+    """Check complete numeric execution, including local tensors and captures.
 
     Only exact SCF value regions have recursive-effect permission. Inspect every
     nested operation, including unused effects. No loop is unrolled, reordered
@@ -94,6 +94,7 @@ def _scalar_combiner(
     retain their explicit checks; serialized provenance grants no admission.
     """
     from .scalar_tile_reads import numeric_tile, scalar_tensor_read
+    from .value_regions import numeric_value, tensor_computation
 
     controls, ids, control_ops = {}, [], []
     for child in block.walk():
@@ -109,6 +110,7 @@ def _scalar_combiner(
         # Only exact guards made by the checked scalar lookup expansion gain
         # this admission. Source attributes/locations cannot grant it.
         guard = isinstance(child, cf.AssertOp) and child in generated_guards
+        local_tensor = tensor_computation(child)
         arithmetic = (
             child.name.split(".")[0] in ("arith", "math")
             and not child.regions
@@ -120,14 +122,14 @@ def _scalar_combiner(
                 or isinstance(child, (arith.ExtSIOp, arith.RemUIOp))
             )
         )
-        if not (control or end or arithmetic or read or literal or guard):
+        if not (control or end or arithmetic or read or literal or guard or local_tensor):
             name = (
                 child.op_name.data
                 if child.name == "builtin.unregistered"
                 else child.name
             )
             refuse(
-                f"{family} combiner requires pure scalar arithmetic and structured value control",
+                f"{family} combiner requires pure scalar arithmetic, functional tensor values and structured value control",
                 opcode=name,
             )
         values = [
@@ -141,17 +143,14 @@ def _scalar_combiner(
             ),
         ]
         if not all(
-            (read and value is child.tensor or literal and value is child.result)
-            or isinstance(
-                value.type, (builtin.IntegerType, builtin.IndexType, builtin.AnyFloat)
-            )
+            numeric_value(value.type)
             for value in values
         ):
             refuse(
-                f"{family} combiner cannot capture tensors, addresses or memory state",
+                f"{family} combiner requires numeric values without addresses or memory state",
                 opcode=child.name,
             )
-        if read or literal or guard:
+        if read or literal or guard or local_tensor:
             try:
                 child.verify()
             except VerifyException as error:
@@ -179,13 +178,13 @@ def _scalar_combiner(
     return controls, ids
 
 
-def expand_scans(module, source_ids, *, generated_guards=()):
+def expand_scans(module, source_ids, *, generated_guards=(), operations=None):
     reports, plans = [], []
 
     def name(op):
         return op.op_name.data if op.name == "builtin.unregistered" else op.name
 
-    for scan in list(module.walk()):
+    for scan in list(module.walk()) if operations is None else operations:
         if name(scan) != "tt.scan":
             continue
         ids = source_ids(scan.location)
@@ -320,7 +319,8 @@ def expand_scans(module, source_ids, *, generated_guards=()):
             body = Block(arg_types=element_types * 3)
             mapper = dict(zip(combiner.args, body.args[: 2 * len(types)], strict=True))
             for op in list(combiner.ops)[:-1]:
-                body.add_op(op.clone(value_mapper=mapper))
+                from .value_regions import clone_body_operation
+                body.add_op(clone_body_operation(op, mapper, generated_guards))
             returned = YieldOp(*(mapper.get(v, v) for v in terminator.operands))
             returned.location = terminator.location
             body.add_op(returned)
