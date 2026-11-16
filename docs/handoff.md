@@ -9,11 +9,19 @@ boundary requested by the user, not a completion claim.
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now retain cancelling SSA roots, source byte units and runtime memory/control.
 Seven native/Merlin-host/Spike libraries retain eleven exact-word results, with
-32 further host invocations and four actual bounds aborts. The latest
+32 further host invocations and four actual bounds aborts. That initial
 `out/pointer-difference-inventory/coverage.json` reopens 304 packages and 247
 standalone qualifications. Twelve focused difference contracts and the 27-case
 address selection pass. Unproved absolute/root/region/effect and applicable
 target forms remain in the completion plan.
+The core change is `288586781e2ed71b374bacebbbbc89a5a52a1f00`. Four further
+width cases retain overflowing i32 increments before byte scaling, with four
+exact results and sixteen host replays. Two complete relative-pointer models
+also retain all twenty original results through native/Merlin host/Spike.
+The latest `out/pointer-difference-width-inventory/coverage.json` reopens 310
+packages and 251 standalone qualifications. A reproduced integer-address
+`scf.for` refusal identifies the next paired region-state work; see the
+[address contract](pointer_addresses.md#complete-model-qualification-and-next-region-boundary).
 
 [Local tensor regions](tensor_regions.md) and complete learned-state models
 now retain functional tensor intermediates, for/while state and mixed nested

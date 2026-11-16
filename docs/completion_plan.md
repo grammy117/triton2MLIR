@@ -353,6 +353,15 @@ memory guards. Seven real libraries/Spike images retain eleven exact-word
 results, with 32 further host replays and four observed bounds aborts. Continue
 with broader integer-address region state, alias/shared-state and runtime/model
 bindings; cross-root and physical observations still require real semantics.
+Four further source-pointer widths now qualify overflowing i32 increment
+computation before byte scaling. Two complete i32/i64 models retain all twenty
+original results as exact words through native/Merlin host/Spike, preserving
+parameters, dependent/empty/zero-trip calls and snapshots. Public model shapes
+remain static. The next reproduced gap carries `ptr_to_int` address state into
+`scf.for`, then casts/loads/advances it inside the loop. Extend the established
+pointer-control edge/fixed-point analysis to paired integer-address base/offset
+state across for/while/if, preserving source operations and all refusal/effect
+checks; qualify the actual consumer rather than serializing or deleting it.
 
 The [local tensor-region extension](tensor_regions.md) now closes the previously
 reproduced make-range/tensor-state/nested-reduction refusal for real bitset source

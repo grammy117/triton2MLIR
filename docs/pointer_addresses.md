@@ -1,9 +1,11 @@
 # Closed pointer-integer displacements and differences
 
 The latest [same-base difference](#same-base-byte-differences) selection has
-seven actual native/Merlin-host/Spike libraries with eleven exact-word results,
-32 further host replays and four real bounds aborts. Its combined inventory
-reopens 304 packages and 247 standalone qualifications. Absolute observations,
+eleven actual native/Merlin-host/Spike libraries with fifteen exact-word results,
+48 further host replays and four real bounds aborts. Two complete models also
+retain all twenty original results through those execution boundaries. The
+latest combined inventory reopens 310 packages and 251 standalone qualifications.
+Absolute observations,
 broader region/alias/effect forms and applicable accelerator scope remain open.
 
 TTIR `ptr_to_int` and `int_to_ptr` no longer imply an unavoidable physical
@@ -169,7 +171,7 @@ composition evidence, not per-operation execution or arbitrary-kernel coverage.
 `tests/test_pointer_differences.py` captures i8/i16/i32/i64 pointers selected
 within one root, converts their byte differences back into runtime load
 coordinates and returns both loaded words and original signed byte differences.
-Its source K-independent loop, signed stride, masks and logical grid stay
+Its original runtime loop, signed stride, masks and logical grid stay
 executable. Their runtime replays cover empty domains, zero trips with an
 unobserved invalid origin, both stride signs and multiple logical programs.
 Three i64 byte-displacement cases additionally retain arbitrary full-width
@@ -178,7 +180,7 @@ references use independent Python integer arithmetic and allocation indices.
 
 The seven libraries and actual Spike images retain **eleven complete results
 as exact words**, with **32 additional unchanged-library host invocations**.
-Four actual guard invocations reject active addresses beyond the allocation;
+Four actual Merlin host guard invocations reject active addresses beyond the allocation;
 no successful receipt or output archive is produced. Bounds, initialization,
 write ownership and lifetime gates remain enabled.
 `out/pointer-differences/summary.json` reopens each receipt/replay and the observed guard outcomes.
@@ -192,3 +194,45 @@ poison flags, unmatched lane permutations, provenance/field-order independence
 and bounded analysis. The 27-case address selection also passes; it includes
 the seven new libraries and the twenty earlier source/native/address tests.
 Those checks overlap and do not establish universal address or target coverage.
+
+Four additional i8/i16/i32/i64 source-pointer cases now qualify narrow i32
+increment arithmetic before byte scaling. Actual runtime words include signed
+extremes and overflowing multiply/adds. The original i32 operations execute
+before signed extension; their four complete results match exact i64 byte
+words through native/Merlin host/Spike and sixteen additional host replays.
+`out/pointer-difference-widths/summary.json` reopens these receipts and a
+separate native-qualified public saved-source CLI capture. CLI JSON references
+use `--effect-reference`; `--reference` selects numeric NPZ archives.
+
+## Complete model qualification and next region boundary
+
+`scripts/capture_pointer_difference_model.py` captures real i32/i64 model2MLIR
+models with saved weights/bias, a strided read, a dependent read from its result,
+an empty call, a zero-trip call with an unobserved invalid origin and ten original
+results each. Those include actual byte distances, value outputs and the original
+input-derived snapshot. Independent CPU references use Python logical indices;
+no compiler root/address helper supplies the goldens.
+
+Both guarded-source-word models pass native/Merlin host/Spike with **all twenty
+original results as exact words**. Parent weights, manifests, inputs, constants
+and complete reference archives remain byte-identical. All five source runtime
+scalars bind through the existing checked typed-call specialization; public
+model shapes stay static. `tests/test_pointer_difference_model.py` reproduces
+the models and `out/pointer-difference-models/summary.json` reopens their target
+receipts. The latest `out/pointer-difference-width-inventory/coverage.json`
+reopens **310 packages, 251 standalone qualifications and fourteen product
+cases**, retaining all fifty names under selected native/Merlin-host profiles.
+
+A maintained real source case, `carried_integer_address` in
+`t2m/examples/pointer_address_kernels.py`, still refuses an integer address carried by
+`scf.for`: `address = x.to(tl.uint64) + lane * 4`, then each iteration loads
+through `address.to(pointer)` and advances it by `n * 4`. The current diagnostic
+locates the absolute integer's escape into `scf.for`. This needs paired logical
+base/displacement state across region entry/backedges, reusing the existing
+pointer-control edge/fixed-point analysis. Preserve the original loop, source
+arithmetic and effects; qualify for/while/branch recurrences and unknown-root
+refusals through the same package and consumer. This remains open alongside
+broader aliases, external state, numeric/source and applicable target scope.
+Its located-refusal test records a valid unimplemented form, not forbidden source
+semantics. Replace that expected refusal with complete execution checks when
+the region-state implementation lands.

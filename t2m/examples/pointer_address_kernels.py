@@ -78,3 +78,25 @@ def relative_byte_words(x, left, right, out, n, B: tl.constexpr):
     second = x.to(tl.uint64) + b.to(tl.uint64)
     difference = (first - second).to(tl.int64)
     tl.store(out + lane, difference, lane < n)
+
+
+@triton.jit
+def relative_narrow_words(x, offsets, out, n, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    word = tl.load(offsets + lane, lane < n, other=0)
+    increment = word * 3 + 5
+    pointer = x + increment
+    difference = (pointer.to(tl.uint64) - x.to(tl.uint64)).to(tl.int64)
+    tl.store(out + lane, difference, lane < n)
+
+
+@triton.jit
+def carried_integer_address(x, out, n, capacity, steps, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    address = x.to(tl.uint64) + lane.to(tl.uint64) * 4
+    total = tl.full((B,), 0, tl.int32)
+    for _ in range(steps):
+        pointer = address.to(tl.pointer_type(tl.int32))
+        total += tl.load(pointer, lane < n, other=0)
+        address = address + n.to(tl.uint64) * 4
+    tl.store(out + lane, total, lane < n)

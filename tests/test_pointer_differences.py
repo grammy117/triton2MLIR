@@ -71,6 +71,15 @@ def byte_arguments(n):
     return [np.asarray([123], np.int32), left, right, np.asarray(n, np.int32)], [expected]
 
 
+def narrow_arguments(width, n):
+    pattern = [-(1 << 31), (1 << 31) - 1, 1 << 30, -(1 << 30), -1, 0, 1, 9]
+    offsets = np.resize(np.asarray(pattern, np.int32), n)
+    words = [(int(value) * 3 + 5) & ((1 << 32) - 1) for value in offsets]
+    signed = [word - (1 << 32) if word >> 31 else word for word in words]
+    expected = np.asarray([word * (width // 8) for word in signed], np.int64)
+    return [np.asarray([1], np.dtype(f"int{width}")), offsets, np.asarray(n, np.int32)], [expected]
+
+
 def qualify_and_replay(root, result, initial, cases):
     from test_mixed_effects import expected, qualify
 
@@ -138,3 +147,39 @@ def test_actual_pointer_differences_drive_runtime_memory_and_retain_byte_results
 def test_cancelled_base_keeps_full_modular_integer_words_in_every_memory_profile(tmp_path, profile):
     result = capture(tmp_path, bytes_only=True, profile=profile)
     qualify_and_replay(tmp_path, result, byte_arguments(13), [byte_arguments(n) for n in (0, 1, 8, 31)])
+
+
+@pytest.mark.parametrize("width", [8, 16, 32, 64])
+def test_original_i32_increment_wraps_before_pointee_byte_scaling(tmp_path, width):
+    from t2m.examples.pointer_address_kernels import relative_narrow_words
+
+    source = tmp_path / "source.ttir"
+    source.write_text(capture_ttir(relative_narrow_words, {
+        "x": f"*i{width}", "offsets": "*i32", "out": "*i64", "n": "i32", "B": "constexpr"}, {"B": 8}))
+    abi = TensorABI(relative_narrow_words.__name__, (TensorBuffer("x", (1,), dtype=f"i{width}"),
+        TensorBuffer("offsets", ("n",), dtype="i32"), TensorBuffer("out", ("n",), "write", "i64")),
+        grid=(GridExtent("n", 8),), runtime_scalars=(RuntimeScalar("n", "i32", 3, bounds=(0, 31)),))
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=os.environ["TRITON_SHARED_OPT"],
+                            memory_profile="guarded-buffer", address_policy="source-words")
+    assert any(op["opcode"] == "arith.muli" and "tensor<8xi32>" in op["output_types"]
+               for op in result.trace["source_operations"])
+    assert "arith.extsi" in result.mlir_text
+    qualify_and_replay(tmp_path, result, narrow_arguments(width, 13), [narrow_arguments(width, n) for n in (0, 1, 8, 31)])
+
+
+def test_integer_address_loop_is_a_located_unimplemented_form_without_portable_success(tmp_path):
+    from t2m.diagnostics import ConversionError
+    from t2m.examples.pointer_address_kernels import carried_integer_address
+
+    source = tmp_path / "source.ttir"
+    source.write_text(capture_ttir(carried_integer_address, {
+        "x": "*i32", "out": "*i32", "n": "i32", "capacity": "i32", "steps": "i32", "B": "constexpr"}, {"B": 8}))
+    abi = TensorABI(carried_integer_address.__name__, (
+        TensorBuffer("x", ("capacity",), dtype="i32"), TensorBuffer("out", ("n",), "write", "i32")),
+        grid=(GridExtent("n", 8),), runtime_scalars=(RuntimeScalar("n", "i32", 2, bounds=(0, 31)),
+            RuntimeScalar("capacity", "i32", 3, bounds=(0, 256)), RuntimeScalar("steps", "i32", 4, bounds=(0, 4))))
+    with pytest.raises(ConversionError, match=r"escape.*scf.for") as error:
+        convert_shared(source, abi, tmp_path / "translation", optimizer=os.environ["TRITON_SHARED_OPT"],
+                       memory_profile="guarded-buffer", address_policy="source-words")
+    assert error.value.opcode == "tt.ptr_to_int" and error.value.source_id
+    assert not (tmp_path / "translation/memory-stage.mlir").exists()

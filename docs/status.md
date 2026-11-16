@@ -15,6 +15,12 @@ results, with 32 further unchanged-library invocations. Four invalid active
 addresses abort through the actual compiled guards. Twelve focused contracts
 and the 27-case address regression selection pass. Absolute observations,
 unproved region/alias/effect compositions and applicable accelerators remain open.
+Four additional libraries retain narrow i32 wrap before byte scaling, with four
+exact results and sixteen host replays. Two complete i32/i64 models retain all
+twenty original results as exact words through native/Merlin host/Spike, including
+dependent/empty/zero-trip calls and original snapshots. Public model shapes
+remain static. A real integer-address `scf.for` probe still refuses and identifies
+the next paired region-state implementation boundary.
 
 [Numeric region builtins](numeric_regions.md) now close the reproduced mapped
 histogram/dot refusals through the existing converters and original contracts.
@@ -124,8 +130,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/pointer-difference-inventory/coverage.json` reopens **304 packages,
-247 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/pointer-difference-width-inventory/coverage.json` reopens **310 packages,
+251 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

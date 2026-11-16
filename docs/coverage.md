@@ -6,11 +6,24 @@ selected pointer offsets and runtime load/loop computation. Seven actual
 native/Merlin-host/Spike libraries retain eleven exact-word results and 32
 unchanged-library host replays. Four invalid active accesses still abort through
 the compiled guard. `out/pointer-differences/summary.json` reopens those receipts;
-the current `out/pointer-difference-inventory/coverage.json` reopens **304 packages,
+that earlier `out/pointer-difference-inventory/coverage.json` reopens **304 packages,
 247 standalone qualifications and fourteen product cases**. All fifty names
 remain observed under selected native/Merlin-host profiles. Twelve focused
 contracts and the overlapping 27-case address selection pass. Broader region/
 alias/effect/source combinations and applicable targets remain incomplete.
+
+Four additional pointer-width cases qualify i32 multiply/add wrap before signed
+extension and pointee-byte scaling. Every result matches exact words through
+native/Merlin host/Spike, with sixteen more unchanged-library host replays.
+Two complete i32/i64 relative-pointer models also retain all twenty original
+results through those execution boundaries, including parameters, dependent
+calls, empty and zero-trip results and original snapshots. Their reopened
+receipts are `out/pointer-difference-widths/summary.json` and
+`out/pointer-difference-models/summary.json`. The current combined
+`out/pointer-difference-width-inventory/coverage.json` reopens **310 packages,
+251 standalone qualifications and fourteen product cases**, retaining all fifty
+observed names. Source names/word results do not close integer-address region
+state, dynamic public model interfaces, broader effects or applicable targets.
 
 [Numeric region builtins](numeric_regions.md) now retain existing histogram,
 dot/scaled-dot, local-gather and mapped-math conversions inside scalar bodies.

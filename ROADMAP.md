@@ -9,8 +9,11 @@ now expose ordinary byte deltas only after actual SSA proves the shared base
 and lane correspondence. Source-width arithmetic, strided reads, selected
 pointers and runtime loops remain executable. Seven native/Merlin-host/Spike
 libraries retain eleven exact-word results and 32 further host replays; four
-actual bounds failures stay refused. The latest inventory reopens 304 packages
-and 247 standalone qualifications. General region/alias/effect/source and
+actual bounds failures stay refused. Four further libraries retain narrow i32
+wrap before byte scaling, with four exact results and sixteen host replays.
+Two complete parameterized models retain all twenty original results as exact
+words through native/Merlin host/Spike. The latest inventory reopens 310 packages
+and 251 standalone qualifications. General region/alias/effect/source and
 applicable target scope remain completion requirements.
 
 [Numeric region builtins](docs/numeric_regions.md) now reuse the existing

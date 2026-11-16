@@ -8,7 +8,10 @@ now cancel the actual common SSA base into standard modular byte arithmetic.
 Runtime strides, selected pointers, loops, exact byte results and memory guards
 remain executable. Seven native/Merlin-host/Spike libraries retain eleven exact
 results and 32 additional host replays; four invalid accesses still abort.
-The latest inventory reopens 304 packages and 247 standalone qualifications.
+Four further libraries retain i32 wrap before byte scaling, adding four exact
+results and sixteen replays. Two complete models retain all twenty original
+results as exact words through native/Merlin host/Spike. The latest inventory
+reopens 310 packages and 251 standalone qualifications.
 Cross-root/absolute observations and full arbitrary-kernel/target scope remain open.
 
 [Numeric region builtins](docs/numeric_regions.md) now retain histogram,
