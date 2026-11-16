@@ -1,10 +1,21 @@
 # Measured coverage and remaining boundaries
 
+Six complete [tensor-region model configurations](tensor_regions.md) now retain
+all 42 original results as exact words through native/Merlin host/Spike. The two
+i32/i64 source models run in three memory profiles, retaining parameters, five
+dependent/empty calls, original snapshots and byte-identical parent archives.
+`out/tensor-region-models/summary.json` reopens the target receipts; the current
+`out/tensor-region-model-inventory/coverage.json` reopens **261 packages, 210
+standalone qualifications and fourteen product cases**. All fifty source names
+remain observed under selected native/Merlin-host profiles. General tensor/
+numeric/effect/source forms, dynamic public model interfaces and applicable
+accelerator correctness/performance remain open.
+
 [Local tensor regions](tensor_regions.md) add 18 real source captures/libraries
 and 18 actual Spike images. Every complete result matches exact words; 72 further
 host invocations retain unchanged libraries across empty/singleton/exact/tail
 domains. `out/tensor-regions/summary.json` reopens those target receipts. The
-current combined `out/tensor-region-inventory/coverage.json` reopens **255
+earlier combined `out/tensor-region-inventory/coverage.json` reopens **255
 packages, 210 standalone qualifications and fourteen product cases**, with all
 fifty source names observed under selected native/Merlin-host profiles. The
 85-case frontend and 31-case guard selections pass, as do Merlin's 147 destination

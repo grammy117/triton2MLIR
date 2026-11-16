@@ -40,7 +40,11 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 intermediates, actual for/while state and mixed nested maps/reductions/scans.
 Eighteen real source libraries and Spike images retain all 18 results as exact
 words and 72 additional host invocations. The combined inventory reopens 255
-packages and 210 standalone qualifications. This closes the reproduced local
+packages and 210 standalone qualifications. Six complete model configurations
+additionally retain parameters, dependent calls, empty outputs and original
+snapshots through native/Merlin host/Spike with all 42 results exact. The latest
+combined inventory reopens 261 packages and 210 standalone qualifications.
+This closes the reproduced local
 tensor-state slice; remaining tensor operations/dynamic intermediates, effects,
 broader model bindings and applicable targets remain full-goal work.
 
@@ -179,8 +183,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/tensor-region-inventory/coverage.json` selection reopens
-**255 packages, 210 standalone qualifications and fourteen maintained product
+The current `out/tensor-region-model-inventory/coverage.json` selection reopens
+**261 packages, 210 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:
@@ -343,7 +347,13 @@ establish universal source equivalence or `source_closure_verified`.
 
 The [local tensor-region extension](tensor_regions.md) now closes the previously
 reproduced make-range/tensor-state/nested-reduction refusal for real bitset source
-combiners and nested maps. It retains shared shape conversion and supplies
+combiners and nested maps; six complete model configurations now qualify those
+forms through all memory profiles and the actual consumer. Real mapped histogram
+and nonzero-accumulator dot callbacks still reproduce refusals at their coarse
+TTIR operation. Extend numeric region admission using the existing converters
+and original numeric/effect contracts, preserving the actual histogram state,
+contraction accumulator and source computation. The implementation retains shared
+shape conversion and supplies
 independent captured destinations only at native materialization. Continue with
 remaining tensor operations/dynamic intermediates, source effects, broader
 bindings and applicable targets; these functional cases do not close that scope.

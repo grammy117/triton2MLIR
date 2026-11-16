@@ -1,5 +1,12 @@
 # Binding translated kernels into model2MLIR
 
+[Complete tensor-region models](tensor_regions.md#complete-model-captures)
+now retain numeric tensor intermediates, tensor for/while state and nested
+maps/reductions/scans through six i32/i64 model configurations. All 42 original
+results pass exact-word native/Merlin-host/Spike comparison, with parameters,
+dependent calls, empty outputs and original snapshots preserved. Existing typed
+bindings and the static public model ABI remain unchanged.
+
 `t2m.model_binding.bind_model(model_mlir, [KernelBinding(...)])` consumes the
 actual model2MLIR `prov.kernel` contract. It replaces typed custom-kernel calls
 with translated standard tensor bodies and preserves the enclosing model ABI.

@@ -10,7 +10,9 @@ mixed nested maps/reductions/scans. Real source bitset kernels retain the actual
 chunk loops and inner reductions. Merlin's native destination preparation keeps
 captured values independent without copying ordinary readonly captures. Eighteen
 libraries/Spike images retain 18 exact-word results and 72 additional host replays.
-The latest inventory reopens 255 packages and 210 standalone qualifications. Broader
+Six complete i32/i64 model configurations also retain all 42 original results
+through native/Merlin host/Spike, including dependent calls and original snapshots.
+The latest inventory reopens 261 packages and 210 standalone qualifications. Broader
 tensor/numeric/effect/model and applicable target scope remain required.
 
 [Captured tensor lookups](docs/scalar_tile_reads.md) now retain original table

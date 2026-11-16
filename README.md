@@ -8,7 +8,9 @@ for/while state and nested map/reduction/scan computation from real Triton
 sources. Shared supplies the shape/elementwise conversion; Merlin protects
 captured writable destinations at native materialization. Public interfaces stay
 unchanged. Eighteen libraries/Spike images retain all 18 results as exact words
-and 72 further host replays. The combined inventory reopens 255 packages,
+and 72 further host replays. Six complete model configurations additionally
+retain all 42 original results as exact words, with parameters and snapshots
+preserved. The combined inventory reopens 261 packages,
 210 standalone qualifications and fourteen product cases. Full arbitrary-kernel
 and accelerator coverage remains incomplete.
 

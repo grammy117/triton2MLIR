@@ -79,11 +79,40 @@ compatibility metadata records this requirement and the representation.
 
 ## Qualification and remaining scope
 
+### Complete model captures
+
+`scripts/capture_tensor_region_model.py` now captures two actual model2MLIR
+models, one each for i32/i64 state. Each contains saved weight/bias parameters,
+nonzero public inputs, map/reduction/reverse-scan calls, a second dependent
+reduction, an empty call and seven original results, including the original
+input-derived snapshot. Its registered PyTorch CPU implementation supplies the
+independent bitwise reference; no compiler implementation supplies the goldens.
+
+All three tensor/buffer/guarded-buffer profiles pass complete native execution,
+the real Merlin host consumer and actual Spike. The six model configurations
+retain all **42 complete results as exact words** and preserve the parent
+weights, manifests, inputs, constants and complete golden archives byte for byte.
+Source runtime `n` specializes from checked captured typed attributes; `kind`
+selects each declared source specialization. Public model shapes remain static.
+No package/ABI/receipt schema changed, and the original parent FX trace remains
+separate from the derived kernel/model correspondence.
+
+`tests/test_tensor_region_model.py` reproduces the six configurations using the
+existing environments. `out/tensor-region-models/summary.json` reopens all six
+target receipts. The combined
+`out/tensor-region-model-inventory/coverage.json` reopens **261 packages, 210
+standalone qualifications and fourteen product cases**, retaining all fifty
+observed names under selected native/Merlin-host profiles. This supplies no
+dynamic public model ABI, arbitrary operation/effect/source closure or
+accelerator correctness/performance qualification.
+
+### Standalone source kernels
+
 The current selection reopens **18 real source captures/libraries and 18 actual
 Spike images**, comparing **18 complete exact-word results and 72 further host
 runtime invocations**. The receipt-bound selection is saved locally in
 `out/tensor-regions/summary.json`. These are separate from the November 12
-237-package combined inventory. The new combined
+237-package combined inventory. That earlier combined
 `out/tensor-region-inventory/coverage.json` reopens 255 packages, 210 standalone
 qualifications and fourteen maintained product cases. All fifty pinned source
 names remain observed under selected native/Merlin-host profiles; source-name

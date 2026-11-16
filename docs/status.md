@@ -16,6 +16,9 @@ Eighteen libraries and actual Spike images retain every result as exact words,
 with 72 additional unchanged-library host invocations. The evidence is in
 `out/tensor-regions/summary.json`; the focused 85-case frontend and 31-case
 guard/lookup selections pass, with their overlap retained.
+Six complete i32/i64 model configurations now also retain parameters, dependent
+calls, empty results and original snapshots through native/Merlin host/Spike.
+All 42 original results match exact words; the public model ABI remains static.
 
 ## Progress against the end goal
 
@@ -96,7 +99,7 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/tensor-region-inventory/coverage.json` reopens **255 packages,
+`out/tensor-region-model-inventory/coverage.json` reopens **261 packages,
 210 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
