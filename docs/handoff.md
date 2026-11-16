@@ -19,8 +19,11 @@ histogram/dot refusals through the existing numeric converters and contracts.
 Uniform logical queries reach the actual enclosing runtime grid without
 choosing physical placement or moving surrounding effects. Thirty standalone
 configurations pass native/Merlin host/Spike: 24 exact-word and six
-tolerance-qualified math results, with 120 further host replays. The latest
-`out/numeric-region-inventory/coverage.json` reopens 291 packages, 240 standalone
+tolerance-qualified math results, with 120 further host replays. The frontend
+change is `2aca8b92b56ed2abaf4881e5ee3a8f7418adbc34`. Six complete numeric-region
+models additionally retain all 39 original results as exact words through
+native/Merlin host/Spike, with parameters, dependent calls and snapshots intact.
+The latest `out/numeric-region-model-inventory/coverage.json` reopens 297 packages, 240 standalone
 qualifications and fourteen product cases. The 32 focused contract and 187
 runtime/grid/external/original-effect regression selections pass.
 

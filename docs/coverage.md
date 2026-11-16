@@ -6,13 +6,23 @@ Nested program-ID/count values reach their actual enclosing logical invocation,
 including dynamic grids and scalar branches/zero-trip loops. Thirty real source
 captures pass native/Merlin host/Spike, retaining 24 exact-word results and six
 tolerance-qualified standard-math results, plus 120 further host invocations.
-`out/numeric-regions/summary.json` reopens the target/replay receipts; the current
+`out/numeric-regions/summary.json` reopens the target/replay receipts; that earlier
 `out/numeric-region-inventory/coverage.json` reopens **291 packages, 240 standalone
 qualifications and fourteen product cases**. All fifty names remain observed
 under selected native/Merlin-host profiles. The 32 focused region/query contracts
 and 187 existing runtime-grid/external/original-effect regressions pass; counts
 overlap. This does not close arbitrary region/type/attribute/effect/source
 compositions or accelerator correctness/performance.
+
+Six complete numeric-region model configurations now also retain all 39
+original results as exact words through native/Merlin host/Spike. The f32/i64
+models retain parameters, dependent calls, empty results and original snapshots;
+all parent data/reference archives remain byte-identical. Their receipts reopen
+in `out/numeric-region-models/summary.json`; the current combined
+`out/numeric-region-model-inventory/coverage.json` reopens **297 packages, 240
+standalone qualifications and fourteen product cases**. The public model ABI
+remains static; finite dyadic dot references grant no general GPU precision,
+effect, source-version or accelerator qualification.
 
 Six complete [tensor-region model configurations](tensor_regions.md) now retain
 all 42 original results as exact words through native/Merlin host/Spike. The two

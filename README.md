@@ -8,8 +8,10 @@ dot/scaled-dot, local gather, mapped math and logical queries through the
 existing converters and source numeric/effect contracts. Uniform program
 queries capture actual logical grid values without choosing hardware placement.
 Thirty native/Merlin-host/Spike configurations retain 24 exact-word and six
-tolerance-qualified results, with 120 further host replays. The latest inventory
-reopens 291 packages, 240 standalone qualifications and fourteen product cases.
+tolerance-qualified results, with 120 further host replays. Six complete
+parameterized model configurations also retain all 39 original results as exact
+words through native/Merlin host/Spike. The latest inventory reopens 297 packages,
+240 standalone qualifications and fourteen product cases.
 Full arbitrary-kernel and accelerator coverage remains incomplete.
 
 [Local tensor regions](docs/tensor_regions.md) now retain tensor intermediates,

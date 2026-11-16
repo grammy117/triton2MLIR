@@ -16,6 +16,10 @@ invocations. Original accumulators, histogram state and source control stay
 executable. Unknown properties/effects still refuse; physical mapping stays
 undecided. The 32 focused contracts and 187 runtime/grid/external/effect
 regressions pass. Broader region/type/effect/source and target closure is open.
+Six complete f32/i64 model configurations additionally retain all 39 original
+results as exact words through native/Merlin host/Spike, with parameters,
+dependent calls, empty results and earlier snapshots preserved. The public
+model ABI remains static.
 
 [Local tensor regions](tensor_regions.md) now retain tensor intermediates,
 tensor for/while state and nested maps/reductions/scans from real source captures.
@@ -110,7 +114,7 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/numeric-region-inventory/coverage.json` reopens **291 packages,
+`out/numeric-region-model-inventory/coverage.json` reopens **297 packages,
 240 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,

@@ -1,5 +1,14 @@
 # Binding translated kernels into model2MLIR
 
+[Numeric-region models](numeric_regions.md#complete-pytorch-models) now retain
+histogram, local gather and dot/scaled-dot callbacks with saved parameters,
+dependent calls, empty outputs and original snapshots. Six f32/i64 model
+configurations pass native/Merlin host/Spike, comparing all 39 original results
+as exact words and preserving every parent data/reference archive. Their source
+runtime n binds through existing typed call attributes; public model shapes
+remain static. Finite dyadic dot references supply no general GPU precision
+policy, and public ABI/receipt schemas are unchanged.
+
 [Complete tensor-region models](tensor_regions.md#complete-model-captures)
 now retain numeric tensor intermediates, tensor for/while state and nested
 maps/reductions/scans through six i32/i64 model configurations. All 42 original

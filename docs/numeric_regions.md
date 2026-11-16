@@ -122,3 +122,37 @@ public model shapes/mutation, arbitrary numeric/source versions and accelerator
 correctness/performance remain completion requirements. A numeric builtin's
 presence inside one qualified map does not establish every reduction/scan,
 type, attribute or kernel composition.
+
+## Complete PyTorch models
+
+`scripts/capture_numeric_region_model.py` captures two actual model2MLIR models
+with saved parameters and nineteen-element public inputs. The f32 model chains
+mapped IEEE contractions, a mixed FP16/BF16 scaled contraction and a zero-C
+contraction. Its seven results include a dependent contraction, an empty call,
+the original computed input and an epilogue. The i64 model chains histogram and
+gather callbacks, retaining six results including the original snapshot and an
+empty output. Independent CPU implementations use ordinary Python integer math
+and finite dyadic PyTorch arithmetic; no lowering helper supplies their goldens.
+
+All three memory profiles pass complete native/Merlin-host/Spike execution.
+The six model configurations retain **all 39 original results as exact words**.
+Parent weights, manifests, inputs, constants, first golden and full result
+archives remain byte-identical. Each typed call selects its exact n/kind
+specialization; the source runtime n remains connected through the established
+binding profile. Public model shapes remain static and no ABI/schema changed.
+
+`tests/test_numeric_region_model.py` reproduces those six configurations.
+`out/numeric-region-models/summary.json` reopens every actual target receipt.
+The latest combined `out/numeric-region-model-inventory/coverage.json` reopens
+**297 packages, 240 standalone qualifications and fourteen product cases**,
+retaining all fifty observed names under selected native/Merlin-host profiles.
+These finite f32 references are chosen to be exact through the declared casts
+and source recurrences; they establish no general GPU precision policy.
+
+With the existing environment variables set to the pinned tools:
+
+```bash
+python -m pytest -q tests/test_numeric_regions.py tests/test_numeric_region_model.py \
+  tests/test_numeric_region_contract.py tests/test_region_launch_queries.py \
+  tests/test_value_region_contract.py --basetemp=.scratch/pytest-numeric-regions
+```

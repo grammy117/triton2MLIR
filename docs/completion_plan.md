@@ -360,6 +360,10 @@ shared shape conversion and supplies
 independent captured destinations only at native materialization. Continue with
 remaining tensor operations/dynamic intermediates, source effects, broader
 bindings and applicable targets; these functional cases do not close that scope.
+Six complete f32/i64 model configurations additionally retain all 39 original
+results through native/Merlin host/Spike with exact words. This closes their
+saved-parameter/dependent-call/empty/snapshot binding slice; public model shapes
+remain static and broader mutation/effect/runtime interfaces remain required.
 
 Finish coherent source-to-consumer slices and commit each. Keep the full
 workstreams below active; do not indefinitely extend one already-qualified

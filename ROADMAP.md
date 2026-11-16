@@ -10,7 +10,9 @@ regions. Nested program-ID/count queries capture values from their enclosing
 logical invocation; original control/effects stay in place and mapping stays
 undecided. Thirty native/Merlin-host/Spike configurations retain 24 exact-word
 and six tolerance-qualified results, with 120 unchanged-library host replays.
-The latest inventory reopens 291 packages and 240 standalone qualifications.
+Six complete parameterized models additionally retain all 39 original results
+as exact words through those execution boundaries. The latest inventory reopens
+297 packages and 240 standalone qualifications.
 Broader region/type/effect/runtime/source and applicable target work remains.
 
 [Local tensor regions](docs/tensor_regions.md) extend scalar container bodies
