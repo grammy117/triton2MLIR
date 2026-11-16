@@ -1,5 +1,11 @@
 # Portable associative scans
 
+[Local tensor regions](tensor_regions.md) now also retain qualified tensor
+intermediates, tensor for/while state and nested reductions/scans in combiners.
+The original parallel stage structure and source tuple order stay executable;
+captured writable destinations gain independent storage at native materialization.
+General tensor/effect/numeric/model and accelerator forms remain open.
+
 [Captured tensor lookups](scalar_tile_reads.md) now retain immutable table
 snapshots in the original scalar body, including guarded element reads and
 runtime recurrence after source table mutation. Source assertions and direct

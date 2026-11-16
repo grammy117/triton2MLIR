@@ -12,6 +12,10 @@ One detached postorder expansion keeps mixed nesting and complete refusals
 transactional. Native materialization gives captured writable destinations real
 independent storage; readonly captures and the portable payload stay intact.
 Remaining tensor/effect/numeric/model and applicable accelerator scope is open.
+Eighteen libraries and actual Spike images retain every result as exact words,
+with 72 additional unchanged-library host invocations. The evidence is in
+`out/tensor-regions/summary.json`; the focused 85-case frontend and 31-case
+guard/lookup selections pass, with their overlap retained.
 
 ## Progress against the end goal
 
@@ -92,8 +96,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/tile-lookup-inventory/coverage.json` reopens **237 packages,
-192 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/tensor-region-inventory/coverage.json` reopens **255 packages,
+210 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

@@ -1,6 +1,6 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
-Updated 2026-11-12. **The full goal is active and incomplete.** Every valid
+Updated 2026-11-15. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
 algorithm retained, and applicable execution evidence. Host-only support,
@@ -36,14 +36,22 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Local tensor regions](tensor_regions.md) now retain checked tensor
+intermediates, actual for/while state and mixed nested maps/reductions/scans.
+Eighteen real source libraries and Spike images retain all 18 results as exact
+words and 72 additional host invocations. The combined inventory reopens 255
+packages and 210 standalone qualifications. This closes the reproduced local
+tensor-state slice; remaining tensor operations/dynamic intermediates, effects,
+broader model bindings and applicable targets remain full-goal work.
+
 [Captured tensor lookups](scalar_tile_reads.md) now preserve immutable table
 captures across source mutation and runtime recurrence in reductions/scans.
 Twenty-four libraries pass native/Merlin host/Spike with 48 exact-word results
-and 96 additional host invocations. The latest combined inventory reopens
-237 packages and 192 standalone qualifications. General tensor intermediates,
-further numeric/capture/packing forms, direct memory/effectful combiners,
+and 96 additional host invocations. That earlier combined inventory reopens
+237 packages and 192 standalone qualifications. Further tensor operations,
+numeric/capture/packing forms, direct memory/effectful combiners,
 runtime/alias/source-version combinations and applicable accelerators remain open.
-The [review handoff](handoff.md) records current evidence and next actions.
+The [November 12 review handoff](handoff.md) records that earlier review boundary.
 
 [Scalar region composition](scalar_regions.md) now applies checked scalar
 shared mappings and exact rounding/high-product expansions before container
@@ -171,8 +179,8 @@ required.
 | Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
 | Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
 
-The current `out/tile-lookup-inventory/coverage.json` selection reopens
-**237 packages, 192 standalone qualifications and fourteen maintained product
+The current `out/tensor-region-inventory/coverage.json` selection reopens
+**255 packages, 210 standalone qualifications and fourteen maintained product
 cases**. It observes **50/50 source definition names**, with **all 50 represented
 in native- and Merlin-host-qualified captures under selected profiles**. The
 optional corpus provides twelve actual libraries and retains two refusals:

@@ -1,5 +1,11 @@
 # General reductions at the model2MLIR/Merlin boundary
 
+[Local tensor regions](tensor_regions.md) now also retain qualified tensor
+intermediates/control state and nested reductions/scans inside the scalar
+combiner. Shared supplies shape/elementwise conversion; updated native/Merlin
+materialization keeps captured writable destinations independent per invocation.
+General tensor/effect/numeric/model and accelerator compositions remain open.
+
 [Captured tensor lookups](scalar_tile_reads.md) now also preserve immutable
 table snapshots across source mutation, guarded scalar reads and runtime
 recurrences. The 24 i32/i64 reduction/scan state cases pass native/Merlin host/

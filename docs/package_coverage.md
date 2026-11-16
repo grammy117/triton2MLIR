@@ -19,9 +19,10 @@ and performs no normalization or target compilation. Invalid source creates no
 successful inventory. The successful-package registry below stays unchanged;
 source inspection alone grants no product or execution coverage.
 
-Each explicit selection admits at most 256 packages and 256 standalone
-qualifications. The earlier 64-entry limit prevented the expanded corpus from
-being reported together. Processing remains serial with the existing receipt,
+Each explicit selection admits at most 512 packages and 512 standalone
+qualifications, with at most 512 combined kernel/product cases. The earlier
+256-case limit could not retain the new tensor-region cases alongside the full
+previous selection. Processing remains serial with the existing receipt,
 per-JSON size and per-case operation budgets; increasing the selection limit
 grants no operation coverage or source/target authority.
 

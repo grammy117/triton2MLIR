@@ -83,7 +83,11 @@ The current selection reopens **18 real source captures/libraries and 18 actual
 Spike images**, comparing **18 complete exact-word results and 72 further host
 runtime invocations**. The receipt-bound selection is saved locally in
 `out/tensor-regions/summary.json`. These are separate from the November 12
-237-package combined inventory; source-name breadth is not a completion score.
+237-package combined inventory. The new combined
+`out/tensor-region-inventory/coverage.json` reopens 255 packages, 210 standalone
+qualifications and fourteen maintained product cases. All fifty pinned source
+names remain observed under selected native/Merlin-host profiles; source-name
+breadth is not a completion score.
 
 `tests/test_tensor_regions.py` checks real i32/i64 source captures for reduction
 with tensor `for` state, reverse scan with tensor `while` state, and maps with

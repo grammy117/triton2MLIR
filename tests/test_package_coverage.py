@@ -20,6 +20,16 @@ def test_empty_selection_retains_every_pinned_definition():
     assert report["ttir"]["tt.dot_scaled"]["status"] == "unmeasured"
 
 
+@pytest.mark.parametrize("argument", ["bundles", "qualifications"])
+def test_expanded_selection_keeps_its_budget_before_reading_any_receipt(tmp_path, argument):
+    selection = [tmp_path / "no-receipt"] * 513
+    with pytest.raises(ValueError, match="at most 512"):
+        if argument == "bundles":
+            package_coverage(selection)
+        else:
+            package_coverage([], qualifications=selection)
+
+
 def test_unknown_operations_and_exact_typed_forms_never_inherit_support():
     def op(id_, name, dtype="tensor<8xi64>"):
         return {"id":id_, "opcode":name, "input_types":[dtype], "output_types":[dtype],

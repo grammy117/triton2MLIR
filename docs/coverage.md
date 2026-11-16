@@ -1,9 +1,23 @@
 # Measured coverage and remaining boundaries
 
+[Local tensor regions](tensor_regions.md) add 18 real source captures/libraries
+and 18 actual Spike images. Every complete result matches exact words; 72 further
+host invocations retain unchanged libraries across empty/singleton/exact/tail
+domains. `out/tensor-regions/summary.json` reopens those target receipts. The
+current combined `out/tensor-region-inventory/coverage.json` reopens **255
+packages, 210 standalone qualifications and fourteen product cases**, with all
+fifty source names observed under selected native/Merlin-host profiles. The
+85-case frontend and 31-case guard selections pass, as do Merlin's 147 destination
+tests and structure/documentation gates. The 19-check package/product registry
+selection retains actual successes/refusals/failures; its bounded ledger admits
+512 combined cases without changing per-source verification or reference gates.
+These selections overlap. New whole-model, broader tensor/effect/numeric/source
+compositions and accelerator correctness/performance remain completion work.
+
 [Captured tensor lookups](scalar_tile_reads.md) now add 24 native/Merlin-host/
 Spike libraries with all 48 complete target results as exact words and
 96 additional unchanged-library host invocations. Their target receipts reopen
-in `out/tile-lookup-state/summary.json`. The latest combined
+in `out/tile-lookup-state/summary.json`. That earlier combined
 `out/tile-lookup-inventory/coverage.json` reopens **237 packages,
 192 standalone qualifications and fourteen product cases**, retaining all fifty
 observed source names under selected profiles. The 177-check combiner/gather/

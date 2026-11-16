@@ -1,5 +1,10 @@
 # Pinned TTIR operation denominator
 
+[Local tensor regions](tensor_regions.md) additionally retain checked numeric
+tensor intermediates, tensor for/while state and nested maps/reductions/scans
+from real source captures. This extends compositions of existing operations;
+it does not close arbitrary types, effects, source versions or targets.
+
 [Captured tensor reads](scalar_tile_reads.md) additionally qualify selected
 `gather`/`unsplat` compositions inside reductions/scans, preserving loaded table
 snapshots across mutation and runtime recurrence through Merlin/Spike. This

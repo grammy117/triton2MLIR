@@ -7,12 +7,15 @@ kernels reaching Merlin, current evidence and the remaining completion gates.
 for/while state and nested map/reduction/scan computation from real Triton
 sources. Shared supplies the shape/elementwise conversion; Merlin protects
 captured writable destinations at native materialization. Public interfaces stay
-unchanged. Full arbitrary-kernel and accelerator coverage remains incomplete.
+unchanged. Eighteen libraries/Spike images retain all 18 results as exact words
+and 72 further host replays. The combined inventory reopens 255 packages,
+210 standalone qualifications and fourteen product cases. Full arbitrary-kernel
+and accelerator coverage remains incomplete.
 
 [Captured tensor lookups](docs/scalar_tile_reads.md) now preserve loaded table
 snapshots across source mutation and runtime reduction/scan recurrence. Twenty-four
 libraries pass native/Merlin host/Spike with all 48 results exact and 96 further
-host invocations. The latest combined inventory reopens 237 packages,
+host invocations. That earlier combined inventory reopens 237 packages,
 192 standalone qualifications and fourteen product cases. Full arbitrary-kernel
 and accelerator coverage remains incomplete. See the [review handoff](docs/handoff.md).
 

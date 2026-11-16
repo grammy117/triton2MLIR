@@ -8,13 +8,15 @@ is active and incomplete; observing all pinned opcode names is not completion.
 with functional tensor intermediates/state and one transactional postorder for
 mixed nested maps/reductions/scans. Real source bitset kernels retain the actual
 chunk loops and inner reductions. Merlin's native destination preparation keeps
-captured values independent without copying ordinary readonly captures. Broader
+captured values independent without copying ordinary readonly captures. Eighteen
+libraries/Spike images retain 18 exact-word results and 72 additional host replays.
+The latest inventory reopens 255 packages and 210 standalone qualifications. Broader
 tensor/numeric/effect/model and applicable target scope remain required.
 
 [Captured tensor lookups](docs/scalar_tile_reads.md) now retain original table
 values across source writes and runtime reduction/scan recurrence. Twenty-four
 libraries pass native/Merlin host/Spike with 48 complete exact-word results and
-96 additional unchanged-library invocations. The latest inventory reopens
+96 additional unchanged-library invocations. That earlier inventory reopens
 237 packages and 192 standalone qualifications. The [review handoff](docs/handoff.md)
 records the implementation, evidence and remaining full-coverage requirements.
 
@@ -157,7 +159,7 @@ standard scalar/tensor computation with retained source/provider identities;
 hardware observations, broader instructions/effects/packing and applicable
 targets remain completion requirements.
 
-**Updated 2026-11-12.** The architecture in [plan.md](plan.md) is accepted as the starting point:
+**Updated 2026-11-15.** The architecture in [plan.md](plan.md) is accepted as the starting point:
 tile-first conversion, a single semantic emission path, and original intent carried through
 annotations/provenance while computations lower into standard MLIR. This roadmap tracks delivery;
 the design document explains the transformations. Milestones below are capability gates, not dates.

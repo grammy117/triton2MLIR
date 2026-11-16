@@ -1,5 +1,10 @@
 # Scalar TTIR computation inside maps, reductions and scans
 
+[Local tensor regions](tensor_regions.md) extend this ordering contract to
+checked tensor intermediates/state and mixed nested containers. Shaped integer
+width casts use the upstream elementwise-to-Linalg pattern before recursive
+xDSL verification. The public ABI and source effect gates remain unchanged.
+
 The same scalar operation now composes inside a checked scalar region before
 that region becomes standard Linalg. Previously, map/reduction/scan admission
 ran before some existing casts, unsigned high products and shared arithmetic

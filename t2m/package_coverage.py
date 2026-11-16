@@ -14,7 +14,7 @@ from .bundle import _record, verify_bundle
 from .kernel_consumer import verify_kernel_qualification
 from .ttir_definitions import OPERATIONS, SOURCE
 
-MAX_SELECTION = 256
+MAX_SELECTION = 512
 
 
 def _json(path):
