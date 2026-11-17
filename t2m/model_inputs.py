@@ -46,7 +46,8 @@ def main(capture, work):
     arrays, sources = [], []
     receipt_path = capture / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text()) if receipt_path.is_file() else {}
-    metadata = capture / "parent/meta.json" if receipt.get("schema") == "t2m.bound-model-receipt.v1" else None
+    metadata = (capture / "parent/meta.json" if receipt.get("schema") in {
+        "t2m.bound-model-receipt.v1", "t2m.bound-model-receipt.v2"} else None)
     with TensorWords(capture, metadata=metadata) as words, safe_open(capture / "weights.safetensors", framework="np") as weights, \
             np.load(capture / "inputs.npz", allow_pickle=False) as inputs, \
             np.load(capture / "extra.npz", allow_pickle=False) as extra:
