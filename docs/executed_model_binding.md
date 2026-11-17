@@ -79,11 +79,40 @@ i8 index transport. Negative tests require a started invocation, SIGABRT,
 the actual guard diagnostic and no published output archive. These standard
 MLIR adapter harnesses are not TTIR source-equivalence evidence.
 
-This milestone is **binding plus direct whole-body Merlin host execution**.
-Normal `write_model_bundle`/receipt verification and independent Merlin package
-staging do not yet admit v4; they must reconstruct original call/body/adapter
-correspondence before selecting signature v6. The existing staged v6 selection
-still covers already admitted older binding profiles. Further work includes
-native qualification and target harness integration, physical/dense view
-adapters, runtime resizing ownership and broader source/effect compositions.
-No new target, performance, universal-op or historical-inventory claim follows.
+Merlin [2963c543e](https://github.com/ucb-bar/merlin/commit/2963c543e757a2afad3e3788b34970e7b974a049)
+now independently reconstructs the complete source expansion through
+`frontends.execution_model_correspondence.checked_execution_model`. Its own
+reader imports no producer analysis or evaluator. It reopens original typed
+calls and retained kernel bodies, constructs every expected scalar/dimension/
+cast guard, and compares the entire SSA graph and source locations. Changing
+ordinary model arithmetic, removing a guard, changing a mapping/source record,
+reordering calls or introducing a size program refuses even after rehashing.
+
+The original retained `implementation.mlir_text` omits source locations.
+V4 therefore additionally requires `located_implementations`, mapping each
+ordinary implementation digest to the SHA256/byte count of `serialize(module)`.
+The consumer verifies these actual located bytes and requires that stripping
+locations reproduces the original implementation digest. Package integration
+must retain this additional compiler artifact; the old unlocated artifact and
+its source/memory evidence are unchanged. No location annotation supplies a
+numeric, shape or effect fact.
+
+The actual count model passes 27 independent reconstruction/refusal checks in
+`.scratch/kernel-size-correspondence-final5.log` across the three memory profiles.
+Twelve separately handwritten Merlin fixtures pass without the producer installed,
+including a type-changing cast that structural comparison alone would miss.
+These are correspondence checks, not additional execution or TTIR equivalence.
+The complete 46-case binding selection passes in `.scratch/kernel-size-final1.log`.
+Three final direct-execution checks in `.scratch/kernel-size-inputs-final6.log`
+additionally verify unchanged caller input/parameter bytes for every initial
+and repeated invocation. These selections overlap.
+
+This milestone is **binding, direct whole-body Merlin host execution and an
+independent correspondence primitive**. Normal `write_model_bundle`/receipt
+verification and Merlin package staging do not yet admit v4; the primitive
+must be connected to retained package artifacts before selecting signature v6.
+The existing staged v6 selection still covers already admitted older binding
+profiles. Further work includes native qualification and target harness
+integration, physical/dense/source-layout view adapters, runtime resizing
+ownership and broader source/effect compositions. No new target, performance,
+universal-op or historical-inventory claim follows.

@@ -7,7 +7,12 @@ cast checks and complete standard kernel bodies replace global output-size
 prediction. This transformation currently has direct Merlin host execution
 evidence only: normal package/receipt and independent consumer staging readers
 still refuse v4 pending source/body/adapter reconstruction. Do not label its
-binding trace as a qualified model2MLIR capture or target package.
+binding trace as a qualified model2MLIR capture or target package. V4 now also
+requires byte-bound `located_implementations` for retained kernel text with
+source locations. Merlin's separate complete-SSA correspondence primitive
+checks those bytes against the original unlocated digest and reconstructs
+every call/body/guard and source location; wiring that primitive into actual
+package staging remains further work.
 
 [Execution-produced results](execution_owned_results.md) explicitly select
 Merlin signature v6 and its separate allocation/descriptor ABI through

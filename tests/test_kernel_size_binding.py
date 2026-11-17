@@ -1,8 +1,10 @@
 """A real kernel-produced count remains live through dependent allocations."""
 
 import hashlib
+import json
 import os
 import subprocess
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -139,7 +141,9 @@ def test_actual_count_and_pack_execute_once_and_preserve_all_original_results(
         compiler_support_root=os.environ["T2M_MERLIN_ROOT"],
         dynamic_inputs=True,
     )
+    snapshots = [array.tobytes() for array in arrays]
     actual, observation = program.execute(arrays)
+    assert [array.tobytes() for array in arrays] == snapshots
     assert observation["source_calls"] == 1
     with np.load(parent / "goldens.npz", allow_pickle=False) as saved:
         assert len(actual) == len(saved.files) == 7
@@ -157,8 +161,18 @@ def test_actual_count_and_pack_execute_once_and_preserve_all_original_results(
         original = x + parameter
         count = np.asarray([np.count_nonzero(original > 0)], np.int64)
         first = original[: count[0]].copy()
-        expected = (first, first, original, x, count, parameter, first[::2])
+        expected = (
+            first,
+            first,
+            original,
+            x.copy(),
+            count,
+            parameter.copy(),
+            first[::2],
+        )
+        snapshots = (parameter.tobytes(), x.tobytes())
         outputs, observation = program.execute((parameter, x))
+        assert (parameter.tobytes(), x.tobytes()) == snapshots
         assert observation["source_calls"] == 1
         for out, reference in zip(outputs, expected, strict=True):
             assert (out.dtype, out.shape, out.tobytes()) == (
@@ -195,3 +209,90 @@ def test_executed_binding_retains_original_call_contract_refusals(selected, fail
         )
     with pytest.raises(ConversionError):
         bind_model(source, bindings, result_mode="execution-owned")
+
+
+def consumer_inputs(selected, monkeypatch):
+    _root, _parent, source, bindings, bound = selected
+    monkeypatch.syspath_prepend(str(Path(os.environ["T2M_MERLIN_ROOT"]) / "src"))
+    from merlin.frontends.linalg_mlir import parse_mlir_text
+
+    from t2m.executed_model_binding import serialize
+
+    trace = json.loads(json.dumps(bound.trace))
+    interfaces = {}
+    for binding in bindings:
+        implementation = binding.implementation
+        digest = implementation.trace["mlir_sha256"]
+        interfaces[digest] = (
+            trace["kernels"][digest]["spec"],
+            serialize(implementation.module),
+        )
+    return parse_mlir_text(source), parse_mlir_text(bound.mlir_text), trace, interfaces
+
+
+def test_independent_consumer_reconstructs_every_original_ssa_edge(
+    selected, monkeypatch
+):
+    inputs = consumer_inputs(selected, monkeypatch)
+    from merlin.frontends.execution_model_correspondence import checked_execution_model
+
+    report = checked_execution_model(*inputs)
+    assert report["calls"] == 3
+    assert report["schema"] == "merlin.executed-model-correspondence.v1"
+
+
+@pytest.mark.parametrize(
+    "damage",
+    ["guard", "body", "mapping", "order", "profile", "program", "source", "location"],
+)
+def test_rehashed_records_cannot_replace_independent_source_body_guard_checks(
+    selected, monkeypatch, damage
+):
+    parent, bound, trace, interfaces = consumer_inputs(selected, monkeypatch)
+    from merlin.frontends.execution_model_correspondence import checked_execution_model
+    from xdsl.dialects import arith, builtin
+
+    trace = deepcopy(trace)
+    if damage == "guard":
+        guard = next(
+            op
+            for op in bound.walk()
+            if op.name == "cf.assert"
+            and op.attributes.get("prov.family") == builtin.StringAttr("binding")
+        )
+        guard.parent.erase_op(guard)
+    elif damage == "body":
+        old = next(
+            op
+            for op in bound.walk()
+            if op.name == "arith.addi" and "prov.kernel_callsite" not in op.attributes
+        )
+        changed = arith.SubiOp(*old.operands)
+        changed.attributes.update(old.attributes)
+        changed.location = old.location
+        old.parent.insert_op_before(changed, old)
+        old.results[0].replace_all_uses_with(changed.result)
+        old.parent.erase_op(old)
+    elif damage == "mapping":
+        trace["calls"][1]["runtime_operand_arguments"]["n"] = "capacity"
+    elif damage == "order":
+        trace["calls"][0], trace["calls"][1] = trace["calls"][1], trace["calls"][0]
+    elif damage == "profile":
+        trace["schema"] = "t2m.model-kernel-binding.v1"
+    elif damage == "program":
+        trace["runtime_shape_contract"] = {"outputs": []}
+    elif damage == "source":
+        trace["calls"][0]["source_sha256"] = "0" * 64
+    else:
+        operation = next(
+            op for op in bound.walk() if "prov.kernel_callsite" in op.attributes
+        )
+        operation.location = builtin.NameLoc(
+            builtin.StringAttr("altered source location"), builtin.UnknownLoc()
+        )
+    bound.verify()
+    from t2m.executed_model_binding import serialize
+
+    trace["mlir_sha256"] = hashlib.sha256(serialize(bound).encode()).hexdigest()
+    with pytest.raises(ValueError):
+        checked_execution_model(parent, bound, trace, interfaces)

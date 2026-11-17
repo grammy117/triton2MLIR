@@ -218,6 +218,16 @@ def bind(model_mlir, bindings):
                 for binding in bindings
                 if binding.implementation.trace["mlir_sha256"] in selected
             },
+            "located_implementations": {
+                binding.implementation.trace["mlir_sha256"]: {
+                    "sha256": hashlib.sha256(
+                        serialize(binding.implementation.module).encode()
+                    ).hexdigest(),
+                    "bytes": len(serialize(binding.implementation.module).encode()),
+                }
+                for binding in bindings
+                if binding.implementation.trace["mlir_sha256"] in selected
+            },
             "input_model_sha256": hashlib.sha256(model_mlir.encode()).hexdigest(),
             "mlir_sha256": hashlib.sha256(serialize(module).encode()).hexdigest(),
             "model_abi": "unchanged",

@@ -14,6 +14,13 @@ check another 105 results. This is not yet a v4 package/staging qualification:
 independent reconstruction and receipt admission are the next work. The older
 precomputed-shape binder retains the original refusal for this same model.
 
+Merlin now also owns an independent v4 correspondence primitive. All three
+real count-model variants pass complete SSA/location reconstruction and
+rehashed body/guard/mapping/profile/source refusals (27 checks). Twelve handwritten
+Merlin fixtures need no producer import. A new required located-kernel digest
+preserves source locations alongside the old unlocated implementation; package
+artifact retention and staging/receipt wiring remain the next work.
+
 [Execution-sized results](execution_owned_results.md) now connect explicit
 Merlin signature v6 staging to complete model/TTIR host invocation in all three
 memory profiles. Saved compiler programs reopen fixed checked artifacts without
@@ -267,9 +274,9 @@ their counts and commit table are historical.
 
 | Repository | Branch | Relevant implementation |
 |---|---|---|
-| `/scratch/grammy/blast/triton2MLIR` | `main` | `e7f4733ab364c733436cbdb9bba1371e4d9fecbd` — captured tensor reads; the following qualification commit contains this handoff and refreshed status. |
-| `/scratch/grammy/blast/merlin-graph-proof-intake` | `ttir-experiment-grammy` | `4770c046bed7b64c4f81862e68f2f0cfae7da2c4` — independent initial-state copies and retained guards; `1a408cd4b577380bfec4d3e79c139b6ac5e0af32` — checked padding values. |
-| `/scratch/grammy/blast/model2MLIR` | `ttir-experiment-grammy` | Existing integration remains separate; no new source edits in this slice. |
+| `/scratch/grammy/blast/triton2MLIR` | `main` | `3a070abc26884677e9e7e3eec03696535be4e809` — executed internal-size binding and direct Merlin execution; the following provenance commit adds required located-kernel hashes, independent-reader tests and this handoff update. |
+| `/scratch/grammy/blast/merlin-graph-proof-intake` | `ttir-experiment-grammy` | `2963c543e757a2afad3e3788b34970e7b974a049` — independent complete-SSA/result-type/location reconstruction; `99c96b1066f0e3f974da753f9d6decab2b121fad` — staged execution-owned results for earlier admitted binding profiles. |
+| `/scratch/grammy/blast/model2MLIR` | `ttir-experiment-grammy` | `863d797` — runtime integer item reads and guards; no new source edits in the executed-call slice. Preserve the unrelated pre-existing whitespace edit in `m2m/ir/import_fx.py`. |
 
 The unrelated dirty `model2MLIR/m2m/ir/import_fx.py` is preserved. Its SHA-256 is
 `8d4000b64f18802086bcf55325f21e268f795df4ccaefea40266e7d23a7a1379`.
