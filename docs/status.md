@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Runtime source views](runtime_source_views.md) now retain dynamic transpose/
+slice coordinates and empty boundary branches through complete i64/f32 models.
+Actual scalar agreement, original pointer roots and all nine results remain
+independently checked. General view/ownership/effect and accelerator closure
+remains open.
+
 [Executed source grouping](executed_source_layouts.md) retains exact original layout
 selections through v4 and independent complete Merlin reconstruction. Packed state
 kernels compose with content-sized scan/scatter under explicit allocation-work limits.

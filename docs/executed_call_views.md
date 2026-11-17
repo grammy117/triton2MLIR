@@ -1,8 +1,9 @@
 # Source views with execution-sized model results
 
-[Runtime dense views](runtime_tensor_views.md) now separately select profile v2
-with checked runtime dimensions and count/overflow guards. The static v1 scope
-below retains its meaning; non-dense source coordinates remain static.
+[Runtime dense views](runtime_tensor_views.md) separately select profile v2
+with checked runtime dimensions and count/overflow guards. [Runtime source
+views](runtime_source_views.md) additionally select profile v3 for checked
+positive transpose/slice coordinates. The static v1 scope below retains its meaning.
 
 The execution-owned model binder now connects its existing dense value adapters
 and static source-view coordinate proofs. The original parent graph still

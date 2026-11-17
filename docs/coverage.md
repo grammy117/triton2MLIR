@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Runtime source views](runtime_source_views.md) add two complete dynamic-matrix
+models with three actual Triton calls each. All eighteen initial results and
+seventy-two unchanged-library replay results retain exact source words. Twelve
+rehashed view claims refuse in both readers; native coordinate/condition guards
+actually abort. Two actual Spike images retain all eighteen results. This
+selection remains separate from the historical inventory.
+
 [Executed source grouping](executed_source_layouts.md) adds complete packed-state and
 count/scan/scatter models under exact source-option bindings and an explicit bounded
 allocation policy. Custody, complete results, runtime reuse, resource failures and

@@ -95,6 +95,8 @@ def _reconstruct(out, receipt, trace):
         if "tensor_views" in record:
             fields["tensor_views"] = record["tensor_views"]
         if "source_tensor_views" in record:
+            if "source_view_policy" in record:
+                fields["source_view_policy"] = record["source_view_policy"]
             fields["source_views"] = {
                 name: value["binding"]
                 for name, value in record["source_tensor_views"].items()

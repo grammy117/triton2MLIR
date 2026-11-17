@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Runtime source views](docs/runtime_source_views.md) now retain dynamic
+transpose/slice geometry through complete i64/f32 learned-state models and
+independent Merlin reconstruction. Actual coordinate guards, original kernel
+loops/tiles and every snapshot remain; broader view/effect/target scope is open.
+
 [Executed source grouping](docs/executed_source_layouts.md) connects exact captured
 layout options to execution-owned models. A combined packed-read and count/scan/scatter
 program retains all seventeen results. Explicit bounded resource policy v2 keeps

@@ -60,8 +60,12 @@ class KernelBinding:
     source_views: dict = field(default_factory=dict)
     # Source runtime-scalar name -> actual schema SSA operand (including singleton tensors).
     runtime_operands: dict[str, str] = field(default_factory=dict)
+    source_view_policy: str | None = None
 
     def validate(self):
+        from .source_view_coordinates import POLICY as SOURCE_POLICY
+        if self.source_view_policy not in (None, SOURCE_POLICY) or self.source_view_policy and not self.source_views:
+            raise ValueError("runtime source view policy requires actual complete view bindings")
         if self.tensor_views not in (None,VIEW_POLICY,RUNTIME_POLICY):
             raise ValueError("unknown model tensor view policy")
         if not isinstance(self.source_views,dict) or any(not isinstance(name,str) for name in self.source_views):
@@ -130,8 +134,8 @@ def bind_model(model_mlir, bindings, *, result_mode=None):
         if result_mode != MODE:
             raise ValueError("unknown explicitly selected model result mode")
         return bind(model_mlir, bindings)
-    if any(binding.tensor_views == RUNTIME_POLICY for binding in bindings):
-        raise ConversionError("runtime dense views require explicit execution-owned model binding")
+    if any(binding.tensor_views == RUNTIME_POLICY or binding.source_view_policy is not None for binding in bindings):
+        raise ConversionError("runtime views require explicit execution-owned model binding")
     prepared = [(b, *b.validate()) for b in bindings]
     original_module = parse_shared(model_mlir)
     module = original_module.clone()

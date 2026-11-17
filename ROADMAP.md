@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Runtime source views](docs/runtime_source_views.md) now retain actual dynamic
+transpose/slice coordinates, executable scalar agreement and canonical empty
+branches through complete learned-state models. Independent Merlin reconstruction
+keeps original pointer roots, snapshots and all results. General view/ownership/
+effect/target closure remains open.
+
 [Executed source grouping](docs/executed_source_layouts.md) now reuses original typed
 source-option proofs under v4 and keeps consumer placement independent. The combined
 grouped-state/compaction model additionally selects an explicit finite resource profile;

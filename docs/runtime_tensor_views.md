@@ -75,7 +75,8 @@ unchanged-library replays, raw target receipts and observed native guard failure
 These selections overlap and do not increase historical opcode inventory counts.
 
 Captured source-layout options now separately compose through
-[executed source grouping](executed_source_layouts.md). Runtime non-dense source-view
-coordinates, physical/mutating aliases, general ownership/effect/numeric compositions
+[executed source grouping](executed_source_layouts.md). Selected runtime non-dense
+coordinates now have the separate [source-view profile](runtime_source_views.md).
+Physical/mutating aliases, general ownership/effect/numeric compositions
 and applicable accelerators remain open. Functional host/serial execution establishes no GPU correspondence
 or preserved performance.

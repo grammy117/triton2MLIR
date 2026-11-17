@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-17
 
+[Runtime source views](runtime_source_views.md) now connect complete i64/f32
+dynamic-matrix models through explicit view profile v3. All eighteen initial
+and seventy-two replay results retain exact source words; twelve rehashed
+coordinate/profile/pointer claims refuse in both readers. The source algorithm,
+root ABI, snapshots and guards remain. Two actual Spike images retain all eighteen
+results. `out/runtime-source-views/summary.json` retains the separate evidence.
+General view/effect/target scope stays open.
+
 [Executed source grouping](executed_source_layouts.md) connects captured source
 options to execution-owned models. The combined grouped-state/compaction example
 retains seventeen results and explicitly selects finite resource policy v2. The

@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Runtime source views](runtime_source_views.md) close the reproduced dynamic
+transpose/slice coordinate refusal for rank-preserving positive slices. Complete
+i64/f32 models retain original roots, loops, snapshots and all nine results;
+independent source reconstruction and executable guards remain mandatory.
+Continue with general view/ownership/effect/source and applicable target closure.
+
 [Executed source grouping](executed_source_layouts.md) connects the established
 captured source-layout contracts to v4. The combined packed-state/compaction model
 retains its reproduced default allocation-work refusal; explicit bounded resource

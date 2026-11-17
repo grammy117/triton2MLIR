@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Runtime source views](runtime_source_views.md) explicitly select per-call
+`runtime-logical-coordinates-v1` and execution view profile v3 within binding v4.
+Runtime shape/stride/offset guards derive from original standard SSA and the
+actual source allocation-pointer contract. Canonical extract/empty conditionals
+preserve boundary-empty slices. Older readers refuse; parent archives, public
+types, receipt v2 and signature v6 are unchanged. Consumer fingerprints additionally
+bind the independent `execution_source_coordinates.py` reader. Logical coordinates
+grant no public physical alias or mutation permission.
+
 [Executed source grouping](executed_source_layouts.md) reuses captured-source-layout
 v1 under binding v4 with exact source option/argument records. Optional
 `execution_allocation_policy` on derived receipt v2 selects explicit

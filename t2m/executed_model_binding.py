@@ -16,7 +16,9 @@ from .diagnostics import ConversionError
 from .executed_model_arguments import accepts, adapt_tensor, arguments, tensor_contract
 from .model_arguments import runtime_constants
 from .model_tensor_views import RUNTIME_POLICY
+from .scalar_abi import RuntimeScalar
 from .shared_tensor import parse_shared
+from .source_view_coordinates import BINDING_PROFILE as COORDINATE_PROFILE
 
 MODE = "execution-owned"
 SCHEMA = "t2m.model-kernel-binding.v4"
@@ -114,7 +116,7 @@ def bind(model_mlir, bindings):
             live=binding.runtime_operands,
         )
         source_views = None
-        if binding.source_views:
+        if binding.source_views and binding.source_view_policy is None:
             from .model_source_views import bind as bind_views
 
             source_views = bind_views(
@@ -157,6 +159,12 @@ def bind(model_mlir, bindings):
             return op.results[0] if op.results else None
 
         values, dimensions = arguments(binding, function, names, by_name, attrs, append)
+        if binding.source_view_policy is not None:
+            from .source_view_coordinates import Coordinates
+            scalars = {scalar.name: value for scalar, value in zip(binding.implementation.spec.inputs, values, strict=True)
+                       if isinstance(scalar, RuntimeScalar)}
+            source_views = Coordinates(append).bind(binding.source_views, names, by_name, scalars,
+                                                    binding.implementation.trace)
         mapper = dict(zip(function.body.block.args, values, strict=True))
         for source in function.body.block.ops:
             if isinstance(source, func.ReturnOp):
@@ -165,6 +173,8 @@ def bind(model_mlir, bindings):
             cloned = source.clone(value_mapper=mapper)
             if source_views:
                 from .model_source_views import PROFILE as SOURCE_VIEW_PROFILE
+                if binding.source_view_policy is not None:
+                    from .source_view_coordinates import PROFILE as SOURCE_VIEW_PROFILE
 
                 cloned.attributes["prov.kernel_source_view_profile"] = (
                     builtin.StringAttr(SOURCE_VIEW_PROFILE)
@@ -236,6 +246,8 @@ def bind(model_mlir, bindings):
             records[-1]["tensor_views"] = binding.tensor_views
         if source_views:
             records[-1]["source_tensor_views"] = source_views
+        if binding.source_view_policy is not None:
+            records[-1]["source_view_policy"] = binding.source_view_policy
         if "source_layout_specialization" in binding.implementation.trace:
             from .model_source_layout import bind_arguments
 
@@ -273,7 +285,9 @@ def bind(model_mlir, bindings):
             ),
             **(
                 {
-                    "execution_view_binding_profile": RUNTIME_VIEW_PROFILE
+                    "execution_view_binding_profile": COORDINATE_PROFILE
+                    if any(record.get("source_view_policy") is not None for record in records)
+                    else RUNTIME_VIEW_PROFILE
                     if any(
                         record.get("tensor_views") == RUNTIME_POLICY
                         for record in records
