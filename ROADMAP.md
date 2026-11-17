@@ -5,7 +5,9 @@ remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
 [Symbolic model intake](docs/symbolic_models.md) now preserves actual `?` public
-dimensions after the model2MLIR importer correction. The fresh real Triton model
+dimensions and executable entry-domain checks after the model2MLIR correction.
+Five dynamic reduction configurations retain fifteen native results and fifteen
+compiled guard aborts. The fresh guarded Triton model
 and existing shape integration expose the next unproved index-conversion
 boundary. Carry source domains, symbolic bindings, runtime allocation and
 independent Merlin invocation through the same package before claiming dynamic

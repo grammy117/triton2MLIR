@@ -6,6 +6,25 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+Executable [entry shape domains](symbolic_models.md) now preserve actual source
+ranges, shared axes and affine inverse/divisibility relations using standard
+unsigned casts and interval-sized integer checks. Dynamic channel sums retain
+their Linalg bodies and static retained axes. Five real configurations pass
+fifteen valid native runs and fifteen actual guard aborts; the final focused
+source-domain/axis/native selection passes 41 tests. The broader source selections and final
+seventeen dimension contracts pass separately with overlap retained. Merlin's
+reader/staging/layout/access selection passes 410 with two unavailable checks
+skipped. The guarded Triton copy capture in `.scratch/symbolic-model-boundary2/`
+still refuses its unproved index narrowing: checked binding, public model
+allocation/signatures and reusable consumer/target execution remain unfinished.
+No new TTIR inventory or bound-model qualification is claimed by the native
+domain selection.
+The source-domain producer is model2MLIR `088496f`; the scalar cast reader is
+Merlin `4ca31cc24`. Native receipts reopen in `out/shape-domain-native-axis/summary.json`.
+The explicit runtime-shape v2 axis profile also executes dynamic-result identity
+calls without extra scalar inputs. It retains v1 checks and exact typed caller
+validation; deriving an independent model compiler signature remains required.
+
 Model2MLIR `f85f949` now preserves backed symbolic dimensions through shared
 literal-aware shape helpers. Its relevant selection passes 134 tests with 26
 unrelated cases deselected; the final twelve dimension contracts pass. Only

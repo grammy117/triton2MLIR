@@ -4,7 +4,9 @@ Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
 [Symbolic model intake](docs/symbolic_models.md) now retains actual dynamic
-public types. General symbolic binding/execution is unfinished: a fresh Triton
+public types and executable source-domain guards. Five dynamic reduction-model
+configurations pass fifteen valid native executions and fifteen actual guard
+aborts. General symbolic binding/execution is unfinished: a fresh Triton
 copy model currently refuses an unproved index conversion. Earlier static-model
 execution results below retain their original frontend-version scope.
 

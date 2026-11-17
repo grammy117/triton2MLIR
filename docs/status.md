@@ -7,10 +7,13 @@ and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
 [Symbolic model intake](symbolic_models.md) now retains real dynamic public
-types after correcting model2MLIR's backed-SymInt specialization. A fresh
+types and executable source-domain guards after correcting model2MLIR's
+backed-SymInt specialization. Five channel-reduction configurations pass
+fifteen valid native executions and fifteen actual guard aborts, including
+shared/affine/inverted, empty/singleton and unbounded source domains. A fresh
 two-call Triton copy model reaches the actual binding boundary and refuses its
 unproved index narrowing. The existing shape integration reproduces that open
-regression; executable source domains, checked casts, runtime result allocation
+regression; binding proofs from those domains, runtime result allocation
 and independent consumer signatures are the next steps. Earlier static-package
 execution evidence remains separately scoped to its original frontend version.
 

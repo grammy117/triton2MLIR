@@ -30,6 +30,8 @@ def context():
     ctx = Context()
     for dialect in (builtin.Builtin, arith.Arith, func.Func, Linalg):
         ctx.load_dialect(dialect)
+    from .standard_arith import register_unsigned_index_cast
+    register_unsigned_index_cast(ctx)
     ctx.load_dialect(Dialect("scf", [*scf.Scf.operations, ForallOp, InParallelOp], list(scf.Scf.attributes)))
     ctx.load_dialect(Dialect("tensor", [*tensor.Tensor.operations, ParallelInsertSliceOp], list(tensor.Tensor.attributes)))
     from .standard_vector import vector_dialect

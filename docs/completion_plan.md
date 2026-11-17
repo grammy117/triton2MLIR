@@ -37,10 +37,15 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 ## Current delivery state
 
 [Symbolic model intake](symbolic_models.md) now retains genuine dynamic public
-types after correcting backed-symbol specialization in model2MLIR. A fresh real
+types and executable entry-domain checks after correcting backed-symbol
+specialization in model2MLIR. Five real channel-reduction configurations pass
+fifteen valid native invocations and fifteen compiled guard aborts. Scalar
+unsigned index casts retain high source bits through native execution; actual
+integer ranges/relations precede model arithmetic without choosing index width.
+A fresh guarded real
 Triton copy capture and the existing shape integration reproduce the current
 index-conversion refusal. This adds no working dynamic bound package. The next
-execution sequence is source-domain checks, proved/checked symbolic bindings,
+execution sequence is broader source domains, proved/checked symbolic bindings,
 runtime result/scratch allocation and independent reusable Merlin invocation.
 Earlier static-model receipts retain their original source-version scope.
 

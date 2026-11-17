@@ -9,8 +9,79 @@ to static types. Its shared helper uses PyTorch's literal check; ordinary
 integers and literal `SymInt` expressions stay concrete. Public tensor types,
 registered calls/declarations, dependent SSA and complete model results now
 retain `?` where the original export is symbolic. Original source ranges remain
-in the FX trace. This does not implement executable source-domain guards or a
-general dynamic model invocation ABI.
+in the FX trace. The subsequent entry-domain expansion now emits executable
+guards from actual expressions and ValueRanges. A general symbolic model
+binding/invocation ABI remains unfinished.
+
+## Executable domains now implemented
+
+The producer implementation is model2MLIR `088496f`; Merlin `4ca31cc24`
+provides the matching standard scalar unsigned-cast reader.
+
+The importer emits standard `tensor.dim`, scalar `arith.index_castui`, integer
+arithmetic/comparisons and `cf.assert` before model computation. It checks the
+round trip through logical i64 sizes without fixing the native index width.
+Interval-sized arithmetic preserves intermediate shape products and offsets.
+Shared dimensions, source ranges and invertible affine root reconstruction
+retain executable equality/divisibility checks. Integer infinities are handled
+as structured upstream values, not parsed strings. Advisory
+`prov.shape_domain` identifies the original entry-domain intent; it grants no
+permission to remove checks or infer values.
+
+Dynamic reduced axes additionally reach ordinary Linalg when the retained
+output axes and existing dtype rules permit it. The real model
+`x.sum(0) + y.sum(0)` now executes shared, `2*n+1`, inverse-derived, empty/
+singleton and unbounded-source configurations. Fifteen valid native executions
+compare exact dyadic f32 results; fifteen invalid invocations abort through
+actual compiled guards. A separate unsigned-cast execution retains high source
+bits. These runs compile unchanged source MLIR for each invocation; they do
+not establish one reusable compiled library or accelerator performance.
+
+The final focused source-domain/axis/native selection passes 41 tests in
+`.scratch/shape-domains-native-final5.log`. Model2MLIR's broader selection passes 137
+with 26 deselected, and the final dimension/domain selection passes seventeen;
+counts overlap. Merlin's independent reader/staging/layout/access selection
+passes 410 with two unavailable environment checks skipped.
+`out/shape-domain-native-axis/summary.json` reopens the five captures, all fifteen
+exact native reduction results and all fifteen compiled guard outcomes under
+the explicit input-axis contract. An earlier native-only observation remains
+separately retained in `out/shape-domain-native/`.
+
+## Runtime input-axis contract
+
+Explicit `t2m.runtime-shapes.v2` / `merlin.runtime-shapes.v2` declarations bind
+dimension names to actual public input axes without adding scalar arguments:
+
+```json
+{
+  "schema": "t2m.runtime-shapes.v2",
+  "inputs": [{"shape": ["rows", 3], "dtype": "i32"}],
+  "outputs": [{"shape": ["rows", 3], "dtype": "i32"}],
+  "dimension_bindings": {
+    "rows": {"argument": 0, "axis": 0, "bounds": [0, 31]}
+  }
+}
+```
+
+The caller checks named axes, optional inclusive i64 bounds, shared input
+dimensions, static extents and exact program/array dtypes. Scalar and axis
+names cannot shadow each other. Binding records reject unknown fields; a v1
+downgrade cannot admit the new field. Output allocation follows declared
+dimension relationships, with no golden/reference inference. A dynamic-result
+identity program executes empty/singleton and independent sizes through this
+contract while retaining its original public ABI. Wrong contract dtypes refuse
+before invocation. Existing v1 scalar contracts and mandatory explicit shape
+contracts for dynamic input signatures remain intact.
+
+This runtime declaration supplies invocation shapes, not a proof of the
+source program's shape/effect or memory semantics. General dynamic model
+bundle writing and independent Merlin compiler signatures still require the
+integration below. The runtime helper accepts the Merlin prefix; current
+compiler staging does not publish an input-axis signature from it. No TTIR inventory,
+new bound-model package or Merlin/device execution qualification is added by
+these native source-domain cases.
+
+## Remaining binding boundary
 
 The preceding [live-argument qualification](live_runtime_arguments.md) used
 model2MLIR `5a681ea7c6e3dacbe9a1a7316a205549014f9298`, whose importer specialized
@@ -39,8 +110,11 @@ an intent annotation may supply that missing fact. The current live profile's
 refusal must remain until conversion is proved or checked in executable IR.
 No successful bound package or Merlin execution is claimed by this probe.
 
-On this VM, `.scratch/symbolic-model-boundary1/` retains the original capture,
-source TTIR, shared translation and separate capture/binding observations.
+On this VM, `.scratch/symbolic-model-boundary2/` retains a fresh guarded capture,
+source TTIR, shared translation and separate capture/binding observations. It
+still reproduces the unproved index conversion; source guards are now present
+for the next proof step. The preceding unguarded capture remains under
+`.scratch/symbolic-model-boundary1/`.
 The focused existing tensor-profile shape integration also reproduces this
 failure in `.scratch/symbolic-existing-shape1.log`. This is an open integration
 regression; do not turn it into a passing refusal test or weaken its checks.
@@ -50,7 +124,8 @@ These are frontend/capture tests, not compiled dynamic kernel/model evidence.
 
 ## Execution order
 
-1. **Carry original shape domains as executable source contracts.** Use the
+1. **Complete source domains and surrounding dynamic computation.** Entry
+   guards for the forms above are implemented. Continue using the
    actual exported symbolic expressions, ranges and placeholder axes. Preserve
    equality/derived-dimension relations and emit standard checked computation
    where the source requires it. Do not parse printed range strings, read
@@ -88,8 +163,11 @@ The full [completion plan](completion_plan.md) remains active.
 ## Package differences
 
 The importer correction changes symbolic MLIR types to reflect the source;
-it adds no receipt schema, compiler artifact or successful dynamic binding
-profile. Concrete reference arrays and model2MLIR `input_abi`/`output_abi` still
+entry domains add executable standard guards and advisory `prov.shape_domain`.
+The scalar unsigned-cast readers retain the native `nonNeg` poison promise;
+domain expansion adds no such promise. Older readers lacking the registered
+operation refuse. Neither change adds a receipt schema, compiler artifact or
+successful dynamic binding profile. Concrete reference arrays and model2MLIR `input_abi`/`output_abi` still
 describe the saved invocation. They must not specialize compiler types or
 authorize runtime result shapes. The existing static-public-model profiles
 remain separately scoped; a future symbolic profile must explicitly declare
