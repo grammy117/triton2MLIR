@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Automatic memory selection](automatic_memory.md) is explicitly selected with
+`--memory-profile auto`; concrete profile defaults are unchanged. A versioned
+trace record retains source-only candidate order and refusal diagnostics.
+Selected tensors or guarded standard-memory payloads retain their existing
+ABI, artifacts and proof/qualification requirements. Numeric/effect/source
+policies remain explicit; selection evidence grants no additional semantics.
+
 [Internal computed-size binding](executed_model_binding.md) explicitly selects
 `t2m.model-kernel-binding.v4` / `t2m.execution-checked-calls.v1` and
 `t2m.bound-model-receipt.v2` through

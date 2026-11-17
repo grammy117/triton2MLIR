@@ -6,6 +6,10 @@ Use `--memory-profile guarded-buffer --address-policy source-words` on
 own address policy. The default remains `structured`; no failed range proof
 silently changes policy.
 
+The separately selected [automatic mode](automatic_memory.md) explicitly permits
+trying tensor, guarded logical and guarded source-word representations in that
+order. It retains every refusal and leaves numeric/effect policies unchanged.
+
 This emits the explicit `shared-source-word-buffer` package profile. The public
 functional tensor/scalar ABI and standard MLIR vocabulary stay the same as
 [guarded memory](guarded_memory.md), including runtime bounds, initialization,

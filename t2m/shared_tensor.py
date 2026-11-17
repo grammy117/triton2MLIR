@@ -1167,8 +1167,14 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     The returned standard module is experimental until numerically qualified;
     native verification and consumer execution are separately measured statuses.
     """
+    if memory_profile == "auto":
+        from .auto_memory import convert
+
+        return convert(source, abi, work, optimizer=optimizer, address_policy=address_policy,
+                       effect_profile=effect_profile, f32_atomic_add=f32_atomic_add, fp8_overflow=fp8_overflow,
+                       byte_order=byte_order, assembly_provider=assembly_provider, source_layout=source_layout)
     if memory_profile not in ("tensor", "buffer", "guarded-buffer"):
-        raise ValueError("memory profile must be explicitly tensor, buffer or guarded-buffer")
+        raise ValueError("memory profile must be explicitly tensor, buffer, guarded-buffer or auto")
     from .fp8_casts import SELECTIONS, PER_CAST, expand_fp8_casts, validate_fp8_casts
     if fp8_overflow not in (None, *SELECTIONS):
         raise ValueError("FP8 overflow policy must be ieee, satfinite, satfinite-nan-inf or per-cast")

@@ -3,6 +3,11 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Automatic memory selection](docs/automatic_memory.md) now explicitly tries
+tensor, guarded logical and guarded source-word representations from source IR
+and ABI alone. Concrete profiles retain their ordinary checks and diagnostics;
+numeric/effect policies and result modes remain explicit. The default is tensor.
+
 [Internal computed sizes](docs/executed_model_binding.md) now reach qualified
 packages and source-only Merlin staging. A real Triton count feeds two later
 allocations through explicit v4 call contracts, receipt v2 and signature v6.

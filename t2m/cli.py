@@ -494,7 +494,8 @@ def main(argv=None):
     tensor.add_argument("--allocation-bindings",type=Path,help="explicit source-order pointer/scalar bindings into the owning allocation ABI")
     tensor.add_argument("--out", type=Path, required=True)
     tensor.add_argument("--optimizer", type=Path)
-    tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
+    tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer", "auto"), default="tensor",
+                        help="auto explicitly tries proved tensor, guarded logical and guarded source-word admission")
     tensor.add_argument("--address-policy", choices=("structured", "source-words"), default="structured",
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
     tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
@@ -554,7 +555,8 @@ def main(argv=None):
     bind.add_argument("--bindings", type=Path, required=True, help="t2m.kernel-bindings.v1 JSON with TTIR/ABI specializations")
     bind.add_argument("--out", type=Path, required=True)
     bind.add_argument("--optimizer", type=Path)
-    bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
+    bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer", "auto"), default="tensor",
+                      help="auto explicitly selects the first admitted portable representation per kernel")
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
     bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics"), default="ordinary")
     bind.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf", "per-cast"), help="default FP8 contract; per-cast requires explicit source policies; each binding may override it")

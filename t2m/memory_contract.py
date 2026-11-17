@@ -39,6 +39,8 @@ def guarded_arguments(spec):
 
 
 def validate_memory_evidence(trace, artifacts):
+    from .memory_selection import validate_selection
+    validate_selection(trace)
     profile = trace.get("profile", TENSOR_PROFILE)
     from .source_capsule import members as source_members
     if profile not in PROFILE_FILES or set(artifacts) not in (PROFILE_FILES[profile], PROFILE_FILES[profile] | source_members(trace)):

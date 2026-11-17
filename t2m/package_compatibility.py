@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if "memory_selection" in trace:
+        differences.append("explicit automatic memory selection tries proved tensor, guarded logical and guarded source-word representations in deterministic order; original source and ABI alone decide admission, refused candidates retain diagnostics, and the selected profile keeps all ordinary source/memory checks; original numeric, effect, byte-order and source-provider policies are unchanged; the selection record grants no source equivalence, numeric, alias, ownership, target or performance permission")
     if any(item.get("kind") == "integer-address-seed-rebase" for item in trace.get("transformations", [])):
         differences.append("closed region address seeds recover actual same-shaped pointer SSA roots through the existing addptr/bitcast/select byte recipe; each original integer increment executes at its source width before signed widening and its own pointee-byte scale; shape operations remain actual SSA anchors without invented lane correspondence or movement across region edges; address-role, root and divisibility fixed points are recomputed from the executable rebased seed before paired state is prepared, so prior zero-displacement facts cannot authorize misaligned byte offsets; unknown source fields, physical observations and unproved roots still refuse transactionally; original source correspondence is retained and public tensor/scalar ABI, artifacts and receipt schemas are unchanged")
     if any(item.get("kind") == "integer-address-seed-retention" for item in trace.get("transformations", [])):

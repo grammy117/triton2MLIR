@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Explicit automatic memory selection](docs/automatic_memory.md) now chooses
+the first admitted tensor, guarded logical or guarded source-word conversion.
+Source/ABI admission and recorded diagnostics decide representation; numeric,
+effect, ownership and target requirements remain unchanged.
+
 The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.

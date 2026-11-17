@@ -6,6 +6,12 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Automatic memory selection](automatic_memory.md) now explicitly chooses the
+first admitted tensor, guarded logical or guarded source-word representation
+using source IR and ABI alone. Existing source/memory contracts remain
+authoritative; policies and result modes stay explicit. The focused 46-check
+selection passes without expanding the historical TTIR inventory.
+
 [Internal computed sizes](executed_model_binding.md) now reach a qualified
 package and working Merlin interface. Receipt v2 retains v4 executable call
 contracts and located kernels; independent complete-SSA reconstruction precedes

@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Explicit automatic memory selection](automatic_memory.md) now tries at most
+three source/ABI conversions in deterministic order. The final focused
+selection passes 46 checks in `.scratch/auto-final1.log`, including real
+pointwise native execution, original unsupported assembly, legacy tensor
+conversion and byte-memory contracts. Typed refusals retain their diagnostics;
+unexpected failures propagate. This selects an existing representation and
+adds no opcode, numeric/effect permission or target qualification.
+
 [Internal computed sizes](executed_model_binding.md) now qualify three real
 model packages through receipt v2, independently reconstructed v4 binding and
 source-only signature v6 staging. All 21 initial PyTorch results and 105
