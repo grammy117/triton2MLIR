@@ -96,7 +96,8 @@ evidence retroactively.
 This connects checked static source coordinates and captured-size dense adapters
 to execution-owned results. Fully runtime reshape coordinates, rank-reducing or
 negative source slices, encoded/mixed-width public views, physical alias/mutation
-ABIs, source-layout option bindings and arbitrary ownership/effect/numeric
-compositions still need separate implementations. Host/serial target correctness
+ABIs and arbitrary ownership/effect/numeric compositions still need separate
+implementations. Captured source-layout options now have the separate
+[execution-owned binding](executed_source_layouts.md). Host/serial target correctness
 does not qualify accelerator placement or preserved performance. Historical
 opcode inventory counts do not change.

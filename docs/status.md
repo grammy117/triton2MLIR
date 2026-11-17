@@ -1,5 +1,10 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Executed source grouping](executed_source_layouts.md) retains exact original layout
+selections through v4 and independent complete Merlin reconstruction. Packed state
+kernels compose with content-sized scan/scatter under explicit allocation-work limits.
+General source/view/ownership/effect and accelerator closure remains open.
+
 [Runtime dense views](runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven

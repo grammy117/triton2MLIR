@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Executed source grouping](executed_source_layouts.md) connects the established
+captured source-layout contracts to v4. The combined packed-state/compaction model
+retains its reproduced default allocation-work refusal; explicit bounded resource
+policy v2 supplies a checked selection. Continue with runtime non-dense coordinates,
+result-axis information, general ownership/effects and applicable targets.
+
 [Runtime dense views](runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven

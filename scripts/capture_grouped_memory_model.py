@@ -3,6 +3,7 @@
 
 import argparse
 import importlib.util
+import sys
 from pathlib import Path
 
 import m2m
@@ -19,7 +20,7 @@ def load(name, path):
     return module
 
 
-def capture(out, *, dtype="i64", warps=4, while_loop=True):
+def capture(out, *, dtype="i64", warps=4, while_loop=True, execution_sizes=False):
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(out)
@@ -52,6 +53,37 @@ def capture(out, *, dtype="i64", warps=4, while_loop=True):
             n, capacity, iterations, delta, warps=source_warps, selected=selected)
         return tuple(torch.from_numpy(value) for value in values)
 
+    compact_names = ("t2m_grouped_demo::positive_count", "t2m_grouped_demo::compact") if execution_sizes else ()
+    if execution_sizes:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from t2m.examples.kernel_size_kernels import positive_count, positive_pack
+
+        @triton_op(compact_names[0], mutates_args={})
+        def count_positive(x: torch.Tensor, capacity: int) -> torch.Tensor:
+            count = torch.empty((1,), dtype=torch.int64, device=x.device)
+            wrap_triton(positive_count)[(1,)](x, count, capacity, B=512)
+            return count
+
+        @count_positive.register_kernel("cpu")
+        def count_reference(x, capacity):
+            assert x.numel() == capacity
+            return (x > 0).to(torch.int64).sum().reshape(1)
+
+        @triton_op(compact_names[1], mutates_args={})
+        def compact(x: torch.Tensor, n: int, capacity: int) -> torch.Tensor:
+            result = torch.empty((n,), dtype=x.dtype, device=x.device)
+            wrap_triton(positive_pack)[(1,)](x, result, capacity, n, B=512)
+            return result
+
+        @compact.register_kernel("cpu")
+        def compact_reference(x, n, capacity):
+            assert x.numel() == capacity
+            return x[x > 0][:n].clone()
+
+        @compact.register_fake
+        def compact_fake(x, n, capacity):
+            return torch.empty((n,), dtype=x.dtype, device=x.device)
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -67,10 +99,19 @@ def capture(out, *, dtype="i64", warps=4, while_loop=True):
             empty = implementation(x[:0], self.weight[:0], 0, 0, 2, 5, *profile)
             # The first complete state and all snapshots remain live after
             # the dependent call; destructive reuse must preserve their values.
-            return *first, *second, *empty
+            results = (*first, *second, *empty)
+            if execution_sizes:
+                flat = second[0].reshape(-1)
+                count = count_positive(flat, 320)
+                n = count.item()
+                torch._check_is_size(n)
+                torch._check(n <= 320)
+                return *results, compact(flat, n, 320), count
+            return results
 
-    previous = KERNEL_REGISTRY.get(qualname)
-    KERNEL_REGISTRY[qualname] = KernelSpec(qualname)
+    previous = {name: KERNEL_REGISTRY.get(name) for name in (qualname, *compact_names)}
+    for name in previous:
+        KERNEL_REGISTRY[name] = KernelSpec(name)
     try:
         torch.set_num_threads(1)
         x = torch.arange(320, dtype=scalar_type).reshape(10, 32) * 3 - 7
@@ -84,10 +125,11 @@ def capture(out, *, dtype="i64", warps=4, while_loop=True):
         write_bundle(model, values, out, capture_regions=False, capture_trace=True,
                      source_path=Path(__file__), conversion_result=result)
     finally:
-        if previous is None:
-            KERNEL_REGISTRY.pop(qualname, None)
-        else:
-            KERNEL_REGISTRY[qualname] = previous
+        for name, value in previous.items():
+            if value is None:
+                KERNEL_REGISTRY.pop(name, None)
+            else:
+                KERNEL_REGISTRY[name] = value
     return out
 
 
@@ -97,5 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("--dtype", choices=("i64", "f32"), default="i64")
     parser.add_argument("--warps", type=int, choices=(2, 4), default=4)
     parser.add_argument("--for-loop", action="store_true")
+    parser.add_argument("--execution-sizes", action="store_true")
     args = parser.parse_args()
-    print(capture(args.out, dtype=args.dtype, warps=args.warps, while_loop=not args.for_loop))
+    print(capture(args.out, dtype=args.dtype, warps=args.warps, while_loop=not args.for_loop,
+                  execution_sizes=args.execution_sizes))

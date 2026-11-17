@@ -74,7 +74,8 @@ it supplies no arithmetic rewrite, layout or source-equivalence permission.
 unchanged-library replays, raw target receipts and observed native guard failures.
 These selections overlap and do not increase historical opcode inventory counts.
 
-Runtime non-dense source-view coordinates, physical/mutating aliases, source-layout
-bindings, general ownership/effect/numeric compositions and applicable accelerators
-remain open. Functional host/serial execution establishes no GPU correspondence
+Captured source-layout options now separately compose through
+[executed source grouping](executed_source_layouts.md). Runtime non-dense source-view
+coordinates, physical/mutating aliases, general ownership/effect/numeric compositions
+and applicable accelerators remain open. Functional host/serial execution establishes no GPU correspondence
 or preserved performance.

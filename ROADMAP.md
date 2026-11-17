@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Executed source grouping](docs/executed_source_layouts.md) now reuses original typed
+source-option proofs under v4 and keeps consumer placement independent. The combined
+grouped-state/compaction model additionally selects an explicit finite resource profile;
+arbitrary view/effect/target closure remains open.
+
 [Runtime dense views](docs/runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven

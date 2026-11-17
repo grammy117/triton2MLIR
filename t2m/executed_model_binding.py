@@ -236,6 +236,12 @@ def bind(model_mlir, bindings):
             records[-1]["tensor_views"] = binding.tensor_views
         if source_views:
             records[-1]["source_tensor_views"] = source_views
+        if "source_layout_specialization" in binding.implementation.trace:
+            from .model_source_layout import bind_arguments
+
+            records[-1]["source_layout_bindings"] = bind_arguments(
+                binding.implementation.trace, binding.source_layout_arguments, attrs
+            )
         used.add(symbol)
     for symbol, function in functions.items():
         if "prov.kernel" in function.attributes:
@@ -260,6 +266,11 @@ def bind(model_mlir, bindings):
             "binding_profile": PROFILE,
             "result_mode": MODE,
             "resource_scope": "execution-allocator-accounted",
+            **(
+                {"source_layout_binding_profile": "t2m.captured-source-layout.v1"}
+                if any("source_layout_bindings" in record for record in records)
+                else {}
+            ),
             **(
                 {
                     "execution_view_binding_profile": RUNTIME_VIEW_PROFILE

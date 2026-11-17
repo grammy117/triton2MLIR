@@ -1,5 +1,10 @@
 # Measured coverage and remaining boundaries
 
+[Executed source grouping](executed_source_layouts.md) adds complete packed-state and
+count/scan/scatter models under exact source-option bindings and an explicit bounded
+allocation policy. Custody, complete results, runtime reuse, resource failures and
+target execution remain separate evidence; historical opcode counts are unchanged.
+
 [Runtime dense views](runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven

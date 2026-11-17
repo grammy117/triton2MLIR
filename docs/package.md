@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Executed source grouping](executed_source_layouts.md) reuses captured-source-layout
+v1 under binding v4 with exact source option/argument records. Optional
+`execution_allocation_policy` on derived receipt v2 selects explicit
+`merlin.owned-result-limits.v2`; original defaults and receipt/signature schemas
+remain unchanged. Parent archives, full source/SSA checks and runtime guards remain.
+
 [Runtime dense views](runtime_tensor_views.md) explicitly select
 `dense-row-major-runtime-v1` / `t2m.execution-checked-call-views.v2` within binding
 v4. Runtime source dimension operands and complete count/overflow checks replace

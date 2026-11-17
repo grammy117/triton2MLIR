@@ -108,6 +108,12 @@ def write(
             "Merlin independently reconstructs their source coordinates and standard adapters; "
             "older v4 readers refuse these fields and no physical alias or mutation permission is added"
         )
+    if "source_layout_binding_profile" in trace:
+        compatibility["differences"].append(
+            trace["source_layout_binding_profile"] + " extends v4 with exact source-layout scalar bindings; "
+            "Merlin independently checks the original typed call and full executable expansion; "
+            "source packing geometry supplies no consumer hardware placement or physical alias permission"
+        )
     if resource_policy is not None:
         compatibility["differences"].append(
             resource_policy["schema"] + " explicitly selects bounded allocation work and byte limits; "

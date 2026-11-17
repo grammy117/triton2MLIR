@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Executed source grouping](docs/executed_source_layouts.md) connects exact captured
+layout options to execution-owned models. A combined packed-read and count/scan/scatter
+program retains all seventeen results. Explicit bounded resource policy v2 keeps
+allocation-work and byte limits separate; defaults and source/lifetime guards remain.
+
 [Runtime dense views](docs/runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven

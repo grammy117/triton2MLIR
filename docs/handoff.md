@@ -1,5 +1,10 @@
 # Review handoff — updated 2026-11-17
 
+[Executed source grouping](executed_source_layouts.md) connects captured source
+options to execution-owned models. The combined grouped-state/compaction example
+retains seventeen results and explicitly selects finite resource policy v2. The
+full arbitrary-kernel goal remains open; keep default resource and source guards.
+
 [Runtime dense views](runtime_tensor_views.md) now retain actual dimension
 operands, checked index products and standard reshapes through execution-owned
 models. A real dynamic-matrix count/scan/scatter model preserves all seven
