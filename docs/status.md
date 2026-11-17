@@ -6,6 +6,13 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Execution-sized result transport](execution_owned_results.md) now works in
+Merlin's explicit serial host ABI for sizes computed from vector contents.
+Actual allocation records, guarded size products and complete result copies
+retain ownership and source computation. This is consumer infrastructure:
+package/model/signature/native/target wiring and runtime resizing generation
+proofs remain open, and the existing 352-package inventory is unchanged.
+
 [Runtime input-word shapes](input_word_shapes.md) now preserve a real input
 count controlling two Triton result sizes and a derived slice. Independent
 source read/range/body proofs select explicit signature v5 allocation. Exact
@@ -141,7 +148,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements and same-base byte differences, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
-| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state, selected source tensor views and input-axis dynamic model signatures. | General physical/mutating views, derived/data-dependent dynamic shapes, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
+| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime scalars, complete tuple results, dependent state, selected value views, input-axis/derived dimensions and checked input-word result sizes. | General physical/mutating views, internally computed result sizes, value-returning TTIR entries/CFGs and broader binding compositions remain open; execution-sized result transport still needs package integration. |
 | Consumer execution | Real native execution, reusable Merlin host libraries and selected complete model/kernel images executed on RISC-V/Spike. | Functional CPU execution does not qualify accelerators, hardware placement or preserved performance. |
 
 In roadmap terms, R0's minimum demo is delivered. R1–R5 have working

@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Execution-sized results](execution_owned_results.md) add a real generic
+Merlin host mechanism for vector-content-derived result descriptors. Its tests
+retain source computation, tracked allocations, bounds/overflow checks and the
+existing lifetime refusals. This is not a new TTIR package or target selection;
+the historical inventory is unchanged. Package/model/signature/evaluator wiring
+and runtime/zero-trip generation proofs remain explicit completion work.
+
 [Runtime input-word shapes](input_word_shapes.md) add complete model/interface
 coverage for actual scalar input data controlling Triton result allocation.
 Qualified read intersections retain exact shared SSA and no initialization

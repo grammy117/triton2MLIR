@@ -6,6 +6,21 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Execution-sized results](execution_owned_results.md) now have a real generic
+Merlin serial host transport. It runs content-derived compaction once, observes
+owned descriptors, validates actual allocations and copies complete results.
+Native allocation-product guards reject negative/overflowing dimensions before
+byte arithmetic. Default package/signature/evaluator/target paths are unchanged;
+the fresh resizing-loop case retains the independent lifetime refusal. Follow
+the linked integration requirements rather than counting this as TTIR package
+or accelerator coverage.
+
+Merlin `434748c9809e3584ea12d70c0fa04bbcc5ce5eb7` supplies the mechanism.
+Its 133 focused regression checks and 36 final native/result/allocator checks
+pass with overlap; documentation and structure gates pass. The original
+codegen diagnostic fixture also now includes its existing compiler-runtime
+header dependency. Default model2MLIR/package signatures remain unchanged.
+
 [Runtime input-word shapes](input_word_shapes.md) retain real scalar input data
 and source guards through Triton result allocation, dependent calls and a
 stepped slice. Model2MLIR `863d797` supplies executable integer reads/guards;

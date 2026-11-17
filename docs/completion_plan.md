@@ -8,6 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Execution-sized results](execution_owned_results.md) now have an actual
+Merlin serial host descriptor/ownership mechanism, retaining source computation,
+allocation-product checks and the existing lifetime gates. Complete package,
+model binding, staged signature, native evaluator and target integration remain
+open. Runtime/zero-trip resizing loops retain their independently checked
+generation refusal and need a separate proof; no TTIR inventory count changes.
+
 [Runtime input-word shapes](input_word_shapes.md) now close the reproduced
 `count.item()` allocation boundary with executable reads/guards, independent
 source proofs and explicit signature v5. General data-dependent vector/scalar
