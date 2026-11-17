@@ -22,3 +22,11 @@ def live_extent_copy(x, n, out, B: tl.constexpr):
     lane = tl.program_id(0) * B + tl.arange(0, B)
     value = tl.load(x + lane, lane < n, other=0)
     tl.store(out + lane, value, lane < n)
+
+
+@triton.jit
+def live_extent_weighted(x, weight, n, out, B: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    value = tl.load(x + lane, lane < n, other=0)
+    control = tl.load(weight)
+    tl.store(out + lane, value ^ control, lane < n)

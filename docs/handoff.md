@@ -6,6 +6,31 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+Complete [dynamic model packages](symbolic_model_packages.md) now extend the
+native-only binding below. Copy/weighted-XOR models qualify all three memory
+profiles through native, Merlin host and actual Spike execution, with all 21
+complete initial results checked at each boundary. Twenty-four further host
+invocations vary lengths and parameter words without changing libraries or
+programs; six invalid lengths abort through the actual source guards.
+`merlin.compile-signature.v3` explicitly binds source-proved public input axes.
+Merlin independently reopens original parent calls, kernel destinations,
+complete inlined bodies and scratch upper bounds. Runtime generation preserves
+captured parameter bytes; reusable host calls accept independent parameters.
+False rehashed result sizes refuse before allocation/library invocation.
+The final 88 focused checks pass across `.scratch/pytest-symbolic-package-final4/`
+and its source-frozen tensor-copy Spike recheck. The initial in-flight source
+edit was correctly refused and remains recorded. Reopened receipts and complete
+word comparisons are in `out/symbolic-model-packages/summary.json`. Merlin's
+matching implementation is `2b32726086`. Its 355 frontend/runtime, 71 final
+runtime and 146 layout/access passes overlap; two unavailable environment
+checks skip. Documentation and structure gates pass.
+The broader producer selection remains 141 passed, three existing surrounding-
+arithmetic/slice failures and one unselected optional target case skipped in
+`.scratch/symbolic-package-final3.log`; this is not an all-green run.
+Broader surrounding dynamic computation, derived/data-dependent dimensions,
+mutation/effects and applicable targets remain incomplete. These packages are
+not yet folded into the historical 352-package inventory.
+
 [Symbolic tensor binding](symbolic_tensor_bindings.md) now proves actual kernel
 input/destination/result relationships across a real two-call exported copy
 model. All three memory profiles retain 36 complete exact native results at
@@ -14,11 +39,10 @@ The original and complete inlined shape contracts agree; sampled lengths supply
 no compiler fact. The final selection passes 32 tests, including the existing
 i32 model's native/Merlin-host/Spike regression; the broader overlapping producer/
 whole-model selection passes 163. `out/symbolic-model-binding-native/summary.json`
-reopens the new source/native evidence. It adds no qualified package or dynamic
-Merlin library. The full writer now stops at dynamic argument materialization,
-as retained in `.scratch/symbolic-model-package-probe1/`. Reference/result
-allocation, independent consumer shape/scratch signatures and reusable invocation
-remain next; the older surrounding-arithmetic integration stays open.
+reopens that earlier source/native evidence. That selection added no qualified
+package or dynamic Merlin library. The earlier full-writer refusal retained in
+`.scratch/symbolic-model-package-probe1/` is superseded by the complete package
+work above; the older surrounding-arithmetic integration stays open.
 
 [Checked index arguments](checked_index_arguments.md) now recover unsigned
 enclosures from original dominating standard assertions and checked round trips,

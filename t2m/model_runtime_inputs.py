@@ -3,13 +3,16 @@
 The C harness accepts BF16 values as binary32 containers and emits their BF16
 words. An exact high-word embedding preserves every BF16 encoding, including
 signaling NaNs; legacy numeric NaN payloads cannot supply those original words.
-This projection contains inputs only, never result references or source weights.
+The input-axis model profile projects the complete positional argument roster,
+including captured weights. Neither projection reads result references.
 """
 
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import tempfile
 
 import numpy as np
 
@@ -22,13 +25,15 @@ RECORD = "runtime-inputs.json"
 
 
 def project(capture, signature):
-    """Return a checked input projection, or None when no BF16 input needs one.
+    """Return the profile's checked projection, or None for legacy inputs.
 
     The caller verifies the complete bound source bundle before using its
     signature/manifest. Replaying this function verifies the projection without
     executing a compiler or reading any output/reference value.
     """
     capture = Path(capture)
+    if signature.get("schema") == "merlin.compile-signature.v3":
+        return _positional(capture, signature)
     manifest = json.loads((capture / "weights.safetensors.manifest.json").read_text())
     inputs = signature["inputs"]
     if set(manifest) != {str(i) for i in range(len(inputs))}:
@@ -65,6 +70,28 @@ def project(capture, signature):
             sources.append(FILENAME)
     return arrays, {"schema": "t2m.runtime-input-projection.v1", "encoding": "bf16-exact-binary32-embedding",
         "source_members": {name: _record(capture / name) for name in sources}, "arguments": arguments}
+
+
+def _positional(capture, signature):
+    from .model_bundle import _arguments
+    from .shared_tensor import parse_shared
+
+    python = os.environ.get("T2M_NATIVE_PYTHON") or os.environ.get("MERLIN_COMPILER_PYTHON")
+    if not python:
+        raise ValueError("symbolic model runtime inputs require the existing native materialization environment")
+    contract = {"schema": "t2m.runtime-shapes.v2", "inputs": signature["inputs"],
+                "outputs": signature["outputs"], "dimension_bindings": signature["dimension_bindings"]}
+    with tempfile.TemporaryDirectory(prefix=".model-invocation-", dir=capture.parent) as directory:
+        values, bindings = _arguments(capture, parse_shared((capture / "model.mlir").read_text()),
+            Path(directory) / "arguments", python, compiler_support_root=os.environ.get("T2M_MERLIN_ROOT"),
+            shape_contract=contract)
+    sources = ["inputs.npz", "extra.npz", "input_order.json", "weights.safetensors",
+               "weights.safetensors.manifest.json", "parent/meta.json"]
+    if (capture / FILENAME).is_file():
+        sources.append(FILENAME)
+    return {f"in{i}": value for i, value in enumerate(values)}, {
+        "schema": "t2m.runtime-input-projection.v2", "encoding": "positional-model-argument-source-words",
+        "source_members": {name: _record(capture / name) for name in sources}, "arguments": bindings}
 
 
 def prepare(capture, out, signature):

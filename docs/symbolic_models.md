@@ -15,8 +15,10 @@ binding/invocation ABI remains unfinished. [Checked index arguments](checked_ind
 now prove the direct guarded narrowing.
 [Symbolic tensor relationships](symbolic_tensor_bindings.md) additionally carry
 the two-call copy model through native execution in all three memory profiles.
-The complete writer now stops at dynamic argument materialization; independent
-consumer signatures and reusable model execution remain open.
+Complete [dynamic model packages](symbolic_model_packages.md) now qualify copy
+and weighted variants through native, Merlin host and Spike. Merlin independently
+derives their input-axis signatures and source-bound scratch; the same host
+libraries handle independent invocation lengths. Broader compositions remain open.
 
 ## Executable domains now implemented
 
@@ -79,12 +81,10 @@ before invocation. Existing v1 scalar contracts and mandatory explicit shape
 contracts for dynamic input signatures remain intact.
 
 This runtime declaration supplies invocation shapes, not a proof of the
-source program's shape/effect or memory semantics. General dynamic model
-bundle writing and independent Merlin compiler signatures still require the
-integration below. The runtime helper accepts the Merlin prefix; current
-compiler staging does not publish an input-axis signature from it. No TTIR inventory,
-new bound-model package or Merlin/device execution qualification is added by
-these native source-domain cases.
+source program's shape/effect or memory semantics. The separate complete package
+integration now independently reconstructs selected input-axis relationships
+and publishes `merlin.compile-signature.v3`. These earlier native source-domain
+cases add no package or target qualification by themselves.
 
 ## Binding and remaining package boundary
 
@@ -108,7 +108,7 @@ All three memory profiles now bind and retain all three dynamic results at
 lengths zero, one, seven and 31. The original guarded `[2, 31]` narrowing proof
 also applies; the new real capture declares `[0, 31]`. Actual standard kernel
 destinations/results establish the tensor relationships across both calls.
-The complete package writer now refuses with:
+The earlier complete writer probe refused with:
 
 ```text
 native model qualification requires static ranked tensor arguments
@@ -120,9 +120,9 @@ with no native index-width assumption; Merlin reconstructs the proof separately.
 The public dimension remains genuinely unknown. Tensor relationships now follow
 actual parent SSA and reified implementation shapes; neither the captured value
 13 nor a range enclosure substitutes for them. The complete inlined body's
-runtime shape contract must agree. This new model-shape profile still needs
-independent consumer reconstruction. No successful dynamic bound package or
-Merlin execution is claimed by these native binding cases.
+runtime shape contract must agree. Independent consumer reconstruction and
+complete package execution now work for the [two copy variants](symbolic_model_packages.md).
+The earlier native binding cases retain their narrower original evidence scope.
 
 On this VM, `.scratch/symbolic-model-boundary3/` retains the preceding guarded
 capture, shared translation and former symbolic-dimension refusal.

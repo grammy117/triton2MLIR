@@ -73,7 +73,8 @@ def worker(mode, root, out, *arguments):
         manifest = checked_stage(out / "compiler")
         signature = json.loads((out / "compiler/signature.json").read_text())
         effect = manifest.get("source_profile") == "standalone-effect-kernel"
-        runtime = effect or manifest.get("source_profile") == "standalone-tensor-kernel"
+        runtime = (effect or manifest.get("source_profile") == "standalone-tensor-kernel"
+                   or signature.get("schema") == "merlin.compile-signature.v3")
         entries = signature["inputs"] + signature["outputs"]
         for entry in (() if runtime else entries):
             shape = entry.get("shape")
@@ -250,7 +251,17 @@ def references(capture, override=None):
     if len(entries) != 1:
         raise ValueError("expected exactly one model entry")
     parent = json.loads((capture / "parent/capture_receipt.json").read_text())
-    return _references(capture, parent, entries[0].function_type.outputs, metadata=capture / "parent/meta.json")
+    result_shapes = None
+    bindings = json.loads((capture / "kernel-bindings.json").read_text())
+    if "runtime_shape_contract" in bindings:
+        from t2m.model_bundle import _input_abi
+        from t2m.model_input_abi import SCHEMA, captured_shapes
+        from t2m.runtime_shapes import resolve_shapes
+
+        abi = {"schema": SCHEMA, "inputs": _input_abi(entries[0], dynamic=True)}
+        result_shapes = resolve_shapes(bindings["runtime_shape_contract"], captured_shapes(capture, abi))
+    return _references(capture, parent, entries[0].function_type.outputs,
+                       metadata=capture / "parent/meta.json", result_shapes=result_shapes)
 
 
 def checked_comparison(rtol, atol, comparison, word_results, *, result_count=None):

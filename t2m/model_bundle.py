@@ -47,24 +47,31 @@ def _parent(capture):
     return receipt
 
 
-def _arguments(capture, module, work, python, *, compiler_support_root=None):
-    entry = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
-    if len(entry) != 1:
-        raise ValueError("model bundle requires exactly one @forward entry")
+def _input_abi(function, *, dynamic=False):
     abi = []
-    for type_ in entry[0].function_type.inputs:
-        if not isinstance(type_, TensorType) or any(n < 0 for n in type_.get_shape()):
-            raise ValueError("native model qualification requires static ranked tensor arguments")
+    for type_ in function.function_type.inputs:
+        if not isinstance(type_, TensorType) or not dynamic and any(n < 0 for n in type_.get_shape()):
+            raise ValueError("native model qualification requires static ranked tensor arguments or a checked shape profile")
         dtype = str(type_.get_element_type())
         if dtype not in ITEM_BYTES:
             raise ValueError(f"native model qualification does not yet support {dtype}")
-        abi.append({"shape": list(type_.get_shape()), "dtype": dtype})
-    if sum(prod(a["shape"]) * ITEM_BYTES[a["dtype"]] for a in abi) > 64 * 1024 * 1024:
+        abi.append({"shape": [None if n < 0 else n for n in type_.get_shape()], "dtype": dtype})
+    return abi
+
+
+def _arguments(capture, module, work, python, *, compiler_support_root=None, shape_contract=None):
+    entry = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
+    if len(entry) != 1:
+        raise ValueError("model bundle requires exactly one @forward entry")
+    abi = _input_abi(entry[0], dynamic=shape_contract is not None)
+    if shape_contract is None and sum(prod(a["shape"]) * ITEM_BYTES[a["dtype"]] for a in abi) > 64 * 1024 * 1024:
         raise ValueError("materialized model arguments exceed the 64MiB qualification budget")
     if not entry[0].function_type.outputs:
         raise ValueError("native model qualification requires at least one tensor result")
     work.mkdir(parents=True, exist_ok=False)
-    _json(work / "abi.json", abi)
+    from .model_input_abi import SCHEMA
+
+    _json(work / "abi.json", {"schema": SCHEMA, "inputs": abi} if shape_contract is not None else abi)
     try:
         process = subprocess.run([str(python or sys.executable), str(Path(__file__).with_name("model_inputs.py")),
                                   str(capture.resolve()), str(work.resolve())], capture_output=True,
@@ -81,16 +88,22 @@ def _arguments(capture, module, work, python, *, compiler_support_root=None):
     return values, json.loads((work / "bindings.json").read_text())
 
 
-def _references(capture, parent, result_types, *, metadata=None):
+def _references(capture, parent, result_types, *, metadata=None, result_shapes=None):
     count = len(result_types)
     schemas = []
-    for type_ in result_types:
-        if (not isinstance(type_, TensorType) or any(n < 0 for n in type_.get_shape())
+    if result_shapes is not None and len(result_shapes) != count:
+        raise ValueError("runtime result shapes must cover the complete model result ABI")
+    for index, type_ in enumerate(result_types):
+        if (not isinstance(type_, TensorType) or result_shapes is None and any(n < 0 for n in type_.get_shape())
                 or str(type_.element_type) not in ITEM_BYTES):
             raise ValueError("native model result requires a qualified static tensor dtype")
         dtype = str(type_.element_type)
         numpy_dtype = np.dtype(DTYPES[dtype])
-        schemas.append((type_.get_shape(), numpy_dtype))
+        shape = type_.get_shape() if result_shapes is None else result_shapes[index]
+        if (len(shape) != len(type_.get_shape()) or any(type(size) is not int or size < 0 for size in shape)
+                or any(size >= 0 and size != actual for size, actual in zip(type_.get_shape(), shape, strict=True))):
+            raise ValueError("runtime result dimensions differ from their typed source contract")
+        schemas.append((tuple(shape), numpy_dtype))
     if sum(prod(shape) * dtype.itemsize for shape, dtype in schemas) > 64 * 1024 * 1024:
         raise ValueError("captured model results exceed the 64MiB qualification budget")
     declared = parent.get("materialized_abi", {}).get("outputs")
@@ -166,12 +179,16 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     trace["mlir_sha256"] = hashlib.sha256(mlir.encode()).hexdigest()
     trace["weights_retarget"] = "relative canonical filename; payload bytes unchanged"
     work.mkdir(parents=True, exist_ok=False)
-    inputs, sources = _arguments(capture, bound.module, work / "arguments", python, compiler_support_root=merlin_root)
+    shape_contract = trace.get("runtime_shape_contract")
+    inputs, sources = _arguments(capture, bound.module, work / "arguments", python,
+                                compiler_support_root=merlin_root, shape_contract=shape_contract)
     entry = next(op for op in bound.module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
-    goldens, reference_members = _references(capture, parent, entry.function_type.outputs)
+    from .runtime_shapes import resolve_shapes
+    result_shapes = resolve_shapes(shape_contract, inputs) if shape_contract is not None else None
+    goldens, reference_members = _references(capture, parent, entry.function_type.outputs, result_shapes=result_shapes)
     from .native import requires_integer_atomic_regions
     actual, execution = execute_native(mlir, inputs, work / "native", python=python, compiler_support_root=merlin_root,
-        integer_atomic_regions=requires_integer_atomic_regions(bound.module))
+        integer_atomic_regions=requires_integer_atomic_regions(bound.module), shape_abi=shape_contract)
     _compare_results(actual, goldens, rtol, atol, entry.function_type.outputs)
     if _parent(capture) != parent or _record(capture / "capture_receipt.json") != parent_receipt_record:
         raise ValueError("parent capture changed during qualification")
@@ -228,6 +245,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                             if bound.trace.get("argument_binding_profile") == "t2m.live-runtime-arguments.v1" else []),
                           *(["t2m.checked-index-runtime-arguments.v1 additionally retains dominating executable unsigned index round trips and fixed-width integer comparisons; original-parent assertions prove the inclusive unsigned range for arith.index_castui into a representable signed kernel integer type; producer verification and Merlin reconstruct the proof before inlining, without an assumed target index width; range facts supply neither concrete tensor dimensions nor scratch costs; source guards remain executable and older profiles refuse this adapter"]
                             if bound.trace.get("argument_binding_profile") == "t2m.checked-index-runtime-arguments.v1" else []),
+                          *(["t2m.symbolic-model-shapes.v1 retains dynamic public MLIR types and derives input/result relationships from original SSA and actual kernel destinations; runtime-shape v2 resolves invocation storage from public input axes without compiler specialization or reference inference; producer verification reopens actual bodies and captured input headers; guarded scratch uses checked source shape upper bounds; independent consumer signatures require explicit admission"]
+                            if shape_contract is not None else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
                             if parent.get("compiler_constants") else []),
                           *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),
@@ -246,7 +265,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
     verify_model_bundle(out)
     if merlin_root is not None:
         try:
-            check_merlin_interface(out, out / "consumer", merlin_root=merlin_root, python=merlin_python or python)
+            check_merlin_interface(out, out / "consumer", merlin_root=merlin_root, python=merlin_python or python,
+                                   arguments=work / "arguments/arguments.npz" if shape_contract is not None else None)
             if merlin_host:
                 actual, host_report = check_merlin_host(out / "consumer", work / "arguments/arguments.npz",
                     merlin_root=merlin_root, python=merlin_python or python, compiler_python=python,
@@ -295,7 +315,18 @@ def verify_model_bundle(out):
     validate_profile(trace)
     from .model_live_arguments import validate_model as validate_live_arguments
     from .shared_tensor import parse_shared
-    validate_live_arguments(trace, parse_shared((out / "parent/model.mlir").read_text()))
+    module = parse_shared((out / "model.mlir").read_text())
+    module.verify()
+    implementations = {}
+    for digest, directory in receipt["kernel_artifacts"].items():
+        kernel = parse_shared((out / directory / "model.mlir").read_text())
+        kernel.verify()
+        functions = [op for op in kernel.ops if isinstance(op, func.FuncOp) and op.body.blocks]
+        if len(functions) != 1:
+            raise ValueError("bound implementation requires one executable kernel function")
+        implementations[digest] = functions[0]
+    validate_live_arguments(trace, parse_shared((out / "parent/model.mlir").read_text()),
+                            implementations=implementations, bound_module=module)
     from .model_source_views import validate_model as validate_source_views
     validate_source_views(trace, parse_shared((out / "parent/model.mlir").read_text()))
     if ("source_layout_binding_profile" in trace
@@ -334,7 +365,15 @@ def verify_model_bundle(out):
     entries = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
     if len(entries) != 1 or len(entries[0].function_type.outputs) != result_count:
         raise ValueError("result witnesses differ from the typed model result count")
-    _, reference_members = _references(out, parent, entries[0].function_type.outputs, metadata=out / "parent/meta.json")
+    result_shapes = None
+    if "runtime_shape_contract" in trace:
+        from .model_input_abi import SCHEMA, captured_shapes
+        from .runtime_shapes import resolve_shapes
+
+        abi = {"schema": SCHEMA, "inputs": _input_abi(entries[0], dynamic=True)}
+        result_shapes = resolve_shapes(trace["runtime_shape_contract"], captured_shapes(out, abi))
+    _, reference_members = _references(out, parent, entries[0].function_type.outputs,
+                                      metadata=out / "parent/meta.json", result_shapes=result_shapes)
     if (("result_count" in execution or len(reference_members) > 1)
             and execution.get("result_reference_members") != reference_members):
         raise ValueError("model native qualification does not bind every result-reference member")

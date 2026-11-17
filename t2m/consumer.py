@@ -19,7 +19,17 @@ from merlin.frontends.compile_inputs import stage_compile_inputs
 capture, out = pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 signature = forward_signature(capture / "model.mlir")
 stage = stage_compile_inputs(capture, out.parent / "compiler")
-generate(capture, out, capture / "inputs.npz", capture / "extra.npz")
+staged_signature = json.loads((out.parent / "compiler/signature.json").read_text())
+if staged_signature["schema"] == "merlin.compile-signature.v3":
+    # The caller supplies the separately materialized full positional roster.
+    # Its values size this runtime harness and never enter compiler staging.
+    if not sys.argv[4]:
+        raise ValueError("symbolic runtime generation requires positional invocation arguments")
+    arguments = pathlib.Path(sys.argv[4])
+    generate(capture, out, arguments, capture / "extra.npz",
+             runtime_signature=out.parent / "compiler/signature.json")
+else:
+    generate(capture, out, capture / "inputs.npz", capture / "extra.npz")
 files = {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
          for p in out.iterdir() if p.is_file()}
 print(json.dumps({"schema": "t2m.merlin-interface-check.v2", "forward_signature": signature,
@@ -30,7 +40,7 @@ print(json.dumps({"schema": "t2m.merlin-interface-check.v2", "forward_signature"
 '''
 
 
-def check_merlin_interface(capture, work, *, merlin_root, python=None):
+def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments=None):
     capture, work, root = Path(capture), Path(work), Path(merlin_root).resolve()
     if not (root / "src/merlin/llvmlower/c_runtime.py").is_file():
         raise ValueError("Merlin checkout does not expose the expected model runtime interface")
@@ -38,7 +48,8 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None):
     (work / "input-receipt.json").write_bytes((capture / "capture_receipt.json").read_bytes())
     try:
         process = subprocess.run([str(python or sys.executable), "-c", SCRIPT, str(root),
-                                  str(capture.resolve()), str((work / "runtime").resolve())],
+                                  str(capture.resolve()), str((work / "runtime").resolve()),
+                                  str(Path(arguments).resolve()) if arguments is not None else ""],
                                  capture_output=True, text=True, timeout=30,
                                  env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                                           TMPDIR=str(work.resolve())))
@@ -51,8 +62,12 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None):
     report["merlin_root"] = str(root)
     for name in ("src/merlin/frontends/linalg_mlir.py", "src/merlin/llvmlower/c_runtime.py",
                  "src/merlin/frontends/compile_inputs.py", "src/merlin/frontends/derived_compile_inputs.py",
-                 "src/merlin/xdsl_dialects/standard_tensor.py"):
-        report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+                 "src/merlin/xdsl_dialects/standard_tensor.py", "src/merlin/frontends/derived_runtime_arguments.py",
+                 "src/merlin/frontends/derived_live_arguments.py", "src/merlin/frontends/source_index_ranges.py",
+                 "src/merlin/frontends/model_shape_facts.py", "src/merlin/frontends/derived_symbolic_shapes.py",
+                 "src/merlin/llvmlower/runtime_invocation.py"):
+        if (root / name).is_file():
+            report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     (work / "interface.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
 

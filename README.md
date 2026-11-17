@@ -11,9 +11,12 @@ representable unsigned conversions from actual dominating source assertions,
 with independent Merlin reconstruction. [Symbolic tensor binding](docs/symbolic_tensor_bindings.md)
 now carries the real two-call copy model through native execution in all three
 memory profiles, preserving all three dynamic results and source guards.
-The full writer stops at dynamic argument materialization; independent Merlin
-signatures and reusable model execution remain open. Earlier static-model
-execution results below retain their original frontend-version scope.
+Complete [dynamic model packages](docs/symbolic_model_packages.md) now pass
+native, Merlin host and Spike for copy and weighted-XOR variants in all three
+memory profiles. The same host libraries handle independent lengths and control
+words; Merlin independently derives input-axis signatures and source-bound
+scratch costs. Broader dynamic model compositions and accelerator qualification
+remain open. Earlier static evidence retains its original frontend-version scope.
 
 [Live model runtime arguments](docs/live_runtime_arguments.md) now preserve
 actual scalar SSA, singleton controls and original exported dimension operands.

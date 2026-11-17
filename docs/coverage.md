@@ -1,16 +1,20 @@
 # Measured coverage and remaining boundaries
 
-The [symbolic importer correction](symbolic_models.md) adds source/type
-preservation, with no new qualified package. Existing model execution results
-retain their original static captures and frontend-version scope. The current
-symbolic shape integration remains an open failing case at checked binding.
-The [checked index profile](checked_index_arguments.md) now proves direct
-unsigned narrowing from dominating source assertions.
-The [symbolic tensor profile](symbolic_tensor_bindings.md) additionally proves
-actual kernel destination/result shapes across dependent calls. Its three
-memory profiles retain 36 complete exact native results and three guard aborts;
-full package writing now stops at dynamic argument materialization. These cases
-add no qualified package or Merlin/target execution.
+The [symbolic importer correction](symbolic_models.md), checked-index proof
+and [symbolic tensor profile](symbolic_tensor_bindings.md) now reach complete
+[dynamic model packages](symbolic_model_packages.md). Six copy/weighted model
+configurations pass native, Merlin host and actual Spike execution, retaining
+all 21 complete results at each initial execution boundary. Twenty-four further
+host invocations reuse the same libraries/programs over independent lengths and
+parameter words; six invalid lengths abort through source-domain guards.
+Independent source/body/axis checks precede result allocation and scratch
+admission. `out/symbolic-model-packages/summary.json` reopens the exact receipts,
+all complete word comparisons and the source-frozen Spike recheck. The 88 focused
+checks pass across that recheck and the final selection; the separate broader
+run retains three existing surrounding-arithmetic/slice failures explicitly.
+The new selection remains separate from the 352-package inventory.
+Broader surrounding dynamic computation, shapes, effects and targets
+remain open; earlier static results keep their original frontend-version scope.
 
 [Live runtime model arguments](live_runtime_arguments.md) qualify seven exact
 scalar control types, actual exported dimension operands in three memory

@@ -47,10 +47,13 @@ using [dominating source assertion proofs](checked_index_arguments.md).
 [Symbolic tensor relationships](symbolic_tensor_bindings.md) now preserve both
 calls and all three dynamic results through twelve native invocations in the
 three memory profiles; three invalid lengths abort through original guards.
-The writer now refuses dynamic argument materialization. The original broader
-shape integration remains open. This adds no working dynamic bound package. The next
-execution sequence is broader source domains, proved/checked symbolic bindings,
-runtime result/scratch allocation and independent reusable Merlin invocation.
+Complete [dynamic model packages](symbolic_model_packages.md) now additionally
+qualify copy/weighted variants in all three memory profiles through native,
+Merlin host and Spike. Explicit input-axis compiler signatures, source-bound
+scratch and reusable host invocation preserve dynamic public types. The
+original broader surrounding-arithmetic integration remains open. Continue
+with derived dimensions, dynamic intermediate/view relationships, model
+composition/effects and applicable target implementations.
 Earlier static-model receipts retain their original source-version scope.
 
 [Live runtime arguments](live_runtime_arguments.md) now retain original scalar

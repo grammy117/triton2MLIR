@@ -13,11 +13,13 @@ Merlin reconstructs the exact scalar proof independently.
 [Symbolic tensor binding](docs/symbolic_tensor_bindings.md) now proves actual
 destination/result relationships across the two-call copy model in all three
 memory profiles. Twelve native invocations retain all 36 results, with three
-source-domain aborts. Full package writing now stops at dynamic argument
-materialization; Merlin compiler signatures and reusable model invocation remain.
-Carry source domains, symbolic bindings, runtime allocation and
-independent Merlin invocation through the same package before claiming dynamic
-whole-model execution; earlier static qualification keeps its original scope.
+source-domain aborts. Complete [dynamic model packages](docs/symbolic_model_packages.md)
+now additionally qualify copy/weighted variants through native, Merlin host and
+Spike. Explicit input-axis compiler signatures, source-bound scratch, complete
+result allocation and unchanged-library invocation work for this selection.
+Broader derived dimensions, dynamic surrounding computation/views, mutation/
+effects and applicable targets remain active work; earlier static qualification
+keeps its original scope.
 
 [Live runtime model arguments](docs/live_runtime_arguments.md) now retain actual
 scalar SSA and singleton tensors, including exported `tensor.dim` operands and

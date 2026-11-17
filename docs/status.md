@@ -17,11 +17,14 @@ and independent Merlin scalar-proof reconstruction.
 [Symbolic tensor binding](symbolic_tensor_bindings.md) now proves actual kernel
 input/destination/result relationships and preserves both calls and all three
 results through twelve native invocations across the memory profiles. Three
-out-of-domain runs abort through compiled source guards. The complete package
-writer now stops at dynamic argument materialization. General relationships,
-model reference/result allocation and independent consumer signatures remain
-the next steps; the older surrounding-arithmetic integration remains open. Earlier static-package
-execution evidence remains separately scoped to its original frontend version.
+out-of-domain runs abort through compiled source guards. Complete
+[dynamic model packages](symbolic_model_packages.md) now qualify copy and
+weighted-XOR variants in all three memory profiles through native, Merlin host
+and actual Spike execution. The same host libraries handle independent lengths
+and weight values; input-axis signatures, result allocation and source-bound
+scratch are independently checked. General relationships and the older
+surrounding-arithmetic integration remain open. Earlier static-package evidence
+retains its original frontend-version scope.
 
 [Live model runtime arguments](live_runtime_arguments.md) now retain actual
 scalar SSA, singleton controls and exported dimension operands alongside captured
@@ -118,7 +121,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements and same-base byte differences, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
-| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state and selected source tensor views. | General physical/mutating views, dynamic public model ABIs, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
+| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime kernel scalars, complete tuple results, dependent state, selected source tensor views and input-axis dynamic model signatures. | General physical/mutating views, derived/data-dependent dynamic shapes, value-returning TTIR entries/CFGs and broader binding compositions remain open. |
 | Consumer execution | Real native execution, reusable Merlin host libraries and selected complete model/kernel images executed on RISC-V/Spike. | Functional CPU execution does not qualify accelerators, hardware placement or preserved performance. |
 
 In roadmap terms, R0's minimum demo is delivered. R1–R5 have working

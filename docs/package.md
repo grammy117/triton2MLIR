@@ -6,8 +6,16 @@ and an input-axis runtime shape contract. Actual implementation bodies and the
 complete inlined model must reproduce those relationships; evaluator samples
 supply none. Symbolic guarded scratch explicitly uses the sum of source shape
 upper bounds. Public MLIR types remain dynamic; no scalar ABI inputs are added.
-The full writer/independent consumer signature integration remains open, so this
-binding capability emits no successful new package or receipt schema.
+Complete [dynamic model packages](symbolic_model_packages.md) now use the
+explicit `merlin.compile-signature.v3` input-axis interface. The evaluator-only
+`t2m.model-invocation-inputs.v2` materializer profile and
+`t2m.runtime-input-projection.v2` positional archive retain dynamic invocation
+shapes and original argument words. They do not enter compiler staging.
+Runtime generation preserves captured weight-blob transport and checks supplied
+parameter bytes against the original container; reusable host calls can supply
+independent parameter values. Existing receipt schemas, parent data and public
+MLIR tensor/scalar arguments remain unchanged. Older static consumers refuse;
+the new interface is an explicit compatibility requirement.
 
 [Checked source index arguments](checked_index_arguments.md) select
 `t2m.checked-index-runtime-arguments.v1` when dominating executable round trips

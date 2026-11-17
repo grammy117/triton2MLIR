@@ -111,6 +111,7 @@ def compile_model(staged, work):
     report = {"schema": "t2m.merlin-host-compilation.v1", "compiler_input_staging": "passed",
               "whole_body_lowering": "passed", "native_object_and_link": "passed",
               "source_program": record(staged / "program.mlir"), "prepared_program": record(work / "prepared.mlir"),
+              "source_signature": record(staged / "signature.json"),
               "llvm": record(ll), "shared_library": record(library), "pipeline": pipeline,
               "features": sorted(features),
               "lowering_api": "merlin.llvmlower.pipeline.lower_to_llvm_ir",
@@ -130,12 +131,27 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     from tensor_storage import DTYPES as dtypes
 
     signature = json.loads((staged / "signature.json").read_text())
+    manifest = json.loads((staged / "compile-inputs.json").read_text())
+    for name in ("signature.json", "program.mlir"):
+        if record(staged / name)["sha256"] != manifest.get("members", {}).get(name):
+            raise ValueError("Merlin invocation signature/program differs from its compiler stage")
+    compiled = json.loads((work / "compilation.json").read_text())
+    if compiled["source_program"] != record(staged / "program.mlir"):
+        raise ValueError("Merlin invocation program differs from its compiled source")
+    if ((signature["schema"] == "merlin.compile-signature.v3" or "source_signature" in compiled)
+            and compiled.get("source_signature") != record(staged / "signature.json")):
+        raise ValueError("Merlin invocation signature differs from its compiled source")
     evaluation = Path(evaluation) if evaluation is not None else work
     with np.load(arguments, allow_pickle=False) as values:
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
             raise ValueError("Merlin host evaluator needs exactly the declared argument keys")
         arrays = [values[f"in{i}"].copy() for i in range(len(signature["inputs"]))]
-    if signature["schema"] == "merlin.compile-signature.v2":
+    if signature["schema"] == "merlin.compile-signature.v3":
+        from merlin.llvmlower.runtime_invocation import resolve
+
+        plan = resolve(staged / "program.mlir", staged / "signature.json", arguments, max_bytes=128 << 20)
+        shapes = [row["shape"] for row in plan["outputs"]]
+    elif signature["schema"] == "merlin.compile-signature.v2":
         shapes = resolve_shapes({"schema": "merlin.runtime-shapes.v1", "inputs": signature["inputs"], "outputs": signature["outputs"]}, arrays)
     elif signature["schema"] == "merlin.compile-signature.v1":
         shapes = [value["shape"] for value in signature["outputs"]]
@@ -162,7 +178,6 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
                                          for shape, value, cost in zip(shapes, signature["outputs"], costs, strict=True)) > 128 * 1024 * 1024:
         raise ValueError("Merlin host invocation exceeds its 128MiB array budget")
     outputs = [np.zeros(shape, dtype=dtypes[value["dtype"]]) for shape, value in zip(shapes, signature["outputs"], strict=True)]
-    compiled = json.loads((work / "compilation.json").read_text())
     if record(work / "model.so") != compiled["shared_library"]:
         raise ValueError("Merlin shared library changed before invocation")
     model = HostModel.load(str((work / "model.so").resolve()))

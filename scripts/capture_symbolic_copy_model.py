@@ -12,29 +12,54 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from t2m.examples.live_scalar_kernels import live_extent_copy
+from t2m.examples.live_scalar_kernels import live_extent_copy, live_extent_weighted
 
 
-def capture(out):
-    name = "t2m_demo::symbolic_copy"
+def capture(out, *, weighted=False):
+    name = "t2m_demo::symbolic_weighted" if weighted else "t2m_demo::symbolic_copy"
 
-    @triton_op(name, mutates_args={})
-    def copy(x: torch.Tensor, n: int) -> torch.Tensor:
-        out = torch.empty_like(x)
-        wrap_triton(live_extent_copy)[((n + 7) // 8,)](x, n, out, B=8)
-        return out
+    if weighted:
+        @triton_op(name, mutates_args={})
+        def copy(x: torch.Tensor, weight: torch.Tensor, n: int) -> torch.Tensor:
+            out = torch.empty_like(x)
+            wrap_triton(live_extent_weighted)[((n + 7) // 8,)](x, weight, n, out, B=8)
+            return out
 
-    @copy.register_fake
-    def fake(x, n):
-        return torch.empty_like(x)
+        @copy.register_kernel("cpu")
+        def reference(x, weight, n):
+            assert x.numel() == n
+            return x ^ weight[0]
 
-    @copy.register_kernel("cpu")
-    def reference(x, n):
-        assert x.numel() == n
-        return x.clone()
+        @copy.register_fake
+        def fake(x, weight, n):
+            return torch.empty_like(x)
+    else:
+        @triton_op(name, mutates_args={})
+        def copy(x: torch.Tensor, n: int) -> torch.Tensor:
+            out = torch.empty_like(x)
+            wrap_triton(live_extent_copy)[((n + 7) // 8,)](x, n, out, B=8)
+            return out
+
+        @copy.register_kernel("cpu")
+        def reference(x, n):
+            assert x.numel() == n
+            return x.clone()
+
+        @copy.register_fake
+        def fake(x, n):
+            return torch.empty_like(x)
 
     class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            if weighted:
+                self.weight = torch.nn.Parameter(torch.tensor([17], dtype=torch.int32), requires_grad=False)
+
         def forward(self, x):
+            if weighted:
+                first = copy(x, self.weight, x.shape[0])
+                second = copy(first, self.weight, first.shape[0])
+                return second, first, x, self.weight
             first = copy(x, x.shape[0])
             second = copy(first, first.shape[0])
             return second, first, x
@@ -66,4 +91,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--weighted", action="store_true")
+    args = parser.parse_args()
+    print(capture(args.out, weighted=args.weighted))

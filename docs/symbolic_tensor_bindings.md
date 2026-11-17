@@ -13,8 +13,9 @@ return second, first, x
 Its public function remains `tensor<?xi32>` to three `tensor<?xi32>` results.
 The source domain admits lengths zero through 31. All three tensor, buffer and
 guarded-buffer implementations bind and execute natively at independent sizes.
-Model package writing and independent Merlin dynamic signatures remain open;
-this establishes no new complete model package or reusable dynamic library.
+Complete [dynamic model packages](symbolic_model_packages.md) now retain this
+contract through native, Merlin host and Spike execution, including reusable
+host libraries and independent consumer signatures.
 
 ## Executable shape proof
 
@@ -75,17 +76,17 @@ checked source scalar intervals and existing per-result guard costs. The
 binding explicitly sets `guard_storage_scope` to
 `sum-of-source-shape-upper-bounds`. It never multiplies an MLIR dynamic sentinel
 or substitutes the saved length. Allocation, initialization, ownership,
-conflict and lifetime checks remain executable. Independent consumer scratch
-admission is still required with the new model interface.
+conflict and lifetime checks remain executable. Merlin independently derives
+these source-bound scratch costs before publishing the model signature.
 
-This extends the binding report only. Artifact rosters, model2MLIR parent data
-and receipt schemas are unchanged; no successful dynamic receipt is emitted by
-the current writer. Older static consumers refuse these public dynamic types.
+Artifact rosters, model2MLIR parent data and receipt schemas are unchanged.
+The complete writer now emits successful dynamic packages under the explicit
+input-axis compiler signature. Older static consumers refuse these types.
 General derived dimensions, cross-axis equality closure, dynamic value views,
 data-dependent result allocation and unsupported shape/control producers remain
 completion work rather than opaque successful conversions.
 
-## Evidence and remaining interface work
+## Earlier binding evidence and subsequent package integration
 
 `.scratch/symbolic-model-binding2.log` retains 163 passing producer/model tests,
 including existing whole-model Merlin host paths. The final 32-check selection
@@ -97,18 +98,16 @@ three compiled source-domain aborts. Each invocation compiles the same source
 MLIR separately; these runs do not establish an unchanged compiled library.
 New source/native cases add no TTIR package-inventory qualification.
 
-The complete writer probe under `.scratch/symbolic-model-package-probe1/` now
-passes binding and refuses at:
+The earlier writer probe under `.scratch/symbolic-model-package-probe1/`
+passed binding and stopped at:
 
 ```text
 native model qualification requires static ranked tensor arguments
 ```
 
-Next extend argument materialization and reference validation using this
-source-derived contract, then independently reconstruct it in Merlin staging.
-Publish an explicit input-axis compiler signature and teach the reusable host
-caller and runtime generator to allocate from it. Preserve evaluator exclusion,
-all results, input snapshots and scratch budgets. Run one model library across
-independent shapes, then qualify the applicable Spike/accelerator interfaces.
-The older surrounding-arithmetic shape integration remains open; this copy model
-does not establish arbitrary dynamic model composition or full TTIR coverage.
+That refusal is superseded by the [complete package integration](symbolic_model_packages.md):
+argument materialization, source-bound reference sizing, independently derived
+Merlin signatures, reusable host invocation and actual Spike execution now work
+for both copy variants in all three memory profiles. The older surrounding-
+arithmetic shape integration remains open; these cases do not establish
+arbitrary dynamic model composition or full TTIR coverage.
