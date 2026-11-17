@@ -57,6 +57,8 @@ class KernelBinding:
     source_layout_arguments: dict[str, str] = field(default_factory=dict)
     # Model view operand -> explicit source-root/coordinate argument binding.
     source_views: dict = field(default_factory=dict)
+    # Source runtime-scalar name -> actual schema SSA operand (including singleton tensors).
+    runtime_operands: dict[str, str] = field(default_factory=dict)
 
     def validate(self):
         if self.tensor_views not in (None,VIEW_POLICY):
@@ -89,7 +91,11 @@ class KernelBinding:
         if len(outputs) != len(output_names) or set(outputs) != set(output_names):
             raise ConversionError("bind every source result exactly once")
         scalar = DictionaryAttr({n: scalar_attribute(v) for n, v in self.scalar_arguments.items()})
-        runtime_constants(result.spec, self.runtime_arguments, scalar)
+        from .model_live_arguments import validate_mapping
+        live = validate_mapping(result.spec, self.runtime_operands)
+        if live & set(self.runtime_arguments):
+            raise ConversionError("live and captured scalar mappings must be disjoint", opcode="func.call")
+        runtime_constants(result.spec, self.runtime_arguments, scalar, live=live)
         from .model_source_layout import bind_arguments
         bind_arguments(result.trace, self.source_layout_arguments, scalar)
         return function, names, outputs, scalar
@@ -118,6 +124,16 @@ def bind_model(model_mlir, bindings):
     module.verify()
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}
     calls = [op for op in module.walk() if isinstance(op, func.CallOp)]
+    from .model_live_arguments import known_integer
+    # Facts describe the original parent graph. Earlier inlining may replace
+    # an opaque call result with a literal; that does not make the literal an
+    # original parent SSA fact or authorize a different call's shape contract.
+    source_facts = {}
+    for call in calls:
+        names = call.attributes.get("prov.kernel_operands")
+        if (isinstance(names, ArrayAttr) and len(names) == len(call.operands)
+                and all(isinstance(name, StringAttr) for name in names)):
+            source_facts[call] = {name.data: known_integer(value) for name, value in zip(names, call.operands, strict=True)}
     used, records, guard_storage = set(), [], 0
     for parent_call_ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
@@ -141,10 +157,10 @@ def bind_model(model_mlir, bindings):
         candidates = []
         for binding, function, operand_names, output_names, scalars in prepared:
             if (binding.qualname != identity.data or scalars != arguments
-                    or set(operand_names.values()) | set(binding.source_views) != set(by_name)):
+                    or set(operand_names.values()) | set(binding.source_views) | set(binding.runtime_operands.values()) != set(by_name)):
                 continue
             plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
-                                  [value.type for value in call.results])
+                                  [value.type for value in call.results], source_facts=source_facts[call])
             if plan is not None:
                 candidates.append((binding, function, operand_names, plan, output_names))
         if len(candidates) != 1:
@@ -154,7 +170,7 @@ def bind_model(model_mlir, bindings):
         source_views = None
         if binding.source_views:
             from .model_source_views import bind
-            _, values = runtime_constants(binding.implementation.spec, binding.runtime_arguments, arguments)
+            values = plan.runtime_values
             source_views = bind(binding.source_views, operand_names, by_name, values, binding.implementation.trace)
         if binding.implementation.trace.get("profile") in GUARDED_PROFILES:
             outputs = binding.implementation.spec.outputs
@@ -219,6 +235,8 @@ def bind_model(model_mlir, bindings):
                         "argument_adaptations": adaptations, "runtime_scalar_bindings": plan.scalar_bindings,
                         "implementation_sha256": binding.implementation.trace["mlir_sha256"],
                         "source_sha256": binding.implementation.trace["source_sha256"]})
+        if plan.live_bindings:
+            records[-1]["runtime_operand_bindings"] = plan.live_bindings
         if binding.tensor_views is not None:
             records[-1]["tensor_views"] = binding.tensor_views
         if source_views:
@@ -257,6 +275,9 @@ def bind_model(model_mlir, bindings):
         report["guard_storage_bytes"] = guard_storage
     if any(record["runtime_scalar_bindings"] for record in records):
         report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
+    if any(record.get("runtime_operand_bindings") for record in records):
+        from .model_live_arguments import PROFILE
+        report["argument_binding_profile"] = PROFILE
     if view_binding:
         report["tensor_view_binding_profile"] = VIEW_PROFILE
     if any(record.get("source_tensor_views") for record in records):

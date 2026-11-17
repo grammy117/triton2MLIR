@@ -16,8 +16,8 @@ from .model_tensor_views import POLICY, compatible, reshape
 from .scalar_abi import RuntimeScalar
 
 
-def runtime_constants(spec, mapping, attributes):
-    scalars = {scalar.name: scalar for scalar in spec.runtime_scalars}
+def runtime_constants(spec, mapping, attributes, *, live=()):
+    scalars = {scalar.name: scalar for scalar in spec.runtime_scalars if scalar.name not in live}
     if set(mapping) != set(scalars) or any(
         not isinstance(name, str) or name not in attributes.data
         for name in mapping.values()
@@ -87,18 +87,35 @@ class ArgumentPlan:
     scalar_bindings: dict
     input_views: dict = field(default_factory=dict)
     result_views: dict = field(default_factory=dict)
+    live_arguments: dict = field(default_factory=dict)
+    live_bindings: dict = field(default_factory=dict)
+    runtime_values: dict = field(default_factory=dict)
 
 
 def plan_arguments(
-    binding, function, operand_names, output_names, by_name, attributes, result_types
+    binding, function, operand_names, output_names, by_name, attributes, result_types, *, source_facts=None
 ):
     spec = binding.implementation.spec
-    constants, values = runtime_constants(spec, binding.runtime_arguments, attributes)
+    from .model_live_arguments import plan_operands
+
+    if set(binding.runtime_operands.values()) & set(attributes.data):
+        raise ConversionError("schema arguments cannot be both live SSA operands and captured attributes", opcode="func.call")
+    live, facts = plan_operands(spec, binding.runtime_operands, by_name, source_facts=source_facts)
+    constants, values = runtime_constants(spec, binding.runtime_arguments, attributes, live=live)
+    values.update(facts)
     arguments, adaptations, input_views = [], [], {}
+    live_arguments = {}
     for index, (source, target) in enumerate(
         zip(spec.inputs, function.function_type.inputs, strict=True)
     ):
         if isinstance(source, RuntimeScalar):
+            if source.name in live:
+                plan = live[source.name]
+                arguments.append((plan.value, target))
+                live_arguments[index] = plan
+                adaptations.append({"kind": "live-runtime-scalar", "argument": index,
+                                    "name": source.name, **plan.record})
+                continue
             arguments.append((constants[source.name], target))
             adaptations.append(
                 {
@@ -156,14 +173,16 @@ def plan_arguments(
                 "attribute": str(attributes.data[binding.runtime_arguments[name]]),
             }
             for name in constants
-        },input_views,result_views,
+        },input_views,result_views,live_arguments,{name: plan.record for name, plan in live.items()},values,
     )
 
 
 def materialize_arguments(plan, append):
     arguments = []
     for index,(value, target) in enumerate(plan.arguments):
-        if isinstance(value, (builtin.IntegerAttr, builtin.FloatAttr)):
+        if index in plan.live_arguments:
+            value = plan.live_arguments[index].materialize(append)
+        elif isinstance(value, (builtin.IntegerAttr, builtin.FloatAttr)):
             value = append(arith.ConstantOp(value), "captured-runtime-scalar")
             if value.type != target:
                 value = append(

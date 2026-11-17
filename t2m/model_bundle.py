@@ -224,6 +224,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                             if bound.trace.get("source_tensor_view_binding_profile") == "t2m.captured-source-tensor-views.v1" else []),
                           *(["t2m.captured-runtime-arguments.v1 materializes captured kernel scalar attributes as typed constants, with explicit RTNE f64-to-f32 rounding when declared; checked tensor/result shape casts preserve the original static model ABI and parent bytes; guarded scratch is derived independently for every original typed call; no evaluator archive supplies compiler values"]
                             if bound.trace.get("argument_binding_profile") == "t2m.captured-runtime-arguments.v1" else []),
+                          *(["t2m.live-runtime-arguments.v1 keeps original typed scalar SSA and singleton tensor elements live through standard tensor.extract and proved index casts; static dimension facts are rederived from actual parent SSA/types, while unconstrained runtime values cannot supply tensor shape or scratch facts; captured scalar attributes can coexist under complete disjoint source-scalar mappings; original call schemas, public model ABI and all parent archives remain unchanged; older consumers without the explicit live profile refuse; source bounds and all numeric/effect/lifetime obligations remain executable and no evaluator value or provenance tag supplies a compiler fact"]
+                            if bound.trace.get("argument_binding_profile") == "t2m.live-runtime-arguments.v1" else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
                             if parent.get("compiler_constants") else []),
                           *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),
@@ -289,8 +291,10 @@ def verify_model_bundle(out):
     trace = json.loads((out / "kernel-bindings.json").read_text())
     from .model_tensor_views import validate_profile
     validate_profile(trace)
-    from .model_source_views import validate_model as validate_source_views
+    from .model_live_arguments import validate_model as validate_live_arguments
     from .shared_tensor import parse_shared
+    validate_live_arguments(trace, parse_shared((out / "parent/model.mlir").read_text()))
+    from .model_source_views import validate_model as validate_source_views
     validate_source_views(trace, parse_shared((out / "parent/model.mlir").read_text()))
     if ("source_layout_binding_profile" in trace
             or any("source_layout_specialization" in k for k in trace.get("kernels", {}).values())

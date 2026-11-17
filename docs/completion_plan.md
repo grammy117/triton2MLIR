@@ -36,6 +36,17 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Live runtime arguments](live_runtime_arguments.md) now retain original scalar
+SSA, singleton controls and exported dimension operands alongside captured
+attributes. Eleven complete models pass native/Merlin host/Spike with 57 exact
+results, 32 further host invocations and two actual range aborts. Original-parent
+facts are fixed before inlining and independently checked by Merlin. General
+symbolic public model signatures, physical/mutating views, arbitrary effects
+and applicable target qualification remain completion requirements.
+The current `out/live-runtime-model-inventory/coverage.json` reopens 352
+packages, 278 standalone qualifications and fourteen product cases, retaining
+all fifty observed names under selected native/Merlin-host profiles.
+
 [Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now recover actual outer roots and byte recipes before region fixed points,
 preserving original narrow arithmetic and control/effects. Per-seed retention
@@ -453,6 +464,11 @@ memory fixture while leaving the missing families unexamined.
    allocation roots to physical/non-dense/mutating model views, independently
    strided C and remaining alias/layout/shape compositions. Keep original
    pointer units, untouched words, zero/tail domains and actual guard failures.
+   Live model scalar operands now retain real runtime control and independently
+   checked static dimension facts. Next carry symbolic dimensions through the
+   public model ABI, source binding, scratch admission and actual reusable
+   consumer invocation; successful dynamic export with a specialized public
+   type does not close this requirement.
 4. **Qualify applicable Merlin targets alongside frontend work.** Carry the
    same standard payload into scheduling/materialization, preserving tile/reuse
    intent and effect dependencies. Implement missing generic consumer lowering

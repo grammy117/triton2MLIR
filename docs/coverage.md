@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Live runtime model arguments](live_runtime_arguments.md) qualify seven exact
+scalar control types, actual exported dimension operands in three memory
+profiles and a dependent address-state model. Eleven complete configurations
+retain **57 exact-word results, 32 additional unchanged-library host invocations
+and two actual range-guard aborts** through native/Merlin host/Spike. The final
+producer/model selection passes 51 tests with no skips; a separate model/view/
+bundle regression selection passes 174. Merlin's independent staging/layout/
+access selection passes 446 with two unavailable environment checks skipped.
+These counts overlap. Public model shapes remain static; general dynamic,
+alias/mutation/effect/source and accelerator/performance closure is open.
+The current `out/live-runtime-model-inventory/coverage.json` reopens **352
+packages, 278 standalone qualifications and fourteen product cases**. All fifty
+pinned source names remain observed under selected native/Merlin-host profiles;
+target receipts remain separately scoped to their actual executions.
+
 [Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now qualify scalar/tiled native-verified saved TTIR in four integer widths and
 explicit little/big byte views. Ten actual native/Merlin-host/Spike libraries
@@ -7,7 +22,7 @@ retain **fourteen exact-word results, 48 additional unchanged-library host
 invocations and four actual bounds aborts**. Optional root recovery recomputes
 byte facts; independently validated per-seed retention preserves unaligned
 pointers and other required recoveries. `out/pointer-address-seeds/summary.json`
-reopens those receipts. The latest combined
+reopens those receipts. That earlier combined
 `out/pointer-address-seed-inventory/coverage.json` reopens **341 packages,
 278 standalone qualifications and fourteen product cases**. This adds no new
 Python AST/model variants, GPU correspondence or accelerator/performance scope.

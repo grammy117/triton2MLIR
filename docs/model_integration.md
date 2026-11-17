@@ -1,5 +1,13 @@
 # Binding translated kernels into model2MLIR
 
+[Live runtime arguments](live_runtime_arguments.md) now bind actual original
+scalar SSA operands and singleton tensor controls alongside captured scalar
+attributes. Eleven complete model configurations preserve 57 exact results
+through native/Merlin host/Spike, with 32 further host invocations and two
+compiled range-guard aborts. Parent data bytes and static public model types
+remain unchanged. Actual exported `tensor.dim` operands qualify in all three
+memory profiles; changing public model shapes and general mutation remain open.
+
 [Integer-address models](integer_address_regions.md#complete-pytorch-model-qualification)
 now retain for/while/branch/alternating-root address state, saved parameters and
 dependent readwrite values through the existing functional interface. Four

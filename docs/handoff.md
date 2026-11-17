@@ -6,6 +6,21 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Live runtime arguments](live_runtime_arguments.md) now retain original scalar
+SSA and singleton control tensors alongside captured geometry. Eleven complete
+models pass native/Merlin host/Spike with 57 exact-word results, 32 further host
+invocations and two compiled range aborts. The final 51-case producer/model
+selection has no skips; the separate 174-case model/view/bundle selection passes.
+Merlin's independent staging/layout/access checks pass 446 with two unavailable
+bubblewrap/release-wheel cases skipped. These counts overlap. Both frontends
+reopen original parent facts; no prior kernel inlining, sampled input or
+provenance grants scalar/shape permission. Public model types stay static.
+Remaining symbolic/mutating model ABIs and applicable target scope remain in
+the completion plan. Generated receipts reopen under `out/live-runtime-models/`.
+The latest `out/live-runtime-model-inventory/coverage.json` reopens 352
+packages, 278 standalone qualifications and fourteen product cases, retaining
+all fifty names under selected native/Merlin-host scopes.
+
 [Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now recover actual outer roots and recompute source-width byte/divisibility
 facts. Independent per-seed retention preserves unaligned typed pointers while

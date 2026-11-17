@@ -666,7 +666,8 @@ def main(argv=None):
                 implementation = implementations[key]
                 bindings.append(KernelBinding(item["kernel"], implementation, operands=item.get("operands", {}),
                                                results=tuple(item.get("results", ())), scalar_arguments=item.get("scalar_arguments", {}),
-                                               runtime_arguments=item.get("runtime_arguments", {}),tensor_views=item.get("tensor_views"),
+                                               runtime_arguments=item.get("runtime_arguments", {}),
+                                               runtime_operands=item.get("runtime_operands", {}), tensor_views=item.get("tensor_views"),
                                                source_layout_arguments=item.get("source_layout_arguments", {}),
                                                source_views=item.get("source_views", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,

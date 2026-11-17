@@ -6,6 +6,16 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Live model runtime arguments](live_runtime_arguments.md) now retain actual
+scalar SSA, singleton controls and exported dimension operands alongside captured
+attributes. Eleven complete configurations pass native/Merlin host/Spike with
+57 exact results, 32 additional host invocations and two compiled range aborts.
+Independent checks reopen original parent SSA, before any earlier kernel's
+inlining can invent facts. Public model shapes stay static; general symbolic
+signatures, physical/mutating views and broader effects/targets remain open.
+The current inventory reopens 352 packages and 278 standalone qualifications;
+all fifty pinned names are observed under selected native/Merlin-host profiles.
+
 [Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now retain actual outer roots, source-width byte arithmetic and original while
 interfaces. Unaligned seeds can keep their independently checked original

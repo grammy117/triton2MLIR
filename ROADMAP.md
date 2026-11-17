@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Live runtime model arguments](docs/live_runtime_arguments.md) now retain actual
+scalar SSA and singleton tensors, including exported `tensor.dim` operands and
+data-controlled address loops. Eleven complete models pass native/Merlin host/
+Spike with 57 exact results, 32 further host invocations and two actual range
+abort outcomes. Independent original-parent checks grant no sampled shape facts;
+general symbolic public models, mutation/effects and applicable targets remain.
+The current inventory reopens 352 packages and 278 standalone qualifications,
+with all fifty pinned names observed under selected native/Merlin-host profiles.
+
 [Region-local pointer seeds](docs/integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now expose actual outer roots and per-addptr byte recipes before paired address
 analysis. Source narrow wrap and original region/effect order stay executable.

@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Live runtime arguments](live_runtime_arguments.md) add
+`runtime_operands` configuration, optional per-call `runtime_operand_bindings`
+and `argument_binding_profile: t2m.live-runtime-arguments.v1` to existing model
+binding schemas. Standard element reads and proved index casts retain actual
+SSA values; original-parent facts are independently rederived before dimension/
+scratch admission. Captured scalar attributes can coexist. Older consumers
+without this profile refuse. Public model ABI, parent data archives, compiler
+artifact rosters and receipt schemas stay unchanged; this grants no symbolic
+public shape, alias, mutation, arithmetic or effect permission.
+
 [Region-local seed recovery](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 records `integer-address-seed-rebase` under the existing closed-pointer
 correspondence: actual same-shaped outer SSA roots plus executable source-width

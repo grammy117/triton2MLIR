@@ -1,5 +1,11 @@
 # Binding runtime kernel arguments into captured models
 
+For actual scalar SSA operands and singleton-tensor controls, use the additive
+[live runtime-argument profile](live_runtime_arguments.md). It preserves live
+values alongside captured attributes, with independent original-parent checks
+in Merlin. The contract below describes captured-attribute specialization;
+neither profile currently makes the public model signature symbolic.
+
 `KernelBinding.runtime_arguments` maps source runtime-scalar names to the
 original `prov.kernel_args` schema names. `scalar_arguments` still must match
 the complete typed captured dictionary. Tensor mappings remain complete and

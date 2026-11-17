@@ -3,12 +3,20 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Live model runtime arguments](docs/live_runtime_arguments.md) now preserve
+actual scalar SSA, singleton controls and original exported dimension operands.
+Eleven complete models retain 57 exact-word results through native/Merlin host/
+Spike, with 32 further host invocations and two actual range-guard aborts.
+Captured attributes can coexist; public model shapes remain static.
+The latest inventory reopens 352 packages and 278 standalone qualifications;
+operation-name breadth does not establish arbitrary-kernel or target coverage.
+
 [Region-local pointer seeds](docs/integer_address_regions.md#pointer-seeds-defined-inside-a-region)
 now recover actual outer roots and source-width byte recipes without moving
 local values out of scope. Unaligned seeds can retain their independently checked
 original pointer representation while other seeds still recover their roots.
 Ten libraries/Spike images retain fourteen exact results, 48 host replays and
-four real bounds aborts. The latest inventory reopens 341 packages and 278
+four real bounds aborts. That earlier inventory reopens 341 packages and 278
 standalone qualifications; arbitrary-kernel and accelerator closure remains open.
 
 [Integer-address region state](docs/integer_address_regions.md) now retains
