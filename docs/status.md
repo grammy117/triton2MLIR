@@ -19,6 +19,10 @@ arities and original loaded condition state. The complete new selection has
 17 libraries/actual target images, 33 exact results, 83 further host invocations
 and four real bounds aborts. The updated 23 focused contracts and the overlapping
 57-case address/model regression selection pass.
+Four complete i32/i64 PyTorch model configurations additionally retain all 44
+original results as exact words through native/Merlin host/Spike. Saved weights,
+dependent state, earlier snapshots and empty/zero-trip calls stay intact;
+public model shapes remain static and original archives stay byte-identical.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now close a reproduced subtraction refusal at the logical/physical boundary.
@@ -144,7 +148,7 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/integer-address-region-inventory/coverage.json` reopens **327 packages,
+`out/integer-address-model-inventory/coverage.json` reopens **331 packages,
 268 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,

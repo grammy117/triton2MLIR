@@ -18,6 +18,11 @@ arities and actual loaded condition state. The complete new selection reopens
 17 libraries/Spike images, 33 exact results, 83 host replays and four real bounds
 aborts. The combined ledger now contains 327 packages and 268 standalone
 qualifications; opcode-name breadth remains separate from arbitrary coverage.
+Four complete i32/i64 address-state models additionally retain all 44 original
+results through native/Merlin host/Spike, with saved parameters, dependent calls,
+earlier snapshots and empty/zero-trip cases. The public model ABI stays static;
+general mutation/runtime/effect and accelerator scope remains required.
+The latest combined inventory reopens 331 packages and 268 standalone qualifications.
 
 [Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
 now expose ordinary byte deltas only after actual SSA proves the shared base

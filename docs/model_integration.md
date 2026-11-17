@@ -1,5 +1,16 @@
 # Binding translated kernels into model2MLIR
 
+[Integer-address models](integer_address_regions.md#complete-pytorch-model-qualification)
+now retain for/while/branch/alternating-root address state, saved parameters and
+dependent readwrite values through the existing functional interface. Four
+complete models preserve all 44 original results as exact words through native,
+Merlin host and actual Spike, including earlier snapshots, saved initial state,
+empty data and zero trips with an unobserved invalid origin. The source operation
+clones its state and declares no argument mutation; kernel readwrite results
+preserve that functional value behavior. All parent data/reference bytes and the
+static public model ABI remain unchanged. Broader mutation, dynamic signatures,
+root/alias/effect/source and applicable target scope remain open.
+
 [Relative-pointer models](pointer_addresses.md#complete-model-qualification-and-next-region-boundary)
 now retain byte differences and the runtime strided reads they drive, saved
 parameters, dependent calls, empty/zero-trip results and original snapshots.

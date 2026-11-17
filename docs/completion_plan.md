@@ -48,6 +48,11 @@ The additional independent-port while fixture and four actual bounds aborts
 bring the new selection to 17 libraries/Spike images, 33 exact results and 83
 host replays. The combined ledger reopens 327 packages and 268 standalone
 qualifications; arbitrary-kernel and applicable-target closure remains open.
+Four complete i32/i64 model configurations additionally retain all 44 original
+results through native/Merlin host/Spike with saved parameters, dependent state,
+earlier snapshots, empty data and zero trips. Parent archives and public model
+ABI are unchanged; general mutation/dynamic signatures remain completion work.
+The latest combined inventory reopens 331 packages and 268 standalone qualifications.
 
 [Local tensor regions](tensor_regions.md) now retain checked tensor
 intermediates, actual for/while state and mixed nested maps/reductions/scans.

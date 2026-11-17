@@ -15,6 +15,15 @@ input/result arities and loaded condition state. The complete new selection in
 `out/integer-address-region-inventory/coverage.json` reopens **327 packages,
 268 standalone qualifications and fourteen product cases**. The 57-case existing
 address/model selection and updated 23 focused contracts pass; counts overlap.
+Four complete i32/i64 model configurations additionally retain all **44 original
+results as exact words** through native/Merlin host/Spike. The for/while/branch/
+alternating models preserve saved parameters, dependent readwrite values,
+earlier snapshots, empty results and zero trips. Original archives remain
+byte-identical, and the public model ABI remains static.
+`out/integer-address-models/summary.json` reopens the separate target receipts.
+The latest combined `out/integer-address-model-inventory/coverage.json` reopens
+**331 packages, 268 standalone qualifications and fourteen product cases**,
+retaining all fifty observed names under selected native/Merlin-host scopes.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now retain the actual shared SSA base proof, source-width increments, byte units,

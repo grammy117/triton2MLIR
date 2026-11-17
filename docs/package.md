@@ -9,6 +9,10 @@ closure, bit-divisibility and SSA scope proofs precede detached publication.
 name this representation; original casts remain inventoried. Provenance grants
 no physical address, alignment or alias facts. Public tensor/scalar ABI, artifact
 rosters and receipt schemas are unchanged.
+Four complete model configurations also retain source state cloning as functional
+readwrite results through the existing checked kernel binding. Original model
+archives, static public ABI and receipt schemas remain unchanged. This does not
+admit argument-mutating source schemas or dynamic public model signatures.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 add `closed-pointer-integer-difference` transformations under the existing

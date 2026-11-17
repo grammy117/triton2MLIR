@@ -19,6 +19,17 @@ four compiled bounds aborts. `out/integer-address-regions/summary.json` reopens
 the receipts; `out/integer-address-region-inventory/coverage.json` reopens 327
 packages and 268 standalone qualifications. The 57-case address/model regression
 selection and updated 23 focused contracts pass; their counts overlap.
+The compiler implementation is `534ecedd1d997c54a85c1c216bb5a05dcb6b4c81`,
+pushed on `main` with verified GitHub author/committer attribution. Four complete
+PyTorch model configurations subsequently retain all 44 original results through
+native/Merlin host/Spike. Source wrappers clone incoming state, preserving the
+functional public interface and earlier snapshots. Parent archives and static
+public model ABI stay unchanged. `out/integer-address-models/summary.json`
+reopens those separate target receipts.
+`out/integer-address-model-inventory/coverage.json` reopens 331 packages,
+268 standalone qualifications and fourteen product cases; all fifty source names
+remain observed under selected native/Merlin-host scopes. This is composition
+evidence, not arbitrary-kernel or accelerator completion.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now retain cancelling SSA roots, source byte units and runtime memory/control.

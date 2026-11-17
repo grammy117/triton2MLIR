@@ -115,3 +115,39 @@ phis, more general root equivalence, address state in other region interfaces,
 broader arithmetic/alias/effect compositions and applicable accelerators remain
 completion work. General physical observations and synchronization need concrete
 semantics; they cannot be erased because address conversion is difficult.
+
+## Complete PyTorch model qualification
+
+`scripts/capture_integer_address_model.py` captures four genuine model2MLIR
+models: i32 for/branch and i64 while/alternating-root forms. Each registered
+`torch.library.triton_op` clones its incoming state before the original Triton
+kernel updates it; the translated kernel's functional readwrite result expresses
+that same value update. The operation's schema declares no argument mutation.
+Its CPU implementation independently uses logical tensor slices and typed XOR,
+without compiler pointer helpers, physical addresses or GPU execution.
+
+```python
+original = x + self.weight
+first, first_distance = address_state(original, self.weight, self.initial,
+                                      19, 128, 4, 80, -3, 1)
+follow, follow_distance = address_state(original, self.weight, first,
+                                        19, 128, 2, 31, -8, -1)
+```
+
+The actual models additionally call the same kernel on empty data and with
+zero trips plus an unobserved invalid origin. All eleven original results stay
+live, including the first state after its dependent update, both calls' byte
+distances, empty/zero-trip values, input-derived snapshot, surrounding model
+math and original saved initial state. Every original result matches exact words
+through native, Merlin host and actual Spike: **four complete models and 44
+target results**. Parent weights, manifests, inputs and complete reference
+archives remain byte-identical. `tests/test_integer_address_model.py` reproduces
+the selection; `out/integer-address-models/summary.json` reopens its receipts.
+The latest `out/integer-address-model-inventory/coverage.json` reopens **331
+packages, 268 standalone qualifications and fourteen product cases**. It retains
+all fifty observed names under selected native/Merlin-host profiles, with the
+same explicit limits on universal and target coverage.
+
+Source runtime scalars bind from the existing typed call attributes. The public
+model ABI remains static and unchanged. This supplies no general argument
+mutation, dynamic public signature, root-equivalence or accelerator permission.

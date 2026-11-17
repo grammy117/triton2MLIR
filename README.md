@@ -13,6 +13,11 @@ remain explicit refusals. Public ABI and receipt schemas are unchanged.
 An additional saved-TTIR while case qualifies independent input/result ports;
 four compiled guards still reject invalid active addresses. The selected ledger
 now reopens 327 packages and 268 standalone qualifications.
+Four complete PyTorch model configurations additionally retain saved parameters,
+dependent address-state calls, empty/zero-trip results and original snapshots.
+All 44 original results match exact words through native/Merlin host/Spike;
+the public model ABI stays static and unchanged.
+The combined inventory now reopens 331 packages and 268 standalone qualifications.
 
 [Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
 now cancel the actual common SSA base into standard modular byte arithmetic.
