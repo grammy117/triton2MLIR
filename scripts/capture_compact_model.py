@@ -16,7 +16,7 @@ from t2m.examples.data_size_kernels import data_size_prefix
 from t2m.examples.kernel_size_kernels import positive_count, positive_pack
 
 
-def capture(out):
+def capture(out, *, matrix_views=False):
     count_name, pack_name, prefix_name = (
         "t2m_compact_demo::positive_count",
         "t2m_compact_demo::compact",
@@ -36,7 +36,7 @@ def capture(out):
 
     @triton_op(pack_name, mutates_args={})
     def compact(x: torch.Tensor, n: int, capacity: int) -> torch.Tensor:
-        out = torch.empty((n,), dtype=x.dtype, device=x.device)
+        out = torch.empty((1, n) if matrix_views else (n,), dtype=x.dtype, device=x.device)
         wrap_triton(positive_pack)[(1,)](x, out, capacity, n, B=32)
         return out
 
@@ -45,15 +45,16 @@ def capture(out):
         assert x.numel() == capacity
         selected = x[x > 0]
         assert n <= selected.numel()
-        return selected[:n].clone()
+        result = selected[:n].clone()
+        return result.reshape(1, n) if matrix_views else result
 
     @compact.register_fake
     def fake_compact(x, n, capacity):
-        return torch.empty((n,), dtype=x.dtype, device=x.device)
+        return torch.empty((1, n) if matrix_views else (n,), dtype=x.dtype, device=x.device)
 
     @triton_op(prefix_name, mutates_args={})
     def prefix(x: torch.Tensor, n: int, capacity: int) -> torch.Tensor:
-        out = torch.empty((n,), dtype=x.dtype, device=x.device)
+        out = torch.empty((1, n) if matrix_views else (n,), dtype=x.dtype, device=x.device)
         wrap_triton(data_size_prefix)[((n + 7) // 8,)](x, n, capacity, out, B=8)
         return out
 
@@ -61,12 +62,14 @@ def capture(out):
     def prefix_reference(x, n, capacity):
         assert x.numel() == capacity
         result = torch.zeros((n,), dtype=x.dtype)
-        result[: min(n, capacity)] = x[: min(n, capacity)]
+        result[: min(n, capacity)] = x.reshape(-1)[: min(n, capacity)]
+        if matrix_views:
+            result = result.reshape(1, n)
         return result
 
     @prefix.register_fake
     def fake_prefix(x, n, capacity):
-        return torch.empty((n,), dtype=x.dtype, device=x.device)
+        return torch.empty((1, n) if matrix_views else (n,), dtype=x.dtype, device=x.device)
 
     class Model(torch.nn.Module):
         def __init__(self):
@@ -77,13 +80,15 @@ def capture(out):
 
         def forward(self, x):
             original = x + self.weight
-            count = count_positive(original, x.shape[0])
+            capacity = x.numel() if matrix_views else x.shape[0]
+            count = count_positive(original, capacity)
             n = count.item()
             torch._check_is_size(n)
             torch._check(n <= 31)
-            first = compact(original, n, x.shape[0])
+            first = compact(original, n, capacity)
             second = prefix(first, n, n)
-            return second, first, original, x, count, self.weight, first[::2]
+            tail = first[:, ::2] if matrix_views else first[::2]
+            return second, first, original, x, count, self.weight, tail
 
     previous = {
         name: KERNEL_REGISTRY.get(name) for name in (count_name, pack_name, prefix_name)
@@ -96,10 +101,14 @@ def capture(out):
         inputs = (
             torch.tensor([4, -7, 2, 9, 1, 3, -2, 5, 0, 8, -1, 6, 7], dtype=torch.int32),
         )
+        if matrix_views:
+            inputs = (torch.tensor([[4, -7, 2, 9, 1], [3, -2, 5, 0, 8], [-1, 6, 7, -4, 2]], dtype=torch.int32),)
         program = torch.export.export(
             model,
             inputs,
-            dynamic_shapes={"x": {0: torch.export.Dim("capacity", min=2, max=31)}},
+            dynamic_shapes={"x": ({0: torch.export.Dim("rows", min=2, max=4),
+                1: torch.export.Dim("cols", min=2, max=7)} if matrix_views else
+                {0: torch.export.Dim("capacity", min=2, max=31)})},
         )
         out = Path(out).resolve()
         out.mkdir(parents=True, exist_ok=False)
@@ -133,4 +142,6 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    print(capture(parser.parse_args().out))
+    parser.add_argument("--matrix-views", action="store_true")
+    args = parser.parse_args()
+    print(capture(args.out, matrix_views=args.matrix_views))

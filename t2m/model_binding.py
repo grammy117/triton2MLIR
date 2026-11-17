@@ -21,6 +21,7 @@ from .memory_contract import GUARDED_PROFILES, validate_memory_evidence
 from .model_arguments import materialize_arguments, plan_arguments, runtime_constants
 from .scalar_abi import RuntimeScalar
 from .model_tensor_views import BINDING_SCHEMA, POLICY as VIEW_POLICY, PROFILE as VIEW_PROFILE, reshape
+from .model_tensor_views import RUNTIME_POLICY
 
 
 def scalar_attribute(value):
@@ -61,7 +62,7 @@ class KernelBinding:
     runtime_operands: dict[str, str] = field(default_factory=dict)
 
     def validate(self):
-        if self.tensor_views not in (None,VIEW_POLICY):
+        if self.tensor_views not in (None,VIEW_POLICY,RUNTIME_POLICY):
             raise ValueError("unknown model tensor view policy")
         if not isinstance(self.source_views,dict) or any(not isinstance(name,str) for name in self.source_views):
             raise ValueError("source model views require named explicit bindings")
@@ -129,6 +130,8 @@ def bind_model(model_mlir, bindings, *, result_mode=None):
         if result_mode != MODE:
             raise ValueError("unknown explicitly selected model result mode")
         return bind(model_mlir, bindings)
+    if any(binding.tensor_views == RUNTIME_POLICY for binding in bindings):
+        raise ConversionError("runtime dense views require explicit execution-owned model binding")
     prepared = [(b, *b.validate()) for b in bindings]
     original_module = parse_shared(model_mlir)
     module = original_module.clone()

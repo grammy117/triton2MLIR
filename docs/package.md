@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Runtime dense views](runtime_tensor_views.md) explicitly select
+`dense-row-major-runtime-v1` / `t2m.execution-checked-call-views.v2` within binding
+v4. Runtime source dimension operands and complete count/overflow checks replace
+captured-size-only adaptation; older readers refuse. Public model types, original
+archives, receipt v2 and Merlin signature v6 remain unchanged. Model2MLIR's
+additional `numel_dimension_queries` trace relation accounts for original shape
+products and grants no numeric, alias or source-equivalence permission.
+
 [Executed call views](executed_call_views.md) add the explicit
 `execution_view_binding_profile: t2m.execution-checked-call-views.v1` extension
 to binding v4, with known dense-policy and complete source-coordinate records

@@ -25,6 +25,7 @@ SOURCES = (
     "src/merlin/llvmlower/execution_result_inputs.py", "src/merlin/frontends/execution_result_signature.py",
     "src/merlin/frontends/execution_call_views.py", "src/merlin/frontends/execution_call_contracts.py",
     "src/merlin/frontends/execution_model_correspondence.py", "src/merlin/frontends/derived_source_views.py",
+    "src/merlin/frontends/execution_runtime_views.py",
     "merlin/runtime/c/owned_result_driver.c", "merlin/runtime/c/owned_result_driver.h",
     "merlin/runtime/c/owned_result_readback.c", "merlin/runtime/c/owned_result_readback.h",
     "merlin/runtime/abi/owned_results.c", "merlin/runtime/abi/owned_result_views.c",

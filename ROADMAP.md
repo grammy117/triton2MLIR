@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Runtime dense views](docs/runtime_tensor_views.md) now retain actual dimension
+operands, checked index products and standard reshapes through execution-owned
+models. A real dynamic-matrix count/scan/scatter model preserves all seven
+results across host replays and three actual target images. Runtime non-dense
+coordinates, remaining result-axis/source-layout bindings and broader effects
+and accelerators remain open.
+
 [Executed call views](docs/executed_call_views.md) now connect existing checked
 dense/source adapters to execution-owned results. Complete view-update models
 and a combined count/scan/scatter model retain original snapshots and internally

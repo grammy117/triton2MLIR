@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Runtime dense views](runtime_tensor_views.md) now retain actual dimension
+operands, checked index products and standard reshapes through execution-owned
+models. A real dynamic-matrix count/scan/scatter model preserves all seven
+results across host replays and three actual target images. Runtime non-dense
+coordinates, remaining result-axis/source-layout bindings and broader effects
+and accelerators remain open.
+
 Updated 2026-11-17. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
@@ -30,7 +37,7 @@ checks. The combined frontend selection passes 57 with one optional legacy
 capture skip; Merlin's separate selection passes all 142 checks.
 
 Next close the remaining source-driven composition gates: general branch/while/
-alias ownership through ordinary native lifetime checks; fully runtime or
+alias ownership through ordinary native lifetime checks; runtime non-dense or
 physical/mutating view adapters with independent source correspondence; broader
 numeric/effect and source-version compositions; and additional applicable
 executor/device support.

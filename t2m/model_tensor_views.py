@@ -10,6 +10,7 @@ import math
 from xdsl.dialects import builtin, tensor
 
 POLICY = "dense-row-major-v1"
+RUNTIME_POLICY = "dense-row-major-runtime-v1"
 PROFILE = "t2m.captured-dense-tensor-views.v1"
 BINDING_SCHEMA = "t2m.model-kernel-binding.v2"
 

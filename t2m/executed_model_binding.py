@@ -15,12 +15,14 @@ from xdsl.printer import Printer
 from .diagnostics import ConversionError
 from .executed_model_arguments import accepts, adapt_tensor, arguments, tensor_contract
 from .model_arguments import runtime_constants
+from .model_tensor_views import RUNTIME_POLICY
 from .shared_tensor import parse_shared
 
 MODE = "execution-owned"
 SCHEMA = "t2m.model-kernel-binding.v4"
 PROFILE = "t2m.execution-checked-calls.v1"
 VIEW_PROFILE = "t2m.execution-checked-call-views.v1"
+RUNTIME_VIEW_PROFILE = "t2m.execution-checked-call-views.v2"
 
 
 def serialize(module):
@@ -202,6 +204,7 @@ def bind(model_mlir, bindings):
                 numbers,
                 binding.tensor_views,
                 role="kernel-to-caller-view",
+                dimensions=dimensions,
             )
             for name, old in zip(outputs, call.results, strict=True)
         ]
@@ -258,7 +261,14 @@ def bind(model_mlir, bindings):
             "result_mode": MODE,
             "resource_scope": "execution-allocator-accounted",
             **(
-                {"execution_view_binding_profile": VIEW_PROFILE}
+                {
+                    "execution_view_binding_profile": RUNTIME_VIEW_PROFILE
+                    if any(
+                        record.get("tensor_views") == RUNTIME_POLICY
+                        for record in records
+                    )
+                    else VIEW_PROFILE
+                }
                 if any(
                     "tensor_views" in record or "source_tensor_views" in record
                     for record in records

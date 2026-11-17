@@ -11,8 +11,8 @@ from xdsl.dialects import arith, builtin, cf, tensor
 
 from .diagnostics import ConversionError
 from .model_arguments import runtime_constants
+from .model_tensor_views import RUNTIME_POLICY, reshape
 from .model_tensor_views import compatible as dense_compatible
-from .model_tensor_views import reshape
 from .scalar_abi import RuntimeScalar
 
 
@@ -37,10 +37,18 @@ def accepts(binding, names, outputs, by_name, result_types, attributes):
         spec, binding.runtime_arguments, attributes, live=binding.runtime_operands
     )
 
-    def matches(caller, buffer):
+    def matches(caller, buffer, *, input_view):
         concrete = concrete_view_type(buffer, numbers)
         if compatible(caller, buffer.type):
             return True
+        if binding.tensor_views == RUNTIME_POLICY:
+            from .executed_runtime_views import admissible
+
+            return (
+                admissible(caller, buffer.type, input_view=True)
+                if input_view
+                else admissible(buffer.type, caller, input_view=False)
+            )
         return (
             binding.tensor_views is not None
             and concrete is not None
@@ -54,14 +62,14 @@ def accepts(binding, names, outputs, by_name, result_types, attributes):
     if len(outputs) != len(result_types):
         return False
     if any(
-        not matches(by_name[names[b.name]].type, b)
+        not matches(by_name[names[b.name]].type, b, input_view=True)
         for b in spec.inputs
         if not isinstance(b, RuntimeScalar)
     ):
         return False
     buffers = {b.name: b for b in spec.outputs}
     if any(
-        not matches(target, buffers[name])
+        not matches(target, buffers[name], input_view=False)
         for name, target in zip(outputs, result_types, strict=True)
     ):
         return False
@@ -95,7 +103,21 @@ def concrete_view_type(buffer, values):
     )
 
 
-def adapt_tensor(append, value, target, buffer, numbers, policy, *, role):
+def adapt_tensor(
+    append, value, target, buffer, numbers, policy, *, role, dimensions=None
+):
+    if policy == RUNTIME_POLICY and (
+        role == "caller-to-kernel-view" or not compatible(value.type, target)
+    ):
+        from .executed_runtime_views import RuntimeViews
+
+        return RuntimeViews(append).reshape(
+            value,
+            target,
+            buffer.shape,
+            dimensions or {},
+            input_view=role == "caller-to-kernel-view",
+        )
     if compatible(value.type, target):
         return cast_tensor(append, value, target)
     concrete = concrete_view_type(buffer, numbers)
@@ -224,7 +246,9 @@ def arguments(binding, function, names, by_name, attributes, append):
             values.append(scalars[source.name])
         else:
             value = by_name[names[source.name]]
-            if not compatible(value.type, target):
+            if getattr(
+                binding, "tensor_views", None
+            ) == RUNTIME_POLICY or not compatible(value.type, target):
                 value = adapt_tensor(
                     append,
                     value,
@@ -233,6 +257,7 @@ def arguments(binding, function, names, by_name, attributes, append):
                     numbers,
                     getattr(binding, "tensor_views", None),
                     role="caller-to-kernel-view",
+                    dimensions=dimensions,
                 )
             tensor_contract(append, value, source, dimensions)
             values.append(cast_tensor(append, value, target))
