@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Executed call views](executed_call_views.md) connect selected static source
+coordinates and captured-size dense adapters to execution-owned results.
+Complete models retain source loops/grids, earlier snapshots and data-dependent
+compaction. The explicit v4 extension and independent consumer reconstruction
+change no historical opcode denominator; arbitrary runtime/physical/mutating
+views, source-layout options and broader effects/targets remain unqualified.
+
 [Runtime returned-loop ownership](runtime_loop_ownership.md) adds consumer
 execution for fresh generations under runtime/zero-trip serial bounds. Source
 loops and guards, complete initial lifetimes, independent zero-trip copies and

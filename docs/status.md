@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Executed call views](executed_call_views.md) now preserve checked dense/source
+adapters through the execution-owned model interface. Original root/coordinate
+proofs, complete SSA and source locations remain independently checked. A real
+five-kernel model combines view updates, preserved snapshots and content-sized
+count/scan/scatter. Runtime view coordinates, physical mutation and broader
+ownership/effect/numeric/target compositions remain open.
+
 [Runtime/zero-trip returned-loop ownership](runtime_loop_ownership.md) now
 passes native/saved/C and actual target checks for direct fresh generations,
 including independently resizing i32/f64 states and exact nonfinite words.

@@ -4,6 +4,7 @@
 import argparse
 import importlib.util
 from pathlib import Path
+import sys
 
 import m2m
 import torch
@@ -12,7 +13,7 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out, dtype="i64"):
+def capture(out, dtype="i64", *, execution_sizes=False):
     out = Path(out).resolve()
     if out.exists(): raise FileExistsError(out)
     source = Path(__file__).resolve().parents[1] / "t2m/examples/model_view_kernels.py"
@@ -44,6 +45,37 @@ def capture(out, dtype="i64"):
         for _ in range(steps): selected.add_(bias)
         return result, selected.clone()
 
+    compact_names = ("t2m_view_demo::positive_count", "t2m_view_demo::compact") if execution_sizes else ()
+    if execution_sizes:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from t2m.examples.kernel_size_kernels import positive_count, positive_pack
+
+        @triton_op(compact_names[0], mutates_args={})
+        def count_positive(x: torch.Tensor, capacity: int) -> torch.Tensor:
+            count = torch.empty((1,), dtype=torch.int64, device=x.device)
+            wrap_triton(positive_count)[(1,)](x, count, capacity, B=128)
+            return count
+
+        @count_positive.register_kernel("cpu")
+        def count_reference(x, capacity):
+            assert x.numel() == capacity
+            return (x > 0).to(torch.int64).sum().reshape(1)
+
+        @triton_op(compact_names[1], mutates_args={})
+        def compact(x: torch.Tensor, n: int, capacity: int) -> torch.Tensor:
+            result = torch.empty((n,), dtype=x.dtype, device=x.device)
+            wrap_triton(positive_pack)[(1,)](x, result, capacity, n, B=128)
+            return result
+
+        @compact.register_kernel("cpu")
+        def compact_reference(x, n, capacity):
+            assert x.numel() == capacity
+            return x[x > 0][:n].clone()
+
+        @compact.register_fake
+        def compact_fake(x, n, capacity):
+            return torch.empty((n,), dtype=x.dtype, device=x.device)
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -60,10 +92,20 @@ def capture(out, dtype="i64"):
             second, later = update(first, next_view, 3, 5, 32, 3, 2, 96, 1, -3, 15)
             empty_view = first.t()[:0, :]
             empty, none = update(first, empty_view, 0, 6, 1, 16, 0, 96, 3, 2, 0)
-            return second + self.bias, first, observed, later, empty, none, first_view
+            full = second + self.bias
+            results = (full, first, observed, later, empty, none, first_view)
+            if execution_sizes:
+                flat = full.reshape(-1)
+                count = count_positive(flat, 96)
+                n = count.item()
+                torch._check_is_size(n)
+                torch._check(n <= 96)
+                return (*results, compact(flat, n, 96), count)
+            return results
 
-    previous = KERNEL_REGISTRY.get(qualname)
-    KERNEL_REGISTRY[qualname] = KernelSpec(qualname)
+    previous = {name: KERNEL_REGISTRY.get(name) for name in (qualname, *compact_names)}
+    for name in previous:
+        KERNEL_REGISTRY[name] = KernelSpec(name)
     try:
         torch.set_num_threads(1)
         model = Model().eval()
@@ -75,8 +117,9 @@ def capture(out, dtype="i64"):
         write_bundle(model, values, out, capture_regions=False, capture_trace=True,
                      source_path=Path(__file__), conversion_result=converted)
     finally:
-        if previous is None: KERNEL_REGISTRY.pop(qualname, None)
-        else: KERNEL_REGISTRY[qualname] = previous
+        for name, old in previous.items():
+            if old is None: KERNEL_REGISTRY.pop(name, None)
+            else: KERNEL_REGISTRY[name] = old
     return out
 
 
@@ -84,5 +127,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--dtype", choices=("i64", "f32", "bf16"), default="i64")
+    parser.add_argument("--execution-sizes", action="store_true")
     args = parser.parse_args()
-    print(capture(args.out, args.dtype))
+    print(capture(args.out, args.dtype, execution_sizes=args.execution_sizes))

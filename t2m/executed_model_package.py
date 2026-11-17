@@ -98,6 +98,12 @@ def write(
             "generated C, target harnesses, physical views and resizing ownership need separate qualification",
         ],
     }
+    if "execution_view_binding_profile" in trace:
+        compatibility["differences"].append(
+            "t2m.execution-checked-call-views.v1 extends v4 with explicit dense/source view records; "
+            "Merlin independently reconstructs their source coordinates and standard adapters; "
+            "older v4 readers refuse these fields and no physical alias or mutation permission is added"
+        )
     _json(candidate / "compatibility.json", compatibility)
     receipt = {
         "schema": SCHEMA,

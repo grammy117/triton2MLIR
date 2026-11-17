@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Executed call views](docs/executed_call_views.md) now connect existing checked
+dense/source adapters to execution-owned results. Complete view-update models
+and a combined count/scan/scatter model retain original snapshots and internally
+computed sizes. Fully runtime reshape/source coordinates, physical/mutating
+views, source-layout options and broader ownership/effect/target closure remain.
+
 [Runtime returned-loop ownership](docs/runtime_loop_ownership.md) now closes
 the fresh-generation runtime/zero-trip refusal. Native/saved/C and actual target
 checks preserve changing/empty results and source guards; tuple i32/f64 owners

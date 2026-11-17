@@ -1,5 +1,12 @@
 # Review handoff — updated 2026-11-17
 
+[Executed call views](executed_call_views.md) now connect selected dense/source
+adapters to the execution-owned package path. Original coordinates, root pointer
+contracts, every schema operand and complete emitted SSA remain checked.
+The combined five-kernel source retains all nine results, including prior
+snapshots and content-sized scan/scatter output. Fully runtime coordinates,
+physical mutation, source-layout options and broader effects/targets remain.
+
 [Runtime returned-loop ownership](runtime_loop_ownership.md) now closes the
 fresh-generation runtime/zero-trip refusal through the ordinary independent
 checker. Initial uses, ownership flags, actual zero-trip copies and tuple result

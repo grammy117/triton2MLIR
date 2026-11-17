@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Executed call views](docs/executed_call_views.md) connect checked dense/source
+views to execution-owned model results. The real combined model retains three
+view-update kernels, count/scan/scatter, earlier snapshots and all nine results.
+An explicit v4 extension profile preserves independent Merlin reconstruction;
+fully runtime view coordinates, physical mutation and broader effects remain.
+
 [Runtime loop ownership](docs/runtime_loop_ownership.md) now reaches Merlin
 host/saved/C and actual serial target execution for fresh returned generations,
 including zero trips and changing extents. Independent i32/f64 states retain exact

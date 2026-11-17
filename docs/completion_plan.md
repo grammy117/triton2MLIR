@@ -8,6 +8,12 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Executed call views](executed_call_views.md) now connect the established dense
+and static source-coordinate proofs to execution-owned results and complete
+combined view-update/count/scan/scatter models. Every original result and
+snapshot remains retained. Fully runtime coordinates, physical/mutating views,
+source-layout options and broader ownership/effect/target families remain.
+
 [Runtime returned-loop ownership](runtime_loop_ownership.md) now separately
 proves fresh generations for runtime/zero-trip serial bounds, complete initial
 lifetimes, actual zero-trip copies and tuple return coordinates. Native/saved/C
@@ -24,9 +30,10 @@ checks. The combined frontend selection passes 57 with one optional legacy
 capture skip; Merlin's separate selection passes all 142 checks.
 
 Next close the remaining source-driven composition gates: general branch/while/
-alias ownership through ordinary native lifetime checks; v4 physical/view
-adapters with independent source correspondence; broader numeric/effect and
-source-version compositions; and additional applicable executor/device support.
+alias ownership through ordinary native lifetime checks; fully runtime or
+physical/mutating view adapters with independent source correspondence; broader
+numeric/effect and source-version compositions; and additional applicable
+executor/device support.
 Retain algorithms, source guards, complete results and explicit unsupported
 options throughout. These are semantic/compiler requirements, not a request
 to substitute more passing variants for the missing contracts.

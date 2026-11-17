@@ -92,6 +92,13 @@ def _reconstruct(out, receipt, trace):
             "runtime_operands": record["runtime_operand_arguments"],
             "source_layout_arguments": record["source_layout_arguments"],
         }
+        if "tensor_views" in record:
+            fields["tensor_views"] = record["tensor_views"]
+        if "source_tensor_views" in record:
+            fields["source_views"] = {
+                name: value["binding"]
+                for name, value in record["source_tensor_views"].items()
+            }
         key = json.dumps(fields, sort_keys=True)
         if key in selected:
             continue

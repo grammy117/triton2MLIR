@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Executed call views](executed_call_views.md) add the explicit
+`execution_view_binding_profile: t2m.execution-checked-call-views.v1` extension
+to binding v4, with known dense-policy and complete source-coordinate records
+per call. Older readers refuse the fields. Parent archives, public tensor ABI,
+receipt v2 and Merlin signature v6 retain their existing schemas. Compatibility
+metadata names the extension; no public physical alias/mutation is inferred.
+
 [Returned loop ownership](runtime_loop_ownership.md) extends the independently
 checked consumer lifetime forms without changing public tensor computation,
 signature v6, result/package schemas or parent archives. Native products, saved

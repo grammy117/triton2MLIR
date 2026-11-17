@@ -1,5 +1,10 @@
 # Internal sizes through executable model call contracts
 
+[Executed call views](executed_call_views.md) additionally connect checked
+dense/source adapters under an explicit extension profile. Complete models can
+retain original non-dense view coordinates and snapshots alongside internally
+computed result extents; fully runtime and physical/mutating views remain work.
+
 The [real compaction example](compaction.md) now extends this path to three
 actual count/parallel-scan/scatter/copy kernels. Its explicit mixed memory
 selection retains the existing call, result and package profiles.

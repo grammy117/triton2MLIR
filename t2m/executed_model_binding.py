@@ -13,12 +13,14 @@ from xdsl.dialects import builtin, func
 from xdsl.printer import Printer
 
 from .diagnostics import ConversionError
-from .executed_model_arguments import accepts, arguments, cast_tensor, tensor_contract
+from .executed_model_arguments import accepts, adapt_tensor, arguments, tensor_contract
+from .model_arguments import runtime_constants
 from .shared_tensor import parse_shared
 
 MODE = "execution-owned"
 SCHEMA = "t2m.model-kernel-binding.v4"
 PROFILE = "t2m.execution-checked-calls.v1"
+VIEW_PROFILE = "t2m.execution-checked-call-views.v1"
 
 
 def serialize(module):
@@ -84,10 +86,17 @@ def bind(model_mlir, bindings):
             for item in prepared
             if item[0].qualname == identity.data
             and item[4] == attrs
-            and set(item[2].values()) | set(item[0].runtime_operands.values())
+            and set(item[2].values())
+            | set(item[0].runtime_operands.values())
+            | set(item[0].source_views)
             == set(by_name)
             and accepts(
-                item[0], item[2], item[3], by_name, [v.type for v in call.results]
+                item[0],
+                item[2],
+                item[3],
+                by_name,
+                [v.type for v in call.results],
+                attrs,
             )
         ]
         if len(candidates) != 1:
@@ -96,6 +105,23 @@ def bind(model_mlir, bindings):
                 opcode="func.call",
             )
         binding, function, names, outputs, _ = candidates[0]
+        _, numbers = runtime_constants(
+            binding.implementation.spec,
+            binding.runtime_arguments,
+            attrs,
+            live=binding.runtime_operands,
+        )
+        source_views = None
+        if binding.source_views:
+            from .model_source_views import bind as bind_views
+
+            source_views = bind_views(
+                binding.source_views,
+                names,
+                by_name,
+                numbers,
+                binding.implementation.trace,
+            )
         callsite = f"kernel_call.{len(records):04d}"
         emitted = []
 
@@ -135,6 +161,15 @@ def bind(model_mlir, bindings):
                 returned = [mapper[value] for value in source.arguments]
                 break
             cloned = source.clone(value_mapper=mapper)
+            if source_views:
+                from .model_source_views import PROFILE as SOURCE_VIEW_PROFILE
+
+                cloned.attributes["prov.kernel_source_view_profile"] = (
+                    builtin.StringAttr(SOURCE_VIEW_PROFILE)
+                )
+                cloned.attributes["prov.kernel_view_arguments"] = builtin.ArrayAttr(
+                    builtin.StringAttr(n) for n in source_views
+                )
             for op in cloned.walk():
                 op.attributes.update(
                     {
@@ -159,7 +194,15 @@ def bind(model_mlir, bindings):
             tensor_contract(append, value, buffer, dimensions)
             results[buffer.name] = value
         replacements = [
-            cast_tensor(append, results[name], old.type)
+            adapt_tensor(
+                append,
+                results[name],
+                old.type,
+                next(b for b in binding.implementation.spec.outputs if b.name == name),
+                numbers,
+                binding.tensor_views,
+                role="kernel-to-caller-view",
+            )
             for name, old in zip(outputs, call.results, strict=True)
         ]
         call.parent.insert_ops_before(emitted, call)
@@ -186,6 +229,10 @@ def bind(model_mlir, bindings):
                 "source_sha256": binding.implementation.trace["source_sha256"],
             }
         )
+        if binding.tensor_views is not None:
+            records[-1]["tensor_views"] = binding.tensor_views
+        if source_views:
+            records[-1]["source_tensor_views"] = source_views
         used.add(symbol)
     for symbol, function in functions.items():
         if "prov.kernel" in function.attributes:
@@ -210,6 +257,14 @@ def bind(model_mlir, bindings):
             "binding_profile": PROFILE,
             "result_mode": MODE,
             "resource_scope": "execution-allocator-accounted",
+            **(
+                {"execution_view_binding_profile": VIEW_PROFILE}
+                if any(
+                    "tensor_views" in record or "source_tensor_views" in record
+                    for record in records
+                )
+                else {}
+            ),
             "calls": records,
             "kernels": {
                 binding.implementation.trace[
