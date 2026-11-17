@@ -1,5 +1,15 @@
 # Review handoff — updated 2026-11-17
 
+Published follow-through: triton2MLIR `59237b7` adds explicit automatic memory
+selection and `b77da69` qualifies real count/scan/scatter compaction. Both are
+on `main`; remote tips and GitHub author/committer attribution were checked.
+Merlin remains `e943745a3` and model2MLIR `863d797`, both on
+`ttir-experiment-grammy`; the pre-existing model2MLIR whitespace edit remains.
+The actual next [target boundary](execution_result_targets.md) is now probed:
+the existing Spike driver rejects receipt v2 before staging or image creation.
+Generated-C execution-owned result handling and explicit v6 target transport
+must be implemented before claiming that target path.
+
 [Real TTIR compaction](compaction.md) now reaches the existing qualified
 execution-sized package and Merlin host interface from Python and public CLI.
 All three kernels and seven original model results remain. Count/copy select

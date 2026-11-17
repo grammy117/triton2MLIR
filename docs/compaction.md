@@ -84,3 +84,7 @@ not qualify v6 generated-C/Spike harnesses, accelerators, arbitrary filtering
 sizes, cross-program scan carries, physical views or unrestricted alias/effect
 compositions. The historical 352-package/50-name inventory stays unchanged.
 No performance equivalence is claimed.
+
+The [next target integration plan](execution_result_targets.md) records the
+actual unchanged Spike-driver receipt refusal and the required generated-C,
+allocation/descriptor and dynamic-result readback work.

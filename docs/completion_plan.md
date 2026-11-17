@@ -8,6 +8,12 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+The [execution-sized target plan](execution_result_targets.md) records the
+actual compaction-to-Spike refusal before staging and the next concrete work:
+checked generated-C result handling, reusable owned-result lowering, explicit
+v6 target staging, observed-shape readback and actual full-result execution.
+No new target success is inferred from existing host qualification.
+
 [Real Triton compaction](compaction.md) now extends the selected host-owned
 package to count, parallel scan, masked scatter and dependent consumption.
 Source-only automatic admission chooses tensor count/copy and guarded
