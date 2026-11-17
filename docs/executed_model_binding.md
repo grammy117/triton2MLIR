@@ -64,6 +64,55 @@ consumer mechanism checks actual allocation products/capacities and ownership;
 it does not derive a global scratch estimate from saved output sizes. Static
 scratch accounting in older profiles is unchanged.
 
+## Qualified package and Merlin interface
+
+```python
+write_model_bundle(
+    capture, bindings, output, work=work,
+    python=model2mlir_python,
+    merlin_root=merlin_root, merlin_python=merlin_python,
+    merlin_host=True, result_mode="execution-owned",
+)
+```
+
+The CLI equivalent is `bind-model --result-mode execution-owned --merlin-host`
+with the existing capture/bindings, toolchain and output options. The selected
+mode requires an existing Merlin checkout and host compiler. Other modes and
+their ordinary torch-mlir native qualification retain their behavior.
+
+| Boundary | Explicit selected profile |
+|---|---|
+| Original parent | Unchanged `m2m.capture-receipt.v1`, archives, public ABI and original FX graph |
+| Call derivation | `t2m.model-kernel-binding.v4` / `t2m.execution-checked-calls.v1` |
+| Qualified package | `t2m.bound-model-receipt.v2` |
+| Compatibility | `t2m.bound-model-compatibility.v2` |
+| Compiler correspondence | `merlin.derived-source-correspondence.v2` |
+| Compiler signature and result ABI | `merlin.compile-signature.v6` / `merlin.execution-owned-results.v1` |
+| Qualification record | `t2m.execution-owned-model-qualification.v1` |
+| Actual host qualification | `t2m.merlin-host-qualification.v2` |
+
+The source-only candidate remains under the selected work directory, with
+`qualification: source-only-unqualified`. Compiler staging checks original
+source/memory evidence and independently reconstructs the entire SSA expansion.
+No evaluator arrays, result references or qualification report enter its staged
+view. Public axes come from actual input types; original source-domain guards
+remain executable. Actual descriptors supply result sizes after execution.
+Only then are all original references compared and the final package published
+with `qualification: qualified`. A contradictory reference prevents publication.
+
+The original source-only input receipt remains under
+`consumer/input-receipt.json`. Producer verification replays original binding
+against retained located kernels and rechecks complete result/reference words,
+source/library/observation hashes, shapes and input preservation. Published
+libraries reopen without compilation. Common parent/kernel retention and byte
+custody are shared with the older package path.
+
+Native qualification uses the actual Merlin host compiler with an independent
+original PyTorch reference. It does **not** claim a second independent native
+compiler implementation. The receipt, compatibility metadata and coverage
+record that backend explicitly. This closes package/host integration for this
+selection; it does not qualify the separate native evaluator or target harness.
+
 ## Evidence and remaining integration
 
 `tests/test_kernel_size_binding.py` captures the actual PyTorch model and both
@@ -92,8 +141,8 @@ The original retained `implementation.mlir_text` omits source locations.
 V4 therefore additionally requires `located_implementations`, mapping each
 ordinary implementation digest to the SHA256/byte count of `serialize(module)`.
 The consumer verifies these actual located bytes and requires that stripping
-locations reproduces the original implementation digest. Package integration
-must retain this additional compiler artifact; the old unlocated artifact and
+locations reproduces the original implementation digest. Receipt v2 retains
+this additional compiler artifact; the old unlocated artifact and
 its source/memory evidence are unchanged. No location annotation supplies a
 numeric, shape or effect fact.
 
@@ -107,12 +156,26 @@ Three final direct-execution checks in `.scratch/kernel-size-inputs-final6.log`
 additionally verify unchanged caller input/parameter bytes for every initial
 and repeated invocation. These selections overlap.
 
-This milestone is **binding, direct whole-body Merlin host execution and an
-independent correspondence primitive**. Normal `write_model_bundle`/receipt
-verification and Merlin package staging do not yet admit v4; the primitive
-must be connected to retained package artifacts before selecting signature v6.
-The existing staged v6 selection still covers already admitted older binding
-profiles. Further work includes native qualification and target harness
-integration, physical/dense/source-layout view adapters, runtime resizing
-ownership and broader source/effect compositions. No new target, performance,
-universal-op or historical-inventory claim follows.
+The complete package selection now passes 49 new/legacy checks in
+`.scratch/executed-package-final5.log`, with overlap. The new selection includes
+three qualified packages, all 21 initial results, fifteen published-library
+replays checking 105 results, six actual source-domain aborts, three source-only
+stages after removing evaluator members and a real failed-reference execution
+that leaves no output package. Rehashed model/guard/order/located/profile and
+result-observation changes refuse. Earlier binding/guard tests and the
+independent-reader selections retain their original scopes.
+
+Merlin's staged implementation is
+[`e943745a3`](https://github.com/ucb-bar/merlin/commit/e943745a3dacac22f7d9071b1772527551c9635a).
+Its 56 new/legacy staging/correspondence checks pass in
+`out/build/execution-model-staging-final.log`. The producer's
+`out/executed-model-packages/summary.json` reopens all selected package/result,
+replay, abort, source-only stage and failed-publication evidence and checks
+current consumer source fingerprints. These are separate from the historical
+352-package inventory.
+
+Further work includes the separate native evaluator, generated C and target
+harnesses, physical/dense/source-layout view adapters, runtime resizing
+ownership and broader source/effect/numeric compositions. The older staged v6
+profiles keep their original admission checks. Full arbitrary-TTIR coverage,
+accelerator correspondence and performance preservation remain unqualified.

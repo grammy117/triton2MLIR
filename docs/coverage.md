@@ -1,12 +1,16 @@
 # Measured coverage and remaining boundaries
 
-[Internal computed sizes](executed_model_binding.md) now execute a real
-count-producing Triton kernel plus two dependent prefix calls through direct
-Merlin whole-body compilation in all three memory profiles. Explicit v4
-binding retains all 21 initial PyTorch results and 105 further results across
-fifteen unchanged-library invocations. This selection is binding/direct-host
-evidence; independent v4 package staging and receipts remain unimplemented.
-The historical inventory and target qualification are unchanged.
+[Internal computed sizes](executed_model_binding.md) now qualify three real
+model packages through receipt v2, independently reconstructed v4 binding and
+source-only signature v6 staging. All 21 initial PyTorch results and 105
+further results across fifteen unchanged-library replays match exact words.
+Six actual source-domain failures abort; staging needs no evaluator members,
+and a contradicted reference leaves no published package. The 49-case new/
+legacy producer selection and 56 independent consumer contracts pass, with
+overlap. `out/executed-model-packages/summary.json` reopens the selected results,
+replays, aborts and source-only stages. Native qualification explicitly uses
+Merlin host with original PyTorch references; no separate native compiler,
+v6 target or historical-inventory expansion is claimed.
 
 [Execution-sized results](execution_owned_results.md) now qualify explicit
 signature v6 staging and Merlin host invocation for complete model/TTIR captures

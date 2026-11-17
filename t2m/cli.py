@@ -563,6 +563,7 @@ def main(argv=None):
     bind.add_argument("--merlin-root", type=Path, help="optional existing Merlin checkout for real interface/runtime generation checks")
     bind.add_argument("--merlin-python", type=Path)
     bind.add_argument("--merlin-host", action="store_true", help="compile staged inputs with Merlin and execute its native host library")
+    bind.add_argument("--result-mode", choices=("execution-owned",), help="explicit executed-size package profile; requires --merlin-root and --merlin-host")
     bind.add_argument("--merlin-clang", type=Path, help="explicit compatible native LLVM code generator")
     bind.add_argument("--rtol", type=float, default=0)
     bind.add_argument("--atol", type=float, default=0)
@@ -673,7 +674,7 @@ def main(argv=None):
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
                                merlin_root=args.merlin_root, merlin_python=args.merlin_python,
                                merlin_host=args.merlin_host, merlin_clang=args.merlin_clang,
-                               rtol=args.rtol, atol=args.atol)
+                               rtol=args.rtol, atol=args.atol, result_mode=args.result_mode)
             summary = {"bundle": str(args.out), "native_model_comparison": "passed",
                        "merlin_interface": "passed" if args.merlin_root else "not-tested",
                        "merlin_host_execution": "passed" if args.merlin_host else "not-performed",

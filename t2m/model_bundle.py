@@ -6,7 +6,6 @@ import json
 from math import prod
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 
@@ -20,7 +19,6 @@ from .ir import text
 from .model_binding import bind_model
 from .native import execute_native
 from .memory_contract import PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
-from .package_compatibility import kernel_representation_differences
 from .tensor_storage import DTYPES, assert_tensor_close
 from .model_tensor_words import FILENAME as WORD_ARCHIVE, TensorWords
 from .source_capsule import members as source_members, validate as validate_source_capsule
@@ -161,7 +159,7 @@ def _compare_results(actual, expected, rtol, atol, result_types):
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
-                       merlin_python=None, merlin_host=False, merlin_clang=None, rtol=0, atol=0):
+                       merlin_python=None, merlin_host=False, merlin_clang=None, rtol=0, atol=0, result_mode=None):
     capture, out, work = Path(capture), Path(out), Path(work)
     if out.exists():
         raise FileExistsError(out)
@@ -169,6 +167,13 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         raise ValueError("model comparison requires finite nonnegative tolerances")
     if merlin_host and merlin_root is None:
         raise ValueError("Merlin host qualification requires a selected Merlin checkout")
+    if result_mode is not None:
+        from .executed_model_package import write
+
+        if result_mode != "execution-owned":
+            raise ValueError("unknown explicitly selected model result mode")
+        return write(capture, bindings, out, work=work, python=python, merlin_root=merlin_root,
+                     merlin_python=merlin_python, merlin_host=merlin_host, merlin_clang=merlin_clang, rtol=rtol, atol=atol)
     parent = _parent(capture)
     parent_receipt_record = _record(capture / "capture_receipt.json")
     bindings = list(bindings)
@@ -197,34 +202,13 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                       "rtol": rtol, "atol": atol, "materialized_arguments": sources,
                       "result_count": len(goldens), "result_reference_members": reference_members})
     out.mkdir(parents=True, exist_ok=False)
-    (out / "parent").mkdir()
-    shutil.copyfile(capture / "capture_receipt.json", out / "parent/capture_receipt.json")
-    parent_bindings = {}
-    for name in parent["artifacts"]:
-        destination = name if name in CORE | OPTIONAL_DATA and name != "model.mlir" else "parent/" + name
-        shutil.copyfile(capture / name, out / destination)
-        parent_bindings[name] = destination
+    from .model_package_members import retain_kernels, retain_parent
+
+    parent_bindings = retain_parent(capture, parent, out, CORE | OPTIONAL_DATA)
     (out / "model.mlir").write_text(mlir)
     _json(out / "kernel-bindings.json", trace)
     _json(out / "execution.json", execution)
-    selected = {r["implementation_sha256"] for r in trace["calls"]}
-    implementations = {b.implementation.trace["mlir_sha256"]: b.implementation for b in bindings
-                       if b.implementation.trace["mlir_sha256"] in selected}
-    kernel_artifacts, kernel_profiles = {}, {}
-    for i, (digest, implementation) in enumerate(implementations.items()):
-        validate_source_capsule(implementation.trace, implementation.auxiliary_artifacts, implementation.source_ttir)
-        directory = out / "kernels" / str(i)
-        directory.mkdir(parents=True)
-        (directory / "source.ttir").write_text(implementation.source_ttir)
-        (directory / "model.mlir").write_text(implementation.mlir_text)
-        _json(directory / "spec.json", implementation.spec.as_dict())
-        _json(directory / "provenance.json", implementation.trace)
-        for name, payload in implementation.auxiliary_artifacts.items():
-            (directory / name).write_text(payload)
-        kernel_artifacts[digest] = str(directory.relative_to(out))
-        kernel_profiles[kernel_artifacts[digest]] = {
-            "profile": implementation.trace.get("profile", TENSOR_PROFILE),
-            "differences": kernel_representation_differences(implementation.trace, dynamic=implementation.spec.dynamic)}
+    kernel_artifacts, kernel_profiles = retain_kernels(bindings, trace, out)
     _json(out / "compatibility.json", {"schema": "t2m.bound-model-compatibility.v1",
           "model_abi_and_core_data_files": "unchanged-from-parent-model2MLIR-capture",
           "kernel_profiles": kernel_profiles,
@@ -297,24 +281,16 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
 def verify_model_bundle(out):
     out = Path(out)
     receipt = json.loads((out / "capture_receipt.json").read_text())
+    if receipt.get("schema") == "t2m.bound-model-receipt.v2":
+        from .executed_model_package import verify
+
+        return verify(out, receipt)
     required = CORE | {"parent/capture_receipt.json", "kernel-bindings.json", "execution.json", "compatibility.json", "meta.json"}
     if receipt.get("schema") != "t2m.bound-model-receipt.v1" or not required <= set(receipt.get("artifacts", {})):
         raise ValueError("not a complete bound model receipt")
-    for name, expected in receipt["artifacts"].items():
-        relative = Path(name)
-        if relative.is_absolute() or ".." in relative.parts or name == "capture_receipt.json":
-            raise ValueError("invalid bound artifact path")
-        path = out / relative
-        parts = [out.joinpath(*relative.parts[:i]) for i in range(len(relative.parts) + 1)]
-        if any(p.is_symlink() for p in parts) or not path.is_file() or _record(path) != expected:
-            raise ValueError("bound bundle integrity mismatch: " + name)
-    parent_path = out / "parent/capture_receipt.json"
-    parent = json.loads(parent_path.read_text())
-    if _record(parent_path) != receipt["parent_receipt"] or set(parent["artifacts"]) != set(receipt["parent_artifact_bindings"]):
-        raise ValueError("incomplete parent receipt binding")
-    for old_name, destination in receipt["parent_artifact_bindings"].items():
-        if destination not in receipt["artifacts"] or _record(out / destination) != parent["artifacts"][old_name]:
-            raise ValueError("parent artifact relation failed: " + old_name)
+    from .model_package_members import checked_members
+
+    parent = checked_members(out, receipt, required)
     trace = json.loads((out / "kernel-bindings.json").read_text())
     from .model_tensor_views import validate_profile
     validate_profile(trace)

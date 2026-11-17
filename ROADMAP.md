@@ -4,13 +4,13 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
-[Internal computed sizes](docs/executed_model_binding.md) now have an explicit
-v4 binding path with executable scalar/dimension/cast contracts. A real
-count-producing Triton kernel and two dependent allocations execute through
-the existing Merlin owned-result compiler in all three memory profiles.
-Next reconstruct this derivation independently in package staging, extend
-qualification/receipts and target evaluators, and retain resizing ownership
-and the full numeric/memory/effect completion scope below.
+[Internal computed sizes](docs/executed_model_binding.md) now qualify the real
+count-producing model through receipt v2, independently reconstructed v4 call
+binding and source-only signature v6 staging in all three memory profiles.
+Every result survives published-package reopening and changed-content library
+replay. Failed original reference comparison prevents publication. Continue
+with separate native/target evaluators, v4 views/layouts, resizing ownership
+and the complete numeric/memory/effect/source scope below.
 
 [Execution-sized results](docs/execution_owned_results.md) now have explicit
 signature v6 staging and reusable Merlin host invocation of complete two-call

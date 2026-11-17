@@ -8,12 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
-[Internal computed sizes](executed_model_binding.md) now pass explicit v4
-call binding and direct Merlin host execution for a real count-producing
-kernel feeding two subsequent allocations. Next independently reconstruct
-the source/body/adapter derivation in package staging and extend normal
-qualification/receipts. Execution-sized native/target harnesses, runtime
-resizing ownership and the complete source/numeric/effect scope remain active.
+[Internal computed sizes](executed_model_binding.md) now pass package creation,
+independent source/body/adapter reconstruction, signature v6 staging and actual
+host qualification/replay for the count-producing model in all three memory
+profiles. Receipt v2 names the Merlin host backend, preserves all original
+parent data and prevents publication after a failed reference comparison.
+Continue with separate native/target harnesses, v4 views/layouts, runtime
+resizing ownership and the complete source/numeric/effect scope.
 
 [Execution-sized results](execution_owned_results.md) now have source-checked
 signature v6 staging and reusable Merlin host execution of complete two-call

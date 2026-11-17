@@ -1,18 +1,29 @@
 # Package contract and explicit model2MLIR differences
 
 [Internal computed-size binding](executed_model_binding.md) explicitly selects
-`t2m.model-kernel-binding.v4` / `t2m.execution-checked-calls.v1` through
-`bind_model(..., result_mode="execution-owned")`. Actual scalar/dimension/
-cast checks and complete standard kernel bodies replace global output-size
-prediction. This transformation currently has direct Merlin host execution
-evidence only: normal package/receipt and independent consumer staging readers
-still refuse v4 pending source/body/adapter reconstruction. Do not label its
-binding trace as a qualified model2MLIR capture or target package. V4 now also
-requires byte-bound `located_implementations` for retained kernel text with
-source locations. Merlin's separate complete-SSA correspondence primitive
-checks those bytes against the original unlocated digest and reconstructs
-every call/body/guard and source location; wiring that primitive into actual
-package staging remains further work.
+`t2m.model-kernel-binding.v4` / `t2m.execution-checked-calls.v1` and
+`t2m.bound-model-receipt.v2` through
+`write_model_bundle(..., result_mode="execution-owned", merlin_host=True)`.
+All parent archives, public tensor ABI and original m2m receipt remain
+byte-identical. `kernels/<ordinal>/located.mlir` and byte-bound
+`located_implementations` additionally preserve kernel source locations;
+stripping locations must reproduce the original implementation digest.
+Actual scalar/dimension/cast contracts and complete standard bodies replace
+global output-size prediction. Merlin independently reconstructs every call,
+surrounding SSA operation, result type, guard and source location before
+signature v6 staging. Source correspondence explicitly uses v2.
+
+An unqualified source-only candidate stays under the work directory. Its
+compiler staging excludes evaluator arrays, references and execution reports.
+Actual host descriptors supply result sizes before original reference
+comparison. Only successful complete qualification publishes receipt v2;
+failed comparison leaves no output package. Producer verification replays
+the derivation and rechecks every retained output word/reference and host
+observation. Compatibility v2 explicitly names the Merlin host compiler and
+original PyTorch oracle; it claims no separate torch-mlir native execution
+backend. Coverage records that distinction. Old/default readers refuse v2
+without explicit execution-owned selection. Separate native evaluator,
+generated C, target and broader shape/view/effect contracts remain open.
 
 [Execution-produced results](execution_owned_results.md) explicitly select
 Merlin signature v6 and its separate allocation/descriptor ABI through

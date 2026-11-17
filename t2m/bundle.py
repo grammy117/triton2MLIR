@@ -94,7 +94,7 @@ def verify_bundle(out):
     if receipt.get("schema") == "t2m.effect-kernel-receipt.v1":
         from .effect_bundle import verify_effect_bundle
         return verify_effect_bundle(out)
-    if receipt.get("schema") == "t2m.bound-model-receipt.v1":
+    if receipt.get("schema") in ("t2m.bound-model-receipt.v1", "t2m.bound-model-receipt.v2"):
         from .model_bundle import verify_model_bundle
         return verify_model_bundle(out)
     if receipt.get("schema") == "t2m.capture-receipt.v2":

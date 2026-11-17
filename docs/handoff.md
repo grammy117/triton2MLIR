@@ -6,20 +6,24 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
-[Internal computed sizes](executed_model_binding.md) now have an explicit v4
-binding path. A real Triton reduction computes the count used by two later
-allocations; direct Merlin host compilation/execution retains all seven
-results in all three memory profiles. Fifteen unchanged-library invocations
-check another 105 results. This is not yet a v4 package/staging qualification:
-independent reconstruction and receipt admission are the next work. The older
-precomputed-shape binder retains the original refusal for this same model.
+[Internal computed sizes](executed_model_binding.md) now reach qualified
+packages and the source-only Merlin interface. Receipt v2 retains v4 call
+contracts and located kernels; independent complete-SSA/result-type/location
+reconstruction precedes signature v6 staging. All 21 initial PyTorch results
+and 105 results across fifteen published-library replays match in the three
+memory profiles. Six actual source-domain failures abort without outputs.
+Staging succeeds with evaluator members removed; a contradicted original
+reference produces actual host results but leaves no published package.
 
-Merlin now also owns an independent v4 correspondence primitive. All three
-real count-model variants pass complete SSA/location reconstruction and
-rehashed body/guard/mapping/profile/source refusals (27 checks). Twelve handwritten
-Merlin fixtures need no producer import. A new required located-kernel digest
-preserves source locations alongside the old unlocated implementation; package
-artifact retention and staging/receipt wiring remain the next work.
+The final new/legacy producer selection passes 49 checks in
+`.scratch/executed-package-final5.log`. Independent Merlin staging/correspondence
+passes 56 in `out/build/execution-model-staging-final.log`. Selections overlap.
+`out/executed-model-packages/summary.json` reopens the complete package/result,
+replay, abort, source-only stage and failed-publication evidence and verifies
+current consumer source hashes. The historic 352-package inventory is unchanged.
+Qualification explicitly names Merlin host with the original PyTorch oracle;
+the separate native evaluator, generated C/target harnesses, v4 views/layouts,
+runtime resizing ownership and broader source/numeric/effect compositions remain.
 
 [Execution-sized results](execution_owned_results.md) now connect explicit
 Merlin signature v6 staging to complete model/TTIR host invocation in all three
@@ -274,8 +278,8 @@ their counts and commit table are historical.
 
 | Repository | Branch | Relevant implementation |
 |---|---|---|
-| `/scratch/grammy/blast/triton2MLIR` | `main` | `3a070abc26884677e9e7e3eec03696535be4e809` — executed internal-size binding and direct Merlin execution; the following provenance commit adds required located-kernel hashes, independent-reader tests and this handoff update. |
-| `/scratch/grammy/blast/merlin-graph-proof-intake` | `ttir-experiment-grammy` | `2963c543e757a2afad3e3788b34970e7b974a049` — independent complete-SSA/result-type/location reconstruction; `99c96b1066f0e3f974da753f9d6decab2b121fad` — staged execution-owned results for earlier admitted binding profiles. |
+| `/scratch/grammy/blast/triton2MLIR` | `main` | `b72caed1e800c024811d57be2f4ca1831d178930` — located kernel retention; the following package commit adds receipt v2 creation/verification, actual qualified host execution, CLI/coverage support and this handoff update. |
+| `/scratch/grammy/blast/merlin-graph-proof-intake` | `ttir-experiment-grammy` | `e943745a3dacac22f7d9071b1772527551c9635a` — independent v4 package staging; `2963c543e757a2afad3e3788b34970e7b974a049` — complete-SSA/result-type/location reconstruction. |
 | `/scratch/grammy/blast/model2MLIR` | `ttir-experiment-grammy` | `863d797` — runtime integer item reads and guards; no new source edits in the executed-call slice. Preserve the unrelated pre-existing whitespace edit in `m2m/ir/import_fx.py`. |
 
 The unrelated dirty `model2MLIR/m2m/ir/import_fx.py` is preserved. Its SHA-256 is

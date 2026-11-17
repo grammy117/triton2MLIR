@@ -3,11 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
-[Internal computed sizes](docs/executed_model_binding.md) now bind a real
-Triton count feeding two later allocations through explicit v4 executable call
-contracts. All seven results pass direct whole-body Merlin host execution in
-three memory profiles, with fifteen unchanged-library replays. Independent
-package staging/receipt admission for v4 remains the next integration step.
+[Internal computed sizes](docs/executed_model_binding.md) now reach qualified
+packages and source-only Merlin staging. A real Triton count feeds two later
+allocations through explicit v4 call contracts, receipt v2 and signature v6.
+All seven results pass in three memory profiles, with fifteen unchanged-library
+replays. Qualification names the Merlin host backend and original PyTorch
+reference; separate native/target evaluators and resizing ownership remain open.
 
 [Execution-sized results](docs/execution_owned_results.md) now connect explicit
 Merlin signature v6 staging to complete model/TTIR host execution in all three

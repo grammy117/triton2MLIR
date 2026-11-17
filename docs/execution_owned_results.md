@@ -7,9 +7,11 @@ computed by the executed body. The
 exposes `merlin.llvmlower.owned_results.compile_owned_results`. Explicit signature
 v6 now connects ordinary captures, standalone kernels and bound models to
 triton2MLIR's selected compiler-only staging and Merlin host invocation.
-Existing signatures through v5 retain their preallocation contracts. The native
-evaluator, generated C/target harnesses and arbitrary producer/binding shapes
-remain further work. The original capture/package schemas are unchanged.
+Existing signatures through v5 retain their preallocation contracts. The separate
+native evaluator, generated C/target harnesses and arbitrary producer/binding
+shapes remain further work. Earlier package profiles retain their schemas;
+internally computed call sizes now use the explicit
+[v4 binding and v2 package](executed_model_binding.md) extension.
 
 ## The concrete boundary
 
@@ -148,13 +150,14 @@ the refusal; it does not disable the gate.
 
 The remaining integration requirements are:
 
-1. Bind real model/kernel results computed from internal data. Extend the
-   necessary model2MLIR emitters and per-call shape/resource relationships;
-   never substitute saved invocation values for executable source computation.
-2. Extend normal qualification receipts and the separate native evaluator for
-   this mode, preserving parent data and all result/effect references. Existing
-   package verification and selected host staging/invocation now work; old
-   qualification formats do not silently inherit this extension.
+1. Extend the selected internally computed count path to remaining model/
+   kernel shapes, views, resources and source compositions. Receipt v2 now
+   packages that real model through independent v4 reconstruction and v6
+   staging; no saved invocation value supplies executable source computation.
+2. Extend the separate native evaluator while retaining complete parent data
+   and result/effect references. The new v2 qualification explicitly uses
+   Merlin host and the original PyTorch oracle; it does not claim a second
+   native compiler backend. Older qualification formats do not inherit it.
 3. Extend the independent generation proof for zero/runtime-trip resizing
    state, conditional final owners and transfer to function results. Close
    initial/fresh/final aliases and every use/release edge; preserve negative

@@ -105,14 +105,15 @@ def package_coverage(bundles, *, qualifications=(), corpora=()):
     for path in bundles:
         root = Path(path).absolute()
         receipt = _receipt(root, "capture_receipt.json")
-        if receipt.get("schema") not in ("t2m.capture-receipt.v2", "t2m.bound-model-receipt.v1", "t2m.effect-kernel-receipt.v1"):
+        if receipt.get("schema") not in ("t2m.capture-receipt.v2", "t2m.bound-model-receipt.v1", "t2m.bound-model-receipt.v2", "t2m.effect-kernel-receipt.v1"):
             raise ValueError("coverage requires shared tensor or bound model packages")
         verify_bundle(root)
         pin = _record(root / "capture_receipt.json")
         if pin["sha256"] in selected:
             raise ValueError("duplicate package receipt in coverage selection")
         selected.add(pin["sha256"])
-        model = receipt["schema"] == "t2m.bound-model-receipt.v1"
+        model = receipt["schema"] in ("t2m.bound-model-receipt.v1", "t2m.bound-model-receipt.v2")
+        executed_model = receipt["schema"] == "t2m.bound-model-receipt.v2"
         effect = receipt["schema"] == "t2m.effect-kernel-receipt.v1"
         effect_reference = _json(root / "reference.json") if effect else None
         mixed = effect and effect_reference["schema"] == "t2m.effect-reference.v2"
@@ -125,6 +126,8 @@ def package_coverage(bundles, *, qualifications=(), corpora=()):
             if not model or filename in receipt["artifacts"]:
                 host = _json(_member(consumer, filename))
         host_schema = "t2m.merlin-effect-host-qualification.v1" if effect else "t2m.merlin-host-qualification.v1" if model else "t2m.merlin-kernel-host-qualification.v1"
+        if executed_model:
+            host_schema = "t2m.merlin-host-qualification.v2"
         if host is not None and (host.get("schema") != host_schema
                 or host.get("host_execution") != ("matched-expected-outcome" if effect else "passed") or host.get("reference_comparison") != "passed"
                 or host.get("whole_body_lowering") != "passed"
@@ -135,6 +138,8 @@ def package_coverage(bundles, *, qualifications=(), corpora=()):
             "merlin_host": host is not None, "native_reference_comparison": "passed",
             "reference_kind":reference_kind,
             "accelerator_execution": "not-qualified-by-this-report"}
+        if executed_model:
+            package.update(native_backend="Merlin-host-execution-owned", independent_native_compiler_oracle=False)
         if mixed:
             package["native_numeric_policy"] = {"results":effect_reference["results"]["comparisons"]}
         if host is not None:
