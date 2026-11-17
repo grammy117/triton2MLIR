@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Integer-address region state](integer_address_regions.md) appends internal
+logical pointer fields alongside original integer slots carrying modular byte
+offsets. Original for/while/if tuple order, independent while input/result
+interfaces, numeric computation and effects stay executable. Complete source
+closure, bit-divisibility and SSA scope proofs precede detached publication.
+`integer-address-region-state` records and generated compatibility metadata
+name this representation; original casts remain inventoried. Provenance grants
+no physical address, alignment or alias facts. Public tensor/scalar ABI, artifact
+rosters and receipt schemas are unchanged.
+
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 add `closed-pointer-integer-difference` transformations under the existing
 `prov.closed_pointer_addresses` correspondence. Only actual common SSA roots

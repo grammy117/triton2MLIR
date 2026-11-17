@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Integer-address region state](integer_address_regions.md) now retains actual
+pointer/displacement pairs across original for/while/if edges. Sixteen real
+source libraries and actual Spike images retain all 32 results as exact words,
+with eighty additional unchanged-library host invocations. Ordinary numeric
+state participates in divisibility proofs without becoming a physical-address
+fact. Bounds, initialization, ownership and source-use closure remain mandatory.
+This extends qualified structured forms; general root equivalence, other region
+interfaces, effects, model/runtime/source and accelerator closure remain open.
+An additional native-verified saved-TTIR while fixture qualifies independent
+input/result arities and loaded condition state. The complete new selection in
+`out/integer-address-regions/summary.json` reopens **17 libraries/Spike images,
+33 exact results, 83 host replays and four actual bounds refusals**. The combined
+`out/integer-address-region-inventory/coverage.json` reopens **327 packages,
+268 standalone qualifications and fourteen product cases**. The 57-case existing
+address/model selection and updated 23 focused contracts pass; counts overlap.
+
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now retain the actual shared SSA base proof, source-width increments, byte units,
 selected pointer offsets and runtime load/loop computation. Seven actual
@@ -19,11 +35,11 @@ Two complete i32/i64 relative-pointer models also retain all twenty original
 results through those execution boundaries, including parameters, dependent
 calls, empty and zero-trip results and original snapshots. Their reopened
 receipts are `out/pointer-difference-widths/summary.json` and
-`out/pointer-difference-models/summary.json`. The current combined
+`out/pointer-difference-models/summary.json`. That earlier combined
 `out/pointer-difference-width-inventory/coverage.json` reopens **310 packages,
 251 standalone qualifications and fourteen product cases**, retaining all fifty
-observed names. Source names/word results do not close integer-address region
-state, dynamic public model interfaces, broader effects or applicable targets.
+observed names. Source names/word results do not close all integer-address region
+compositions, dynamic public model interfaces, broader effects or applicable targets.
 
 [Numeric region builtins](numeric_regions.md) now retain existing histogram,
 dot/scaled-dot, local-gather and mapped-math conversions inside scalar bodies.

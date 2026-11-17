@@ -1,10 +1,24 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
-Updated 2026-11-15. **The end-to-end pipeline works for a broad qualified
+Updated 2026-11-16. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
 model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
+
+[Integer-address region state](integer_address_regions.md) now retains closed
+address pairs across original for/while/if interfaces. Finite SSA classification,
+root propagation and byte-divisibility proofs precede detached publication;
+source numeric/control/effect semantics stay executable. Sixteen i8/i16/i32/i64
+libraries pass native/Merlin host/Spike with 32 exact-word results and eighty
+additional host invocations. Branches may select roots before or inside loops;
+physical observations and unproved mixed/root/alias/effect forms still refuse.
+Public ABI and receipt schemas are unchanged.
+An additional saved-TTIR while fixture qualifies independent input/result
+arities and original loaded condition state. The complete new selection has
+17 libraries/actual target images, 33 exact results, 83 further host invocations
+and four real bounds aborts. The updated 23 focused contracts and the overlapping
+57-case address/model regression selection pass.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now close a reproduced subtraction refusal at the logical/physical boundary.
@@ -19,8 +33,8 @@ Four additional libraries retain narrow i32 wrap before byte scaling, with four
 exact results and sixteen host replays. Two complete i32/i64 models retain all
 twenty original results as exact words through native/Merlin host/Spike, including
 dependent/empty/zero-trip calls and original snapshots. Public model shapes
-remain static. A real integer-address `scf.for` probe still refuses and identifies
-the next paired region-state implementation boundary.
+remain static. The formerly refused integer-address `scf.for` probe now passes
+through the paired region-state implementation described above.
 
 [Numeric region builtins](numeric_regions.md) now close the reproduced mapped
 histogram/dot refusals through the existing converters and original contracts.
@@ -130,8 +144,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/pointer-difference-width-inventory/coverage.json` reopens **310 packages,
-251 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/integer-address-region-inventory/coverage.json` reopens **327 packages,
+268 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

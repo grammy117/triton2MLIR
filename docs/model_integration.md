@@ -6,8 +6,8 @@ parameters, dependent calls, empty/zero-trip results and original snapshots.
 Two i32/i64 guarded-source-word models pass native/Merlin host/Spike with all
 twenty original results as exact words. Original weights/data/reference archives
 are byte-identical; runtime kernel scalars specialize from captured typed call
-attributes. Public model shapes and ABI remain unchanged. Absolute integer
-region state, physical observations and broader model/effect/target forms remain open.
+attributes. Public model shapes and ABI remain unchanged. Unproved integer-address
+region compositions, physical observations and broader model/effect/target forms remain open.
 
 [Numeric-region models](numeric_regions.md#complete-pytorch-models) now retain
 histogram, local gather and dot/scaled-dot callbacks with saved parameters,

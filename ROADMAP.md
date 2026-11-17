@@ -4,6 +4,21 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Integer-address region state](docs/integer_address_regions.md) closes the
+reproduced carried-address refusal using actual logical pointer bases paired
+with modular byte offsets. Original for/while/if interfaces, numeric state,
+effects and undecided grid placement remain executable. Sixteen source captures
+pass native/Merlin host/Spike with 32 exact-word results and eighty further host
+replays. General root equivalence, other region interfaces, broader aliases,
+external effects, model/runtime/source compositions and applicable targets
+remain completion requirements.
+
+An additional saved-TTIR while fixture qualifies different paired input/result
+arities and actual loaded condition state. The complete new selection reopens
+17 libraries/Spike images, 33 exact results, 83 host replays and four real bounds
+aborts. The combined ledger now contains 327 packages and 268 standalone
+qualifications; opcode-name breadth remains separate from arbitrary coverage.
+
 [Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
 now expose ordinary byte deltas only after actual SSA proves the shared base
 and lane correspondence. Source-width arithmetic, strided reads, selected
@@ -12,7 +27,7 @@ libraries retain eleven exact-word results and 32 further host replays; four
 actual bounds failures stay refused. Four further libraries retain narrow i32
 wrap before byte scaling, with four exact results and sixteen host replays.
 Two complete parameterized models retain all twenty original results as exact
-words through native/Merlin host/Spike. The latest inventory reopens 310 packages
+words through native/Merlin host/Spike. That earlier inventory reopens 310 packages
 and 251 standalone qualifications. General region/alias/effect/source and
 applicable target scope remain completion requirements.
 

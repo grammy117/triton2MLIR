@@ -1,6 +1,6 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
-Updated 2026-11-15. **The full goal is active and incomplete.** Every valid
+Updated 2026-11-16. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
 algorithm retained, and applicable execution evidence. Host-only support,
@@ -35,6 +35,19 @@ Microsoft and Triton boundaries. Use the existing pinned tools; no implicit
 Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
+
+[Integer-address region state](integer_address_regions.md) now carries closed
+logical pointer/byte pairs across original for/while/if edges, including changing
+roots and ordinary numeric state. Sixteen libraries and actual Spike images
+retain 32 exact-word results with eighty further host invocations. Complete
+source-use, bit-divisibility, scope and memory checks remain mandatory; mixed
+or physically observing states still refuse. Next close remaining correlated
+root/region/alias forms and complete model/runtime/effect/target compositions
+through the same package, without granting semantics through provenance.
+The additional independent-port while fixture and four actual bounds aborts
+bring the new selection to 17 libraries/Spike images, 33 exact results and 83
+host replays. The combined ledger reopens 327 packages and 268 standalone
+qualifications; arbitrary-kernel and applicable-target closure remains open.
 
 [Local tensor regions](tensor_regions.md) now retain checked tensor
 intermediates, actual for/while state and mixed nested maps/reductions/scans.

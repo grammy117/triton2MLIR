@@ -114,12 +114,32 @@ class Address:
 
 
 def normalize_pointer_addresses(module, source_ids):
+    from .integer_address_regions import analyze
+
+    if analyze(module, source_ids) is None:
+        return _normalize_pointer_addresses(module, source_ids)
+    prepared = module.clone()
+    try:
+        regions = analyze(prepared, source_ids).prepare()
+        reports = _normalize_pointer_addresses(prepared, source_ids, regions=regions)
+    except Exception:
+        prepared.drop_all_references()
+        raise
+    for block in list(module.body.blocks):
+        module.body.erase_block(block, safe_erase=False)
+    prepared.body.move_blocks(module.body)
+    return [*regions.reports, *reports]
+
+
+def _normalize_pointer_addresses(module, source_ids, *, regions=None):
     """Validate the whole address-use closure before committing any mutation."""
     from .pointer_views import element
     from .shared_tensor import opcode
 
-    states, plans, reports = {}, [], []
-    divisibility = {}
+    states, plans, reports = dict(regions.pairs) if regions else {}, [], []
+    divisibility = {value: fact for value, fact in regions.factors.items()
+                    if value not in regions.addresses or value in regions.pairs} if regions else {}
+    retained, deferred = set(), []
     emitted = []
     committed = False
 
@@ -144,16 +164,19 @@ def normalize_pointer_addresses(module, source_ids):
         for op in list(module.walk()):
             name = opcode(op)
             affected = [v for v in op.operands if v in states]
-            if name not in {"tt.ptr_to_int", "tt.int_to_ptr"} and not affected:
-                continue
             emitted = []
+            handled = regions.handle(op, states, emitted) if regions else False
+            if name not in {"tt.ptr_to_int", "tt.int_to_ptr"} and not affected and not handled:
+                continue
             sources = frozenset(source_ids(op.location)).union(
                 *(states[v].sources for v in affected)
             )
             terminal = name == "tt.int_to_ptr"
             if len(sources) > 4096:
                 refuse(op, "pointer integer expression exceeds its 4096-source budget")
-            if name == "tt.ptr_to_int":
+            if handled:
+                retained.add(op)
+            elif name == "tt.ptr_to_int":
                 if (
                     len(op.operands) != 1
                     or len(op.results) != 1
@@ -238,6 +261,9 @@ def normalize_pointer_addresses(module, source_ids):
             elif name in {"arith.addi", "arith.subi"}:
                 neutral(op)
                 if name == "arith.subi" and len(affected) == 2:
+                    if regions:
+                        deferred.append((op, tuple(states[v] for v in op.operands), sources))
+                        continue
                     from .pointer_differences import difference
 
                     def emit(created, emitted=emitted):
@@ -370,12 +396,51 @@ def normalize_pointer_addresses(module, source_ids):
                 )
             plans.append((op, emitted, terminal))
         # Absolute integers disappear only after all of their users are checked.
+        replacements = {}
         for op, emitted, terminal in plans:
             op.parent.insert_ops_before(emitted, op)
             if terminal:
+                replacements[op.results[0]] = emitted[-1].results[0]
                 op.results[0].replace_all_uses_with(emitted[-1].results[0])
+        if regions:
+            from .pointer_differences import difference
+
+            regions.aliases.update(replacements)
+            regions.fold_bases()
+            for op, addresses, sources in deferred:
+                emitted = []
+
+                def emit(created, emitted=emitted):
+                    if len(emitted) >= 32768:
+                        created.drop_all_references()
+                        raise ValueError("pointer difference exceeds its bounded recipe budget")
+                    emitted.append(created)
+                    return created.results[0]
+
+                addresses = tuple(Address(regions.resolve(value.pointer), regions.resolve(value.displacement),
+                                          value.sources, value.origin) for value in addresses)
+                try:
+                    result, extra_sources = difference(*addresses, emit, source_ids)
+                except (ValueError, ParseError) as error:
+                    refuse(op, str(error))
+                sources = sources.union(extra_sources)
+                if len(sources) > 4096:
+                    refuse(op, "pointer integer expression exceeds its 4096-source budget")
+                for created in emitted:
+                    created.location = builtin.FusedLoc(builtin.ArrayAttr([
+                        op.location, *(builtin.NameLoc(builtin.StringAttr(identity), builtin.UnknownLoc())
+                                       for identity in sorted(sources))]), builtin.NoneAttr())
+                op.parent.insert_ops_before(emitted, op)
+                regions.aliases[op.results[0]] = result
+                op.results[0].replace_all_uses_with(result)
+                op.parent.erase_op(op)
+                reports.append({"kind": "closed-pointer-integer-difference", "source_ids": sorted(sources),
+                                "address_bits": 64, "units": "bytes", "arithmetic": "modulo-2^64",
+                                "expansion": "same-logical-base-cancelled; difference-of-executable-byte-displacements",
+                                "physical_address": "unobserved; no base integer materialized"})
         for op, _, _ in reversed(plans):
-            op.parent.erase_op(op)
+            if op not in retained:
+                op.parent.erase_op(op)
         committed = True
         return reports
     finally:

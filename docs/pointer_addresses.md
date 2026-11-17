@@ -1,5 +1,10 @@
 # Closed pointer-integer displacements and differences
 
+[Integer-address region state](integer_address_regions.md) now extends these
+closed expressions through original for/while/if interfaces. Paired pointer
+bases and modular byte state preserve source control and memory effects;
+physical observations and unproved compositions still refuse.
+
 The latest [same-base difference](#same-base-byte-differences) selection has
 eleven actual native/Merlin-host/Spike libraries with fifteen exact-word results,
 48 further host replays and four real bounds aborts. Two complete models also
@@ -41,8 +46,9 @@ address comparisons/diagnostics, mixed integer/address selection, arbitrary
 integer-created pointers, unsupported address algebra and poison-producing
 overflow flags refuse with source locations. Reorderable address reshapes need
 a paired lane-order contract; they cannot independently reorder bases and
-displacements. Integer-valued region-carried addresses remain further work;
-pointer-valued region state uses the existing pointer-control adapter.
+displacements. Closed integer-valued region state uses the
+[paired address adapter](integer_address_regions.md); pointer-valued region
+state uses the existing pointer-control adapter.
 Divisibility proof is limited to 8,192 SSA nodes and depth 128; an expression
 retains at most 4,096 source IDs. Unproved cases are explicit refusals.
 
@@ -223,16 +229,11 @@ receipts. The latest `out/pointer-difference-width-inventory/coverage.json`
 reopens **310 packages, 251 standalone qualifications and fourteen product
 cases**, retaining all fifty names under selected native/Merlin-host profiles.
 
-A maintained real source case, `carried_integer_address` in
-`t2m/examples/pointer_address_kernels.py`, still refuses an integer address carried by
-`scf.for`: `address = x.to(tl.uint64) + lane * 4`, then each iteration loads
-through `address.to(pointer)` and advances it by `n * 4`. The current diagnostic
-locates the absolute integer's escape into `scf.for`. This needs paired logical
-base/displacement state across region entry/backedges, reusing the existing
-pointer-control edge/fixed-point analysis. Preserve the original loop, source
-arithmetic and effects; qualify for/while/branch recurrences and unknown-root
-refusals through the same package and consumer. This remains open alongside
-broader aliases, external state, numeric/source and applicable target scope.
-Its located-refusal test records a valid unimplemented form, not forbidden source
-semantics. Replace that expected refusal with complete execution checks when
-the region-state implementation lands.
+The formerly refused `carried_integer_address` case in
+`t2m/examples/pointer_address_kernels.py` now converts with its actual `scf.for`
+and the complete closed-pointer contract. The
+[region-state qualification](integer_address_regions.md) additionally executes
+for/while/branch recurrences and alternating roots through the same native,
+Merlin-host and Spike interfaces. The earlier expected refusal has become a
+positive source/control check. Broader root equivalence, aliases, external state,
+numeric/source combinations and applicable targets remain completion work.

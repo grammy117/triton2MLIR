@@ -3,6 +3,17 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Integer-address region state](docs/integer_address_regions.md) now retains
+closed address pairs across original for/while/if interfaces. Actual pointer
+bases travel with modular byte displacements; source numeric widths, branches,
+loop effects and logical grid remain executable. Sixteen i8/i16/i32/i64 libraries
+and actual Spike images retain 32 exact-word results and eighty additional host
+replays. Physical observations and unproved address/alias/effect combinations
+remain explicit refusals. Public ABI and receipt schemas are unchanged.
+An additional saved-TTIR while case qualifies independent input/result ports;
+four compiled guards still reject invalid active addresses. The selected ledger
+now reopens 327 packages and 268 standalone qualifications.
+
 [Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
 now cancel the actual common SSA base into standard modular byte arithmetic.
 Runtime strides, selected pointers, loops, exact byte results and memory guards
@@ -10,7 +21,7 @@ remain executable. Seven native/Merlin-host/Spike libraries retain eleven exact
 results and 32 additional host replays; four invalid accesses still abort.
 Four further libraries retain i32 wrap before byte scaling, adding four exact
 results and sixteen replays. Two complete models retain all twenty original
-results as exact words through native/Merlin host/Spike. The latest inventory
+results as exact words through native/Merlin host/Spike. That earlier inventory
 reopens 310 packages and 251 standalone qualifications.
 Cross-root/absolute observations and full arbitrary-kernel/target scope remain open.
 

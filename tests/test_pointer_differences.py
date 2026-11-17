@@ -167,8 +167,7 @@ def test_original_i32_increment_wraps_before_pointee_byte_scaling(tmp_path, widt
     qualify_and_replay(tmp_path, result, narrow_arguments(width, 13), [narrow_arguments(width, n) for n in (0, 1, 8, 31)])
 
 
-def test_integer_address_loop_is_a_located_unimplemented_form_without_portable_success(tmp_path):
-    from t2m.diagnostics import ConversionError
+def test_integer_address_loop_retains_its_source_control_and_closed_pointer_contract(tmp_path):
     from t2m.examples.pointer_address_kernels import carried_integer_address
 
     source = tmp_path / "source.ttir"
@@ -178,8 +177,8 @@ def test_integer_address_loop_is_a_located_unimplemented_form_without_portable_s
         TensorBuffer("x", ("capacity",), dtype="i32"), TensorBuffer("out", ("n",), "write", "i32")),
         grid=(GridExtent("n", 8),), runtime_scalars=(RuntimeScalar("n", "i32", 2, bounds=(0, 31)),
             RuntimeScalar("capacity", "i32", 3, bounds=(0, 256)), RuntimeScalar("steps", "i32", 4, bounds=(0, 4))))
-    with pytest.raises(ConversionError, match=r"escape.*scf.for") as error:
-        convert_shared(source, abi, tmp_path / "translation", optimizer=os.environ["TRITON_SHARED_OPT"],
-                       memory_profile="guarded-buffer", address_policy="source-words")
-    assert error.value.opcode == "tt.ptr_to_int" and error.value.source_id
-    assert not (tmp_path / "translation/memory-stage.mlir").exists()
+    result = convert_shared(source, abi, tmp_path / "translation", optimizer=os.environ["TRITON_SHARED_OPT"],
+                            memory_profile="guarded-buffer", address_policy="source-words")
+    assert any(item["kind"] == "integer-address-region-state" for item in result.trace["transformations"])
+    assert "scf.for" in result.mlir_text
+    assert not any(item.name in ("tt.ptr_to_int", "tt.int_to_ptr") for item in result.module.walk())

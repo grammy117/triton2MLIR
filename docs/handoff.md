@@ -1,10 +1,24 @@
-# Review handoff — updated 2026-11-15
+# Review handoff — updated 2026-11-16
 
 The source-to-package-to-Merlin pipeline works for the qualified selections.
 **Full arbitrary-Triton-kernel coverage remains incomplete.** This is a review
 boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
+
+[Integer-address region state](integer_address_regions.md) now closes the
+reproduced integer-address for-loop refusal. Actual logical pointer fields pair
+with modular byte state across for/while/if interfaces, preserving original
+numeric/control/effect computation. Sixteen source captures pass native/Merlin
+host/Spike with all 32 results exact and eighty further host replays. Unknown
+physical, mixed-state, root/alias/effect and applicable target forms stay open.
+One native-verified saved-TTIR while fixture additionally executes independent
+input/result ports and actual loaded condition state. The complete selection
+has 17 libraries/Spike images, 33 exact results, 83 further host invocations and
+four compiled bounds aborts. `out/integer-address-regions/summary.json` reopens
+the receipts; `out/integer-address-region-inventory/coverage.json` reopens 327
+packages and 268 standalone qualifications. The 57-case address/model regression
+selection and updated 23 focused contracts pass; their counts overlap.
 
 [Same-base pointer differences](pointer_addresses.md#same-base-byte-differences)
 now retain cancelling SSA roots, source byte units and runtime memory/control.
@@ -19,8 +33,8 @@ width cases retain overflowing i32 increments before byte scaling, with four
 exact results and sixteen host replays. Two complete relative-pointer models
 also retain all twenty original results through native/Merlin host/Spike.
 The latest `out/pointer-difference-width-inventory/coverage.json` reopens 310
-packages and 251 standalone qualifications. A reproduced integer-address
-`scf.for` refusal identifies the next paired region-state work; see the
+packages and 251 standalone qualifications. The reproduced integer-address
+`scf.for` refusal is now closed by the paired region-state work above; see the
 [address contract](pointer_addresses.md#complete-model-qualification-and-next-region-boundary).
 
 [Local tensor regions](tensor_regions.md) and complete learned-state models
