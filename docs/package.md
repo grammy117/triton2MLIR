@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+Selected owned-result consumer fingerprints additionally pin the link-independent
+`owned_result_lowering.py`. The separate serial-context/failure-hook build choices
+do not change public capture, receipt or signature schemas and are not selected
+by source operation names. Their real Spike runtime fixtures are separate from
+package qualification; no existing host receipt silently acquires target support.
+
 [Checked C result invocation](checked_c_results.md) adds a reusable generated
 bridge API, not a new receipt or qualification backend. Selected consumer-source
 fingerprints now include its source-typed generator and C implementation/header;

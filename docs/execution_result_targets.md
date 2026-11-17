@@ -1,5 +1,28 @@
 # Execution-sized results: next target integration boundary
 
+The shared lowerer and serial allocator seams are now implemented. Merlin
+`bb347b1de` emits source/prepared MLIR, checked bridge and LLVM before runtime
+linking; layout/index values remain explicit caller premises. Merlin
+`f2552dec1` adds explicitly selected nonconcurrent context and external failure
+reporting without changing native TLS/stdio defaults. Source/owner/product
+guards and the default 64-bit descriptor contract remain active.
+
+Actual cross model/bridge objects and a linked Spike runtime fixture now pass.
+The successful standard-MLIR image returns all nine results across three
+invocations; a second image rejects allocation exhaustion before results or
+normal completion. The complete 152-check selection and two retained image
+rechecks pass. These are runtime-seam results, not production receipt-v2/v6
+target-driver qualification. The unchanged Spike package driver still has the
+original receipt gate described below.
+
+The next implementation must connect actual v6 source-only staging, invocation
+input transport and generated typed calls to the existing target build/resource
+owners. It must then report every actual result shape/payload under an explicit
+readback profile and independently match complete original model references.
+Reusing the binary frame transport is possible, but fixed-shape output metadata
+cannot substitute for observed dimensions. Keep source validation, compiler
+inputs and runtime/evaluator arrays separated throughout that integration.
+
 The first reusable C seam is now implemented and exercised by
 [checked C calls](checked_c_results.md): source-typed aggregate invocation,
 complete descriptor/owner validation and independent logical copies. The real

@@ -80,6 +80,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                      "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_abi.py",
                      "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
                      "merlin/runtime/abi/owned_results.c", "src/merlin/llvmlower/owned_result_c.py",
+                     "src/merlin/llvmlower/owned_result_lowering.py",
                      "merlin/runtime/abi/owned_result_views.c", "merlin/runtime/abi/owned_result_views.h"):
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     (work / "interface.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")

@@ -1,5 +1,22 @@
 # Execution-sized results through a checked C call
 
+Merlin now separates lowering from host linking (`bb347b1de`) and supports
+explicit serial allocation context/external failure reporting (`f2552dec1`).
+Actual observed cross-compiler contracts produce model and bridge objects.
+A standard-MLIR runtime fixture additionally links and executes on Spike,
+retaining all nine results across three invocations; an allocation-failure
+image exits without publishing results. This is a runtime-seam test, not the
+production seven-result TTIR package driver or its readback protocol.
+
+The final 152-check Merlin selection passes in
+`out/build/owned-runtime-final1.log`. Two source-frozen image rechecks use
+explicit retention in `out/build/pytest-owned-images-retained/`, with actual
+source/tool/image/output identities and process outcomes. The frontend's real
+TTIR model separately passes all eight C checks against the new implementation
+in `.scratch/compact-c-lowering1.log`. Source fingerprints now pin the common
+lowerer too. The [target plan](execution_result_targets.md) retains the remaining
+staged-driver, input-transport and observed-shape readback requirements.
+
 Merlin `0606fd4f1` adds `merlin_owned_result_invoke_checked` to the existing
 official returned-descriptor bridge. A caller explicitly begins one tracked
 invocation, invokes the actual source once, validates every result, copies

@@ -1,5 +1,19 @@
 # Measured coverage and remaining boundaries
 
+[Link-independent lowering and serial context](execution_result_targets.md)
+now pass the complete 152-check Merlin selection, including real cross objects,
+a Spike image with nine exact standard-MLIR results over three calls, and an
+actual allocation-budget failure before result publication. Two source-frozen
+image rechecks remain under `out/build/pytest-owned-images-retained/`. Frontend
+real-TTIR host/C execution separately passes eight checks in
+`.scratch/compact-c-lowering1.log`; it supplies no new target image verdict.
+No production v6 target-package, per-op execution or historical-inventory
+expansion is claimed by these runtime-seam checks.
+
+`out/owned-result-target-seams/summary.json` reopens the frontend's complete
+84 results and two source aborts separately from the two actual runtime images,
+checking original source, compiler/simulator, image and retained output digests.
+
 [Checked C calls](checked_c_results.md) now retain all 84 shape/word results
 across twelve actual invocations of the real three-kernel compaction model.
 Two invalid lengths reach original exported-domain assertions. The final

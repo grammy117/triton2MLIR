@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-17
 
+Merlin `bb347b1de` separates owned-result lowering from host linking, and
+`f2552dec1` adds explicit serial context/external failure reporting. Both are
+pushed on `ttir-experiment-grammy`, with tips and attribution verified. The final
+152 runtime/allocator/cross/native/persistence checks pass. Two source-frozen
+Spike image rechecks are retained under `out/build/pytest-owned-images-retained/`:
+one reports nine exact standard-MLIR results over three calls, and one exits on
+allocation exhaustion without results. Source/tool/image/output digests reopen.
+These are runtime-seam fixtures; production v6 TTIR driver/readback is still open.
+The frontend now pins the common lowerer and its real-TTIR host/C regression
+selection passes eight in `.scratch/compact-c-lowering1.log`. Follow the
+[target integration plan](execution_result_targets.md) for the actual next work.
+
+`out/owned-result-target-seams/summary.json` reopens the two evidence scopes,
+including all frontend results/aborts and actual retained runtime image/tool/
+output identities. Successful pytest temporaries are normally removed by Merlin;
+the image recheck explicitly uses `-o tmp_path_retention_policy=all` under the
+project-owned output root. No unowned scratch path is needed.
+
 Merlin `0606fd4f1` now adds [checked generated-C result calls](checked_c_results.md)
 on `ttir-experiment-grammy`; its remote tip and `grammy117` author/committer
 attribution are verified. Its final 115 C/allocator/native/persistence checks

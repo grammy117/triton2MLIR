@@ -8,6 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+Shared lowering and explicit serial allocation context now pass real cross
+builds and Spike runtime success/failure fixtures. Next connect v6 source-only
+staging and input transport to a generated typed target call, retaining ordinary
+resource/toolchain owners and complete dynamic-result readback. The existing
+package driver still rejects the new receipt before staging; runtime fixture
+execution alone does not close that interface requirement.
+
 [Checked generated-C result calls](checked_c_results.md) now implement complete
 descriptor/allocation validation and independent copies, with actual seven-result
 TTIR compaction execution and source guards. Next separate reusable lowering

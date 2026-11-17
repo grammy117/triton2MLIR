@@ -6,6 +6,15 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Owned-result target seams](execution_result_targets.md) now emit link-independent
+LLVM/bridge products and support explicitly selected serial allocator context
+and failure reporting. Actual cross objects and two real Spike runtime images
+pass success/failure checks. The complete Merlin selection passes 152; two
+retained image rechecks preserve source/tool/image/output identities. The real
+TTIR host/C model separately retains its eight passing checks. Production v6
+package-driver/readback integration, rather than a new op conversion, remains
+the next target boundary; the historical TTIR inventory is unchanged.
+
 [Checked C result calls](checked_c_results.md) now execute the actual three-kernel
 TTIR compaction model without predicted result shapes. Six input sets/twelve
 C calls retain all 84 returned results; two invalid lengths abort through

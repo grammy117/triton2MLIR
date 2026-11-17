@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Target runtime seams](docs/execution_result_targets.md) now lower returned
+descriptors independently of host linking and explicitly select serial context
+and failure reporting. A real Spike fixture retains nine content-derived results
+and an allocation-failure image refuses. Production v6 package staging, generated
+invocation and complete observed-shape readback still require integration.
+
 [Checked C result transport](docs/checked_c_results.md) now implements the first
 execution-sized target prerequisite: actual source execution, complete returned
 descriptor/owner validation and independent copies. Real TTIR model results pass

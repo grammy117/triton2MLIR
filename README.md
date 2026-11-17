@@ -1,5 +1,10 @@
 # triton2MLIR
 
+The [owned-result target seams](docs/execution_result_targets.md) now include
+link-independent lowering and explicit serial allocation context. Real Spike
+runtime fixtures pass results and allocation-failure cases; the full v6 TTIR
+package driver/readback remains open. Real TTIR host/C regressions also pass.
+
 [Checked generated-C results](docs/checked_c_results.md) now execute the real
 three-kernel compaction model from a standalone C program. Six input sets retain
 all 84 results across two calls each; actual source-domain guards still abort.
