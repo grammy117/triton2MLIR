@@ -3,6 +3,11 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Symbolic model intake](docs/symbolic_models.md) now retains actual dynamic
+public types. General symbolic binding/execution is unfinished: a fresh Triton
+copy model currently refuses an unproved index conversion. Earlier static-model
+execution results below retain their original frontend-version scope.
+
 [Live model runtime arguments](docs/live_runtime_arguments.md) now preserve
 actual scalar SSA, singleton controls and original exported dimension operands.
 Eleven complete models retain 57 exact-word results through native/Merlin host/

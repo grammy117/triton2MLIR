@@ -1,5 +1,10 @@
 # Measured coverage and remaining boundaries
 
+The [symbolic importer correction](symbolic_models.md) adds source/type
+preservation, with no new qualified package. Existing model execution results
+retain their original static captures and frontend-version scope. The current
+symbolic shape integration remains an open failing case at checked binding.
+
 [Live runtime model arguments](live_runtime_arguments.md) qualify seven exact
 scalar control types, actual exported dimension operands in three memory
 profiles and a dependent address-state model. Eleven complete configurations

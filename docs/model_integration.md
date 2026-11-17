@@ -1,5 +1,9 @@
 # Binding translated kernels into model2MLIR
 
+See the [symbolic model boundary](symbolic_models.md) for the newer importer
+that preserves dynamic public types. The execution evidence below retains its
+original static captures; symbolic binding and consumer invocation remain open.
+
 [Live runtime arguments](live_runtime_arguments.md) now bind actual original
 scalar SSA operands and singleton tensor controls alongside captured scalar
 attributes. Eleven complete model configurations preserve 57 exact results

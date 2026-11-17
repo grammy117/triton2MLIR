@@ -4,6 +4,13 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Symbolic model intake](docs/symbolic_models.md) now preserves actual `?` public
+dimensions after the model2MLIR importer correction. The fresh real Triton model
+and existing shape integration expose the next unproved index-conversion
+boundary. Carry source domains, symbolic bindings, runtime allocation and
+independent Merlin invocation through the same package before claiming dynamic
+whole-model execution; earlier static qualification keeps its original scope.
+
 [Live runtime model arguments](docs/live_runtime_arguments.md) now retain actual
 scalar SSA and singleton tensors, including exported `tensor.dim` operands and
 data-controlled address loops. Eleven complete models pass native/Merlin host/

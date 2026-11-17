@@ -6,6 +6,18 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+Model2MLIR `f85f949` now preserves backed symbolic dimensions through shared
+literal-aware shape helpers. Its relevant selection passes 134 tests with 26
+unrelated cases deselected; the final twelve dimension contracts pass. Only
+the intended importer hunk was committed, preserving the unrelated whitespace
+edit. The [symbolic model contract](symbolic_models.md) records the next actual
+boundary: a fresh real Triton copy model and the existing tensor-profile shape
+integration refuse the unproved index conversion. The latter is an open failing
+integration, not a passing refusal case. Source-domain checks, symbolic binding,
+runtime allocation and independent Merlin signatures/execution remain required.
+Earlier 51-case live-argument evidence used model2MLIR `5a681ea` and static
+public types; its retained packages do not qualify the new symbolic capture path.
+
 [Live runtime arguments](live_runtime_arguments.md) now retain original scalar
 SSA and singleton control tensors alongside captured geometry. Eleven complete
 models pass native/Merlin host/Spike with 57 exact-word results, 32 further host

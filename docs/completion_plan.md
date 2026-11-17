@@ -36,6 +36,14 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Symbolic model intake](symbolic_models.md) now retains genuine dynamic public
+types after correcting backed-symbol specialization in model2MLIR. A fresh real
+Triton copy capture and the existing shape integration reproduce the current
+index-conversion refusal. This adds no working dynamic bound package. The next
+execution sequence is source-domain checks, proved/checked symbolic bindings,
+runtime result/scratch allocation and independent reusable Merlin invocation.
+Earlier static-model receipts retain their original source-version scope.
+
 [Live runtime arguments](live_runtime_arguments.md) now retain original scalar
 SSA, singleton controls and exported dimension operands alongside captured
 attributes. Eleven complete models pass native/Merlin host/Spike with 57 exact

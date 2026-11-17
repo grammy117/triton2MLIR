@@ -6,6 +6,14 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Symbolic model intake](symbolic_models.md) now retains real dynamic public
+types after correcting model2MLIR's backed-SymInt specialization. A fresh
+two-call Triton copy model reaches the actual binding boundary and refuses its
+unproved index narrowing. The existing shape integration reproduces that open
+regression; executable source domains, checked casts, runtime result allocation
+and independent consumer signatures are the next steps. Earlier static-package
+execution evidence remains separately scoped to its original frontend version.
+
 [Live model runtime arguments](live_runtime_arguments.md) now retain actual
 scalar SSA, singleton controls and exported dimension operands alongside captured
 attributes. Eleven complete configurations pass native/Merlin host/Spike with

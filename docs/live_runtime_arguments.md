@@ -1,5 +1,11 @@
 # Live runtime arguments in complete model captures
 
+The qualification below used static parent captures from model2MLIR `5a681ea`.
+Model2MLIR `f85f949` now preserves actual symbolic public types; that path stops
+at the existing checked index-conversion boundary. See the
+[symbolic model contract and next execution steps](symbolic_models.md).
+The retained static results do not establish current symbolic-model execution.
+
 `KernelBinding.runtime_operands` maps a source runtime-scalar name to an actual
 original model-call SSA operand. The explicit
 `argument_binding_profile: "t2m.live-runtime-arguments.v1"` keeps these values
