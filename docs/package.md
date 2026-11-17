@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Internal computed-size binding](executed_model_binding.md) explicitly selects
+`t2m.model-kernel-binding.v4` / `t2m.execution-checked-calls.v1` through
+`bind_model(..., result_mode="execution-owned")`. Actual scalar/dimension/
+cast checks and complete standard kernel bodies replace global output-size
+prediction. This transformation currently has direct Merlin host execution
+evidence only: normal package/receipt and independent consumer staging readers
+still refuse v4 pending source/body/adapter reconstruction. Do not label its
+binding trace as a qualified model2MLIR capture or target package.
+
 [Execution-produced results](execution_owned_results.md) explicitly select
 Merlin signature v6 and its separate allocation/descriptor ABI through
 `check_merlin_interface(..., result_mode="execution-owned")`. Actual source

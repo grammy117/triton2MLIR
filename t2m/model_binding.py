@@ -108,10 +108,14 @@ class BoundModel:
 
     @property
     def mlir_text(self):
+        if self.trace.get("result_mode") == "execution-owned":
+            from .executed_model_binding import serialize
+
+            return serialize(self.module)
         return text(self.module)
 
 
-def bind_model(model_mlir, bindings):
+def bind_model(model_mlir, bindings, *, result_mode=None):
     """Inline all registered kernel calls, preserving the enclosing model ABI.
 
     No bundle receipt or native/consumer execution is claimed by binding alone.
@@ -119,6 +123,12 @@ def bind_model(model_mlir, bindings):
     argument manifest and independently captured model outputs.
     """
     bindings = list(bindings)
+    if result_mode is not None:
+        from .executed_model_binding import MODE, bind
+
+        if result_mode != MODE:
+            raise ValueError("unknown explicitly selected model result mode")
+        return bind(model_mlir, bindings)
     prepared = [(b, *b.validate()) for b in bindings]
     original_module = parse_shared(model_mlir)
     module = original_module.clone()

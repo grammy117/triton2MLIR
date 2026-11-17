@@ -59,19 +59,20 @@ def _input_abi(function, *, dynamic=False):
     return abi
 
 
-def _arguments(capture, module, work, python, *, compiler_support_root=None, shape_contract=None):
+def _arguments(capture, module, work, python, *, compiler_support_root=None, shape_contract=None, dynamic_inputs=False):
     entry = [op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
     if len(entry) != 1:
         raise ValueError("model bundle requires exactly one @forward entry")
-    abi = _input_abi(entry[0], dynamic=shape_contract is not None)
-    if shape_contract is None and sum(prod(a["shape"]) * ITEM_BYTES[a["dtype"]] for a in abi) > 64 * 1024 * 1024:
+    dynamic = dynamic_inputs or shape_contract is not None
+    abi = _input_abi(entry[0], dynamic=dynamic)
+    if not dynamic and sum(prod(a["shape"]) * ITEM_BYTES[a["dtype"]] for a in abi) > 64 * 1024 * 1024:
         raise ValueError("materialized model arguments exceed the 64MiB qualification budget")
     if not entry[0].function_type.outputs:
         raise ValueError("native model qualification requires at least one tensor result")
     work.mkdir(parents=True, exist_ok=False)
     from .model_input_abi import SCHEMA
 
-    _json(work / "abi.json", {"schema": SCHEMA, "inputs": abi} if shape_contract is not None else abi)
+    _json(work / "abi.json", {"schema": SCHEMA, "inputs": abi} if dynamic else abi)
     try:
         process = subprocess.run([str(python or sys.executable), str(Path(__file__).with_name("model_inputs.py")),
                                   str(capture.resolve()), str(work.resolve())], capture_output=True,

@@ -8,6 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Internal computed sizes](executed_model_binding.md) now pass explicit v4
+call binding and direct Merlin host execution for a real count-producing
+kernel feeding two subsequent allocations. Next independently reconstruct
+the source/body/adapter derivation in package staging and extend normal
+qualification/receipts. Execution-sized native/target harnesses, runtime
+resizing ownership and the complete source/numeric/effect scope remain active.
+
 [Execution-sized results](execution_owned_results.md) now have source-checked
 signature v6 staging and reusable Merlin host execution of complete two-call
 models in all three memory profiles, retaining every result and original input

@@ -6,6 +6,14 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Internal computed sizes](executed_model_binding.md) now close the reproduced
+per-call binding refusal for a real Triton count feeding two later allocations.
+Explicit v4 binding checks scalar ranges, actual dimensions and narrowing
+casts without a public-input result-size program. Three direct whole-body
+Merlin libraries retain all 21 initial results and 105 results across fifteen
+replays. Independent package/receipt staging for v4 remains open; this adds
+no target evidence or historical-inventory coverage.
+
 [Execution-sized results](execution_owned_results.md) now connect source-checked
 signature v6 staging to complete model/TTIR Merlin host invocation in all three
 memory profiles. All 21 initial results match original PyTorch words; 18 host

@@ -6,6 +6,14 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Internal computed sizes](executed_model_binding.md) now have an explicit v4
+binding path. A real Triton reduction computes the count used by two later
+allocations; direct Merlin host compilation/execution retains all seven
+results in all three memory profiles. Fifteen unchanged-library invocations
+check another 105 results. This is not yet a v4 package/staging qualification:
+independent reconstruction and receipt admission are the next work. The older
+precomputed-shape binder retains the original refusal for this same model.
+
 [Execution-sized results](execution_owned_results.md) now connect explicit
 Merlin signature v6 staging to complete model/TTIR host invocation in all three
 memory profiles. Saved compiler programs reopen fixed checked artifacts without

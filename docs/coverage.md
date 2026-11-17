@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Internal computed sizes](executed_model_binding.md) now execute a real
+count-producing Triton kernel plus two dependent prefix calls through direct
+Merlin whole-body compilation in all three memory profiles. Explicit v4
+binding retains all 21 initial PyTorch results and 105 further results across
+fifteen unchanged-library invocations. This selection is binding/direct-host
+evidence; independent v4 package staging and receipts remain unimplemented.
+The historical inventory and target qualification are unchanged.
+
 [Execution-sized results](execution_owned_results.md) now qualify explicit
 signature v6 staging and Merlin host invocation for complete model/TTIR captures
 in all three memory profiles. All 21 initial PyTorch results, eighteen further
