@@ -159,7 +159,8 @@ def _compare_results(actual, expected, rtol, atol, result_types):
 
 
 def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root=None,
-                       merlin_python=None, merlin_host=False, merlin_clang=None, rtol=0, atol=0, result_mode=None):
+                       merlin_python=None, merlin_host=False, merlin_clang=None, rtol=0, atol=0, result_mode=None,
+                       execution_allocation_policy=None):
     capture, out, work = Path(capture), Path(out), Path(work)
     if out.exists():
         raise FileExistsError(out)
@@ -167,13 +168,16 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
         raise ValueError("model comparison requires finite nonnegative tolerances")
     if merlin_host and merlin_root is None:
         raise ValueError("Merlin host qualification requires a selected Merlin checkout")
+    if execution_allocation_policy is not None and result_mode != "execution-owned":
+        raise ValueError("execution allocation policy requires explicit execution-owned result mode")
     if result_mode is not None:
         from .executed_model_package import write
 
         if result_mode != "execution-owned":
             raise ValueError("unknown explicitly selected model result mode")
         return write(capture, bindings, out, work=work, python=python, merlin_root=merlin_root,
-                     merlin_python=merlin_python, merlin_host=merlin_host, merlin_clang=merlin_clang, rtol=rtol, atol=atol)
+                     merlin_python=merlin_python, merlin_host=merlin_host, merlin_clang=merlin_clang, rtol=rtol, atol=atol,
+                     execution_allocation_policy=execution_allocation_policy)
     parent = _parent(capture)
     parent_receipt_record = _record(capture / "capture_receipt.json")
     bindings = list(bindings)

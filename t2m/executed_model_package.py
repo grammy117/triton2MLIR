@@ -47,6 +47,7 @@ def write(
     merlin_clang,
     rtol,
     atol,
+    execution_allocation_policy=None,
 ):
     from .model_bundle import (
         CORE,
@@ -61,6 +62,9 @@ def write(
         raise ValueError(
             "execution-owned model qualification requires merlin_root and merlin_host=True"
         )
+    from .execution_resources import checked_policy
+
+    resource_policy = checked_policy(execution_allocation_policy)
     parent = _parent(capture)
     parent_receipt = _record(capture / "capture_receipt.json")
     bindings = list(bindings)
@@ -104,6 +108,11 @@ def write(
             "Merlin independently reconstructs their source coordinates and standard adapters; "
             "older v4 readers refuse these fields and no physical alias or mutation permission is added"
         )
+    if resource_policy is not None:
+        compatibility["differences"].append(
+            resource_policy["schema"] + " explicitly selects bounded allocation work and byte limits; "
+            "the legacy default is unchanged and all source, allocation and lifetime checks remain active"
+        )
     _json(candidate / "compatibility.json", compatibility)
     receipt = {
         "schema": SCHEMA,
@@ -114,6 +123,7 @@ def write(
         "parent_receipt": parent_receipt,
         "kernel_artifacts": kernels,
         "materialized_abi": "unchanged-from-parent",
+        **({"execution_allocation_policy": resource_policy} if resource_policy is not None else {}),
     }
     _json(candidate / "capture_receipt.json", receipt)
     # Input materialization is a separate evaluator operation. No argument path

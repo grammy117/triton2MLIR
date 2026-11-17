@@ -152,6 +152,7 @@ def _verify(out, receipt):
         "consumer/host/evaluation.json",
         "consumer/host/outputs.npz",
         "consumer/host/model.so",
+        "consumer/host/owned-result-program.json",
     }
     if (
         receipt.get("schema") != SCHEMA
@@ -233,9 +234,31 @@ def _verify(out, receipt):
             "executed staging does not bind its original source-only input receipt"
         )
     signature = json.loads((out / "consumer/compiler/signature.json").read_text())
+    if "execution_allocation_policy" in receipt:
+        from .execution_resources import checked_policy
+
+        selected_policy = checked_policy(receipt["execution_allocation_policy"])
+        input_receipt = json.loads((out / "consumer/input-receipt.json").read_text())
+        if (
+            selected_policy is None
+            or signature.get("allocation_policy") != selected_policy
+            or input_receipt.get("execution_allocation_policy") != selected_policy
+        ):
+            raise ValueError("executed allocation policy differs from its original compiler selection")
+    elif signature.get("allocation_policy", {}).get("schema") != "merlin.owned-result-limits.v1":
+        raise ValueError("executed allocation policy lacks its explicit source-package selection")
     host = json.loads((out / "consumer/host/execution.json").read_text())
     compilation = json.loads((out / "consumer/host/compilation.json").read_text())
     evaluation = json.loads((out / "consumer/host/evaluation.json").read_text())
+    saved_program = json.loads((out / "consumer/host/owned-result-program.json").read_text())
+    if (
+        saved_program.get("limits") != {
+            key: signature["allocation_policy"][key]
+            for key in ("max_bytes", "max_allocations", "max_output_bytes")
+        }
+        or compilation.get("owned_result_program") != _record(out / "consumer/host/owned-result-program.json")
+    ):
+        raise ValueError("executed saved program changes its selected allocation limits")
     if (
         signature.get("schema") != "merlin.compile-signature.v6"
         or signature.get("result_abi") != PROFILE

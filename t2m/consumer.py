@@ -20,6 +20,9 @@ capture, out = pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 signature = forward_signature(capture / "model.mlir")
 stage = stage_compile_inputs(capture, out.parent / "compiler", result_mode=sys.argv[5] or None)
 staged_signature = json.loads((out.parent / "compiler/signature.json").read_text())
+requested_policy = json.loads((capture / "capture_receipt.json").read_text()).get("execution_allocation_policy")
+if requested_policy is not None and staged_signature.get("allocation_policy") != requested_policy:
+    raise ValueError("Merlin staging did not preserve the explicitly selected allocation policy")
 execution_owned = staged_signature["schema"] == "merlin.compile-signature.v6"
 if execution_owned:
     pass  # Result descriptors are produced by the separate host invocation.

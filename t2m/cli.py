@@ -566,6 +566,8 @@ def main(argv=None):
     bind.add_argument("--merlin-python", type=Path)
     bind.add_argument("--merlin-host", action="store_true", help="compile staged inputs with Merlin and execute its native host library")
     bind.add_argument("--result-mode", choices=("execution-owned",), help="explicit executed-size package profile; requires --merlin-root and --merlin-host")
+    bind.add_argument("--execution-allocation-policy", type=Path,
+                      help="explicit merlin.owned-result-limits.v2 JSON; requires --result-mode execution-owned")
     bind.add_argument("--merlin-clang", type=Path, help="explicit compatible native LLVM code generator")
     bind.add_argument("--rtol", type=float, default=0)
     bind.add_argument("--atol", type=float, default=0)
@@ -624,9 +626,16 @@ def main(argv=None):
             summary = {key: report[key] for key in ("selected_cases", "measured_cases", "complete_selection_measured",
                 "all_selected_cases_merlin_host_qualified", "stage_definition_counts", "unmeasured_definitions")}
         elif args.command == "bind-model":
+            from .execution_resources import checked_policy
             from .model_binding import KernelBinding
             from .model_bundle import write_model_bundle
             from .shared_tensor import TensorABI, convert_shared
+            if args.execution_allocation_policy is not None and args.result_mode != "execution-owned":
+                raise ValueError("execution allocation policy requires --result-mode execution-owned")
+            allocation_policy = (checked_policy(json.loads(args.execution_allocation_policy.read_text()))
+                if args.execution_allocation_policy is not None else None)
+            if args.execution_allocation_policy is not None and allocation_policy is None:
+                raise ValueError("execution allocation policy requires an explicit v2 resource object")
             configuration = json.loads(args.bindings.read_text())
             if configuration.get("schema") != "t2m.kernel-bindings.v1" or not isinstance(configuration.get("kernels"), list):
                 raise ValueError("expected a t2m.kernel-bindings.v1 configuration")
@@ -676,7 +685,8 @@ def main(argv=None):
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
                                merlin_root=args.merlin_root, merlin_python=args.merlin_python,
                                merlin_host=args.merlin_host, merlin_clang=args.merlin_clang,
-                               rtol=args.rtol, atol=args.atol, result_mode=args.result_mode)
+                               rtol=args.rtol, atol=args.atol, result_mode=args.result_mode,
+                               execution_allocation_policy=allocation_policy)
             summary = {"bundle": str(args.out), "native_model_comparison": "passed",
                        "merlin_interface": "passed" if args.merlin_root else "not-tested",
                        "merlin_host_execution": "passed" if args.merlin_host else "not-performed",
