@@ -72,8 +72,9 @@ and its early, now-fixed extreme-slice failure; it is not relabeled all green.
 
 ## Remaining dynamic coverage
 
-General conditional/derived result expressions still need independent compiler
-signature support. Runtime-supplied slice bounds, dynamic value/source views,
+[Derived model dimensions](derived_model_shapes.md) now separately qualify
+conditional broadcast sizes and clipped slice counts with independently checked
+signature v4 programs. More general expressions, runtime-supplied slice bounds, dynamic value/source views,
 resizing state, data-dependent output allocation and arbitrary effect/model
 compositions remain open. New producer emitters alone do not close those
 consumer interfaces. Accelerator placement, GPU numeric correspondence and

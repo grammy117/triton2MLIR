@@ -56,7 +56,8 @@ def main(work):
                 raise ValueError("native input has an unsupported scalar/tensor ABI type")
             if contract is not None:
                 declared = contract["inputs"][i]
-                if (contract["schema"] in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2")
+                if (contract["schema"] in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2",
+                                           "t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3")
                         and declared.get("dtype") != (str(tensor.element_type) if isinstance(type_, ir.RankedTensorType) else str(type_))):
                     raise ValueError("native shape contract differs from its typed input dtype")
                 symbolic = declared["shape"]
@@ -70,7 +71,8 @@ def main(work):
             if len(contract["outputs"]) != len(shapes) or len(resolved) != len(shapes):
                 raise ValueError("native shape contract differs from its output count")
             for type_, shape, declared in zip(signature.results, shapes, contract["outputs"], strict=True):
-                if (contract["schema"] in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2")
+                if (contract["schema"] in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2",
+                                           "t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3")
                         and declared.get("dtype") != str(ir.RankedTensorType(type_).element_type)):
                     raise ValueError("native shape contract differs from its typed output dtype")
                 if len(shape) != len(declared["shape"]) or any((n < 0) != isinstance(d, str) or n >= 0 and n != d for n, d in zip(shape, declared["shape"])):

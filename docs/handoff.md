@@ -6,6 +6,15 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Derived model dimensions](derived_model_shapes.md) now qualify a real shared-axis
+broadcast/stepped-slice model and two dependent Triton calls through native,
+Merlin host and Spike in all three memory profiles. Typed shape programs and
+independent source proofs supply signature v4 result allocation. All seven
+results survive; twelve library replays check 84 results and nine invalid
+source-domain invocations abort without outputs. Model2MLIR `4b0e7bd` retains
+actual symbolic arithmetic SSA. Broader dynamic views, resizing state,
+data-dependent results, effects and targets remain active completion work.
+
 [Dynamic surrounding arithmetic and slicing](dynamic_surrounding.md) now closes
 the three reproduced integration failures recorded below. Model2MLIR `9e2b646`
 emits actual runtime broadcasts and clipped positive-step slices. The real

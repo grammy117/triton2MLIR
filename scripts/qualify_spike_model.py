@@ -74,7 +74,7 @@ def worker(mode, root, out, *arguments):
         signature = json.loads((out / "compiler/signature.json").read_text())
         effect = manifest.get("source_profile") == "standalone-effect-kernel"
         runtime = (effect or manifest.get("source_profile") == "standalone-tensor-kernel"
-                   or signature.get("schema") == "merlin.compile-signature.v3")
+                   or signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4"))
         entries = signature["inputs"] + signature["outputs"]
         for entry in (() if runtime else entries):
             shape = entry.get("shape")

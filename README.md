@@ -3,6 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Derived model dimensions](docs/derived_model_shapes.md) now retain shared-axis
+broadcasting, a stepped slice and two dependent Triton calls through native,
+Merlin host and Spike in all three memory profiles. Typed size programs and
+independent source proofs size every result without sample specialization.
+General dynamic views, data-dependent allocation, effects and targets remain.
+
 [Dynamic surrounding arithmetic and slices](docs/dynamic_surrounding.md) now
 close the three reproduced model-integration failures. The real addition,
 dependent Triton calls and empty slice/call preserve all five results through

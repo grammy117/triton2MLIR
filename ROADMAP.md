@@ -4,6 +4,14 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Derived model dimensions](docs/derived_model_shapes.md) now reach the same
+complete consumer path in all three memory profiles. Shared axes, conditional
+broadcast sizes and clipped slice counts retain actual typed shape programs;
+Merlin independently proves source relationships and publishes signature v4.
+Unchanged libraries handle new lengths/weights, and invalid source domains
+abort. Continue with runtime bounds/views, data-dependent sizes, resizing state,
+arbitrary effects/compositions and applicable targets.
+
 [Dynamic surrounding computation](docs/dynamic_surrounding.md) now closes the
 reproduced addition/slice failures in all three memory profiles. Standard
 source-derived extents retain complete native/Merlin-host/Spike results,

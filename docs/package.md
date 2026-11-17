@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Derived model dimensions](derived_model_shapes.md) additionally select
+`t2m.symbolic-model-shapes.v2` and `t2m.runtime-shapes.v3`, carrying a bounded
+typed `logical-size-program.v1` DAG. Independent source reconstruction admits
+`merlin.compile-signature.v4` with that `shape_program`; invocation evaluates
+actual public input axes after rechecking the executable body. Earlier schemas
+refuse the extension. Public MLIR arguments, receipts and parent archives stay
+unchanged; logical relationships grant no physical alias or effect permission.
+
 [Symbolic tensor binding](symbolic_tensor_bindings.md) declares
 `t2m.symbolic-model-shapes.v1`, source-derived per-call tensor relationships
 and an input-axis runtime shape contract. Actual implementation bodies and the

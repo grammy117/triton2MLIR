@@ -106,6 +106,11 @@ def plan_arguments(
     dimensions = {dim for buffer in spec.buffers for dim in buffer.shape if isinstance(dim, str)}
     symbolic = {}
     original = by_name if source_shape_values is None else source_shape_values
+    if shape_facts is not None and shape_facts.expressions and source_point is not None:
+        source_ranges = dict(source_ranges or {})
+        for schema in binding.runtime_operands.values():
+            if source_ranges.get(schema) is None and isinstance(original[schema].type, builtin.IndexType):
+                source_ranges[schema] = shape_facts.range_at(original[schema], source_point)
     if shape_facts is not None:
         for name, schema in binding.runtime_operands.items():
             fact = source_facts[schema] if source_facts is not None else known_integer(original[schema])
@@ -160,7 +165,8 @@ def plan_arguments(
         else:
             value = by_name[operand_names[source.name]]
             concrete = concrete_type(source, type_values)
-            if symbolic and shape_facts.shape(original[operand_names[source.name]]) != logical_shapes[source.name]:
+            if symbolic and not shape_facts.same_shape(shape_facts.shape(original[operand_names[source.name]]),
+                                                       logical_shapes[source.name], source_point):
                 return None
             if value.type != concrete:
                 if binding.tensor_views != POLICY or not compatible(value.type,concrete):
@@ -194,7 +200,8 @@ def plan_arguments(
     if symbolic:
         from .model_shape_facts import ShapeFacts
 
-        kernel_facts = ShapeFacts()
+        kernel_facts = ShapeFacts(expressions=shape_facts.expressions)
+        shape_facts.copy_context(kernel_facts, source_point)
         for source, argument in zip(spec.inputs, function.body.block.args, strict=True):
             if isinstance(source, RuntimeScalar):
                 expression = values.get(source.name, symbolic.get(source.name))
@@ -206,8 +213,8 @@ def plan_arguments(
         from xdsl.dialects import func
 
         if (not isinstance(terminal, func.ReturnOp)
-                or [kernel_facts.shape(value) for value in terminal.operands]
-                != [logical_shapes[buffer.name] for buffer in spec.outputs]):
+                or any(not kernel_facts.same_shape(kernel_facts.shape(value), logical_shapes[buffer.name], terminal)
+                       for value, buffer in zip(terminal.operands, spec.outputs, strict=True))):
             raise ConversionError("symbolic kernel result shape needs an executable standard-MLIR proof", opcode="func.call")
         maximum = {buffer.name: tuple(values[dim] if dim in values else live[dim].record["unsigned_integer_range"][1]
                                      if isinstance(dim, str) else dim for dim in buffer.shape)

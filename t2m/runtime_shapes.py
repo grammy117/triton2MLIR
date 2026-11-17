@@ -7,13 +7,19 @@ the compiler frontend, NumPy or any Triton dependency.
 
 def resolve_shapes(contract, arrays):
     schema = contract.get("schema")
-    axis_profile = schema in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2")
+    expression_profile = schema in ("t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3")
+    axis_profile = expression_profile or schema in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2")
     if (schema not in ("t2m.runtime-shapes.v1", "merlin.runtime-shapes.v1") and not axis_profile
             or len(contract.get("inputs", [])) != len(arrays)):
         raise ValueError("runtime shape contract has an incomplete input signature")
     if not axis_profile and "dimension_bindings" in contract:
         raise ValueError("input-axis dimensions require runtime shape contract v2")
-    if axis_profile and (set(contract) != {"schema", "inputs", "outputs", "dimension_bindings"}
+    if not expression_profile and "shape_program" in contract:
+        raise ValueError("derived dimension programs require runtime shape contract v3")
+    fields = {"schema", "inputs", "outputs", "dimension_bindings"}
+    if expression_profile:
+        fields.add("shape_program")
+    if axis_profile and (set(contract) != fields
             or not isinstance(contract["inputs"], list) or not isinstance(contract["outputs"], list)
             or any(not isinstance(value, dict) or not isinstance(value.get("shape"), list)
                    or "scalar" in value and (not isinstance(value["scalar"], str) or not value["scalar"].isidentifier())
@@ -58,12 +64,26 @@ def resolve_shapes(contract, arrays):
                 raise ValueError("runtime input dimension is outside its declared bounds")
             scalars[name] = value
 
+    program = None
+    if expression_profile:
+        try:
+            from .shape_expressions import Program
+        except ImportError:  # Isolated native runner loads this file directly.
+            from shape_expressions import Program
+        roots = [size for row in contract["outputs"] for size in row["shape"]
+                 if isinstance(size, str) and size not in scalars]
+        program = Program.load(contract["shape_program"], contract["dimension_bindings"], roots)
+
     def shape(declared):
         result = []
         for size in declared["shape"]:
-            size = scalars.get(size) if isinstance(size, str) else size
+            if isinstance(size, str):
+                size = (program.evaluate(size, scalars) if program is not None and size in program.nodes
+                        else scalars.get(size))
             if type(size) is not int or size < 0:
                 raise ValueError("runtime dimension lacks a nonnegative integer scalar binding")
+            if expression_profile and size >= 2**63:
+                raise ValueError("derived runtime dimension exceeds its logical i64 size domain")
             result.append(size)
         return tuple(result)
 

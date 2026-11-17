@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Derived model dimensions](derived_model_shapes.md) now qualify three complete
+model/profile configurations through native, Merlin host and Spike, retaining
+all 21 initial results. Twelve unchanged-library host replays check 84 further
+results, and nine source-domain violations abort without outputs. Typed size
+programs and independent executable-body proofs select signature v4. These
+selections are separate from the historical 352-package inventory; arbitrary
+shape/effect/kernel and accelerator coverage remains incomplete.
+
 [Dynamic surrounding computation](dynamic_surrounding.md) now closes all three
 reproduced addition/slice integration failures. The three model/profile cases
 retain fifteen complete initial results through native, Merlin host and actual

@@ -7,6 +7,13 @@ algorithm retained, and applicable execution evidence. Host-only support,
 accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
+
+[Derived model dimensions](derived_model_shapes.md) now close the reproduced
+shared-axis broadcast/stepped-slice integration through native, Merlin host and
+Spike in all three memory profiles. Source-proved typed programs and explicit
+signature v4 preserve allocation relationships. Continue with runtime bounds,
+views/resizing state, data-dependent shapes, arbitrary effects and targets.
+
 Detailed historical evidence remains in [coverage.md](coverage.md), the linked
 capability contracts and Git history; earlier open items are superseded only
 by explicitly qualified implementations.

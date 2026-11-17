@@ -139,6 +139,7 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
 
     calls = trace.get("calls", [])
     from .model_shape_facts import PROFILE as SHAPE_PROFILE
+    from .model_shape_facts import EXPRESSION_PROFILE
     from .model_shape_facts import ShapeFacts
 
     shape_facts = None
@@ -148,12 +149,13 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
                                       for type_ in (*entries[0].function_type.inputs, *entries[0].function_type.outputs))
     if (shape_profile is not None or dynamic or any("symbolic_tensor_shapes" in record for record in calls)
             or "runtime_shape_contract" in trace):
-        if shape_profile != SHAPE_PROFILE or len(entries) != 1 or bound_module is None or implementations is None:
+        if (shape_profile not in (SHAPE_PROFILE, EXPRESSION_PROFILE)
+                or len(entries) != 1 or bound_module is None or implementations is None):
             raise ValueError("symbolic model shapes require their explicit profile and executable implementations")
         ordinals = [record.get("parent_call_ordinal") for record in calls]
         if any(type(number) is not int for number in ordinals) or ordinals != sorted(set(ordinals)):
             raise ValueError("symbolic model call shapes require original source order")
-        shape_facts = ShapeFacts.entry(entries[0])
+        shape_facts = ShapeFacts.entry(entries[0], expressions=shape_profile == EXPRESSION_PROFILE)
     expected_profile = binding_profile(calls)
     if (expected_profile is not None and trace.get("argument_binding_profile") != expected_profile
             or expected_profile is None and trace.get("argument_binding_profile") in (PROFILE, RANGE_PROFILE)):
@@ -219,8 +221,9 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
                 or "guard_storage_scope" in trace and trace["guard_storage_scope"] != "sum-of-source-shape-upper-bounds"):
             raise ValueError("symbolic guarded scratch requires its explicit shape-bound scope")
         bound_entries = [op for op in bound_module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
-        contract = shape_facts.contract(entries[0])
+        contract = shape_facts.contract(entries[0], force_expressions=shape_profile == EXPRESSION_PROFILE)
         if (len(bound_entries) != 1 or bound_entries[0].function_type != entries[0].function_type
-                or trace.get("runtime_shape_contract") != contract
-                or ShapeFacts.entry(bound_entries[0]).contract(bound_entries[0]) != contract):
+                or trace.get("runtime_shape_contract") != contract):
             raise ValueError("symbolic model runtime shape contract differs from its complete executable source")
+        ShapeFacts.entry(bound_entries[0], expressions=shape_profile == EXPRESSION_PROFILE).check_contract(
+            bound_entries[0], contract)

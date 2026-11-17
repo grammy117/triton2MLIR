@@ -6,6 +6,12 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Derived model dimensions](derived_model_shapes.md) now qualify a real shared-axis
+broadcast/slice model with two dependent Triton calls through native, Merlin
+host and Spike in all three memory profiles. Typed size programs, independently
+source-proved signature v4 and unchanged-library invocation retain every result.
+General runtime bounds, data-dependent shapes, views/effects and targets remain.
+
 [Dynamic surrounding computation](dynamic_surrounding.md) now closes the
 three reproduced arithmetic/slice integration failures. Actual source addition,
 two dependent Triton copies and an empty slice/call retain all fifteen results

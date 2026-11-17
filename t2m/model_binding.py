@@ -129,7 +129,7 @@ def bind_model(model_mlir, bindings):
     from .model_shape_facts import ShapeFacts
     original_entries = [op for op in original_module.ops if isinstance(op, func.FuncOp)
                         and op.sym_name.data == "forward" and op.body.blocks]
-    shape_facts = ShapeFacts.entry(original_entries[0]) if len(original_entries) == 1 else None
+    shape_facts = ShapeFacts.entry(original_entries[0], expressions=True) if len(original_entries) == 1 else None
     from .model_live_arguments import known_integer
     from .source_index_ranges import unsigned_index_range
     # Facts describe the original parent graph. Earlier inlining may replace
@@ -174,7 +174,7 @@ def bind_model(model_mlir, bindings):
                 plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
                                       [value.type for value in call.results], source_facts=source_facts[call],
                                       source_ranges=source_ranges[call], shape_facts=shape_facts,
-                                      source_shape_values=original_by_name)
+                                      source_shape_values=original_by_name, source_point=original_call)
             except (TypeError, ValueError) as error:
                 raise ConversionError(str(error), opcode="func.call") from error
             if plan is not None:
@@ -304,16 +304,20 @@ def bind_model(model_mlir, bindings):
             or original_entries and any(isinstance(type_, builtin.TensorType) and any(n < 0 for n in type_.get_shape())
                                        for type_ in (*original_entries[0].function_type.inputs,
                                                      *original_entries[0].function_type.outputs))):
-        from .model_shape_facts import PROFILE
+        from .model_shape_facts import EXPRESSION_PROFILE, PROFILE
 
         try:
             contract = shape_facts.contract(original_entries[0])
             entry = next(op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
-            if ShapeFacts.entry(entry).contract(entry) != contract:
-                raise ValueError("inlined model result dimensions differ from the proved parent relationships")
+            expression_profile = contract["schema"] == "t2m.runtime-shapes.v3" or any(
+                isinstance(size, str) and size in shape_facts.program.nodes for record in records
+                for shape in record.get("symbolic_tensor_shapes", {}).values() for size in shape)
+            if expression_profile:
+                contract = shape_facts.contract(original_entries[0], force_expressions=True)
+            ShapeFacts.entry(entry, expressions=expression_profile).check_contract(entry, contract)
         except (TypeError, ValueError) as error:
             raise ConversionError(str(error), opcode="func.func") from error
-        report["model_shape_profile"] = PROFILE
+        report["model_shape_profile"] = EXPRESSION_PROFILE if expression_profile else PROFILE
         report["runtime_shape_contract"] = contract
         if guard_storage:
             report["guard_storage_scope"] = "sum-of-source-shape-upper-bounds"
