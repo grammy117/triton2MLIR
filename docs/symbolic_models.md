@@ -11,7 +11,9 @@ registered calls/declarations, dependent SSA and complete model results now
 retain `?` where the original export is symbolic. Original source ranges remain
 in the FX trace. The subsequent entry-domain expansion now emits executable
 guards from actual expressions and ValueRanges. A general symbolic model
-binding/invocation ABI remains unfinished.
+binding/invocation ABI remains unfinished. [Checked index arguments](checked_index_arguments.md)
+now prove the direct guarded narrowing; symbolic tensor-dimension relationships
+are the current binding boundary.
 
 ## Executable domains now implemented
 
@@ -102,21 +104,24 @@ three model references. The Triton body is the existing masked
 Binding currently refuses with:
 
 ```text
-live index conversion needs a representable source SSA shape/integer fact
+live runtime shape dimension needs an actual parent SSA/type fact
 ```
 
-The public dimension is genuinely unknown; neither its captured value 13 nor
-an intent annotation may supply that missing fact. The current live profile's
-refusal must remain until conversion is proved or checked in executable IR.
+The new checked-index profile derives `[2, 31]` from the original dominating
+round trip and standard integer comparisons. It emits an unsigned conversion
+with no native index-width assumption; Merlin reconstructs the proof separately.
+The public dimension remains genuinely unknown: neither its captured value 13
+nor a range enclosure establishes tensor-dimension equality or a concrete size.
+The remaining refusal must stay until the symbolic shape relationship is proved.
 No successful bound package or Merlin execution is claimed by this probe.
 
-On this VM, `.scratch/symbolic-model-boundary2/` retains a fresh guarded capture,
-source TTIR, shared translation and separate capture/binding observations. It
-still reproduces the unproved index conversion; source guards are now present
-for the next proof step. The preceding unguarded capture remains under
+On this VM, `.scratch/symbolic-model-boundary3/` retains a fresh guarded capture,
+source TTIR, shared translation and the new symbolic-dimension refusal.
+`.scratch/symbolic-model-boundary2/` retains the preceding guarded index refusal.
+The original unguarded capture remains under
 `.scratch/symbolic-model-boundary1/`.
-The focused existing tensor-profile shape integration also reproduces this
-failure in `.scratch/symbolic-existing-shape1.log`. This is an open integration
+The earlier focused tensor-profile shape integration retained the preceding
+index refusal in `.scratch/symbolic-existing-shape1.log`. This remains an open integration
 regression; do not turn it into a passing refusal test or weaken its checks.
 Model2MLIR's relevant frontend selection passes 134 tests with 26 unrelated
 cases deselected; the final twelve dimension contracts pass after source freeze.
@@ -132,9 +137,10 @@ These are frontend/capture tests, not compiled dynamic kernel/model evidence.
    evaluator samples, or treat FX/provenance custody as an arithmetic proof.
    Static-only surrounding decompositions must gain actual dynamic computation;
    an unresolved ATen call cannot count as a runnable model.
-2. **Bind symbolic kernel operands without losing words or dimensions.** Prove
-   a narrowing index conversion from dominating typed source checks, or emit
-   a representability check before the cast. Preserve kernel scalar guards.
+2. **Bind symbolic kernel operands without losing words or dimensions.** The
+   checked-index profile now proves direct unsigned narrowing from dominating
+   typed source checks. Preserve kernel scalar guards and extend actual proof
+   coverage where other source expressions require it.
    Establish input/result dimension relationships from actual original SSA,
    including dependent calls. Keep concrete captured scalars and live scalar
    data distinct from shape proofs. Unknown relations remain explicit refusals.

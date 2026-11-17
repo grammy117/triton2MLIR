@@ -1,10 +1,28 @@
-# Review handoff — updated 2026-11-16
+# Review handoff — updated 2026-11-17
 
 The source-to-package-to-Merlin pipeline works for the qualified selections.
 **Full arbitrary-Triton-kernel coverage remains incomplete.** This is a review
 boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
+
+[Checked index arguments](checked_index_arguments.md) now recover unsigned
+enclosures from original dominating standard assertions and checked round trips,
+then emit a representable `arith.index_castui` without choosing index width.
+Producer verification and Merlin reconstruct the exact profile/adapter/range
+record; source guards remain executable. The fresh probe under
+`.scratch/symbolic-model-boundary3/` now passes narrowing planning and refuses
+symbolic tensor-dimension binding. Public dynamic model allocation/signatures,
+reusable execution and broader semantic/target closure remain unfinished. These
+source-proof cases add no TTIR inventory or complete model qualification.
+The final producer selection passes 100 tests in
+`.scratch/checked-index-final3.log`; the independent Merlin selection passes
+425 with two unavailable environment checks skipped. Native checks retain three
+valid controls and four actual guard aborts; compiler protocol fixtures retain
+evaluator exclusion and profile/range tamper refusals. Counts overlap.
+Merlin's implementation is `50873d7cc`; the original i32 runtime-control model
+also passes native/Merlin host/Spike, retaining all five results and four
+unchanged-library host replays under its existing live profile.
 
 Executable [entry shape domains](symbolic_models.md) now preserve actual source
 ranges, shared axes and affine inverse/divisibility relations using standard
@@ -14,8 +32,8 @@ fifteen valid native runs and fifteen actual guard aborts; the final focused
 source-domain/axis/native selection passes 41 tests. The broader source selections and final
 seventeen dimension contracts pass separately with overlap retained. Merlin's
 reader/staging/layout/access selection passes 410 with two unavailable checks
-skipped. The guarded Triton copy capture in `.scratch/symbolic-model-boundary2/`
-still refuses its unproved index narrowing: checked binding, public model
+skipped. That guarded capture in `.scratch/symbolic-model-boundary2/` retained
+the earlier index-narrowing refusal, superseded by the source proof above. Public model
 allocation/signatures and reusable consumer/target execution remain unfinished.
 No new TTIR inventory or bound-model qualification is claimed by the native
 domain selection.
@@ -30,8 +48,9 @@ literal-aware shape helpers. Its relevant selection passes 134 tests with 26
 unrelated cases deselected; the final twelve dimension contracts pass. Only
 the intended importer hunk was committed, preserving the unrelated whitespace
 edit. The [symbolic model contract](symbolic_models.md) records the next actual
-boundary: a fresh real Triton copy model and the existing tensor-profile shape
-integration refuse the unproved index conversion. The latter is an open failing
+boundary: the fresh real Triton copy model now refuses symbolic tensor-dimension
+binding after the new checked index proof. The existing tensor-profile shape
+integration is an open failing
 integration, not a passing refusal case. Source-domain checks, symbolic binding,
 runtime allocation and independent Merlin signatures/execution remain required.
 Earlier 51-case live-argument evidence used model2MLIR `5a681ea` and static

@@ -1,6 +1,6 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
-Updated 2026-11-16. **The end-to-end pipeline works for a broad qualified
+Updated 2026-11-17. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
 model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
@@ -11,9 +11,11 @@ types and executable source-domain guards after correcting model2MLIR's
 backed-SymInt specialization. Five channel-reduction configurations pass
 fifteen valid native executions and fifteen actual guard aborts, including
 shared/affine/inverted, empty/singleton and unbounded source domains. A fresh
-two-call Triton copy model reaches the actual binding boundary and refuses its
-unproved index narrowing. The existing shape integration reproduces that open
-regression; binding proofs from those domains, runtime result allocation
+two-call Triton copy model now passes checked index-conversion planning using
+dominating executable assertions, with an explicit [checked-index profile](checked_index_arguments.md)
+and independent Merlin reconstruction. It still refuses unresolved symbolic
+tensor-dimension binding. The existing shape integration remains open;
+dimension relationships, runtime result allocation
 and independent consumer signatures are the next steps. Earlier static-package
 execution evidence remains separately scoped to its original frontend version.
 

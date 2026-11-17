@@ -125,15 +125,18 @@ def bind_model(model_mlir, bindings):
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}
     calls = [op for op in module.walk() if isinstance(op, func.CallOp)]
     from .model_live_arguments import known_integer
+    from .source_index_ranges import unsigned_index_range
     # Facts describe the original parent graph. Earlier inlining may replace
     # an opaque call result with a literal; that does not make the literal an
     # original parent SSA fact or authorize a different call's shape contract.
-    source_facts = {}
+    source_facts, source_ranges = {}, {}
     for call in calls:
         names = call.attributes.get("prov.kernel_operands")
         if (isinstance(names, ArrayAttr) and len(names) == len(call.operands)
                 and all(isinstance(name, StringAttr) for name in names)):
             source_facts[call] = {name.data: known_integer(value) for name, value in zip(names, call.operands, strict=True)}
+            source_ranges[call] = {name.data: unsigned_index_range(value, call)
+                                  for name, value in zip(names, call.operands, strict=True)}
     used, records, guard_storage = set(), [], 0
     for parent_call_ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
@@ -160,7 +163,8 @@ def bind_model(model_mlir, bindings):
                     or set(operand_names.values()) | set(binding.source_views) | set(binding.runtime_operands.values()) != set(by_name)):
                 continue
             plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
-                                  [value.type for value in call.results], source_facts=source_facts[call])
+                                  [value.type for value in call.results], source_facts=source_facts[call],
+                                  source_ranges=source_ranges[call])
             if plan is not None:
                 candidates.append((binding, function, operand_names, plan, output_names))
         if len(candidates) != 1:
@@ -276,8 +280,8 @@ def bind_model(model_mlir, bindings):
     if any(record["runtime_scalar_bindings"] for record in records):
         report["argument_binding_profile"] = "t2m.captured-runtime-arguments.v1"
     if any(record.get("runtime_operand_bindings") for record in records):
-        from .model_live_arguments import PROFILE
-        report["argument_binding_profile"] = PROFILE
+        from .model_live_arguments import binding_profile
+        report["argument_binding_profile"] = binding_profile(records)
     if view_binding:
         report["tensor_view_binding_profile"] = VIEW_PROFILE
     if any(record.get("source_tensor_views") for record in records):

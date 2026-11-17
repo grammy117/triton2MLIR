@@ -93,14 +93,16 @@ class ArgumentPlan:
 
 
 def plan_arguments(
-    binding, function, operand_names, output_names, by_name, attributes, result_types, *, source_facts=None
+    binding, function, operand_names, output_names, by_name, attributes, result_types, *, source_facts=None,
+    source_ranges=None, source_point=None
 ):
     spec = binding.implementation.spec
     from .model_live_arguments import plan_operands
 
     if set(binding.runtime_operands.values()) & set(attributes.data):
         raise ConversionError("schema arguments cannot be both live SSA operands and captured attributes", opcode="func.call")
-    live, facts = plan_operands(spec, binding.runtime_operands, by_name, source_facts=source_facts)
+    live, facts = plan_operands(spec, binding.runtime_operands, by_name, source_facts=source_facts,
+                               source_ranges=source_ranges, source_point=source_point)
     constants, values = runtime_constants(spec, binding.runtime_arguments, attributes, live=live)
     values.update(facts)
     arguments, adaptations, input_views = [], [], {}

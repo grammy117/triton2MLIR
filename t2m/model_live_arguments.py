@@ -3,6 +3,8 @@
 Use standard Tensor dim/extract and Arith index casts. Singleton tensors carry
 one logical value regardless of rank. Static dimension facts come only from
 actual parent SSA/type semantics, never a sampled input or provenance claim.
+Checked unsigned index ranges additionally require dominating source assertions;
+they do not become concrete shape facts.
 """
 
 from dataclasses import dataclass
@@ -12,6 +14,19 @@ from xdsl.dialects import arith, builtin, tensor
 from .diagnostics import ConversionError
 
 PROFILE = "t2m.live-runtime-arguments.v1"
+RANGE_PROFILE = "t2m.checked-index-runtime-arguments.v1"
+
+
+def binding_profile(calls):
+    live = []
+    for call in calls:
+        bindings = call.get("runtime_operand_bindings", {})
+        if not isinstance(bindings, dict) or any(not isinstance(binding, dict) for binding in bindings.values()):
+            raise ValueError("live runtime operand bindings must be dictionaries")
+        live.extend(bindings.values())
+    if any(binding.get("adapter") == "checked-index-castui" for binding in live):
+        return RANGE_PROFILE
+    return PROFILE if live else None
 
 
 def validate_mapping(spec, mapping):
@@ -56,10 +71,14 @@ class LiveOperand:
                            "live-runtime-scalar")
         elif self.adapter == "proved-index-cast":
             value = append(arith.IndexCastOp(value, self.target), "live-runtime-scalar")
+        elif self.adapter == "checked-index-castui":
+            from .standard_arith import IndexCastUIOp
+
+            value = append(IndexCastUIOp(value, self.target), "live-runtime-scalar")
         return value
 
 
-def plan_operands(spec, mapping, by_name, *, source_facts=None):
+def plan_operands(spec, mapping, by_name, *, source_facts=None, source_ranges=None, source_point=None):
     validate_mapping(spec, mapping)
     plans, facts = {}, {}
     for scalar in spec.runtime_scalars:
@@ -70,6 +89,7 @@ def plan_operands(spec, mapping, by_name, *, source_facts=None):
             raise ConversionError("live runtime scalar has no original schema operand: " + name, opcode="func.call")
         value, target = by_name[name], scalar.type
         fact = known_integer(value) if source_facts is None else source_facts[name]
+        enclosure = None
         if isinstance(value.type, builtin.TensorType):
             if (not isinstance(value.type.encoding, builtin.NoneAttr) or value.type.element_type != target
                     or any(extent != 1 for extent in value.type.get_shape())):
@@ -80,10 +100,20 @@ def plan_operands(spec, mapping, by_name, *, source_facts=None):
             adapter = "exact-scalar"
         elif isinstance(value.type, builtin.IndexType) and scalar.dtype in ("i8", "i16", "i32", "i64"):
             width = target.bitwidth
-            if type(fact) is not int or not -(1 << (width - 1)) <= fact < 1 << (width - 1):
+            if type(fact) is int and -(1 << (width - 1)) <= fact < 1 << (width - 1):
+                adapter = "proved-index-cast"
+            elif fact is None:
+                from .source_index_ranges import unsigned_index_range
+
+                enclosure = (source_ranges[name] if source_ranges is not None else
+                             unsigned_index_range(value, source_point) if source_point is not None else None)
+                if enclosure is None or not 0 <= enclosure[0] <= enclosure[1] < 1 << (width - 1):
+                    raise ConversionError("live index conversion needs a representable source SSA shape/integer fact",
+                                          opcode="func.call")
+                adapter = "checked-index-castui"
+            else:
                 raise ConversionError("live index conversion needs a representable source SSA shape/integer fact",
                                       opcode="func.call")
-            adapter = "proved-index-cast"
         else:
             raise ConversionError("live runtime scalar must retain its exact numeric/Boolean type", opcode="func.call")
         if scalar.bounds is not None and fact is not None and not scalar.bounds[0] <= fact <= scalar.bounds[1]:
@@ -92,6 +122,8 @@ def plan_operands(spec, mapping, by_name, *, source_facts=None):
         if fact is not None:
             record["constant_integer"] = fact
             facts[scalar.name] = fact
+        if enclosure is not None:
+            record["unsigned_integer_range"] = list(enclosure)
         plans[scalar.name] = LiveOperand(value, target, adapter, record)
     dimensions = {dimension for buffer in spec.buffers for dimension in buffer.shape if isinstance(dimension, str)}
     if dimensions & set(mapping) - set(facts):
@@ -105,8 +137,9 @@ def validate_model(trace, parent):
     from .shared_tensor import TensorABI
 
     calls = trace.get("calls", [])
-    present = any(record.get("runtime_operand_bindings") for record in calls)
-    if present != (trace.get("argument_binding_profile") == PROFILE):
+    expected_profile = binding_profile(calls)
+    if (expected_profile is not None and trace.get("argument_binding_profile") != expected_profile
+            or expected_profile is None and trace.get("argument_binding_profile") in (PROFILE, RANGE_PROFILE)):
         raise ValueError("live runtime operands require their explicit binding profile")
     parent_calls = [op for op in parent.walk() if isinstance(op, func.CallOp)]
     for record in calls:
@@ -128,7 +161,7 @@ def validate_model(trace, parent):
         try:
             spec = TensorABI.from_dict(trace["kernels"][record["implementation_sha256"]]["spec"])
             plans, _ = plan_operands(spec, {name: binding["schema_operand"] for name, binding in live.items()},
-                                     dict(zip((name.data for name in names), call.operands, strict=True)))
+                                     dict(zip((name.data for name in names), call.operands, strict=True)), source_point=call)
         except (KeyError, TypeError, ConversionError) as error:
             raise ValueError("live runtime operand source proof is incomplete") from error
         if {name: plan.record for name, plan in plans.items()} != live:
@@ -153,7 +186,7 @@ def validate_model(trace, parent):
                                              [item.type for item in spec.outputs])
             plan = plan_arguments(binding, function, mapping, outputs, dict(zip(names, call.operands, strict=True)),
                                   call.attributes.get("prov.kernel_args", builtin.DictionaryAttr({})),
-                                  [value.type for value in call.results])
+                                  [value.type for value in call.results], source_point=call)
         except (KeyError, TypeError, ConversionError) as error:
             raise ValueError("live runtime operands do not reconstruct the parent call interface") from error
         if plan is None or plan.scalar_bindings != captures:

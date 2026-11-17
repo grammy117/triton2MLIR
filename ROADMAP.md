@@ -7,9 +7,11 @@ is active and incomplete; observing all pinned opcode names is not completion.
 [Symbolic model intake](docs/symbolic_models.md) now preserves actual `?` public
 dimensions and executable entry-domain checks after the model2MLIR correction.
 Five dynamic reduction configurations retain fifteen native results and fifteen
-compiled guard aborts. The fresh guarded Triton model
-and existing shape integration expose the next unproved index-conversion
-boundary. Carry source domains, symbolic bindings, runtime allocation and
+compiled guard aborts. [Checked index arguments](docs/checked_index_arguments.md)
+now recover representable unsigned ranges from dominating source assertions;
+Merlin reconstructs the exact proof independently. The fresh guarded Triton
+copy model reaches the remaining symbolic tensor-dimension binding boundary.
+Carry source domains, symbolic bindings, runtime allocation and
 independent Merlin invocation through the same package before claiming dynamic
 whole-model execution; earlier static qualification keeps its original scope.
 

@@ -6,8 +6,10 @@ kernels reaching Merlin, current evidence and the remaining completion gates.
 [Symbolic model intake](docs/symbolic_models.md) now retains actual dynamic
 public types and executable source-domain guards. Five dynamic reduction-model
 configurations pass fifteen valid native executions and fifteen actual guard
-aborts. General symbolic binding/execution is unfinished: a fresh Triton
-copy model currently refuses an unproved index conversion. Earlier static-model
+aborts. [Checked index arguments](docs/checked_index_arguments.md) now prove
+representable unsigned conversions from actual dominating source assertions,
+with independent Merlin reconstruction. The fresh Triton copy model now stops
+at symbolic tensor-dimension binding. General symbolic execution remains open. Earlier static-model
 execution results below retain their original frontend-version scope.
 
 [Live model runtime arguments](docs/live_runtime_arguments.md) now preserve

@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Checked source index arguments](checked_index_arguments.md) select
+`t2m.checked-index-runtime-arguments.v1` when dominating executable round trips
+and comparisons prove a representable unsigned index conversion. Call records
+add the exact checked adapter and `unsigned_integer_range`; producer and Merlin
+reconstruct them from the original parent. Source guards remain executable,
+older profiles refuse, and no native index width is chosen. This adds no
+concrete tensor extent/scratch fact or dynamic whole-model signature. Public
+ABIs, artifact rosters and receipt schemas stay unchanged.
+
 [Live runtime arguments](live_runtime_arguments.md) add
 `runtime_operands` configuration, optional per-call `runtime_operand_bindings`
 and `argument_binding_profile: t2m.live-runtime-arguments.v1` to existing model

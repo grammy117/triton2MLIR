@@ -1,6 +1,6 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
-Updated 2026-11-16. **The full goal is active and incomplete.** Every valid
+Updated 2026-11-17. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
 algorithm retained, and applicable execution evidence. Host-only support,
@@ -42,9 +42,10 @@ specialization in model2MLIR. Five real channel-reduction configurations pass
 fifteen valid native invocations and fifteen compiled guard aborts. Scalar
 unsigned index casts retain high source bits through native execution; actual
 integer ranges/relations precede model arithmetic without choosing index width.
-A fresh guarded real
-Triton copy capture and the existing shape integration reproduce the current
-index-conversion refusal. This adds no working dynamic bound package. The next
+A fresh guarded real Triton copy capture now passes index-conversion planning
+using [dominating source assertion proofs](checked_index_arguments.md), then
+refuses symbolic tensor-dimension binding. The original dynamic shape
+integration remains open. This adds no working dynamic bound package. The next
 execution sequence is broader source domains, proved/checked symbolic bindings,
 runtime result/scratch allocation and independent reusable Merlin invocation.
 Earlier static-model receipts retain their original source-version scope.
