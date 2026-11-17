@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Real Triton compaction](docs/compaction.md) now keeps count, parallel scan,
+masked scatter and dependent consumption through a complete PyTorch package
+and Merlin host execution. Automatic selection retains two tensor kernels and
+one guarded source-word kernel; output sizes come from actual execution.
+
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 

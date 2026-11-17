@@ -8,6 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Real Triton compaction](compaction.md) now extends the selected host-owned
+package to count, parallel scan, masked scatter and dependent consumption.
+Source-only automatic admission chooses tensor count/copy and guarded
+source-word packing. Continue with v6 native/target materialization, stronger
+scan-dependent range proofs, general views and runtime resizing ownership;
+guarded admission does not establish arbitrary source/target closure.
+
 [Internal computed sizes](executed_model_binding.md) now pass package creation,
 independent source/body/adapter reconstruction, signature v6 staging and actual
 host qualification/replay for the count-producing model in all three memory

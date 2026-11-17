@@ -6,6 +6,16 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Real Triton compaction](compaction.md) now preserves count, parallel scan,
+masked indexed stores and dependent consumption through receipt v2/signature
+v6 and Merlin host execution. Python and public-CLI packages retain all fourteen
+initial results; six unchanged-library replay inputs retain 42 more results.
+The standalone packing kernel handles zero/truncated/full valid sizes and
+actually aborts for unwritten output. The final four integration checks pass.
+Count/copy stay tensors; packing explicitly uses guarded source-word memory.
+General scan ranges, source compositions, v6 targets and arbitrary coverage
+remain open; the historical inventory is unchanged.
+
 [Automatic memory selection](automatic_memory.md) now explicitly chooses the
 first admitted tensor, guarded logical or guarded source-word representation
 using source IR and ABI alone. Existing source/memory contracts remain

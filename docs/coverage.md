@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Real compaction](compaction.md) now qualifies count, five parallel scan
+stages, masked scatter and a dependent copy through complete execution-sized
+packages. Two Python/CLI configurations retain fourteen initial results; six
+unchanged-library replay inputs retain 42 further results. Three valid
+standalone output sizes pass and an excessive size aborts through compiled
+complete-write coverage without publishing output. The final selection passes
+four checks in `.scratch/compact-final5.log`; earlier test-driver failures stay
+in their original logs. `out/compact-model/summary.json` reopens package/results,
+replay observations, source hashes and the actual abort. Qualification is
+Merlin host only, with mixed tensor/guarded source-word payloads; no v6 target,
+performance, arbitrary-kernel or historical-inventory expansion is claimed.
+
 [Explicit automatic memory selection](automatic_memory.md) now tries at most
 three source/ABI conversions in deterministic order. The final focused
 selection passes 46 checks in `.scratch/auto-final1.log`, including real

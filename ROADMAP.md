@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Real compaction](docs/compaction.md) now extends execution-sized packages to
+actual parallel scan/indexed-store filtering with dependent consumption and
+all original model results. The mixed tensor/guarded payload and host-only
+qualification are explicit; v6 target and general effect/shape closure remain.
+
 [Explicit automatic memory selection](docs/automatic_memory.md) now chooses
 the first admitted tensor, guarded logical or guarded source-word conversion.
 Source/ABI admission and recorded diagnostics decide representation; numeric,

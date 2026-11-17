@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Compaction](compaction.md) uses the existing selected receipt v2/signature v6
+without a new public schema. Per-kernel automatic selection retains tensor
+count/copy and guarded source-word packing. The latter's standard memory and
+private admission state are an explicit payload difference; every original
+model value, archive and actual execution-sized allocation remains retained.
+
 [Automatic memory selection](automatic_memory.md) is explicitly selected with
 `--memory-profile auto`; concrete profile defaults are unchanged. A versioned
 trace record retains source-only candidate order and refusal diagnostics.

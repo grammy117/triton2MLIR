@@ -1,5 +1,9 @@
 # Internal sizes through executable model call contracts
 
+The [real compaction example](compaction.md) now extends this path to three
+actual count/parallel-scan/scatter/copy kernels. Its explicit mixed memory
+selection retains the existing call, result and package profiles.
+
 `bind_model(source, bindings, result_mode="execution-owned")` now binds a real
 Triton-produced count controlling two later result allocations. This is an
 explicit transformation profile, `t2m.model-kernel-binding.v4` with

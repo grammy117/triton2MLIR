@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-17
 
+[Real TTIR compaction](compaction.md) now reaches the existing qualified
+execution-sized package and Merlin host interface from Python and public CLI.
+All three kernels and seven original model results remain. Count/copy select
+tensors; pack retains five parallel Linalg scan stages and masked indexed
+stores in guarded source-word memory, with original structured-range refusals
+recorded by [explicit automatic selection](automatic_memory.md).
+
+The final four compaction integration checks pass in
+`.scratch/compact-final5.log`. `out/compact-model/summary.json` reopens two
+packages/fourteen initial results, six library replay input sets/42 results,
+three valid standalone sizes and one actual unwritten-result abort. The
+automatic-selection/native/legacy memory selection passes 46 checks in
+`.scratch/auto-final1.log`; the earlier overlapping policy/model selection
+passes 24. Source/memory/effect/numeric/ownership checks remain authoritative.
+V6 generated-C/Spike, stronger scan range proofs, general views/resizing/effects
+and arbitrary source/target coverage remain open. Historical inventory counts
+are unchanged. This adds no GPU or performance equivalence claim.
+
 The source-to-package-to-Merlin pipeline works for the qualified selections.
 **Full arbitrary-Triton-kernel coverage remains incomplete.** This is a review
 boundary requested by the user, not a completion claim.
