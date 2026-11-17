@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Runtime returned-loop ownership](docs/runtime_loop_ownership.md) now closes
+the fresh-generation runtime/zero-trip refusal. Native/saved/C and actual target
+checks preserve changing/empty results and source guards; tuple i32/f64 owners
+retain independent sizes and exact storage. General branch/while/permuted owners,
+dynamic steps, aliases/views/effects and other final consumers remain work.
+
 The [execution-owned target package](docs/execution_owned_target_packages.md)
 now connects source-only v6 staging, the ordinary Merlin builder and observed
 shape readback to actual whole-model Spike execution. Four qualified images

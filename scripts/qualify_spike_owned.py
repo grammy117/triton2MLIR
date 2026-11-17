@@ -20,6 +20,7 @@ SOURCES = (
     "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/llvmlower/owned_result_lowering.py",
     "src/merlin/llvmlower/owned_result_abi.py", "src/merlin/llvmlower/owned_result_c.py",
     "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_allocations.py",
+    "src/merlin/llvmlower/dealloc_lifetime.py", "src/merlin/llvmlower/dealloc_promotions.py",
     "src/merlin/llvmlower/runtime_invocation.py", "src/merlin/llvmlower/compilation_recipe.py",
     "src/merlin/llvmlower/execution_result_inputs.py", "src/merlin/frontends/execution_result_signature.py",
     "merlin/runtime/c/owned_result_driver.c", "merlin/runtime/c/owned_result_driver.h",

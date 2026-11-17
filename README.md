@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Runtime loop ownership](docs/runtime_loop_ownership.md) now reaches Merlin
+host/saved/C and actual serial target execution for fresh returned generations,
+including zero trips and changing extents. Independent i32/f64 states retain exact
+words. Source guards and lifetime/allocation checks remain active; broader branch/
+while/alias/view/effect compositions remain open.
+
 The [execution-owned target package](docs/execution_owned_target_packages.md)
 now takes the real three-kernel model through source-only signature-v6 staging,
 the ordinary Merlin builder and actual Spike execution. Four qualified images

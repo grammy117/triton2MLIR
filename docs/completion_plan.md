@@ -8,6 +8,13 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Runtime returned-loop ownership](runtime_loop_ownership.md) now separately
+proves fresh generations for runtime/zero-trip serial bounds, complete initial
+lifetimes, actual zero-trip copies and tuple return coordinates. Native/saved/C
+and target execution retain changing/empty results and source guards. The
+independent lifetime checker remains active. General branch/while/permuted
+ownership, dynamic steps, retained aliases and other final consumers remain.
+
 The [execution-owned target package](execution_owned_target_packages.md) now
 closes the selected v6 staging/build/readback boundary. The real three-kernel
 model passes four actual whole-model Spike qualifications with all 28 results;
@@ -16,8 +23,8 @@ replays independent source staging and complete input/driver/wire/reference
 checks. The combined frontend selection passes 57 with one optional legacy
 capture skip; Merlin's separate selection passes all 142 checks.
 
-Next close the remaining source-driven composition gates: runtime/zero-trip
-resizing ownership through ordinary native lifetime checks; v4 physical/view
+Next close the remaining source-driven composition gates: general branch/while/
+alias ownership through ordinary native lifetime checks; v4 physical/view
 adapters with independent source correspondence; broader numeric/effect and
 source-version compositions; and additional applicable executor/device support.
 Retain algorithms, source guards, complete results and explicit unsupported
@@ -55,8 +62,9 @@ signature v6 staging and reusable Merlin host execution of complete two-call
 models in all three memory profiles, retaining every result and original input
 restriction. Standard-MLIR content-derived compaction also executes after
 staging/reopening. Next extend actual producer/binding shapes and normal
-qualification/native/target evaluators. Runtime/zero-trip resizing still needs
-its independent generation proof; the historical inventory is unchanged.
+qualification/native/target evaluators. Fresh returned runtime/zero-trip resizing
+now has the separate proof above; broader ownership forms remain. The historical
+inventory is unchanged.
 
 [Runtime input-word shapes](input_word_shapes.md) now close the reproduced
 `count.item()` allocation boundary with executable reads/guards, independent

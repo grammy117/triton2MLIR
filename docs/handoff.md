@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-17
 
+[Runtime returned-loop ownership](runtime_loop_ownership.md) now closes the
+fresh-generation runtime/zero-trip refusal through the ordinary independent
+checker. Initial uses, ownership flags, actual zero-trip copies and tuple result
+coordinates remain checked. Native/saved/C and actual target execution preserve
+changing/empty results and source guards; independent i32/f64 buffers keep exact
+nonfinite words. General branch/while/permuted ownership, dynamic steps, retained
+aliases, other final consumers and broader view/effect/target work remain open.
+
 [Execution-owned target packages](execution_owned_target_packages.md) now
 connect the real three-kernel model to source-only signature-v6 staging, the
 ordinary Merlin builder and actual observed-shape Spike execution. Four qualified

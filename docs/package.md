@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Returned loop ownership](runtime_loop_ownership.md) extends the independently
+checked consumer lifetime forms without changing public tensor computation,
+signature v6, result/package schemas or parent archives. Native products, saved
+programs and selected frontend source fingerprints additionally bind
+`dealloc_lifetime.py` and `dealloc_promotions.py`. Actual flags, copies and closed
+uses establish ownership; no annotation supplies alias or lifetime permission.
+
 [Execution-owned target packages](execution_owned_target_packages.md) explicitly
 select `t2m.spike-owned-result-qualification.v1` with runtime input projection v3
 (`positional-execution-owned-source-words`). Source-only signature v6 staging,

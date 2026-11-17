@@ -82,6 +82,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                      "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
                      "merlin/runtime/abi/owned_results.c", "src/merlin/llvmlower/owned_result_c.py",
                      "src/merlin/llvmlower/owned_result_lowering.py",
+                     "src/merlin/llvmlower/dealloc_lifetime.py", "src/merlin/llvmlower/dealloc_promotions.py",
                      "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/runtime/owned_result_readback.py",
                      "src/merlin/runtime/out_bin.py", "merlin/runtime/c/owned_result_driver.c",
                      "merlin/runtime/c/owned_result_driver.h", "merlin/runtime/c/owned_result_readback.c",

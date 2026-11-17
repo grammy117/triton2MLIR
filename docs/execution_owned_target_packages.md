@@ -58,7 +58,9 @@ The combined frontend target/host/legacy selection passes 57 checks; one optiona
 legacy capture selection is skipped. The separate Merlin runtime selection
 passes all 142 checks, including actual images and arena exhaustion.
 
-Remaining work includes runtime/zero-trip resizing ownership, v4 physical/view
+Fresh returned runtime/zero-trip resizing now has the separate
+[consumer ownership proof](runtime_loop_ownership.md). Remaining work includes
+general branch/while/alias ownership, v4 physical/view
 adapters, broader numeric/effect/source compositions, additional applicable
 executors and accelerator correctness/performance. The historical TTIR opcode
 inventory is unchanged. [Generated hosted transport](owned_result_driver.md)

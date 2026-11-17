@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Runtime returned-loop ownership](runtime_loop_ownership.md) adds consumer
+execution for fresh generations under runtime/zero-trip serial bounds. Source
+loops and guards, complete initial lifetimes, independent zero-trip copies and
+tuple result coordinates remain executable and checked. Native/saved/C and
+actual target evidence stays separate from real-TTIR compaction/attention
+regressions. This changes no historical opcode denominator or universal
+arbitrary-kernel/accelerator claim; broader ownership and effect forms remain.
+
 [Execution-owned target packages](execution_owned_target_packages.md) now
 qualify four actual whole-model TTIR images with all 28 original/changed-input
 results. Source-domain and wrong-reference failures publish no qualification.

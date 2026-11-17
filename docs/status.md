@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Runtime/zero-trip returned-loop ownership](runtime_loop_ownership.md) now
+passes native/saved/C and actual target checks for direct fresh generations,
+including independently resizing i32/f64 states and exact nonfinite words.
+Original loops, source guards and allocation/lifetime checks remain active.
+This is consumer ownership support, with separate real-TTIR compaction and
+attention regressions. General branch/while/permuted owners, dynamic steps,
+retained aliases, other final consumers and broader effects/targets remain open.
+
 [Execution-owned target packages](execution_owned_target_packages.md) now run
 the real three-kernel TTIR model through source-only v6 staging, the ordinary
 Merlin builder and actual Spike execution. Four qualified images retain all
