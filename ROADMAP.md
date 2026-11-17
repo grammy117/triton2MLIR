@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+The [source-typed owned-result driver](docs/owned_result_driver.md) now closes
+production hosted invocation and observed-shape transport for the real TTIR
+compaction model. Three unchanged drivers retain all 84 results across twelve
+calls; two original source-domain failures publish no results. The 63-check
+Merlin driver/readback/legacy transport selection passes. Target package staging,
+linking, allocator/console selection and actual v6 target qualification remain.
+
 [Target runtime seams](docs/execution_result_targets.md) now lower returned
 descriptors independently of host linking and explicitly select serial context
 and failure reporting. A real Spike fixture retains nine content-derived results

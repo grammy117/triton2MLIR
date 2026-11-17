@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Generated owned-result runtime transport](owned_result_driver.md) now executes
+the actual three-kernel compaction LLVM through production hosted C and complete
+observed-shape frames. All 84 results over twelve calls retain exact words;
+two invalid source domains abort before output. The 63-check Merlin selection
+covers source-typed drivers, independent readback, cleanup failures and legacy
+OUT_BIN behavior. Target v6 staging/build/console integration remains open; this
+does not change the historical inventory or qualify accelerator performance.
+
 Updated 2026-11-17. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
 model2MLIR-like package whose executable MLIR preserves the kernel's algorithm

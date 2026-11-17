@@ -1,5 +1,12 @@
 # Execution-sized results: next target integration boundary
 
+The [generated source-typed driver/readback](owned_result_driver.md) now runs the
+real TTIR compaction model through the production hosted adapter. Twelve calls
+retain all 84 exact results; two actual source-domain failures publish neither
+result frames nor DONE. All 63 Merlin driver/readback/legacy transport checks pass.
+This closes the shared generated call and observed-shape protocol components,
+while their ordinary target staging/build/console integration remains required.
+
 The shared lowerer and serial allocator seams are now implemented. Merlin
 `bb347b1de` emits source/prepared MLIR, checked bridge and LLVM before runtime
 linking; layout/index values remain explicit caller premises. Merlin

@@ -3,10 +3,10 @@
 import hashlib
 import json
 import os
-from pathlib import Path
+import signal
 import subprocess
 import sys
-import signal
+from pathlib import Path
 
 import numpy as np
 
@@ -55,6 +55,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                                   str(Path(arguments).resolve()) if arguments is not None and result_mode is None else "",
                                   result_mode or ""],
                                  capture_output=True, text=True, timeout=30,
+                                 check=False,
                                  env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                                           TMPDIR=str(work.resolve())))
     except subprocess.TimeoutExpired as exc:
@@ -81,6 +82,10 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                      "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
                      "merlin/runtime/abi/owned_results.c", "src/merlin/llvmlower/owned_result_c.py",
                      "src/merlin/llvmlower/owned_result_lowering.py",
+                     "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/runtime/owned_result_readback.py",
+                     "src/merlin/runtime/out_bin.py", "merlin/runtime/c/owned_result_driver.c",
+                     "merlin/runtime/c/owned_result_driver.h", "merlin/runtime/c/owned_result_readback.c",
+                     "merlin/runtime/c/owned_result_readback.h", "merlin/runtime/c/owned_result_host_main.c",
                      "merlin/runtime/abi/owned_result_views.c", "merlin/runtime/abi/owned_result_views.h"):
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     (work / "interface.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")

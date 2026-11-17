@@ -1,5 +1,10 @@
 # triton2MLIR
 
+The [generated owned-result driver](docs/owned_result_driver.md) now runs the
+real three-kernel model through production hosted C and observed-shape readback.
+All 84 results match across changed input/parameter contents; source guards still
+abort invalid calls. Production v6 target staging/build integration remains open.
+
 The [owned-result target seams](docs/execution_result_targets.md) now include
 link-independent lowering and explicit serial allocation context. Real Spike
 runtime fixtures pass results and allocation-failure cases; the full v6 TTIR

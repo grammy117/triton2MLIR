@@ -1,5 +1,14 @@
 # Review handoff — updated 2026-11-17
 
+[Production generated owned-result invocation/readback](owned_result_driver.md)
+now executes the real three-kernel model LLVM with separate runtime input bytes.
+Three input capacities reuse their generated executables across four content/
+parameter patterns each; every one of the 84 results matches exact words.
+Two invalid capacities still abort in original source guards before publication.
+Merlin's 63-check driver/readback/legacy transport selection passes. The generic
+controller also checks cleanup after descriptor/allocation/observer failures and
+preserves another caller's busy context. Target package integration remains open.
+
 Merlin `bb347b1de` separates owned-result lowering from host linking, and
 `f2552dec1` adds explicit serial context/external failure reporting. Both are
 pushed on `ttir-experiment-grammy`, with tips and attribution verified. The final

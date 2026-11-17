@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Generated owned-result runtime transport](owned_result_driver.md) explicitly
+selects `merlin.owned-result-driver.v1` and
+`merlin.execution-owned-readback.v1`. A separate bounded invocation blob fixes
+runtime-driver input shapes while actual returned descriptors supply dynamic
+output extents. Complete shape/payload companions differ from legacy fixed-shape
+readback. Public MLIR, parent archives, receipt v2, signature v6 and host
+qualification keep their existing meanings; target qualification still requires
+its own staged build/execution evidence. Selected consumer fingerprints now bind
+the generator, C controller/readback/host adapter and independent decoder.
+
 Selected owned-result consumer fingerprints additionally pin the link-independent
 `owned_result_lowering.py`. The separate serial-context/failure-hook build choices
 do not change public capture, receipt or signature schemas and are not selected
