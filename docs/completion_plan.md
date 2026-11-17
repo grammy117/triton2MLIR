@@ -51,8 +51,9 @@ Complete [dynamic model packages](symbolic_model_packages.md) now additionally
 qualify copy/weighted variants in all three memory profiles through native,
 Merlin host and Spike. Explicit input-axis compiler signatures, source-bound
 scratch and reusable host invocation preserve dynamic public types. The
-original broader surrounding-arithmetic integration remains open. Continue
-with derived dimensions, dynamic intermediate/view relationships, model
+surrounding addition/empty-slice integration now also qualifies all three
+profiles through the [complete consumer](dynamic_surrounding.md). Continue
+with conditional/derived dimensions, dynamic intermediate/view relationships, model
 composition/effects and applicable target implementations.
 Earlier static-model receipts retain their original source-version scope.
 

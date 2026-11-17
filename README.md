@@ -3,6 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Dynamic surrounding arithmetic and slices](docs/dynamic_surrounding.md) now
+close the three reproduced model-integration failures. The real addition,
+dependent Triton calls and empty slice/call preserve all five results through
+native, Merlin host and Spike, with unchanged-library shape/parameter replays
+and executable source-domain refusals. General derived shapes and effects remain.
+
 [Symbolic model intake](docs/symbolic_models.md) now retains actual dynamic
 public types and executable source-domain guards. Five dynamic reduction-model
 configurations pass fifteen valid native executions and fifteen actual guard

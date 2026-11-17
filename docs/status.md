@@ -6,6 +6,14 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Dynamic surrounding computation](dynamic_surrounding.md) now closes the
+three reproduced arithmetic/slice integration failures. Actual source addition,
+two dependent Triton copies and an empty slice/call retain all fifteen results
+across three model profiles through native, Merlin host and Spike. Twelve
+further host calls check all sixty results with unchanged libraries and changed
+lengths/parameters; six source-domain violations abort without outputs. General
+conditional/derived result expressions, runtime views/effects and targets remain.
+
 [Symbolic model intake](symbolic_models.md) now retains real dynamic public
 types and executable source-domain guards after correcting model2MLIR's
 backed-SymInt specialization. Five channel-reduction configurations pass
@@ -22,8 +30,8 @@ out-of-domain runs abort through compiled source guards. Complete
 weighted-XOR variants in all three memory profiles through native, Merlin host
 and actual Spike execution. The same host libraries handle independent lengths
 and weight values; input-axis signatures, result allocation and source-bound
-scratch are independently checked. General relationships and the older
-surrounding-arithmetic integration remain open. Earlier static-package evidence
+scratch are independently checked. General relationships remain open; the
+surrounding addition/empty-slice integration is now qualified above. Earlier static-package evidence
 retains its original frontend-version scope.
 
 [Live model runtime arguments](live_runtime_arguments.md) now retain actual

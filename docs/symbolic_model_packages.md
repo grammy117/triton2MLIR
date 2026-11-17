@@ -113,6 +113,8 @@ further host invocations with 84 complete results, and six actual guard aborts.
 The earlier broader selection retains 141 passes, three existing surrounding-
 arithmetic/slicing integration failures and one unselected optional target case
 skipped in `.scratch/symbolic-package-final3.log`; it is not an all-green run.
+Those three integration failures are now closed by the independently qualified
+[dynamic surrounding computation](dynamic_surrounding.md).
 
 The matching Merlin implementation is
 [`2b32726086`](https://github.com/ucb-bar/merlin/commit/2b32726086be311bd2a28ed7736ee8f1b49d986d).
@@ -124,7 +126,7 @@ the 352-package inventory; historical counts must not increase by assumption.
 
 General derived dimension expressions, cross-axis relationship closure,
 dynamic value/source views, resizing loop state, data-dependent result sizes,
-the older surrounding-arithmetic integration and arbitrary numeric/effect/model
+and arbitrary numeric/effect/model
 compositions remain open. Host/Spike execution establishes functional behavior
 for the selected programs, not GPU correspondence, accelerator placement or
 preserved performance.

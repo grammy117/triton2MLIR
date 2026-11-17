@@ -1,5 +1,21 @@
 # Measured coverage and remaining boundaries
 
+[Dynamic surrounding computation](dynamic_surrounding.md) now closes all three
+reproduced addition/slice integration failures. The three model/profile cases
+retain fifteen complete initial results through native, Merlin host and actual
+Spike. Twelve unchanged-library host replays retain sixty more complete results;
+six source-domain violations abort without outputs. The final seventeen typed
+emitter cases separately execute sixty native results and two incompatible-
+broadcast aborts, including extreme signed-i64 slice bounds/step. These primitive
+driver checks do not supply general derived-model compiler shape facts. The
+actual model packages independently reconstruct their ordinary v3 signatures.
+`out/dynamic-surrounding/summary.json` reopens the source packages, all target
+receipts, complete original/reference word comparisons and compiled guard
+outcomes. The final focused selections pass 17 primitive cases and three models
+with seven unrelated cases deselected; the earlier broad run retains its fixed
+extreme-slice failure alongside 160 passes and one skip. Counts overlap.
+The new selection remains separate from the historical 352-package inventory.
+
 The [symbolic importer correction](symbolic_models.md), checked-index proof
 and [symbolic tensor profile](symbolic_tensor_bindings.md) now reach complete
 [dynamic model packages](symbolic_model_packages.md). Six copy/weighted model
@@ -11,7 +27,8 @@ Independent source/body/axis checks precede result allocation and scratch
 admission. `out/symbolic-model-packages/summary.json` reopens the exact receipts,
 all complete word comparisons and the source-frozen Spike recheck. The 88 focused
 checks pass across that recheck and the final selection; the separate broader
-run retains three existing surrounding-arithmetic/slice failures explicitly.
+run retains the three then-failing surrounding-arithmetic/slice cases explicitly;
+the source-computation work above now closes them.
 The new selection remains separate from the 352-package inventory.
 Broader surrounding dynamic computation, shapes, effects and targets
 remain open; earlier static results keep their original frontend-version scope.

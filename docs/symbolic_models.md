@@ -132,8 +132,10 @@ The original unguarded capture remains under
 The new full-writer observation is `.scratch/symbolic-model-package-probe1/`;
 native binding evidence reopens in `out/symbolic-model-binding-native/summary.json`.
 The earlier focused tensor-profile shape integration retained the preceding
-index refusal in `.scratch/symbolic-existing-shape1.log`. This remains an open integration
-regression; do not turn it into a passing refusal test or weaken its checks.
+index refusal in `.scratch/symbolic-existing-shape1.log`. That integration now
+passes after [actual dynamic source lowering](dynamic_surrounding.md), retaining
+source guards, symbolic facts, independent result allocation and every result.
+It was not converted into a passing refusal test or statically specialized.
 Model2MLIR's relevant frontend selection passes 134 tests with 26 unrelated
 cases deselected; the final twelve dimension contracts pass after source freeze.
 These are frontend/capture tests, not compiled dynamic kernel/model evidence.

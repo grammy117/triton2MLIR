@@ -17,6 +17,13 @@ independent parameter values. Existing receipt schemas, parent data and public
 MLIR tensor/scalar arguments remain unchanged. Older static consumers refuse;
 the new interface is an explicit compatibility requirement.
 
+[Dynamic surrounding arithmetic/slices](dynamic_surrounding.md) additionally
+retain standard source computation before/between/after translated kernel calls.
+Runtime broadcasting and clipped positive-step slices add no public arguments,
+receipt/schema fields, physical alias contract or source specialization. The
+real addition/empty-slice model uses the existing independently checked symbolic
+profile and v3 compiler signature; general derived expressions remain separate.
+
 [Checked source index arguments](checked_index_arguments.md) select
 `t2m.checked-index-runtime-arguments.v1` when dominating executable round trips
 and comparisons prove a representable unsigned index conversion. Call records

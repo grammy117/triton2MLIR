@@ -4,6 +4,12 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Dynamic surrounding computation](docs/dynamic_surrounding.md) now closes the
+reproduced addition/slice failures in all three memory profiles. Standard
+source-derived extents retain complete native/Merlin-host/Spike results,
+unchanged-library runtime shapes and real source guards. Continue with general
+conditional/derived shape signatures, runtime bounds/views, effects and targets.
+
 [Symbolic model intake](docs/symbolic_models.md) now preserves actual `?` public
 dimensions and executable entry-domain checks after the model2MLIR correction.
 Five dynamic reduction configurations retain fifteen native results and fifteen

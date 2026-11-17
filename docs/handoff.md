@@ -6,6 +6,27 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Dynamic surrounding arithmetic and slicing](dynamic_surrounding.md) now closes
+the three reproduced integration failures recorded below. Model2MLIR `9e2b646`
+emits actual runtime broadcasts and clipped positive-step slices. The real
+addition/two-dependent-copies/empty-call model retains all five results through
+native, Merlin host and actual Spike in all three memory profiles. Twelve
+unchanged-library host replays check sixty complete results with changed lengths
+and parameter words; six out-of-domain calls abort through original guards.
+The final seventeen primitive emitter checks additionally execute sixty native
+results and two incompatible-broadcast aborts, including signed-i64 extreme
+slice bounds/step. An initially missing wide-division runtime helper is removed
+by proved bounded length arithmetic; earlier failing logs remain retained.
+The final focused selections pass 17 primitive cases and three complete models
+with seven unrelated cases deselected. `out/dynamic-surrounding/summary.json`
+reopens all target/native/replay/guard receipts and original parent archives.
+The earlier broad selection retains 160 passes, one skip and the now-fixed
+extreme-slice failure. It is not relabeled an all-green run.
+Model2MLIR's 274 broader passes with sixteen skips and 46 final symbolic/domain
+passes overlap. General conditional/derived shape signatures, runtime view/bound
+bindings, effects and targets remain open. Source word/shape facts still come
+from actual computation and independent consumer reconstruction.
+
 Complete [dynamic model packages](symbolic_model_packages.md) now extend the
 native-only binding below. Copy/weighted-XOR models qualify all three memory
 profiles through native, Merlin host and actual Spike execution, with all 21
@@ -24,9 +45,10 @@ word comparisons are in `out/symbolic-model-packages/summary.json`. Merlin's
 matching implementation is `2b32726086`. Its 355 frontend/runtime, 71 final
 runtime and 146 layout/access passes overlap; two unavailable environment
 checks skip. Documentation and structure gates pass.
-The broader producer selection remains 141 passed, three existing surrounding-
+That earlier broader producer selection retained 141 passed, three surrounding-
 arithmetic/slice failures and one unselected optional target case skipped in
-`.scratch/symbolic-package-final3.log`; this is not an all-green run.
+`.scratch/symbolic-package-final3.log`; it remains a historical failing run.
+Those three failures are now closed by the source computation above.
 Broader surrounding dynamic computation, derived/data-dependent dimensions,
 mutation/effects and applicable targets remain incomplete. These packages are
 not yet folded into the historical 352-package inventory.
@@ -42,7 +64,7 @@ whole-model selection passes 163. `out/symbolic-model-binding-native/summary.jso
 reopens that earlier source/native evidence. That selection added no qualified
 package or dynamic Merlin library. The earlier full-writer refusal retained in
 `.scratch/symbolic-model-package-probe1/` is superseded by the complete package
-work above; the older surrounding-arithmetic integration stays open.
+work above; the surrounding-arithmetic integration is now qualified separately.
 
 [Checked index arguments](checked_index_arguments.md) now recover unsigned
 enclosures from original dominating standard assertions and checked round trips,

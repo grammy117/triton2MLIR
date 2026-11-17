@@ -108,6 +108,7 @@ native model qualification requires static ranked tensor arguments
 That refusal is superseded by the [complete package integration](symbolic_model_packages.md):
 argument materialization, source-bound reference sizing, independently derived
 Merlin signatures, reusable host invocation and actual Spike execution now work
-for both copy variants in all three memory profiles. The older surrounding-
-arithmetic shape integration remains open; these cases do not establish
+for both copy variants in all three memory profiles. The separate
+[surrounding-arithmetic integration](dynamic_surrounding.md) now also qualifies
+the actual source addition and empty slice/call. These cases do not establish
 arbitrary dynamic model composition or full TTIR coverage.

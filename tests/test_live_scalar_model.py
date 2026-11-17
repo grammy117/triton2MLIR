@@ -61,7 +61,8 @@ def capture_and_bind(root, dtype, *, extent=False, profile="guarded-buffer"):
         merlin_host=True, merlin_clang=os.environ["T2M_MERLIN_CLANG"])
     verify_bundle(out)
     trace = json.loads((out / "kernel-bindings.json").read_text())
-    assert trace["argument_binding_profile"] == "t2m.live-runtime-arguments.v1" and trace["model_abi"] == "unchanged"
+    expected_profile = "t2m.checked-index-runtime-arguments.v1" if extent else "t2m.live-runtime-arguments.v1"
+    assert trace["argument_binding_profile"] == expected_profile and trace["model_abi"] == "unchanged"
     assert len(trace["calls"]) == (3 if extent else 2) and len(trace["kernels"]) == 1
     for name in ("weights.safetensors", "weights.safetensors.manifest.json", "inputs.npz", "golden.npy", "goldens.npz", "extra.npz"):
         assert (out / name).read_bytes() == (parent / name).read_bytes()
@@ -137,11 +138,41 @@ def test_complete_model_controls_remain_runtime_values_in_unchanged_merlin_libra
 @pytest.mark.parametrize("profile", ["tensor", "buffer", "guarded-buffer"])
 def test_actual_exported_shape_operands_and_captured_empty_call_share_one_body(tmp_path, profile):
     from scripts import qualify_spike_model as target
+    from t2m.bundle import _record
+    from t2m.consumer import invoke_merlin_host, observe_merlin_host
 
     out = capture_and_bind(tmp_path, "i32", extent=True, profile=profile)
     trace = json.loads((out / "kernel-bindings.json").read_text())
     assert [bool(call.get("runtime_operand_bindings")) for call in trace["calls"]] == [True, True, False]
-    assert all(call["runtime_operand_bindings"]["n"]["constant_integer"] == 13 for call in trace["calls"][:2])
+    for call in trace["calls"][:2]:
+        scalar = call["runtime_operand_bindings"]["n"]
+        assert scalar["adapter"] == "checked-index-castui" and scalar["unsigned_integer_range"] == [2, 31]
+        assert "constant_integer" not in scalar
+    contract = trace["runtime_shape_contract"]
+    assert contract["dimension_bindings"] == {"d1_0": {"argument": 1, "axis": 0}}
+    assert [item["shape"] for item in contract["outputs"]] == [["d1_0"], ["d1_0"], [0], ["d1_0"], []]
+    library, program = _record(out / "consumer/host/model.so"), _record(out / "consumer/compiler/program.mlir")
+    for length, control in ((2, 17), (3, -1), (7, 0), (31, -(1 << 31))):
+        x, weight = np.arange(length, dtype=np.int32) * 7 - 43, np.array(control, dtype=np.int32)
+        arguments = tmp_path / f"caller-{length}.npz"
+        np.savez(arguments, in0=weight, in1=x)
+        actual, report = invoke_merlin_host(out / "consumer", arguments, tmp_path / f"invoke-{length}",
+            merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"])
+        original = x + weight
+        expected = (original, original, np.empty(0, np.int32), original, weight)
+        for value, reference in zip(actual, expected, strict=True):
+            assert (value.shape, value.dtype, value.tobytes()) == (reference.shape, reference.dtype, reference.tobytes())
+        assert report["functional_inputs_preserved"]
+        assert _record(out / "consumer/host/model.so") == library
+        assert _record(out / "consumer/compiler/program.mlir") == program
+    for length in (1, 32):
+        arguments, failed = tmp_path / f"invalid-{length}.npz", tmp_path / f"invalid-{length}"
+        np.savez(arguments, in0=np.array(17, np.int32), in1=np.arange(length, dtype=np.int32))
+        outcome = observe_merlin_host(out / "consumer", arguments, failed,
+            merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"])
+        assert outcome["returncode"] == -6
+        assert b"exported shape domain:" in (failed / "stdout.bin").read_bytes()
+        assert not (failed / "outputs.npz").exists()
     options = {"merlin_root": os.environ["T2M_MERLIN_ROOT"], "python": os.environ["T2M_MERLIN_PYTHON"]}
     report = target.qualify(out, tmp_path / "target", comparison="words", **options)
     assert target.verify(tmp_path / "target", **options) == report and report["evaluation"]["result_count"] == 5
