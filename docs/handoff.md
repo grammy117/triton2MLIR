@@ -6,20 +6,28 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
-[Execution-sized results](execution_owned_results.md) now have a real generic
-Merlin serial host transport. It runs content-derived compaction once, observes
-owned descriptors, validates actual allocations and copies complete results.
-Native allocation-product guards reject negative/overflowing dimensions before
-byte arithmetic. Default package/signature/evaluator/target paths are unchanged;
-the fresh resizing-loop case retains the independent lifetime refusal. Follow
-the linked integration requirements rather than counting this as TTIR package
-or accelerator coverage.
+[Execution-sized results](execution_owned_results.md) now connect explicit
+Merlin signature v6 staging to complete model/TTIR host invocation in all three
+memory profiles. Saved compiler programs reopen fixed checked artifacts without
+compilation. All 21 original PyTorch results match; eighteen further host replays
+check 126 results with independent lengths/counts/parameters. Twelve actual
+source-domain failures abort without outputs and three false rehashed result
+declarations refuse. Standard-MLIR compaction also executes after staging and
+reopening, with dimensions discovered from actual vector contents.
 
-Merlin `434748c9809e3584ea12d70c0fa04bbcc5ce5eb7` supplies the mechanism.
-Its 133 focused regression checks and 36 final native/result/allocator checks
-pass with overlap; documentation and structure gates pass. The original
-codegen diagnostic fixture also now includes its existing compiler-runtime
-header dependency. Default model2MLIR/package signatures remain unchanged.
+`out/execution-result-models/summary.json` reopens every selected initial result,
+replay and abort. `.scratch/execution-model-final1.log` passes 47 with one optional
+feature import skipped; Merlin's `out/build/execution-staging-final1.log` passes
+355 and `execution-staging-final2.log` passes ten with overlap. The native stage
+fragment composition fix is `54b5a5c22`. Original capture/package receipts and
+default signatures remain unchanged. Arbitrary internally computed producer/
+binding shapes, normal qualification receipts, native/generated-C/target
+evaluators and runtime/zero-trip generation proofs remain further work.
+The staged/runtime implementation is Merlin
+`99c96b1066f0e3f974da753f9d6decab2b121fad` on `ttir-experiment-grammy`.
+The final `.scratch/execution-result-model-final2.log` passes all twelve selected
+model checks after source freeze. The summary reopens that selection and checks
+every interface consumer-source hash against the current implementation.
 
 [Runtime input-word shapes](input_word_shapes.md) retain real scalar input data
 and source guards through Triton result allocation, dependent calls and a

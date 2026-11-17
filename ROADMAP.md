@@ -4,11 +4,12 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
-[Execution-sized results](docs/execution_owned_results.md) now have an explicit
-Merlin serial host transport with actual allocation ownership, guarded byte
-products and complete result copies. Package/model/staged-signature/native/target
-integration and runtime/zero-trip generation proofs remain completion work.
-This mechanism adds no TTIR package/inventory coverage by itself.
+[Execution-sized results](docs/execution_owned_results.md) now have explicit
+signature v6 staging and reusable Merlin host invocation of complete two-call
+models in all three memory profiles. Original source/input constraints, guarded
+allocation products and complete returned values survive. Arbitrary internally
+computed producer/binding shapes, native/target evaluator and qualification
+receipt extensions, and runtime/zero-trip generation proofs remain open.
 
 [Runtime input-word shapes](docs/input_word_shapes.md) now retain actual scalar
 input reads and source guards for Triton result allocation, under model profile

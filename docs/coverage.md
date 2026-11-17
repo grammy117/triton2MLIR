@@ -1,11 +1,14 @@
 # Measured coverage and remaining boundaries
 
-[Execution-sized results](execution_owned_results.md) add a real generic
-Merlin host mechanism for vector-content-derived result descriptors. Its tests
-retain source computation, tracked allocations, bounds/overflow checks and the
-existing lifetime refusals. This is not a new TTIR package or target selection;
-the historical inventory is unchanged. Package/model/signature/evaluator wiring
-and runtime/zero-trip generation proofs remain explicit completion work.
+[Execution-sized results](execution_owned_results.md) now qualify explicit
+signature v6 staging and Merlin host invocation for complete model/TTIR captures
+in all three memory profiles. All 21 initial PyTorch results, eighteen further
+host replays with 126 results, and twelve compiled source-domain aborts are
+reopened in `out/execution-result-models/summary.json`. The focused producer
+selection passes 47 with one optional feature import skipped; Merlin passes
+355 plus ten final staging checks with overlap. Arbitrary producer/binding
+shapes, normal qualification/native/target evaluators and runtime generation
+proofs remain open. No v6 target or historical-inventory expansion is claimed.
 
 [Runtime input-word shapes](input_word_shapes.md) add complete model/interface
 coverage for actual scalar input data controlling Triton result allocation.

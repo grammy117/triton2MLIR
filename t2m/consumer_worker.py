@@ -91,6 +91,14 @@ def compile_model(staged, work):
     source = (staged / "program.mlir").read_text()
     module = parse_mlir_text(source)
     module.verify()
+    signature = json.loads((staged / "signature.json").read_text())
+    if signature.get("schema") == "merlin.compile-signature.v6":
+        from execution_results_worker import compile as compile_execution_results
+
+        compile_execution_results(staged, work, source, module, signature, select_features(module))
+        return
+    if "result_mode" in manifest:
+        raise ValueError("selected execution result mode cannot use an older compiler signature")
     add_c_interface(module)
     prepared = text(module, generic=True)
     (work / "prepared.mlir").write_text(prepared)
@@ -146,6 +154,11 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
             raise ValueError("Merlin host evaluator needs exactly the declared argument keys")
         arrays = [values[f"in{i}"].copy() for i in range(len(signature["inputs"]))]
+    if signature.get("schema") == "merlin.compile-signature.v6":
+        from execution_results_worker import execute as execute_execution_results
+
+        execute_execution_results(staged, work, arguments, arrays, signature, compiled, evaluation, observed=observed)
+        return
     if signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
         from merlin.llvmlower.runtime_invocation import resolve
 

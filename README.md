@@ -3,11 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
-[Execution-sized results](docs/execution_owned_results.md) now have a generic
-Merlin serial host transport, retaining content-derived dimensions, actual
-allocation ownership and source computation. Package/model/signature/evaluator
-and target integration remain open; runtime resizing loops retain the existing
-independent lifetime refusal. This adds no TTIR package coverage by itself.
+[Execution-sized results](docs/execution_owned_results.md) now connect explicit
+Merlin signature v6 staging to complete model/TTIR host execution in all three
+memory profiles. Original input restrictions, source computation, tracked
+allocations and complete result observations remain intact. Arbitrary internal
+producer/binding shapes, native/target evaluators and resizing generation proofs
+remain open; the historical TTIR inventory is unchanged.
 
 [Runtime input-word shapes](docs/input_word_shapes.md) now keep a real
 `count.item()` and its source guards through two Triton allocations and a

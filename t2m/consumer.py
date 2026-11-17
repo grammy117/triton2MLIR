@@ -18,9 +18,12 @@ from merlin.llvmlower.c_runtime import generate
 from merlin.frontends.compile_inputs import stage_compile_inputs
 capture, out = pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 signature = forward_signature(capture / "model.mlir")
-stage = stage_compile_inputs(capture, out.parent / "compiler")
+stage = stage_compile_inputs(capture, out.parent / "compiler", result_mode=sys.argv[5] or None)
 staged_signature = json.loads((out.parent / "compiler/signature.json").read_text())
-if staged_signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
+execution_owned = staged_signature["schema"] == "merlin.compile-signature.v6"
+if execution_owned:
+    pass  # Result descriptors are produced by the separate host invocation.
+elif staged_signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
     # The caller supplies the separately materialized full positional roster.
     # Its values size this runtime harness and never enter compiler staging.
     if not sys.argv[4]:
@@ -30,17 +33,17 @@ if staged_signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile
              runtime_signature=out.parent / "compiler/signature.json")
 else:
     generate(capture, out, capture / "inputs.npz", capture / "extra.npz")
-files = {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
+files = {} if execution_owned else {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
          for p in out.iterdir() if p.is_file()}
-print(json.dumps({"schema": "t2m.merlin-interface-check.v2", "forward_signature": signature,
-                 "parser": "merlin.frontends.linalg_mlir", "runtime": "merlin.llvmlower.c_runtime.generate",
-                 "interface_ingestion": "passed", "runtime_generation": "passed",
+print(json.dumps({"schema": "t2m.merlin-interface-check.v3" if execution_owned else "t2m.merlin-interface-check.v2", "forward_signature": signature,
+                 "parser": "merlin.frontends.linalg_mlir", "runtime": "merlin.llvmlower.owned_results" if execution_owned else "merlin.llvmlower.c_runtime.generate",
+                 "interface_ingestion": "passed", "runtime_generation": "not-performed; execution-produced result descriptors" if execution_owned else "passed",
                  "compiler_input_staging": "passed", "compiler_input_manifest": stage,
                  "target_execution": "not-performed", "generated_artifacts": files}))
 '''
 
 
-def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments=None):
+def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments=None, result_mode=None):
     capture, work, root = Path(capture), Path(work), Path(merlin_root).resolve()
     if not (root / "src/merlin/llvmlower/c_runtime.py").is_file():
         raise ValueError("Merlin checkout does not expose the expected model runtime interface")
@@ -49,7 +52,8 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
     try:
         process = subprocess.run([str(python or sys.executable), "-c", SCRIPT, str(root),
                                   str(capture.resolve()), str((work / "runtime").resolve()),
-                                  str(Path(arguments).resolve()) if arguments is not None else ""],
+                                  str(Path(arguments).resolve()) if arguments is not None and result_mode is None else "",
+                                  result_mode or ""],
                                  capture_output=True, text=True, timeout=30,
                                  env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                                           TMPDIR=str(work.resolve())))
@@ -69,6 +73,12 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                  "src/merlin/frontends/shape_input_words.py", "src/merlin/frontends/shape_word_bindings.py",
                  "src/merlin/llvmlower/runtime_invocation.py"):
         if (root / name).is_file():
+            report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+    if result_mode is not None:
+        for name in ("src/merlin/frontends/execution_result_signature.py", "src/merlin/llvmlower/owned_result_program.py",
+                     "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_abi.py",
+                     "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
+                     "merlin/runtime/abi/owned_results.c"):
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     (work / "interface.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report

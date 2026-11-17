@@ -6,12 +6,14 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
-[Execution-sized result transport](execution_owned_results.md) now works in
-Merlin's explicit serial host ABI for sizes computed from vector contents.
-Actual allocation records, guarded size products and complete result copies
-retain ownership and source computation. This is consumer infrastructure:
-package/model/signature/native/target wiring and runtime resizing generation
-proofs remain open, and the existing 352-package inventory is unchanged.
+[Execution-sized results](execution_owned_results.md) now connect source-checked
+signature v6 staging to complete model/TTIR Merlin host invocation in all three
+memory profiles. All 21 initial results match original PyTorch words; 18 host
+replays check 126 results and twelve actual source-domain failures abort without
+outputs. Standard-MLIR content-derived compaction additionally executes after
+staging/reopening without a size predictor. Arbitrary producer/binding shapes,
+native/target evaluators, qualification receipts and runtime resizing proofs
+remain open. The historical 352-package inventory is unchanged.
 
 [Runtime input-word shapes](input_word_shapes.md) now preserve a real input
 count controlling two Triton result sizes and a derived slice. Independent
@@ -148,7 +150,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements and same-base byte differences, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
-| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/lifted constants, runtime scalars, complete tuple results, dependent state, selected value views, input-axis/derived dimensions and checked input-word result sizes. | General physical/mutating views, internally computed result sizes, value-returning TTIR entries/CFGs and broader binding compositions remain open; execution-sized result transport still needs package integration. |
+| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/constants, runtime scalars, complete tuple results, dependent state, selected value views, source-proved dimensions/words and explicitly selected executed-result staging/host transport. | General physical/mutating views, internally computed producer/binding shapes, value-returning TTIR entries/CFGs, normal v6 qualification receipts and native/target evaluators remain open. |
 | Consumer execution | Real native execution, reusable Merlin host libraries and selected complete model/kernel images executed on RISC-V/Spike. | Functional CPU execution does not qualify accelerators, hardware placement or preserved performance. |
 
 In roadmap terms, R0's minimum demo is delivered. R1–R5 have working

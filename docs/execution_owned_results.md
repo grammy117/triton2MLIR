@@ -3,11 +3,13 @@
 Merlin now has an explicit serial host mechanism,
 `merlin.execution-owned-results.v1`, for tensor results whose dimensions are
 computed by the executed body. The
-[Merlin implementation](https://github.com/ucb-bar/merlin/commit/434748c9809e3584ea12d70c0fa04bbcc5ce5eb7)
-exposes `merlin.llvmlower.owned_results.compile_owned_results`; it is not yet selected by
-triton2MLIR packages, model binding, the native evaluator or the Spike harness.
-Existing compile signatures through v5 retain their source-proved preallocation
-contracts. No package ABI or TTIR coverage count changes in this milestone.
+[Merlin implementation](https://github.com/ucb-bar/merlin/commit/99c96b1066f0e3f974da753f9d6decab2b121fad)
+exposes `merlin.llvmlower.owned_results.compile_owned_results`. Explicit signature
+v6 now connects ordinary captures, standalone kernels and bound models to
+triton2MLIR's selected compiler-only staging and Merlin host invocation.
+Existing signatures through v5 retain their preallocation contracts. The native
+evaluator, generated C/target harnesses and arbitrary producer/binding shapes
+remain further work. The original capture/package schemas are unchanged.
 
 ## The concrete boundary
 
@@ -33,6 +35,42 @@ and pack loops rather than invoking a separate size predictor. Duplicate
 results and returned snapshots of input values retain their full contents.
 This is an actual standard-MLIR execution test, not a claim that the PyTorch
 indexing syntax above already imports through model2MLIR.
+
+## Explicit staged host interface
+
+```python
+check_merlin_interface(capture, work, merlin_root=merlin_root,
+                       python=merlin_python, result_mode="execution-owned")
+outputs, report = check_merlin_host(work, arguments, merlin_root=merlin_root,
+                                  python=merlin_python,
+                                  compiler_python=native_python, clang=clang)
+```
+
+The argument archive is the complete positional invocation, including parameter
+arguments. The staging selection receives no argument/reference data or argument
+path. Each original source/package validation still runs before v6 selection.
+Public input/result ranks, storage and static dimensions come from actual MLIR;
+unknown result extents stay null until execution. Existing input axis/scalar
+relationships and scalar bounds remain restrictions, with source guards intact.
+They do not supply output predictions or rewrite permissions.
+
+The boundary versions are explicit:
+
+| Boundary | Selected profile |
+|---|---|
+| Compiler result signature | `merlin.compile-signature.v6` |
+| Executed result ABI | `merlin.execution-owned-results.v1` |
+| Saved compiler/native program | `merlin.owned-result-program.v1` |
+| Interface observation | `t2m.merlin-interface-check.v3` |
+| Host compilation/evaluation | `t2m.merlin-host-compilation.v2` / `t2m.merlin-host-evaluation.v2` |
+
+The interface observation explicitly reports C runtime generation as not
+performed. The separate compiler worker lowers the entire standard body without
+evaluator arguments. `invoke_merlin_host` reopens fixed, checked compiler
+products and the private native image without recompilation. Every descriptor
+comes from the actual call, then its complete result is copied for comparison.
+Rehashed false type/result/resource declarations refuse independent source
+reconstruction. Older preallocated runtime readers reject v6.
 
 ## Reused upstream behavior and resource contract
 
@@ -66,13 +104,32 @@ lower-level allocation/descriptor ABI.
 
 ## Qualification and remaining work
 
-The final Merlin regression selection passes **133** execution/allocation,
-codegen, pipeline and lifetime checks in
-`out/build/owned-result-final3.log`. After the last source changes, **36** focused
-native/result/allocator checks pass in `out/build/owned-result-final4.log`.
-Counts overlap. Documentation and structure gates pass. All new modules and
-changed support/test modules pass Ruff; `pipeline.py` retains its 71 pre-existing
-diagnostics with no new diagnostics. Earlier failing logs remain distinct.
+The current Merlin selection passes **355** staging, source-only, native,
+allocation and lifetime checks in `out/build/execution-staging-final1.log`.
+The final **10** signature/staging checks separately include executing
+content-derived compaction after staging and program reopening, in
+`out/build/execution-staging-final2.log`. Counts overlap. Earlier failing probes
+remain distinct; the first complete-model probe exposed the native fragment
+composition bug, now covered by an explicit callback regression.
+
+The producer/model selection passes **47**, with one optional feature check
+skipped, in `.scratch/execution-model-final1.log`. It includes the existing
+input-word packages/Spike regressions and the new three-profile selected-host
+models. All **21** original model results match captured PyTorch words; **18**
+additional unchanged-library host replays check **126** results with independent
+capacities, counts and parameters. Twelve invalid source-domain calls abort
+without outputs; three rehashed false-result signatures refuse. The selections
+are separate from the historical 352-package inventory and supply no new v6
+target qualification. Negative counts execute their actual source assertion in
+this mode; earlier preallocation profiles retain their own early-size refusal.
+`out/execution-result-models/summary.json` independently reopens the complete
+initial/replay values and actual compiled abort records. The implementation is
+Merlin `99c96b1066f0e3f974da753f9d6decab2b121fad`, following the native fragment
+composition fix `54b5a5c22`.
+The final source-frozen model selection additionally passes all twelve checks
+in `.scratch/execution-result-model-final2.log`; every retained interface
+consumer-source hash matches the current Merlin implementation. The summary
+now points to that final selection. Earlier logs retain their original scopes.
 
 Merlin's focused tests exercise real content-derived output sizes, empty and
 duplicate results, input snapshots, mixed result ranks, exact floating words,
@@ -89,22 +146,20 @@ new generation. Conditional cloning/retention and returned ownership need a
 closed proof before the checker can admit that case. The new transport keeps
 the refusal; it does not disable the gate.
 
-The next integration requirements are:
+The remaining integration requirements are:
 
-1. Add an explicit independently source-checked staged result-mode signature.
-   Retain exact public ranks/dtypes and reject downgrade/rehashed mismatches;
-   do not reinterpret v3/v4/v5 preallocation contracts.
-2. Bind real model/kernel results computed from internal data. Extend the
+1. Bind real model/kernel results computed from internal data. Extend the
    necessary model2MLIR emitters and per-call shape/resource relationships;
    never substitute saved invocation values for executable source computation.
-3. Carry the selected mode through triton2MLIR package verification, compiler-only
-   staging, native evaluation and complete result/reference receipts. Preserve
-   source/weight archives and keep evaluator arrays out of compiler staging.
-4. Extend the independent generation proof for zero/runtime-trip resizing
+2. Extend normal qualification receipts and the separate native evaluator for
+   this mode, preserving parent data and all result/effect references. Existing
+   package verification and selected host staging/invocation now work; old
+   qualification formats do not silently inherit this extension.
+3. Extend the independent generation proof for zero/runtime-trip resizing
    state, conditional final owners and transfer to function results. Close
    initial/fresh/final aliases and every use/release edge; preserve negative
    lifetime tests.
-5. Materialize the same semantics in the applicable target harnesses with real
+4. Materialize the same semantics in generated C and applicable target harnesses with real
    resource/lifetime contracts and complete execution evidence.
 
 These remain part of the full arbitrary-TTIR objective, alongside broader

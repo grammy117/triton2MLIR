@@ -1,5 +1,18 @@
 # Package contract and explicit model2MLIR differences
 
+[Execution-produced results](execution_owned_results.md) explicitly select
+Merlin signature v6 and its separate allocation/descriptor ABI through
+`check_merlin_interface(..., result_mode="execution-owned")`. Actual source
+types fix ranks/storage/static dimensions; invoked code produces remaining
+extents. Original input constraints and package checks remain, and compiler
+staging receives no evaluator arrays or argument paths. Interface v3 and host
+compilation/evaluation v2 observations distinguish this route; saved native
+program v1 reopens fixed products without compilation. Parent archives and
+capture/package receipt schemas are unchanged. Native evaluator, generated C,
+target harness and normal qualification-receipt extensions remain explicit
+further work; older runtime readers reject v6 rather than preallocating guessed
+results. This adds no physical alias/mutation, numeric or target permission.
+
 [Runtime input-word shapes](input_word_shapes.md) select model shape v3,
 checked-word arguments, runtime shapes v4, typed program v2 and independent
 Merlin signature v5. `word_bindings` records actual public singleton/native
