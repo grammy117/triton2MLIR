@@ -87,14 +87,17 @@ four changed-control invocations reuse its host library. Its regression log is
 The actual `capture_live_scalar_model.py --extent --dtype i32` export supplies
 the checked `[2, 31]` entry dimension to both original calls. Torch export reuses
 the original dimension SSA; no opaque-result shape fact is inferred.
-A fresh two-call copy probe in `.scratch/symbolic-model-boundary3/` now passes
+A fresh two-call copy probe in `.scratch/symbolic-model-boundary3/` passed
 index-conversion planning and stops at:
 
 ```text
 live runtime shape dimension needs an actual parent SSA/type fact
 ```
 
-The next work is symbolic tensor-dimension relationships, result/scratch
-allocation and independent Merlin signatures under an explicit model profile.
+[Symbolic tensor binding](symbolic_tensor_bindings.md) now supersedes that
+particular refusal with actual input/destination/result proofs and native
+execution in three memory profiles. The complete writer stops at dynamic
+argument materialization; reference/result allocation and independent Merlin
+model signatures remain next under an explicit profile.
 The existing dynamic whole-model integration remains open. No TTIR inventory
 or target qualification is added by these source-proof cases.

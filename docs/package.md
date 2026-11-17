@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Symbolic tensor binding](symbolic_tensor_bindings.md) declares
+`t2m.symbolic-model-shapes.v1`, source-derived per-call tensor relationships
+and an input-axis runtime shape contract. Actual implementation bodies and the
+complete inlined model must reproduce those relationships; evaluator samples
+supply none. Symbolic guarded scratch explicitly uses the sum of source shape
+upper bounds. Public MLIR types remain dynamic; no scalar ABI inputs are added.
+The full writer/independent consumer signature integration remains open, so this
+binding capability emits no successful new package or receipt schema.
+
 [Checked source index arguments](checked_index_arguments.md) select
 `t2m.checked-index-runtime-arguments.v1` when dominating executable round trips
 and comparisons prove a representable unsigned index conversion. Call records

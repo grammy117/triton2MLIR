@@ -2,7 +2,9 @@
 
 The qualification below used static parent captures from model2MLIR `5a681ea`.
 Model2MLIR `f85f949` now preserves actual symbolic public types; that path stops
-at symbolic tensor-dimension binding after checked index-conversion planning. See the
+at the dynamic whole-model interface. A separate two-call copy model now has
+checked tensor relationships and native execution in three memory profiles;
+package materialization and independent consumer signatures remain open. See the
 [symbolic model contract and next execution steps](symbolic_models.md).
 The retained static results do not establish current symbolic-model execution.
 

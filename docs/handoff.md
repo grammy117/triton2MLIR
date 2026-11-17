@@ -6,13 +6,27 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Symbolic tensor binding](symbolic_tensor_bindings.md) now proves actual kernel
+input/destination/result relationships across a real two-call exported copy
+model. All three memory profiles retain 36 complete exact native results at
+independent empty/singleton/tail lengths, with three source-domain guard aborts.
+The original and complete inlined shape contracts agree; sampled lengths supply
+no compiler fact. The final selection passes 32 tests, including the existing
+i32 model's native/Merlin-host/Spike regression; the broader overlapping producer/
+whole-model selection passes 163. `out/symbolic-model-binding-native/summary.json`
+reopens the new source/native evidence. It adds no qualified package or dynamic
+Merlin library. The full writer now stops at dynamic argument materialization,
+as retained in `.scratch/symbolic-model-package-probe1/`. Reference/result
+allocation, independent consumer shape/scratch signatures and reusable invocation
+remain next; the older surrounding-arithmetic integration stays open.
+
 [Checked index arguments](checked_index_arguments.md) now recover unsigned
 enclosures from original dominating standard assertions and checked round trips,
 then emit a representable `arith.index_castui` without choosing index width.
 Producer verification and Merlin reconstruct the exact profile/adapter/range
 record; source guards remain executable. The fresh probe under
-`.scratch/symbolic-model-boundary3/` now passes narrowing planning and refuses
-symbolic tensor-dimension binding. Public dynamic model allocation/signatures,
+`.scratch/symbolic-model-boundary3/` retained the prior narrowing-planning success
+and symbolic tensor-dimension refusal, now superseded by the binding above. Public dynamic model allocation/signatures,
 reusable execution and broader semantic/target closure remain unfinished. These
 source-proof cases add no TTIR inventory or complete model qualification.
 The final producer selection passes 100 tests in
@@ -48,8 +62,8 @@ literal-aware shape helpers. Its relevant selection passes 134 tests with 26
 unrelated cases deselected; the final twelve dimension contracts pass. Only
 the intended importer hunk was committed, preserving the unrelated whitespace
 edit. The [symbolic model contract](symbolic_models.md) records the next actual
-boundary: the fresh real Triton copy model now refuses symbolic tensor-dimension
-binding after the new checked index proof. The existing tensor-profile shape
+boundary: the fresh real Triton copy model now reaches the writer's dynamic
+argument-materialization requirement after checked binding. The existing tensor-profile shape
 integration is an open failing
 integration, not a passing refusal case. Source-domain checks, symbolic binding,
 runtime allocation and independent Merlin signatures/execution remain required.

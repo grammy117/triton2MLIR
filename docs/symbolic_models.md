@@ -12,8 +12,11 @@ retain `?` where the original export is symbolic. Original source ranges remain
 in the FX trace. The subsequent entry-domain expansion now emits executable
 guards from actual expressions and ValueRanges. A general symbolic model
 binding/invocation ABI remains unfinished. [Checked index arguments](checked_index_arguments.md)
-now prove the direct guarded narrowing; symbolic tensor-dimension relationships
-are the current binding boundary.
+now prove the direct guarded narrowing.
+[Symbolic tensor relationships](symbolic_tensor_bindings.md) additionally carry
+the two-call copy model through native execution in all three memory profiles.
+The complete writer now stops at dynamic argument materialization; independent
+consumer signatures and reusable model execution remain open.
 
 ## Executable domains now implemented
 
@@ -83,7 +86,7 @@ compiler staging does not publish an input-axis signature from it. No TTIR inven
 new bound-model package or Merlin/device execution qualification is added by
 these native source-domain cases.
 
-## Remaining binding boundary
+## Binding and remaining package boundary
 
 The preceding [live-argument qualification](live_runtime_arguments.md) used
 model2MLIR `5a681ea7c6e3dacbe9a1a7316a205549014f9298`, whose importer specialized
@@ -101,25 +104,33 @@ func.func @forward(%x: tensor<?xi32>)
 Two dependent calls use the actual original `tensor.dim` SSA and preserve all
 three model references. The Triton body is the existing masked
 `live_extent_copy`, translated through shared into standard tensor computation.
-Binding currently refuses with:
+All three memory profiles now bind and retain all three dynamic results at
+lengths zero, one, seven and 31. The original guarded `[2, 31]` narrowing proof
+also applies; the new real capture declares `[0, 31]`. Actual standard kernel
+destinations/results establish the tensor relationships across both calls.
+The complete package writer now refuses with:
 
 ```text
-live runtime shape dimension needs an actual parent SSA/type fact
+native model qualification requires static ranked tensor arguments
 ```
 
 The new checked-index profile derives `[2, 31]` from the original dominating
 round trip and standard integer comparisons. It emits an unsigned conversion
 with no native index-width assumption; Merlin reconstructs the proof separately.
-The public dimension remains genuinely unknown: neither its captured value 13
-nor a range enclosure establishes tensor-dimension equality or a concrete size.
-The remaining refusal must stay until the symbolic shape relationship is proved.
-No successful bound package or Merlin execution is claimed by this probe.
+The public dimension remains genuinely unknown. Tensor relationships now follow
+actual parent SSA and reified implementation shapes; neither the captured value
+13 nor a range enclosure substitutes for them. The complete inlined body's
+runtime shape contract must agree. This new model-shape profile still needs
+independent consumer reconstruction. No successful dynamic bound package or
+Merlin execution is claimed by these native binding cases.
 
-On this VM, `.scratch/symbolic-model-boundary3/` retains a fresh guarded capture,
-source TTIR, shared translation and the new symbolic-dimension refusal.
+On this VM, `.scratch/symbolic-model-boundary3/` retains the preceding guarded
+capture, shared translation and former symbolic-dimension refusal.
 `.scratch/symbolic-model-boundary2/` retains the preceding guarded index refusal.
 The original unguarded capture remains under
 `.scratch/symbolic-model-boundary1/`.
+The new full-writer observation is `.scratch/symbolic-model-package-probe1/`;
+native binding evidence reopens in `out/symbolic-model-binding-native/summary.json`.
 The earlier focused tensor-profile shape integration retained the preceding
 index refusal in `.scratch/symbolic-existing-shape1.log`. This remains an open integration
 regression; do not turn it into a passing refusal test or weaken its checks.
@@ -141,8 +152,9 @@ These are frontend/capture tests, not compiled dynamic kernel/model evidence.
    checked-index profile now proves direct unsigned narrowing from dominating
    typed source checks. Preserve kernel scalar guards and extend actual proof
    coverage where other source expressions require it.
-   Establish input/result dimension relationships from actual original SSA,
-   including dependent calls. Keep concrete captured scalars and live scalar
+   Direct checked input/destination/result relationships now reconstruct from
+   original SSA and actual kernel bodies, including dependent calls. Extend
+   the remaining shape producers and derived relationships. Keep concrete captured scalars and live scalar
    data distinct from shape proofs. Unknown relations remain explicit refusals.
 3. **Extend the package and independent Merlin signature together.** Public
    input axes can supply runtime dimensions without adding artificial scalar

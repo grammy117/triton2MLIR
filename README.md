@@ -8,8 +8,11 @@ public types and executable source-domain guards. Five dynamic reduction-model
 configurations pass fifteen valid native executions and fifteen actual guard
 aborts. [Checked index arguments](docs/checked_index_arguments.md) now prove
 representable unsigned conversions from actual dominating source assertions,
-with independent Merlin reconstruction. The fresh Triton copy model now stops
-at symbolic tensor-dimension binding. General symbolic execution remains open. Earlier static-model
+with independent Merlin reconstruction. [Symbolic tensor binding](docs/symbolic_tensor_bindings.md)
+now carries the real two-call copy model through native execution in all three
+memory profiles, preserving all three dynamic results and source guards.
+The full writer stops at dynamic argument materialization; independent Merlin
+signatures and reusable model execution remain open. Earlier static-model
 execution results below retain their original frontend-version scope.
 
 [Live model runtime arguments](docs/live_runtime_arguments.md) now preserve

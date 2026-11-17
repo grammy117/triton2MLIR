@@ -10,7 +10,7 @@ import hashlib
 import json
 import math
 
-from xdsl.dialects import func, tensor
+from xdsl.dialects import builtin, func, tensor
 from xdsl.dialects.builtin import (ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr,
                                   StringAttr, UnitAttr, f64, i1, i64)
 
@@ -120,23 +120,29 @@ def bind_model(model_mlir, bindings):
     """
     bindings = list(bindings)
     prepared = [(b, *b.validate()) for b in bindings]
-    module = parse_shared(model_mlir)
+    original_module = parse_shared(model_mlir)
+    module = original_module.clone()
     module.verify()
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}
     calls = [op for op in module.walk() if isinstance(op, func.CallOp)]
+    original_calls = [op for op in original_module.walk() if isinstance(op, func.CallOp)]
+    from .model_shape_facts import ShapeFacts
+    original_entries = [op for op in original_module.ops if isinstance(op, func.FuncOp)
+                        and op.sym_name.data == "forward" and op.body.blocks]
+    shape_facts = ShapeFacts.entry(original_entries[0]) if len(original_entries) == 1 else None
     from .model_live_arguments import known_integer
     from .source_index_ranges import unsigned_index_range
     # Facts describe the original parent graph. Earlier inlining may replace
     # an opaque call result with a literal; that does not make the literal an
     # original parent SSA fact or authorize a different call's shape contract.
     source_facts, source_ranges = {}, {}
-    for call in calls:
+    for call, original_call in zip(calls, original_calls, strict=True):
         names = call.attributes.get("prov.kernel_operands")
         if (isinstance(names, ArrayAttr) and len(names) == len(call.operands)
                 and all(isinstance(name, StringAttr) for name in names)):
-            source_facts[call] = {name.data: known_integer(value) for name, value in zip(names, call.operands, strict=True)}
-            source_ranges[call] = {name.data: unsigned_index_range(value, call)
-                                  for name, value in zip(names, call.operands, strict=True)}
+            source_facts[call] = {name.data: known_integer(value) for name, value in zip(names, original_call.operands, strict=True)}
+            source_ranges[call] = {name.data: unsigned_index_range(value, original_call)
+                                  for name, value in zip(names, original_call.operands, strict=True)}
     used, records, guard_storage = set(), [], 0
     for parent_call_ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
@@ -154,6 +160,8 @@ def bind_model(model_mlir, bindings):
             or len(names) != len(call.operands) or len(set(n.data for n in names)) != len(names)):
             raise ConversionError("kernel operands lack complete unique schema names", opcode="func.call")
         by_name = dict(zip((n.data for n in names), call.operands, strict=True))
+        original_call = original_calls[parent_call_ordinal]
+        original_by_name = dict(zip((n.data for n in names), original_call.operands, strict=True))
         arguments = call.attributes.get("prov.kernel_args", DictionaryAttr({}))
         if not isinstance(arguments, DictionaryAttr):
             raise ConversionError("kernel scalar arguments must be a typed dictionary", opcode="func.call")
@@ -162,15 +170,22 @@ def bind_model(model_mlir, bindings):
             if (binding.qualname != identity.data or scalars != arguments
                     or set(operand_names.values()) | set(binding.source_views) | set(binding.runtime_operands.values()) != set(by_name)):
                 continue
-            plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
-                                  [value.type for value in call.results], source_facts=source_facts[call],
-                                  source_ranges=source_ranges[call])
+            try:
+                plan = plan_arguments(binding, function, operand_names, output_names, by_name, arguments,
+                                      [value.type for value in call.results], source_facts=source_facts[call],
+                                      source_ranges=source_ranges[call], shape_facts=shape_facts,
+                                      source_shape_values=original_by_name)
+            except (TypeError, ValueError) as error:
+                raise ConversionError(str(error), opcode="func.call") from error
             if plan is not None:
                 candidates.append((binding, function, operand_names, plan, output_names))
         if len(candidates) != 1:
             raise ConversionError(f"{identity.data}: expected one matching typed/scalar specialization, found {len(candidates)}",
                                   opcode="func.call")
         binding, function, operand_names, plan, output_names = candidates[0]
+        if plan.symbolic_shapes:
+            for value, name in zip(original_call.results, output_names, strict=True):
+                shape_facts.tensors[value] = plan.symbolic_shapes[name]
         source_views = None
         if binding.source_views:
             from .model_source_views import bind
@@ -181,7 +196,8 @@ def bind_model(model_mlir, bindings):
             cost = json.loads(binding.implementation.auxiliary_artifacts["memory-admission.json"])["guard_storage_bytes_per_output_element"]
             from .typed_storage_contract import checked_guard_costs
             costs = checked_guard_costs(function, binding.implementation.trace, cost)
-            guard_storage += sum(cost * math.prod(plan.outputs[b.name].get_shape()) for cost, b in zip(costs, outputs, strict=True))
+            guard_storage += sum(cost * math.prod(plan.output_max_shapes.get(b.name, plan.outputs[b.name].get_shape()))
+                                 for cost, b in zip(costs, outputs, strict=True))
             if not 0 <= guard_storage < 2**63:
                 raise ConversionError("guarded model scratch exceeds its i64 domain", opcode="func.call")
         callsite = f"kernel_call.{len(records):04d}"
@@ -241,6 +257,8 @@ def bind_model(model_mlir, bindings):
                         "source_sha256": binding.implementation.trace["source_sha256"]})
         if plan.live_bindings:
             records[-1]["runtime_operand_bindings"] = plan.live_bindings
+        if plan.symbolic_shapes:
+            records[-1]["symbolic_tensor_shapes"] = {name: list(shape) for name, shape in plan.symbolic_shapes.items()}
         if binding.tensor_views is not None:
             records[-1]["tensor_views"] = binding.tensor_views
         if source_views:
@@ -282,6 +300,23 @@ def bind_model(model_mlir, bindings):
     if any(record.get("runtime_operand_bindings") for record in records):
         from .model_live_arguments import binding_profile
         report["argument_binding_profile"] = binding_profile(records)
+    if (any(record.get("symbolic_tensor_shapes") for record in records)
+            or original_entries and any(isinstance(type_, builtin.TensorType) and any(n < 0 for n in type_.get_shape())
+                                       for type_ in (*original_entries[0].function_type.inputs,
+                                                     *original_entries[0].function_type.outputs))):
+        from .model_shape_facts import PROFILE
+
+        try:
+            contract = shape_facts.contract(original_entries[0])
+            entry = next(op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
+            if ShapeFacts.entry(entry).contract(entry) != contract:
+                raise ValueError("inlined model result dimensions differ from the proved parent relationships")
+        except (TypeError, ValueError) as error:
+            raise ConversionError(str(error), opcode="func.func") from error
+        report["model_shape_profile"] = PROFILE
+        report["runtime_shape_contract"] = contract
+        if guard_storage:
+            report["guard_storage_scope"] = "sum-of-source-shape-upper-bounds"
     if view_binding:
         report["tensor_view_binding_profile"] = VIEW_PROFILE
     if any(record.get("source_tensor_views") for record in records):

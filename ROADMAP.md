@@ -9,8 +9,12 @@ dimensions and executable entry-domain checks after the model2MLIR correction.
 Five dynamic reduction configurations retain fifteen native results and fifteen
 compiled guard aborts. [Checked index arguments](docs/checked_index_arguments.md)
 now recover representable unsigned ranges from dominating source assertions;
-Merlin reconstructs the exact proof independently. The fresh guarded Triton
-copy model reaches the remaining symbolic tensor-dimension binding boundary.
+Merlin reconstructs the exact scalar proof independently.
+[Symbolic tensor binding](docs/symbolic_tensor_bindings.md) now proves actual
+destination/result relationships across the two-call copy model in all three
+memory profiles. Twelve native invocations retain all 36 results, with three
+source-domain aborts. Full package writing now stops at dynamic argument
+materialization; Merlin compiler signatures and reusable model invocation remain.
 Carry source domains, symbolic bindings, runtime allocation and
 independent Merlin invocation through the same package before claiming dynamic
 whole-model execution; earlier static qualification keeps its original scope.

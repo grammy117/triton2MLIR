@@ -5,9 +5,12 @@ preservation, with no new qualified package. Existing model execution results
 retain their original static captures and frontend-version scope. The current
 symbolic shape integration remains an open failing case at checked binding.
 The [checked index profile](checked_index_arguments.md) now proves direct
-unsigned narrowing from dominating source assertions. The fresh copy model
-reaches the remaining symbolic tensor-dimension boundary; these source-proof
-cases add no qualified package or target execution.
+unsigned narrowing from dominating source assertions.
+The [symbolic tensor profile](symbolic_tensor_bindings.md) additionally proves
+actual kernel destination/result shapes across dependent calls. Its three
+memory profiles retain 36 complete exact native results and three guard aborts;
+full package writing now stops at dynamic argument materialization. These cases
+add no qualified package or Merlin/target execution.
 
 [Live runtime model arguments](live_runtime_arguments.md) qualify seven exact
 scalar control types, actual exported dimension operands in three memory

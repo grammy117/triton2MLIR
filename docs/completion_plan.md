@@ -43,9 +43,12 @@ fifteen valid native invocations and fifteen compiled guard aborts. Scalar
 unsigned index casts retain high source bits through native execution; actual
 integer ranges/relations precede model arithmetic without choosing index width.
 A fresh guarded real Triton copy capture now passes index-conversion planning
-using [dominating source assertion proofs](checked_index_arguments.md), then
-refuses symbolic tensor-dimension binding. The original dynamic shape
-integration remains open. This adds no working dynamic bound package. The next
+using [dominating source assertion proofs](checked_index_arguments.md).
+[Symbolic tensor relationships](symbolic_tensor_bindings.md) now preserve both
+calls and all three dynamic results through twelve native invocations in the
+three memory profiles; three invalid lengths abort through original guards.
+The writer now refuses dynamic argument materialization. The original broader
+shape integration remains open. This adds no working dynamic bound package. The next
 execution sequence is broader source domains, proved/checked symbolic bindings,
 runtime result/scratch allocation and independent reusable Merlin invocation.
 Earlier static-model receipts retain their original source-version scope.

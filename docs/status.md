@@ -13,10 +13,14 @@ fifteen valid native executions and fifteen actual guard aborts, including
 shared/affine/inverted, empty/singleton and unbounded source domains. A fresh
 two-call Triton copy model now passes checked index-conversion planning using
 dominating executable assertions, with an explicit [checked-index profile](checked_index_arguments.md)
-and independent Merlin reconstruction. It still refuses unresolved symbolic
-tensor-dimension binding. The existing shape integration remains open;
-dimension relationships, runtime result allocation
-and independent consumer signatures are the next steps. Earlier static-package
+and independent Merlin scalar-proof reconstruction.
+[Symbolic tensor binding](symbolic_tensor_bindings.md) now proves actual kernel
+input/destination/result relationships and preserves both calls and all three
+results through twelve native invocations across the memory profiles. Three
+out-of-domain runs abort through compiled source guards. The complete package
+writer now stops at dynamic argument materialization. General relationships,
+model reference/result allocation and independent consumer signatures remain
+the next steps; the older surrounding-arithmetic integration remains open. Earlier static-package
 execution evidence remains separately scoped to its original frontend version.
 
 [Live model runtime arguments](live_runtime_arguments.md) now retain actual

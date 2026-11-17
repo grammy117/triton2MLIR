@@ -90,21 +90,44 @@ class ArgumentPlan:
     live_arguments: dict = field(default_factory=dict)
     live_bindings: dict = field(default_factory=dict)
     runtime_values: dict = field(default_factory=dict)
+    symbolic_shapes: dict = field(default_factory=dict)
+    output_max_shapes: dict = field(default_factory=dict)
 
 
 def plan_arguments(
     binding, function, operand_names, output_names, by_name, attributes, result_types, *, source_facts=None,
-    source_ranges=None, source_point=None
+    source_ranges=None, source_point=None, shape_facts=None, source_shape_values=None
 ):
     spec = binding.implementation.spec
-    from .model_live_arguments import plan_operands
+    from .model_live_arguments import known_integer, plan_operands
 
     if set(binding.runtime_operands.values()) & set(attributes.data):
         raise ConversionError("schema arguments cannot be both live SSA operands and captured attributes", opcode="func.call")
+    dimensions = {dim for buffer in spec.buffers for dim in buffer.shape if isinstance(dim, str)}
+    symbolic = {}
+    original = by_name if source_shape_values is None else source_shape_values
+    if shape_facts is not None:
+        for name, schema in binding.runtime_operands.items():
+            fact = source_facts[schema] if source_facts is not None else known_integer(original[schema])
+            if name in dimensions and fact is None and isinstance(original[schema].type, builtin.IndexType):
+                expression = shape_facts.index(original[schema])
+                if expression is not None:
+                    symbolic[name] = expression
     live, facts = plan_operands(spec, binding.runtime_operands, by_name, source_facts=source_facts,
-                               source_ranges=source_ranges, source_point=source_point)
+                               source_ranges=source_ranges, source_point=source_point, symbolic_dimensions=symbolic)
     constants, values = runtime_constants(spec, binding.runtime_arguments, attributes, live=live)
     values.update(facts)
+    symbolic = {name: expression for name, expression in symbolic.items() if name not in values}
+    for name in symbolic:
+        enclosure = live[name].record.get("unsigned_integer_range")
+        scalar = next(item for item in spec.runtime_scalars if item.name == name)
+        if (enclosure is None or scalar.bounds is None
+                or not scalar.bounds[0] <= enclosure[0] <= enclosure[1] <= scalar.bounds[1]):
+            raise ConversionError("symbolic tensor dimension needs checked source bounds inside the kernel domain",
+                                  opcode="func.call")
+    logical_shapes = {buffer.name: tuple(values[dim] if dim in values else symbolic[dim] if isinstance(dim, str) else dim
+                                        for dim in buffer.shape) for buffer in spec.buffers}
+    type_values = {**values, **{name: builtin.DYNAMIC_INDEX for name in symbolic}}
     arguments, adaptations, input_views = [], [], {}
     live_arguments = {}
     for index, (source, target) in enumerate(
@@ -136,7 +159,9 @@ def plan_arguments(
             )
         else:
             value = by_name[operand_names[source.name]]
-            concrete = concrete_type(source,values)
+            concrete = concrete_type(source, type_values)
+            if symbolic and shape_facts.shape(original[operand_names[source.name]]) != logical_shapes[source.name]:
+                return None
             if value.type != concrete:
                 if binding.tensor_views != POLICY or not compatible(value.type,concrete):
                     return None
@@ -154,7 +179,7 @@ def plan_arguments(
                         "kernel_type": str(target),
                     }
                 )
-    outputs = {buffer.name: concrete_type(buffer, values) for buffer in spec.outputs}
+    outputs = {buffer.name: concrete_type(buffer, type_values) for buffer in spec.outputs}
     if len(output_names) != len(result_types):
         return None
     result_views = {}
@@ -165,6 +190,28 @@ def plan_arguments(
             result_views[name] = target
             adaptations.append({"kind":"dense-tensor-result-view","name":name,"caller_type":str(target),
                 "concrete_kernel_type":str(outputs[name]),"policy":POLICY})
+    maximum = {}
+    if symbolic:
+        from .model_shape_facts import ShapeFacts
+
+        kernel_facts = ShapeFacts()
+        for source, argument in zip(spec.inputs, function.body.block.args, strict=True):
+            if isinstance(source, RuntimeScalar):
+                expression = values.get(source.name, symbolic.get(source.name))
+                if expression is not None and (isinstance(expression, str) or type(expression) is int and expression >= 0):
+                    kernel_facts.integers[argument] = expression
+            else:
+                kernel_facts.tensors[argument] = logical_shapes[source.name]
+        terminal = function.body.block.last_op
+        from xdsl.dialects import func
+
+        if (not isinstance(terminal, func.ReturnOp)
+                or [kernel_facts.shape(value) for value in terminal.operands]
+                != [logical_shapes[buffer.name] for buffer in spec.outputs]):
+            raise ConversionError("symbolic kernel result shape needs an executable standard-MLIR proof", opcode="func.call")
+        maximum = {buffer.name: tuple(values[dim] if dim in values else live[dim].record["unsigned_integer_range"][1]
+                                     if isinstance(dim, str) else dim for dim in buffer.shape)
+                   for buffer in spec.outputs}
     return ArgumentPlan(
         arguments,
         outputs,
@@ -176,6 +223,7 @@ def plan_arguments(
             }
             for name in constants
         },input_views,result_views,live_arguments,{name: plan.record for name, plan in live.items()},values,
+        symbolic_shapes=logical_shapes if symbolic else {}, output_max_shapes=maximum,
     )
 
 
