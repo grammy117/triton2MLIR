@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Checked generated-C results](docs/checked_c_results.md) now execute the real
+three-kernel compaction model from a standalone C program. Six input sets retain
+all 84 results across two calls each; actual source-domain guards still abort.
+Target model-driver generation, allocator context and readback remain open.
+
 [Real Triton compaction](docs/compaction.md) now keeps count, parallel scan,
 masked scatter and dependent consumption through a complete PyTorch package
 and Merlin host execution. Automatic selection retains two tensor kernels and

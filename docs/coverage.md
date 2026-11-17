@@ -1,5 +1,14 @@
 # Measured coverage and remaining boundaries
 
+[Checked C calls](checked_c_results.md) now retain all 84 shape/word results
+across twelve actual invocations of the real three-kernel compaction model.
+Two invalid lengths reach original exported-domain assertions. The final
+eight-check selection passes in `.scratch/compact-c-final1.log` and reopens
+under `out/compact-model-c/summary.json`. Merlin's independent C runtime,
+aggregate calling-contract and native/persistence selection passes 115.
+The same compiled model/library backs the C and Python paths; this is no new
+compiler backend, receipt schema, target or historical-inventory qualification.
+
 [Real compaction](compaction.md) now qualifies count, five parallel scan
 stages, masked scatter and a dependent copy through complete execution-sized
 packages. Two Python/CLI configurations retain fourteen initial results; six

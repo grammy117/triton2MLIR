@@ -8,6 +8,12 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Checked generated-C result calls](checked_c_results.md) now implement complete
+descriptor/allocation validation and independent copies, with actual seven-result
+TTIR compaction execution and source guards. Next separate reusable lowering
+from host linking, select target allocation context/layout explicitly, extend
+v6 staging and implement complete observed-shape readback before target claims.
+
 The [execution-sized target plan](execution_result_targets.md) records the
 actual compaction-to-Spike refusal before staging and the next concrete work:
 checked generated-C result handling, reusable owned-result lowering, explicit

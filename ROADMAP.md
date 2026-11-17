@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Checked C result transport](docs/checked_c_results.md) now implements the first
+execution-sized target prerequisite: actual source execution, complete returned
+descriptor/owner validation and independent copies. Real TTIR model results pass
+from C; staged target generation/linking/readback still require implementation.
+
 [Real compaction](docs/compaction.md) now extends execution-sized packages to
 actual parallel scan/indexed-store filtering with dependent consumption and
 all original model results. The mixed tensor/guarded payload and host-only

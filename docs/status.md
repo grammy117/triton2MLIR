@@ -6,6 +6,14 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Checked C result calls](checked_c_results.md) now execute the actual three-kernel
+TTIR compaction model without predicted result shapes. Six input sets/twelve
+C calls retain all 84 returned results; two invalid lengths abort through
+original source guards. Merlin's 115-check C/allocator/native selection and
+the eight complete TTIR/C checks pass. The public package and host qualification
+profiles are unchanged; this closes the reusable C seam, not target staging,
+allocator context, linking or observed-shape readback.
+
 [Real Triton compaction](compaction.md) now preserves count, parallel scan,
 masked indexed stores and dependent consumption through receipt v2/signature
 v6 and Merlin host execution. Python and public-CLI packages retain all fourteen

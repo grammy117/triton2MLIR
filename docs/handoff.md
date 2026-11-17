@@ -1,14 +1,26 @@
 # Review handoff — updated 2026-11-17
 
+Merlin `0606fd4f1` now adds [checked generated-C result calls](checked_c_results.md)
+on `ttir-experiment-grammy`; its remote tip and `grammy117` author/committer
+attribution are verified. Its final 115 C/allocator/native/persistence checks
+pass, as do regenerated documentation and structure gates. The frontend now
+pins the new generator and C runtime/header in selected consumer fingerprints.
+The real TTIR compaction model additionally passes eight standalone-C checks:
+six input sets/twelve calls check all 84 results, and two source-domain failures
+abort. `out/compact-model-c/summary.json` reopens this evidence. Staged driver
+generation, target allocator context/linking and production shape readback
+remain the next actual v6 target work; no Spike execution is claimed.
+
 Published follow-through: triton2MLIR `59237b7` adds explicit automatic memory
 selection and `b77da69` qualifies real count/scan/scatter compaction. Both are
 on `main`; remote tips and GitHub author/committer attribution were checked.
-Merlin remains `e943745a3` and model2MLIR `863d797`, both on
-`ttir-experiment-grammy`; the pre-existing model2MLIR whitespace edit remains.
+That selection used Merlin `e943745a3`; its checked C successor is above.
+Model2MLIR remains `863d797` on `ttir-experiment-grammy`, with the pre-existing
+whitespace edit preserved.
 The actual next [target boundary](execution_result_targets.md) is now probed:
 the existing Spike driver rejects receipt v2 before staging or image creation.
-Generated-C execution-owned result handling and explicit v6 target transport
-must be implemented before claiming that target path.
+Checked C invocation/copy now exists; staged target-driver generation and
+explicit v6 target transport remain required before claiming that target path.
 
 [Real TTIR compaction](compaction.md) now reaches the existing qualified
 execution-sized package and Merlin host interface from Python and public CLI.

@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Checked C result invocation](checked_c_results.md) adds a reusable generated
+bridge API, not a new receipt or qualification backend. Selected consumer-source
+fingerprints now include its source-typed generator and C implementation/header;
+saved native programs pin them too. The same full model/library retains existing
+host qualification, independent Python validation and unchanged parent archives.
+Actual C execution evidence does not grant target staging/linking/readback support.
+
 [Compaction](compaction.md) uses the existing selected receipt v2/signature v6
 without a new public schema. Per-kernel automatic selection retains tensor
 count/copy and guarded source-word packing. The latter's standard memory and

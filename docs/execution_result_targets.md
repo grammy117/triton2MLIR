@@ -1,5 +1,14 @@
 # Execution-sized results: next target integration boundary
 
+The first reusable C seam is now implemented and exercised by
+[checked C calls](checked_c_results.md): source-typed aggregate invocation,
+complete descriptor/owner validation and independent logical copies. The real
+three-kernel compaction model passes all seven results and source-domain guards
+from a standalone C executable. This does not yet change Spike staging, linking
+or production dynamic-result readback. The source-boundary inventory below
+records the original probe; the implementation order identifies the remaining
+integration requirements.
+
 The real [compaction package](compaction.md) passes Merlin host qualification.
 The unchanged Spike driver still rejects receipt v2 before staging. The actual
 probe is retained in `.scratch/compact-v6-spike-probe.log`; it reports
