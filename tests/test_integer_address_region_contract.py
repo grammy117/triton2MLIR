@@ -120,11 +120,8 @@ def test_while_preserves_different_original_input_and_output_arities():
     assert any(opcode(op) == "tt.load" for op in loop.walk())
 
 
-def test_branch_local_base_is_not_published_as_an_out_of_scope_loop_invariant():
-    # This variant is not yet proved equivalent to the outside root. Its
-    # before-region pointer must not escape by folding an unused result field;
-    # deferred differences have not registered those uses when folding runs.
-    source = '''module {"tt.func"() <{sym_name="scoped",
+def scoped_source():
+    return '''module {"tt.func"() <{sym_name="scoped",
       function_type=(!tt.ptr<i32>,i64)->()}> ({
       ^bb0(%p:!tt.ptr<i32>,%count:i64):
         %zero=arith.constant 0:i64
@@ -142,4 +139,20 @@ def test_branch_local_base_is_not_published_as_an_out_of_scope_loop_invariant():
         %delta=arith.subi %result,%bits:i64 loc("ttir.op.scoped-difference")
         "tt.return"():()->()
       }):()->() }'''
+
+
+def test_before_local_zero_offset_is_rebased_without_publishing_an_out_of_scope_value():
+    module = parse_shared(scoped_source())
+    reports = normalize_pointer_addresses(module, _source_ids)
+    module.verify()
+    assert any(item["kind"] == "integer-address-seed-rebase" for item in reports)
+    assert not any(opcode(op) in ("tt.ptr_to_int", "tt.int_to_ptr") for op in module.walk())
+
+
+def test_unproved_branch_local_base_is_not_published_as_an_out_of_scope_loop_invariant():
+    source = scoped_source().replace('function_type=(!tt.ptr<i32>,i64)',
+        'function_type=(!tt.ptr<i32>,!tt.ptr<i32>,i64)').replace(
+        '^bb0(%p:!tt.ptr<i32>,%count:i64)', '^bb0(%p:!tt.ptr<i32>,%q:!tt.ptr<i32>,%count:i64)').replace(
+        '%local="tt.addptr"(%p,%zero):(!tt.ptr<i32>,i64)->!tt.ptr<i32>',
+        '%local=arith.select %condition,%p,%q:!tt.ptr<i32>')
     unchanged_refusal(parse_shared(source), "same established logical base")

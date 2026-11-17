@@ -4,6 +4,15 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Region-local pointer seeds](docs/integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now expose actual outer roots and per-addptr byte recipes before paired address
+analysis. Source narrow wrap and original region/effect order stay executable.
+Only actual contributing unaligned seeds retain their original exact pointer
+representation; other required recoveries remain enabled. Ten libraries/Spike
+images retain fourteen exact results, 48 host replays and four bounds aborts.
+The combined ledger now reopens 341 packages and 278 standalone qualifications.
+Broader root/alias/effect/source, dynamic model and applicable target scope remains.
+
 [Integer-address region state](docs/integer_address_regions.md) closes the
 reproduced carried-address refusal using actual logical pointer bases paired
 with modular byte offsets. Original for/while/if interfaces, numeric state,
@@ -22,7 +31,7 @@ Four complete i32/i64 address-state models additionally retain all 44 original
 results through native/Merlin host/Spike, with saved parameters, dependent calls,
 earlier snapshots and empty/zero-trip cases. The public model ABI stays static;
 general mutation/runtime/effect and accelerator scope remains required.
-The latest combined inventory reopens 331 packages and 268 standalone qualifications.
+That earlier combined inventory reopens 331 packages and 268 standalone qualifications.
 
 [Same-base pointer differences](docs/pointer_addresses.md#same-base-byte-differences)
 now expose ordinary byte deltas only after actual SSA proves the shared base

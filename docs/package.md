@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Region-local seed recovery](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+records `integer-address-seed-rebase` under the existing closed-pointer
+correspondence: actual same-shaped outer SSA roots plus executable source-width
+byte recipes. Role/root/divisibility proofs are recomputed before paired state.
+`integer-address-seed-retention` names independently validated original typed
+pointers when optional recovery lacks a divisor proof; selection follows actual
+source seed dependencies, without disabling other recoveries. Unknown consumed
+source fields and physical observations cannot authorize retention. Generated
+compatibility metadata names both representations. Public tensor/scalar ABI,
+artifacts and receipt schemas remain unchanged.
+
 [Integer-address region state](integer_address_regions.md) appends internal
 logical pointer fields alongside original integer slots carrying modular byte
 offsets. Original for/while/if tuple order, independent while input/result

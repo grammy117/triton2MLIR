@@ -36,6 +36,16 @@ Triton/LLVM rebuild or Triton-CPU dependency.
 
 ## Current delivery state
 
+[Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now recover actual outer roots and byte recipes before region fixed points,
+preserving original narrow arithmetic and control/effects. Per-seed retention
+keeps an independently checked unaligned pointer representation available
+without disabling another required recovery. Ten native-verified saved-TTIR
+libraries/Spike images retain fourteen exact results, 48 host replays and four
+bounds aborts. The combined inventory reopens 341 packages and 278 standalone
+qualifications. General root/alias/effect/source, dynamic public model and
+applicable target closure remains required.
+
 [Integer-address region state](integer_address_regions.md) now carries closed
 logical pointer/byte pairs across original for/while/if edges, including changing
 roots and ordinary numeric state. Sixteen libraries and actual Spike images

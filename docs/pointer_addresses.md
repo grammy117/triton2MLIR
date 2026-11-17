@@ -4,6 +4,11 @@
 closed expressions through original for/while/if interfaces. Paired pointer
 bases and modular byte state preserve source control and memory effects;
 physical observations and unproved compositions still refuse.
+Its [region-local seed extension](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+also recovers actual outer roots through original per-addptr byte recipes.
+Independent per-seed retention preserves an unaligned typed base when its
+original closed representation still validates, without inventing divisibility
+or disabling a separate required recovery.
 
 The latest [same-base difference](#same-base-byte-differences) selection has
 eleven actual native/Merlin-host/Spike libraries with fifteen exact-word results,

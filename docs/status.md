@@ -6,6 +6,15 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now retain actual outer roots, source-width byte arithmetic and original while
+interfaces. Unaligned seeds can keep their independently checked original
+pointer representation without disabling another required recovery. Ten
+native/Merlin-host/Spike libraries retain fourteen exact results, 48 further host
+invocations and four bounds aborts. These are native-verified saved-TTIR cases;
+no new Python AST/model variants or GPU correspondence is claimed. General
+root/alias/effect/source combinations and applicable accelerators remain open.
+
 [Integer-address region state](integer_address_regions.md) now retains closed
 address pairs across original for/while/if interfaces. Finite SSA classification,
 root propagation and byte-divisibility proofs precede detached publication;
@@ -148,8 +157,8 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/integer-address-model-inventory/coverage.json` reopens **331 packages,
-268 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
+`out/pointer-address-seed-inventory/coverage.json` reopens **341 packages,
+278 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,
 not a percentage of arbitrary kernels or a per-operation execution proof.

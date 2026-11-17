@@ -12,12 +12,14 @@ from .pointer_addresses import SHAPES, _constant, _like, _scalar
 from .pointer_views import element
 
 
-def difference(left, right, emit, source_ids):
-    """Build a detached byte-offset recipe and the source facts it consumed.
+def pointer_offsets(emit, source_ids, *, shape_anchors=False):
+    """Return a bounded pointer recipe builder and its consumed source facts.
 
     Roots are actual SSA values, never names, provenance or declared aliases.
     Scalar roots are uniform under shape operations. Nonuniform roots retain
     their exact shape-operation path before they can be compared.
+    A seed rebase may instead stop at actual shaped pointer SSA anchors, so it
+    never has to manufacture or move a lane permutation across a region edge.
     """
     from .shared_tensor import opcode
 
@@ -65,7 +67,7 @@ def difference(left, right, emit, source_ids):
             element(operation.operands[0].type)
             element(pointer.type)
             result = offsets(operation.operands[0], depth + 1)
-        elif name in SHAPES:
+        elif name in SHAPES and not shape_anchors:
             fields = {"tt.expand_dims": {"axis"}, "tt.trans": {"order"},
                       "tt.reshape": {"allow_reorder", "efficient_layout"}}
             checked(operation, fields.get(name, ()))
@@ -101,6 +103,12 @@ def difference(left, right, emit, source_ids):
         cache[pointer] = result
         return result
 
+    return offsets, sources
+
+
+def difference(left, right, emit, source_ids):
+    """Cancel only actual matching roots and preserve source byte arithmetic."""
+    offsets, sources = pointer_offsets(emit, source_ids)
     if left.pointer is right.pointer:
         first, second = left.displacement, right.displacement
     else:

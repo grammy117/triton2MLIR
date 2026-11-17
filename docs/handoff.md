@@ -6,6 +6,21 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now recover actual outer roots and recompute source-width byte/divisibility
+facts. Independent per-seed retention preserves unaligned typed pointers while
+other required recoveries stay enabled. Ten native-verified saved-TTIR libraries
+and actual Spike images retain fourteen exact results, 48 further host invocations
+and four actual bounds aborts. `out/pointer-address-seeds/summary.json` reopens
+the receipts; `out/pointer-address-seed-inventory/coverage.json` reopens 341
+packages and 278 standalone qualifications. Broader root/region/alias/effect,
+dynamic model/source and applicable target closure remains open.
+The final 52-case contract/address-region/complete-model selection passes with
+no skips and twelve intentionally deselected region-width cases. It includes
+all four existing complete address-state models. The retained/recovered seed
+receipts use the final compiler source; earlier selections remain separately
+scoped. No Merlin/model2MLIR source edits were needed for this extension.
+
 [Integer-address region state](integer_address_regions.md) now closes the
 reproduced integer-address for-loop refusal. Actual logical pointer fields pair
 with modular byte state across for/while/if interfaces, preserving original

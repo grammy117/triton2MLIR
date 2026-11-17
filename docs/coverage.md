@@ -1,5 +1,20 @@
 # Measured coverage and remaining boundaries
 
+[Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now qualify scalar/tiled native-verified saved TTIR in four integer widths and
+explicit little/big byte views. Ten actual native/Merlin-host/Spike libraries
+retain **fourteen exact-word results, 48 additional unchanged-library host
+invocations and four actual bounds aborts**. Optional root recovery recomputes
+byte facts; independently validated per-seed retention preserves unaligned
+pointers and other required recoveries. `out/pointer-address-seeds/summary.json`
+reopens those receipts. The latest combined
+`out/pointer-address-seed-inventory/coverage.json` reopens **341 packages,
+278 standalone qualifications and fourteen product cases**. This adds no new
+Python AST/model variants, GPU correspondence or accelerator/performance scope.
+The current 52-case contract/address-region/complete-model selection passes,
+including all four existing address-state models; the twelve intentionally
+deselected region-width cases are separate from that result. Counts overlap.
+
 [Integer-address region state](integer_address_regions.md) now retains actual
 pointer/displacement pairs across original for/while/if edges. Sixteen real
 source libraries and actual Spike images retain all 32 results as exact words,

@@ -113,22 +113,57 @@ class Address:
     origin: object
 
 
+class _UnprovedByteDisplacement(ConversionError):
+    def __init__(self, message, *, source_id, opcode, seeds):
+        self.seeds = frozenset(seeds)
+        super().__init__(message, source_id=source_id, opcode=opcode)
+
+
 def normalize_pointer_addresses(module, source_ids):
     from .integer_address_regions import analyze
 
     if analyze(module, source_ids) is None:
         return _normalize_pointer_addresses(module, source_ids)
-    prepared = module.clone()
-    try:
-        regions = analyze(prepared, source_ids).prepare()
-        reports = _normalize_pointer_addresses(prepared, source_ids, regions=regions)
-    except Exception:
-        prepared.drop_all_references()
-        raise
+    from .pointer_address_seeds import rebase
+
+    original = tuple(module.walk())
+    retained_seeds, first_failure = set(), None
+    # Optional recovery must not remove an independently valid exact typed
+    # pointer representation. Retain only actual contributing source seeds,
+    # so another required rebase in the same module can still succeed.
+    for attempt in range(17):
+        prepared = module.clone()
+        copies = dict(zip(original, prepared.walk(), strict=True))
+        originals = {copy: source for source, copy in copies.items()}
+        rewritten = {}
+        try:
+            seed_reports, rewritten = rebase(prepared, source_ids, retained={copies[seed] for seed in retained_seeds})
+            regions = analyze(prepared, source_ids).prepare()
+            reports = _normalize_pointer_addresses(prepared, source_ids, regions=regions)
+        except Exception as error:
+            prepared.drop_all_references()
+            if isinstance(error, _UnprovedByteDisplacement):
+                candidates = {originals[rewritten[seed]] for seed in error.seeds if seed in rewritten}
+                if candidates - retained_seeds:
+                    if attempt == 16:
+                        raise ConversionError("pointer seed recovery exceeds its 16-refinement budget",
+                                              source_id=error.source_id, opcode=error.opcode) from error
+                    retained_seeds.update(candidates)
+                    first_failure = first_failure or error
+                    continue
+            if first_failure is not None and isinstance(error, ConversionError):
+                raise first_failure from error
+            raise
+        break
     for block in list(module.body.blocks):
         module.body.erase_block(block, safe_erase=False)
     prepared.body.move_blocks(module.body)
-    return [*regions.reports, *reports]
+    retention_reports = [{"kind": "integer-address-seed-retention", "source_ids": source_ids(op.location),
+                          "representation": "original-exact-typed-pointer-base-and-closed-byte-state",
+                          "reason": "rebased-divisor-unproved; complete-original-pair-independently-validated",
+                          "alignment_permission": "none", "public_abi": "unchanged"}
+                         for op in original if op in retained_seeds]
+    return [*seed_reports, *retention_reports, *regions.reports, *reports]
 
 
 def _normalize_pointer_addresses(module, source_ids, *, regions=None):
@@ -221,9 +256,10 @@ def _normalize_pointer_addresses(module, source_ids, *, regions=None):
                 except ValueError as error:
                     refuse(op, str(error))
                 if width not in (1, 2, 4, 8) or low_zeros < width.bit_length() - 1:
-                    refuse(
-                        op,
+                    raise _UnprovedByteDisplacement(
                         "pointer byte displacement is not proved divisible by its element width",
+                        opcode=name, source_id=next(iter(source_ids(op.location)), None),
+                        seeds=regions.origins.get(op.operands[0], ()) if regions else (),
                     )
                 base = address.pointer
                 if _like(base.type, _scalar(op.results[0].type)) != op.results[0].type:

@@ -3,6 +3,14 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Region-local pointer seeds](docs/integer_address_regions.md#pointer-seeds-defined-inside-a-region)
+now recover actual outer roots and source-width byte recipes without moving
+local values out of scope. Unaligned seeds can retain their independently checked
+original pointer representation while other seeds still recover their roots.
+Ten libraries/Spike images retain fourteen exact results, 48 host replays and
+four real bounds aborts. The latest inventory reopens 341 packages and 278
+standalone qualifications; arbitrary-kernel and accelerator closure remains open.
+
 [Integer-address region state](docs/integer_address_regions.md) now retains
 closed address pairs across original for/while/if interfaces. Actual pointer
 bases travel with modular byte displacements; source numeric widths, branches,

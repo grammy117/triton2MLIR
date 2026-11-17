@@ -151,3 +151,97 @@ same explicit limits on universal and target coverage.
 Source runtime scalars bind from the existing typed call attributes. The public
 model ABI remains static and unchanged. This supplies no general argument
 mutation, dynamic public signature, root-equivalence or accelerator permission.
+
+## Pointer seeds defined inside a region
+
+A before region can compute `local = outer + increment` and forward
+`local.to(tl.uint64)` through `scf.condition`. Treating `local` as an opaque
+base loses the relation to `outer` outside that region. Moving `local` outside
+would also violate SSA scope when its increment depends on before-region state.
+
+`pointer_address_seeds.py` instead reuses the bounded byte recipe from
+`pointer_differences.py`: actual addptr operands supply their original integer
+increments, each signed-widened only after its source computation and scaled
+by that addptr's input pointee width. Pointer bitcasts preserve accumulated
+bytes. Same-root selects retain their actual condition and both offsets. Shape
+operations remain exact SSA anchors; no lane permutation is inferred or moved.
+An existing shaped pointer outside the control can therefore anchor a tiled
+region-local addptr without manufacturing a new pointer shape.
+
+The seed becomes an actual same-shaped outer pointer integer plus the executable
+byte recipe on the detached graph. Address classification, original seed roots
+and byte-divisibility fixed points are recomputed before paired fields are
+prepared. A previously zero displacement relative to `local` says nothing
+about the new displacement relative to `outer`; carrying that old fact forward
+would miscompile unaligned byte views. The original narrow arithmetic, condition,
+load/store effects and source locations stay executable. No physical address
+or provenance-derived alignment is introduced.
+
+Rebasing is optional for each actual source seed. If its new byte representation
+cannot establish a required reconstruction divisor, the frontend retains that
+seed's original exact typed pointer and independently validates the complete
+paired lowering again. Other seeds can still recover their outer roots. The
+choice follows actual SSA seed dependencies, never names, provenance or sample
+values. This preserves an unaligned byte-view path without granting a false
+alignment fact or disabling a separate required rebase. Physical observations,
+unknown consumed source fields and incomplete source closure cannot trigger
+this alternative. Every failed attempt is detached and discarded before the
+original module can change; bounded retries and recipe budgets still apply.
+Recovery permits sixteen monotone retention refinements, 32,768 generated
+operations per seed and 65,536 across a pass. Exceeding a budget is a located
+transactional refusal, not an unbounded retry or an inferred permission.
+
+`integer-address-seed-rebase` records name the recovered source IDs and exact
+byte boundary under the existing `prov.closed_pointer_addresses` correspondence.
+Generated compatibility metadata explicitly names the representation. Public
+tensor/scalar ABI, artifacts and receipt schemas remain unchanged. Source
+budgets, actual-root proofs and complete transactional refusal still apply.
+
+This adapter uses the previously reviewed Meta/shared base/offset boundary and
+Ascend `8f0ade66580245e30ad97093526a4018e4e18fc7`,
+`third_party/ascend/lib/TritonMemoryAccess/PtrAnalysisRules/CommonPtrRules.cpp`
+(`parseAddPtr`, `parseBitcast`) with its independent
+`third_party/ascend/unittest/Analysis/PtrAnalysisBitcastTest.cpp` byte-address
+oracle. No upstream code or fixture was copied. Shared's ordinary shaped
+arithmetic conversion still handles the executable standard casts; xDSL's
+scalar-only cast binding is not treated as a native MLIR restriction.
+
+### Seed qualification
+
+`tests/test_pointer_address_seeds.py` uses native-verified saved TTIR with
+independent while input/result ports. Scalar cases retain a loaded signed word
+as their next condition input and original i32 multiply/add wrap before byte
+widening. Tile cases retain an actual outer shaped pointer, region-local offset
+arithmetic and observable four-word updates. All four i8/i16/i32/i64 widths
+reach native, Merlin host and actual Spike. Runtime replays include zero trips,
+empty unused roots, different loaded words and signed i32 extremes.
+
+Two additional little/big logical byte-view cases retain an original unaligned
+typed pointer. A word load crosses an owning word boundary and its signed result
+controls the actual recurrence. Independent byte references use integer codecs,
+not compiler address helpers. A one-word allocation fails at the real compiled
+whole-word bounds guard, with no success receipt or output archive. No assumed
+alignment or physical byte-order equivalence is granted.
+
+`out/pointer-address-seeds/summary.json` reopens **ten libraries/actual target
+images, fourteen exact-word results, 48 additional unchanged-library host
+invocations and four actual bounds aborts**. The latest combined
+`out/pointer-address-seed-inventory/coverage.json` reopens **341 packages,
+278 standalone qualifications and fourteen product cases**. All fifty names
+remain observed under selected native/Merlin-host profiles; source-name breadth
+does not establish universal coverage or accelerator execution.
+
+The focused contracts additionally preserve original SSA uses on refusal,
+reject false byte-divisibility facts and unknown consumed source fields, retain
+independent seed choices after serialization, and enforce the refinement budget.
+These are saved-TTIR examples, not additional Python AST captures, GPU execution
+correspondence, new complete model variants or a performance measurement. General
+root/alias/region/effect/source combinations, dynamic public model signatures
+and applicable accelerators remain completion work.
+
+The current 52-case contract/address-region/complete-model selection passes
+with no skips (twelve other storage-width region cases were deliberately
+deselected). It includes 33 focused contracts, all ten new libraries, five
+existing region configurations and all four complete address-state model
+regressions. `.scratch/pointer-address-seeds4.log` records the selection. Counts
+overlap earlier evidence and are not additional unique coverage.
