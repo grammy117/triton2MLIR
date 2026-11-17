@@ -138,7 +138,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     compiled = json.loads((work / "compilation.json").read_text())
     if compiled["source_program"] != record(staged / "program.mlir"):
         raise ValueError("Merlin invocation program differs from its compiled source")
-    if ((signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4") or "source_signature" in compiled)
+    if ((signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5") or "source_signature" in compiled)
             and compiled.get("source_signature") != record(staged / "signature.json")):
         raise ValueError("Merlin invocation signature differs from its compiled source")
     evaluation = Path(evaluation) if evaluation is not None else work
@@ -146,7 +146,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
         if set(values.files) != {f"in{i}" for i in range(len(signature["inputs"]))}:
             raise ValueError("Merlin host evaluator needs exactly the declared argument keys")
         arrays = [values[f"in{i}"].copy() for i in range(len(signature["inputs"]))]
-    if signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4"):
+    if signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
         from merlin.llvmlower.runtime_invocation import resolve
 
         plan = resolve(staged / "program.mlir", staged / "signature.json", arguments, max_bytes=128 << 20)

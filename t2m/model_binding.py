@@ -129,7 +129,7 @@ def bind_model(model_mlir, bindings):
     from .model_shape_facts import ShapeFacts
     original_entries = [op for op in original_module.ops if isinstance(op, func.FuncOp)
                         and op.sym_name.data == "forward" and op.body.blocks]
-    shape_facts = ShapeFacts.entry(original_entries[0], expressions=True) if len(original_entries) == 1 else None
+    shape_facts = ShapeFacts.entry(original_entries[0], expressions=True, data_words=True) if len(original_entries) == 1 else None
     from .model_live_arguments import known_integer
     from .source_index_ranges import unsigned_index_range
     # Facts describe the original parent graph. Earlier inlining may replace
@@ -304,20 +304,21 @@ def bind_model(model_mlir, bindings):
             or original_entries and any(isinstance(type_, builtin.TensorType) and any(n < 0 for n in type_.get_shape())
                                        for type_ in (*original_entries[0].function_type.inputs,
                                                      *original_entries[0].function_type.outputs))):
-        from .model_shape_facts import EXPRESSION_PROFILE, PROFILE
+        from .model_shape_facts import EXPRESSION_PROFILE, PROFILE, WORD_PROFILE
 
         try:
             contract = shape_facts.contract(original_entries[0])
             entry = next(op for op in module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward")
-            expression_profile = contract["schema"] == "t2m.runtime-shapes.v3" or any(
+            word_profile = contract["schema"] == "t2m.runtime-shapes.v4"
+            expression_profile = word_profile or contract["schema"] == "t2m.runtime-shapes.v3" or any(
                 isinstance(size, str) and size in shape_facts.program.nodes for record in records
                 for shape in record.get("symbolic_tensor_shapes", {}).values() for size in shape)
             if expression_profile:
-                contract = shape_facts.contract(original_entries[0], force_expressions=True)
-            ShapeFacts.entry(entry, expressions=expression_profile).check_contract(entry, contract)
+                contract = shape_facts.contract(original_entries[0], force_expressions=True, force_words=word_profile)
+            ShapeFacts.entry(entry, expressions=expression_profile, data_words=word_profile).check_contract(entry, contract)
         except (TypeError, ValueError) as error:
             raise ConversionError(str(error), opcode="func.func") from error
-        report["model_shape_profile"] = EXPRESSION_PROFILE if expression_profile else PROFILE
+        report["model_shape_profile"] = WORD_PROFILE if word_profile else EXPRESSION_PROFILE if expression_profile else PROFILE
         report["runtime_shape_contract"] = contract
         if guard_storage:
             report["guard_storage_scope"] = "sum-of-source-shape-upper-bounds"

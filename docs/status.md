@@ -6,6 +6,12 @@ model2MLIR-like package whose executable MLIR preserves the kernel's algorithm
 and observable semantics, enters Merlin's ordinary compiler interface, and
 executes correctly on each applicable qualified target.
 
+[Runtime input-word shapes](input_word_shapes.md) now preserve a real input
+count controlling two Triton result sizes and a derived slice. Independent
+source read/range/body proofs select explicit signature v5 allocation. Exact
+intersected read masks retain original SSA and bounds. General data-dependent
+computation, runtime views/effects and targets remain open.
+
 [Derived model dimensions](derived_model_shapes.md) now qualify a real shared-axis
 broadcast/slice model with two dependent Triton calls through native, Merlin
 host and Spike in all three memory profiles. Typed size programs, independently

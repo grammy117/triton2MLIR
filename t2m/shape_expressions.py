@@ -10,6 +10,7 @@ import json
 
 MAX_SIZE = (1 << 63) - 1
 SCHEMA = "logical-size-program.v1"
+WORD_SCHEMA = "logical-size-program.v2"
 PREDICATES = ("eq", "ne", "slt", "sle", "sgt", "sge", "ult", "ule", "ugt", "uge")
 BINARY = {
     "addi",
@@ -168,10 +169,22 @@ class Program:
             return 1
         return row["type"]
 
-    def intern(self, op, *, args=(), type_=None, value=None, axis=None, predicate=None):
+    def intern(
+        self,
+        op,
+        *,
+        args=(),
+        type_=None,
+        value=None,
+        axis=None,
+        word=None,
+        predicate=None,
+    ):
         row = {"op": op}
         if op == "axis":
             row["axis"] = axis
+        elif op == "word":
+            row.update(type=type_, word=word)
         else:
             if op != "cmpi":
                 row["type"] = type_
@@ -181,7 +194,7 @@ class Program:
                 row["args"] = list(args)
             if op == "cmpi":
                 row["predicate"] = predicate
-        if op not in ("axis", "const") and all(
+        if op not in ("axis", "const", "word") and all(
             self.nodes[name]["op"] == "const" for name in args
         ):
             try:
@@ -219,7 +232,7 @@ class Program:
             return value
         return self.intern("axis", axis=value)
 
-    def export(self, roots):
+    def export(self, roots, *, word_profile=False):
         self.visits = 0
         result, pending = {}, list(roots)
         while pending:
@@ -229,7 +242,12 @@ class Program:
             self._visit(0)
             result[name] = self.nodes[name]
             pending.extend(self.nodes[name].get("args", []))
-        return {"schema": SCHEMA, "nodes": result}
+        return {
+            "schema": WORD_SCHEMA
+            if word_profile or any(row["op"] == "word" for row in result.values())
+            else SCHEMA,
+            "nodes": result,
+        }
 
     def evaluate(self, name, axes, depth=0):
         if depth == 0:
@@ -241,6 +259,12 @@ class Program:
         op = row["op"]
         if op == "axis":
             result = axes[row["axis"]]
+        elif op == "word":
+            result = axes[row["word"]]
+            if type(result) is not int or not 0 <= result < 1 << row["type"]:
+                raise ValueError(
+                    "runtime size word is outside its actual source storage type"
+                )
         elif op == "const":
             result = row["value"]
         elif op == "select":
@@ -280,6 +304,9 @@ class Program:
         if op == "axis":
             interval = axis_bounds(row["axis"])
             result = None if interval is None else [tuple(interval)]
+        elif op == "word":
+            result = axis_bounds(row["word"])
+            result = None if result is None else _join(result)
         elif op == "const":
             result = [(row["value"], row["value"])]
         elif op == "select":
@@ -465,11 +492,11 @@ class Program:
         return _join(result)
 
     @classmethod
-    def load(cls, program, axes, roots):
+    def load(cls, program, axes, roots, *, words=None):
         if (
             not isinstance(program, dict)
             or set(program) != {"schema", "nodes"}
-            or program["schema"] != SCHEMA
+            or program["schema"] not in ((SCHEMA,) if words is None else (WORD_SCHEMA,))
             or not isinstance(program["nodes"], dict)
             or len(program["nodes"]) > 4096
         ):
@@ -491,14 +518,18 @@ class Program:
                 raise ValueError("shape expression needs a complete typed operation")
             op = row["op"]
             expected = (
-                {"op", "axis"}
-                if op == "axis"
-                else {"op", "type", "value"}
-                if op == "const"
+                {"op", "type", "word"}
+                if op == "word"
                 else (
-                    {"op", "predicate", "args"}
-                    if op == "cmpi"
-                    else {"op", "type", "args"}
+                    {"op", "axis"}
+                    if op == "axis"
+                    else {"op", "type", "value"}
+                    if op == "const"
+                    else (
+                        {"op", "predicate", "args"}
+                        if op == "cmpi"
+                        else {"op", "type", "args"}
+                    )
                 )
             )
             if set(row) != expected:
@@ -514,6 +545,17 @@ class Program:
                 if not isinstance(row["axis"], str) or row["axis"] not in axes:
                     raise ValueError(
                         "shape expression axis lacks its public input binding"
+                    )
+            elif op == "word":
+                if (
+                    words is None
+                    or not isinstance(row["word"], str)
+                    or row["word"] not in words
+                    or type_ == "index"
+                    or words[row["word"]] != type_
+                ):
+                    raise ValueError(
+                        "shape expression word lacks its actual typed public input binding"
                     )
             elif op == "const":
                 if type(row["value"]) is not int or not 0 <= row["value"] <= (
@@ -636,6 +678,24 @@ class Program:
                         z3.UGE(axes[axis], bounds[0]), z3.ULE(axes[axis], bounds[1])
                     )
                 value = axes[axis]
+            elif op == "word":
+                name = row["word"]
+                key = "word", name
+                if key not in axes:
+                    axes[key] = z3.BitVec("input_word_" + name, width)
+                    intervals = axis_bounds(name)
+                    if intervals is not None:
+                        solver.add(
+                            z3.Or(
+                                *[
+                                    z3.And(
+                                        z3.UGE(axes[key], low), z3.ULE(axes[key], high)
+                                    )
+                                    for low, high in intervals
+                                ]
+                            )
+                        )
+                value = axes[key]
             elif op == "const":
                 value = z3.BitVecVal(row["value"], width)
             else:

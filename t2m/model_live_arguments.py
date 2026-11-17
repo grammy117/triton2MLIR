@@ -15,6 +15,7 @@ from .diagnostics import ConversionError
 
 PROFILE = "t2m.live-runtime-arguments.v1"
 RANGE_PROFILE = "t2m.checked-index-runtime-arguments.v1"
+WORD_RANGE_PROFILE = "t2m.checked-word-runtime-arguments.v1"
 
 
 def binding_profile(calls):
@@ -24,6 +25,8 @@ def binding_profile(calls):
         if not isinstance(bindings, dict) or any(not isinstance(binding, dict) for binding in bindings.values()):
             raise ValueError("live runtime operand bindings must be dictionaries")
         live.extend(bindings.values())
+    if any(binding.get("adapter") == "checked-size-scalar" for binding in live):
+        return WORD_RANGE_PROFILE
     if any(binding.get("adapter") == "checked-index-castui" for binding in live):
         return RANGE_PROFILE
     return PROFILE if live else None
@@ -79,7 +82,7 @@ class LiveOperand:
 
 
 def plan_operands(spec, mapping, by_name, *, source_facts=None, source_ranges=None, source_point=None,
-                  symbolic_dimensions=None):
+                  symbolic_dimensions=None, word_sizes=False):
     validate_mapping(spec, mapping)
     plans, facts = {}, {}
     for scalar in spec.runtime_scalars:
@@ -99,6 +102,11 @@ def plan_operands(spec, mapping, by_name, *, source_facts=None, source_ranges=No
             adapter = "singleton-tensor-extract"
         elif value.type == target:
             adapter = "exact-scalar"
+            if word_sizes and scalar.name in (symbolic_dimensions or {}) and isinstance(target, builtin.IntegerType):
+                enclosure = None if source_ranges is None else source_ranges.get(name)
+                if enclosure is None or not 0 <= enclosure[0] <= enclosure[1] < 1 << (target.bitwidth - 1):
+                    raise ConversionError("data-derived size scalar needs its actual source integer bounds", opcode="func.call")
+                adapter = "checked-size-scalar"
         elif isinstance(value.type, builtin.IndexType) and scalar.dtype in ("i8", "i16", "i32", "i64"):
             width = target.bitwidth
             if type(fact) is int and -(1 << (width - 1)) <= fact < 1 << (width - 1):
@@ -124,7 +132,7 @@ def plan_operands(spec, mapping, by_name, *, source_facts=None, source_ranges=No
             record["constant_integer"] = fact
             facts[scalar.name] = fact
         if enclosure is not None:
-            record["unsigned_integer_range"] = list(enclosure)
+            record["integer_range" if adapter == "checked-size-scalar" else "unsigned_integer_range"] = list(enclosure)
         plans[scalar.name] = LiveOperand(value, target, adapter, record)
     dimensions = {dimension for buffer in spec.buffers for dimension in buffer.shape if isinstance(dimension, str)}
     if dimensions & set(mapping) - set(facts) - set(symbolic_dimensions or {}):
@@ -139,7 +147,7 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
 
     calls = trace.get("calls", [])
     from .model_shape_facts import PROFILE as SHAPE_PROFILE
-    from .model_shape_facts import EXPRESSION_PROFILE
+    from .model_shape_facts import EXPRESSION_PROFILE, WORD_PROFILE
     from .model_shape_facts import ShapeFacts
 
     shape_facts = None
@@ -149,16 +157,17 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
                                       for type_ in (*entries[0].function_type.inputs, *entries[0].function_type.outputs))
     if (shape_profile is not None or dynamic or any("symbolic_tensor_shapes" in record for record in calls)
             or "runtime_shape_contract" in trace):
-        if (shape_profile not in (SHAPE_PROFILE, EXPRESSION_PROFILE)
+        if (shape_profile not in (SHAPE_PROFILE, EXPRESSION_PROFILE, WORD_PROFILE)
                 or len(entries) != 1 or bound_module is None or implementations is None):
             raise ValueError("symbolic model shapes require their explicit profile and executable implementations")
         ordinals = [record.get("parent_call_ordinal") for record in calls]
         if any(type(number) is not int for number in ordinals) or ordinals != sorted(set(ordinals)):
             raise ValueError("symbolic model call shapes require original source order")
-        shape_facts = ShapeFacts.entry(entries[0], expressions=shape_profile == EXPRESSION_PROFILE)
+        shape_facts = ShapeFacts.entry(entries[0], expressions=shape_profile in (EXPRESSION_PROFILE, WORD_PROFILE),
+                                       data_words=shape_profile == WORD_PROFILE)
     expected_profile = binding_profile(calls)
     if (expected_profile is not None and trace.get("argument_binding_profile") != expected_profile
-            or expected_profile is None and trace.get("argument_binding_profile") in (PROFILE, RANGE_PROFILE)):
+            or expected_profile is None and trace.get("argument_binding_profile") in (PROFILE, RANGE_PROFILE, WORD_RANGE_PROFILE)):
         raise ValueError("live runtime operands require their explicit binding profile")
     parent_calls = [op for op in parent.walk() if isinstance(op, func.CallOp)]
     for record in calls:
@@ -221,9 +230,11 @@ def validate_model(trace, parent, *, implementations=None, bound_module=None):
                 or "guard_storage_scope" in trace and trace["guard_storage_scope"] != "sum-of-source-shape-upper-bounds"):
             raise ValueError("symbolic guarded scratch requires its explicit shape-bound scope")
         bound_entries = [op for op in bound_module.ops if isinstance(op, func.FuncOp) and op.sym_name.data == "forward"]
-        contract = shape_facts.contract(entries[0], force_expressions=shape_profile == EXPRESSION_PROFILE)
+        contract = shape_facts.contract(entries[0], force_expressions=shape_profile in (EXPRESSION_PROFILE, WORD_PROFILE),
+                                         force_words=shape_profile == WORD_PROFILE)
         if (len(bound_entries) != 1 or bound_entries[0].function_type != entries[0].function_type
                 or trace.get("runtime_shape_contract") != contract):
             raise ValueError("symbolic model runtime shape contract differs from its complete executable source")
-        ShapeFacts.entry(bound_entries[0], expressions=shape_profile == EXPRESSION_PROFILE).check_contract(
+        ShapeFacts.entry(bound_entries[0], expressions=shape_profile in (EXPRESSION_PROFILE, WORD_PROFILE),
+                         data_words=shape_profile == WORD_PROFILE).check_contract(
             bound_entries[0], contract)

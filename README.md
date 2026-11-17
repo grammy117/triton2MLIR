@@ -3,6 +3,12 @@
 Read the [overall status](docs/status.md) for progress toward arbitrary TTIR
 kernels reaching Merlin, current evidence and the remaining completion gates.
 
+[Runtime input-word shapes](docs/input_word_shapes.md) now keep a real
+`count.item()` and its source guards through two Triton allocations and a
+stepped result slice. Explicit typed word bindings and Merlin signature v5
+separate runtime allocation values from source-only compiler proofs. General
+data-dependent computation, views/effects and target scope remain open.
+
 [Derived model dimensions](docs/derived_model_shapes.md) now retain shared-axis
 broadcasting, a stepped slice and two dependent Triton calls through native,
 Merlin host and Spike in all three memory profiles. Typed size programs and

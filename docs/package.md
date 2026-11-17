@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Runtime input-word shapes](input_word_shapes.md) select model shape v3,
+checked-word arguments, runtime shapes v4, typed program v2 and independent
+Merlin signature v5. `word_bindings` records actual public singleton/native
+integer reads; invocation values size results only after source-body proof.
+Older profiles refuse. Public model arguments, parent archives, receipt schemas
+and artifact rosters stay unchanged; selected scalar reads during evaluator
+verification do not enter compiler staging.
+
 [Derived model dimensions](derived_model_shapes.md) additionally select
 `t2m.symbolic-model-shapes.v2` and `t2m.runtime-shapes.v3`, carrying a bounded
 typed `logical-size-program.v1` DAG. Independent source reconstruction admits

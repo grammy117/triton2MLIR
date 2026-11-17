@@ -79,3 +79,23 @@ def test_reference_dimensions_cannot_override_shapes_from_actual_input_headers(t
     np.save(root / "golden.npy", np.arange(13, dtype=np.int32))
     with pytest.raises(ValueError):
         _references(root, {}, [TensorType(i32, [DYNAMIC_INDEX])], result_shapes=[actual])
+
+
+def test_explicit_runtime_word_projection_reads_only_selected_source_storage(tmp_path, monkeypatch):
+    root = tmp_path / "capture"
+    abi = example(root)
+    load = np.load
+
+    def no_array_payloads(*_args, **_kwargs):
+        raise AssertionError("an unrelated argument payload was loaded")
+
+    monkeypatch.setattr(np, "load", no_array_payloads)
+    words = {"w0": {"argument": 0, "indices": [0], "dtype": "i32"}}
+    values = captured_shapes(root, abi, word_bindings=words)
+    assert values[0].dtype == np.dtype(np.int32) and values[0].item() == 17
+    assert values[1].shape == (7,) and not hasattr(values[1], "dtype")
+    monkeypatch.setattr(np, "load", load)
+    np.savez(root / "inputs.npz", in0=np.asarray(9, np.int64))
+    abi["inputs"][1] = {"shape": [], "dtype": "i64"}
+    values = captured_shapes(root, abi, word_bindings={"w1": {"argument": 1, "indices": [], "dtype": "i64"}})
+    assert values[1].item() == 9 and not hasattr(values[0], "dtype")

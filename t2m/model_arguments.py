@@ -108,23 +108,25 @@ def plan_arguments(
     original = by_name if source_shape_values is None else source_shape_values
     if shape_facts is not None and shape_facts.expressions and source_point is not None:
         source_ranges = dict(source_ranges or {})
-        for schema in binding.runtime_operands.values():
-            if source_ranges.get(schema) is None and isinstance(original[schema].type, builtin.IndexType):
+        for name, schema in binding.runtime_operands.items():
+            if source_ranges.get(schema) is None and (isinstance(original[schema].type, builtin.IndexType)
+                    or shape_facts.data_words and name in dimensions and isinstance(original[schema].type, builtin.IntegerType)):
                 source_ranges[schema] = shape_facts.range_at(original[schema], source_point)
     if shape_facts is not None:
         for name, schema in binding.runtime_operands.items():
             fact = source_facts[schema] if source_facts is not None else known_integer(original[schema])
-            if name in dimensions and fact is None and isinstance(original[schema].type, builtin.IndexType):
-                expression = shape_facts.index(original[schema])
+            if name in dimensions and fact is None:
+                expression = shape_facts.size(original[schema], source_point)
                 if expression is not None:
                     symbolic[name] = expression
     live, facts = plan_operands(spec, binding.runtime_operands, by_name, source_facts=source_facts,
-                               source_ranges=source_ranges, source_point=source_point, symbolic_dimensions=symbolic)
+                               source_ranges=source_ranges, source_point=source_point, symbolic_dimensions=symbolic,
+                               word_sizes=shape_facts is not None and shape_facts.data_words)
     constants, values = runtime_constants(spec, binding.runtime_arguments, attributes, live=live)
     values.update(facts)
     symbolic = {name: expression for name, expression in symbolic.items() if name not in values}
     for name in symbolic:
-        enclosure = live[name].record.get("unsigned_integer_range")
+        enclosure = live[name].record.get("unsigned_integer_range", live[name].record.get("integer_range"))
         scalar = next(item for item in spec.runtime_scalars if item.name == name)
         if (enclosure is None or scalar.bounds is None
                 or not scalar.bounds[0] <= enclosure[0] <= enclosure[1] <= scalar.bounds[1]):
@@ -216,7 +218,8 @@ def plan_arguments(
                 or any(not kernel_facts.same_shape(kernel_facts.shape(value), logical_shapes[buffer.name], terminal)
                        for value, buffer in zip(terminal.operands, spec.outputs, strict=True))):
             raise ConversionError("symbolic kernel result shape needs an executable standard-MLIR proof", opcode="func.call")
-        maximum = {buffer.name: tuple(values[dim] if dim in values else live[dim].record["unsigned_integer_range"][1]
+        maximum = {buffer.name: tuple(values[dim] if dim in values else
+                                     live[dim].record.get("unsigned_integer_range", live[dim].record.get("integer_range"))[1]
                                      if isinstance(dim, str) else dim for dim in buffer.shape)
                    for buffer in spec.outputs}
     return ArgumentPlan(

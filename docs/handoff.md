@@ -6,6 +6,14 @@ boundary requested by the user, not a completion claim.
 
 ## Follow-through since the November 12 review boundary
 
+[Runtime input-word shapes](input_word_shapes.md) retain real scalar input data
+and source guards through Triton result allocation, dependent calls and a
+stepped slice. Model2MLIR `863d797` supplies executable integer reads/guards;
+source-only shape proofs and explicit Merlin signature v5 size runtime outputs.
+Read-mask intersections retain Meta/shared's exact SSA minimum and independent
+bounds without write-coverage permission. General data-dependent computation,
+runtime bounds/views, resizing, effects and targets remain completion work.
+
 [Derived model dimensions](derived_model_shapes.md) now qualify a real shared-axis
 broadcast/stepped-slice model and two dependent Triton calls through native,
 Merlin host and Spike in all three memory profiles. Typed shape programs and

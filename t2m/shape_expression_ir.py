@@ -18,6 +18,12 @@ def word(facts, value, depth=0):
     ):
         return None
     width = value.type.bitwidth
+    from .shape_input_words import leaf
+
+    supplied = leaf(facts, value)
+    if supplied is not None:
+        facts.expression_words[value] = supplied
+        return supplied
     if value in facts.integers:
         return facts.program.intern(
             "index_castui",
@@ -84,7 +90,7 @@ def index(facts, value, depth=0):
     if expression is None:
         return None
     intervals = facts.program.bounds(
-        expression, lambda axis: axis_range(facts, axis, operation)
+        expression, lambda axis: input_range(facts, axis, operation)
     )
     if not intervals:
         return None
@@ -185,18 +191,26 @@ def axis_range(facts, axis, point):
 
 
 def range_at(facts, value, point):
-    dimension = facts.index(value)
+    dimension = facts.size(value, point)
     if dimension is None:
         return None
     if type(dimension) is int:
         return dimension, dimension
     if dimension not in facts.program.nodes:
-        return axis_range(facts, dimension, point)
+        return input_range(facts, dimension, point)
     intervals = facts.program.bounds(
-        dimension, lambda axis: axis_range(facts, axis, point)
+        dimension, lambda axis: input_range(facts, axis, point)
     )
     if not intervals or any(
         not 0 <= low <= high <= MAX_SIZE for low, high in intervals
     ):
         return None
     return min(a for a, _ in intervals), max(b for _, b in intervals)
+
+
+def input_range(facts, name, point):
+    if name in facts.word_bindings:
+        from .shape_input_words import range_at
+
+        return range_at(facts, name, point)
+    return axis_range(facts, name, point)

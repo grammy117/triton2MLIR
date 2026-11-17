@@ -32,7 +32,7 @@ def project(capture, signature):
     executing a compiler or reading any output/reference value.
     """
     capture = Path(capture)
-    if signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4"):
+    if signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
         return _positional(capture, signature)
     manifest = json.loads((capture / "weights.safetensors.manifest.json").read_text())
     inputs = signature["inputs"]
@@ -83,6 +83,9 @@ def _positional(capture, signature):
                 "outputs": signature["outputs"], "dimension_bindings": signature["dimension_bindings"]}
     if signature["schema"] == "merlin.compile-signature.v4":
         contract.update(schema="t2m.runtime-shapes.v3", shape_program=signature["shape_program"])
+    elif signature["schema"] == "merlin.compile-signature.v5":
+        contract.update(schema="t2m.runtime-shapes.v4", shape_program=signature["shape_program"],
+                        word_bindings=signature["word_bindings"])
     with tempfile.TemporaryDirectory(prefix=".model-invocation-", dir=capture.parent) as directory:
         values, bindings = _arguments(capture, parse_shared((capture / "model.mlir").read_text()),
             Path(directory) / "arguments", python, compiler_support_root=os.environ.get("T2M_MERLIN_ROOT"),

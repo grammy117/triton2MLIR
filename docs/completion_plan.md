@@ -8,6 +8,12 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
+[Runtime input-word shapes](input_word_shapes.md) now close the reproduced
+`count.item()` allocation boundary with executable reads/guards, independent
+source proofs and explicit signature v5. General data-dependent vector/scalar
+computation, runtime bounds/views, resizing, effects and applicable targets
+remain active completion requirements.
+
 [Derived model dimensions](derived_model_shapes.md) now close the reproduced
 shared-axis broadcast/stepped-slice integration through native, Merlin host and
 Spike in all three memory profiles. Source-proved typed programs and explicit

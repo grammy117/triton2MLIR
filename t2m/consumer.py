@@ -20,7 +20,7 @@ capture, out = pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 signature = forward_signature(capture / "model.mlir")
 stage = stage_compile_inputs(capture, out.parent / "compiler")
 staged_signature = json.loads((out.parent / "compiler/signature.json").read_text())
-if staged_signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4"):
+if staged_signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
     # The caller supplies the separately materialized full positional roster.
     # Its values size this runtime harness and never enter compiler staging.
     if not sys.argv[4]:
@@ -66,6 +66,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                  "src/merlin/frontends/derived_live_arguments.py", "src/merlin/frontends/source_index_ranges.py",
                  "src/merlin/frontends/model_shape_facts.py", "src/merlin/frontends/derived_symbolic_shapes.py",
                  "src/merlin/frontends/shape_expressions.py", "src/merlin/frontends/shape_expression_ir.py",
+                 "src/merlin/frontends/shape_input_words.py", "src/merlin/frontends/shape_word_bindings.py",
                  "src/merlin/llvmlower/runtime_invocation.py"):
         if (root / name).is_file():
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()

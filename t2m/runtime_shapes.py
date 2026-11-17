@@ -7,7 +7,8 @@ the compiler frontend, NumPy or any Triton dependency.
 
 def resolve_shapes(contract, arrays):
     schema = contract.get("schema")
-    expression_profile = schema in ("t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3")
+    word_profile = schema in ("t2m.runtime-shapes.v4", "merlin.runtime-shapes.v4")
+    expression_profile = word_profile or schema in ("t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3")
     axis_profile = expression_profile or schema in ("t2m.runtime-shapes.v2", "merlin.runtime-shapes.v2")
     if (schema not in ("t2m.runtime-shapes.v1", "merlin.runtime-shapes.v1") and not axis_profile
             or len(contract.get("inputs", [])) != len(arrays)):
@@ -16,9 +17,13 @@ def resolve_shapes(contract, arrays):
         raise ValueError("input-axis dimensions require runtime shape contract v2")
     if not expression_profile and "shape_program" in contract:
         raise ValueError("derived dimension programs require runtime shape contract v3")
+    if not word_profile and "word_bindings" in contract:
+        raise ValueError("public storage words require runtime shape contract v4")
     fields = {"schema", "inputs", "outputs", "dimension_bindings"}
     if expression_profile:
         fields.add("shape_program")
+    if word_profile:
+        fields.add("word_bindings")
     if axis_profile and (set(contract) != fields
             or not isinstance(contract["inputs"], list) or not isinstance(contract["outputs"], list)
             or any(not isinstance(value, dict) or not isinstance(value.get("shape"), list)
@@ -65,6 +70,17 @@ def resolve_shapes(contract, arrays):
             scalars[name] = value
 
     program = None
+    words = None
+    if word_profile:
+        try:
+            from .shape_word_bindings import resolve_words
+        except ImportError:
+            from shape_word_bindings import resolve_words
+        values = resolve_words(contract["word_bindings"], contract["inputs"], arrays)
+        if set(values) & set(scalars):
+            raise ValueError("runtime size word conflicts with an existing dimension binding")
+        scalars.update(values)
+        words = {name: int(binding["dtype"][1:]) for name, binding in contract["word_bindings"].items()}
     if expression_profile:
         try:
             from .shape_expressions import Program
@@ -72,7 +88,7 @@ def resolve_shapes(contract, arrays):
             from shape_expressions import Program
         roots = [size for row in contract["outputs"] for size in row["shape"]
                  if isinstance(size, str) and size not in scalars]
-        program = Program.load(contract["shape_program"], contract["dimension_bindings"], roots)
+        program = Program.load(contract["shape_program"], contract["dimension_bindings"], roots, words=words)
 
     def shape(declared):
         result = []

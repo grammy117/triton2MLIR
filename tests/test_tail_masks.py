@@ -179,3 +179,35 @@ def test_an_access_bounds_proof_does_not_certify_complete_fresh_initialization()
     initialization.store(abi.buffers[0], (offset,), (extent,))
     with pytest.raises(ConversionError, match="no proved complete overwrite"):
         initialization.finish()
+
+
+def test_read_intersection_retains_all_independent_upper_bounds_without_write_credit():
+    from t2m.tail_masks import ReadSubsetExtent
+    left, facts, offset = mask_case(limit=53, runtime=True)
+    block = left.owner.parent
+    other = block.insert_arg(IndexType(), len(block.args))
+    facts[other] = Linear(parameters=(("capacity", 0, 53, 1),))
+    sixteen = arith.ConstantOp.from_int_and_width(16, IndexType())
+    start = arith.MuliOp(block.args[0], sixteen)
+    end = arith.AddiOp(start, sixteen)
+    clipped = arith.MinSIOp(end, other)
+    nonnegative = arith.MaxSIOp(clipped, start)
+    right = arith.SubiOp(nonnegative, start)
+    intersection = arith.MinSIOp(left, right)
+    block.add_ops([sixteen, start, end, clipped, nonnegative, right, intersection])
+    extent = recover_extent(intersection.result, 16, [offset], facts, (6,), allow_read_subset=True)
+    assert isinstance(extent, ReadSubsetExtent) and extent.value is intersection.result
+    assert len(extent.upper_prefixes) == 2
+    for parameter in ("n", "capacity"):
+        assert extent.fits_access(offset, Linear(parameters=((parameter, 0, 53, 1),)), (6,))
+    assert not extent.fits_access(offset + Linear(1), Linear(parameters=(("capacity", 0, 53, 1),)), (6,))
+    assert not extent.fits(offset, 53)
+    with pytest.raises(ConversionError):
+        recover_extent(intersection.result, 16, [offset], facts, (6,))
+    zero = arith.ConstantOp.from_int_and_width(0, IndexType())
+    enabled = arith.CmpiOp(block.args[0], zero, "eq")
+    selected = arith.SelectOp(enabled, intersection, zero)
+    block.add_ops([zero, enabled, selected])
+    gated = recover_extent(selected.result, 16, [offset], facts, (6,), allow_read_subset=True)
+    assert gated.value is selected.result and len(gated.upper_prefixes) == 2
+    assert gated.fits_access(offset, Linear(parameters=(("capacity", 0, 53, 1),)), (6,))

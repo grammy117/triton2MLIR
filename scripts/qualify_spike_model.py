@@ -74,7 +74,7 @@ def worker(mode, root, out, *arguments):
         signature = json.loads((out / "compiler/signature.json").read_text())
         effect = manifest.get("source_profile") == "standalone-effect-kernel"
         runtime = (effect or manifest.get("source_profile") == "standalone-tensor-kernel"
-                   or signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4"))
+                   or signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"))
         entries = signature["inputs"] + signature["outputs"]
         for entry in (() if runtime else entries):
             shape = entry.get("shape")
@@ -259,7 +259,8 @@ def references(capture, override=None):
         from t2m.runtime_shapes import resolve_shapes
 
         abi = {"schema": SCHEMA, "inputs": _input_abi(entries[0], dynamic=True)}
-        result_shapes = resolve_shapes(bindings["runtime_shape_contract"], captured_shapes(capture, abi))
+        result_shapes = resolve_shapes(bindings["runtime_shape_contract"], captured_shapes(capture, abi,
+            word_bindings=bindings["runtime_shape_contract"].get("word_bindings")))
     return _references(capture, parent, entries[0].function_type.outputs,
                        metadata=capture / "parent/meta.json", result_shapes=result_shapes)
 

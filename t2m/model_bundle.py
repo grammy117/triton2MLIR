@@ -249,6 +249,8 @@ def write_model_bundle(capture, bindings, out, *, work, python=None, merlin_root
                             if shape_contract is not None and shape_contract["schema"] == "t2m.runtime-shapes.v2" else []),
                           *(["t2m.symbolic-model-shapes.v2 additionally retains typed derived size programs (runtime-shapes.v3); producer and independent consumer rederive expressions from actual standard scalar/tensor bodies, proving equality over dominating executable source assertions; Merlin compile-signature.v4 uses the checked program for runtime allocation, without sample specialization or added public scalar arguments; fixed-width arithmetic and conditional shapes remain executable; provenance grants no shape, numeric, alias or effect authority"]
                             if shape_contract is not None and shape_contract["schema"] == "t2m.runtime-shapes.v3" else []),
+                          *(["t2m.symbolic-model-shapes.v3 and checked-word runtime arguments retain actual scalar input reads and dominating signed size guards; runtime-shapes.v4 and logical-size-program.v2 explicitly bind typed public singleton/native integer words; independent Merlin signature v5 reconstruction precedes runtime allocation; runtime values never specialize compiler computation and no payload word or annotation supplies a compile-time value, bound, alias or effect permission"]
+                            if shape_contract is not None and shape_contract["schema"] == "t2m.runtime-shapes.v4" else []),
                           *(["parent m2m.compiler-constants.v1 binds lifted source arguments to original weights.safetensors bytes; Merlin emits a separately checked compiler-constants.json projection; legacy evaluator extra members and their digests are excluded from compiler staging"]
                             if parent.get("compiler_constants") else []),
                           *(["flat tuple model references use receipt-bound goldens.npz in result order; golden.npy retains the original first result"] if len(goldens) > 1 else []),
@@ -373,7 +375,8 @@ def verify_model_bundle(out):
         from .runtime_shapes import resolve_shapes
 
         abi = {"schema": SCHEMA, "inputs": _input_abi(entries[0], dynamic=True)}
-        result_shapes = resolve_shapes(trace["runtime_shape_contract"], captured_shapes(out, abi))
+        result_shapes = resolve_shapes(trace["runtime_shape_contract"], captured_shapes(out, abi,
+            word_bindings=trace["runtime_shape_contract"].get("word_bindings")))
     _, reference_members = _references(out, parent, entries[0].function_type.outputs,
                                       metadata=out / "parent/meta.json", result_shapes=result_shapes)
     if (("result_count" in execution or len(reference_members) > 1)

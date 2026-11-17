@@ -4,6 +4,13 @@ The [overall status](docs/status.md) separates established end-to-end paths,
 remaining architectural work and evidence limits. Full arbitrary-kernel coverage
 is active and incomplete; observing all pinned opcode names is not completion.
 
+[Runtime input-word shapes](docs/input_word_shapes.md) now retain actual scalar
+input reads and source guards for Triton result allocation, under model profile
+v3/runtime v4/program v2 and Merlin signature v5. Exact intersected read masks
+keep original SSA and independent bounds without write-coverage credit. Continue
+with general data-dependent computation, runtime views/bounds, resizing state,
+effects and applicable targets.
+
 [Derived model dimensions](docs/derived_model_shapes.md) now reach the same
 complete consumer path in all three memory profiles. Shared axes, conditional
 broadcast sizes and clipped slice counts retain actual typed shape programs;

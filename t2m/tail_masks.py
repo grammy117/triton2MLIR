@@ -59,13 +59,20 @@ class ReadSubsetExtent(TailExtent):
     a scalar conjunction. Retain that exact SSA; only its upper prefix supplies
     an access bound. Stores must not rebuild this value as the upper prefix.
     """
+    upper_prefixes: tuple = ()
 
     def fits(self, offset, dimension):
         return False
 
+    def fits_access(self, offset, dimension, grid):
+        if self.upper_prefixes:
+            return any(prefix.fits_access(offset, dimension, grid) for prefix in self.upper_prefixes)
+        return super().fits_access(offset, dimension, grid)
+
     def as_dict(self):
         return {**super().as_dict(), "formula": "0<=extent<=max(0,min(maximum,limit-offset))",
-                "coverage": "read-bound-only-conditional-subset"}
+                "coverage": "read-bound-only-conditional-subset",
+                **({"upper_prefixes": [prefix.as_dict() for prefix in self.upper_prefixes]} if self.upper_prefixes else {})}
 
 
 def maximum(size):
@@ -76,9 +83,13 @@ def describe(size):
     return size.as_dict() if isinstance(size, TailExtent) else size
 
 
-def recover_extent(value, cap, offsets, facts, grid, *, allow_read_subset=False, _subset_depth=0):
+def recover_extent(value, cap, offsets, facts, grid, *, allow_read_subset=False, _subset_depth=0, _subset_visits=None):
     """Match an exact clamp normal form; unsupported masks remain refusals."""
     cache = {}
+    _subset_visits = [0] if _subset_visits is None else _subset_visits
+    _subset_visits[0] += 1
+    if _subset_depth >= 32 or _subset_visits[0] > 256:
+        raise ConversionError("read extent subset exceeds its finite structural budget")
 
     def bounds(expr):
         if isinstance(expr, Linear):
@@ -168,6 +179,22 @@ def recover_extent(value, cap, offsets, facts, grid, *, allow_read_subset=False,
         return result
 
     owner = value.owner
+    if allow_read_subset and getattr(owner, "name", "") == "arith.minsi":
+        # MaskState::minStates intersects rectangular masks with minOFRs.
+        # The exact source minimum remains executable. Each proved child is
+        # an independent upper prefix; either may establish an access bound.
+        try:
+            prefixes = [recover_extent(argument, cap, offsets, facts, grid, allow_read_subset=True,
+                         _subset_depth=_subset_depth + 1, _subset_visits=_subset_visits)
+                        for argument in owner.operands]
+        except ConversionError:
+            if _subset_visits[0] > 256:
+                raise
+            prefixes = []
+        if prefixes and all(isinstance(prefix, TailExtent) for prefix in prefixes):
+            first = prefixes[0]
+            return ReadSubsetExtent(cap, first.limit, first.offset, value, tuple(prefixes))
+        # A constant child can be part of the normal exact-clamp form below.
     if allow_read_subset and getattr(owner, "name", "") == "arith.select":
         if _subset_depth >= 32:
             raise ConversionError("conditional read extent exceeds its structural budget")
@@ -182,9 +209,10 @@ def recover_extent(value, cap, offsets, facts, grid, *, allow_read_subset=False,
         if (owner.operands[0].type == i1 and true != Linear(1)
                 and linear(owner.operands[2], facts, grid) == Linear()):
             upper = recover_extent(owner.operands[1], cap, offsets, facts, grid,
-                                   allow_read_subset=True, _subset_depth=_subset_depth + 1)
+                                   allow_read_subset=True, _subset_depth=_subset_depth + 1, _subset_visits=_subset_visits)
             if isinstance(upper, TailExtent):
-                return ReadSubsetExtent(upper.cap, upper.limit, upper.offset, value)
+                return ReadSubsetExtent(upper.cap, upper.limit, upper.offset, value,
+                    upper.upper_prefixes if isinstance(upper, ReadSubsetExtent) else ())
             if 0 <= upper <= cap:
                 return ReadSubsetExtent(upper, upper, Linear(), value) if upper else 0
 

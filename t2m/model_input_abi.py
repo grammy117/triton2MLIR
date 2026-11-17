@@ -1,7 +1,8 @@
 """Model invocation shapes and storage bindings, separate from compiler facts.
 
-Read array/container headers only when reopening captured invocation shapes.
-These evaluator dimensions never specialize the portable MLIR or its contract.
+Read array/container headers when reopening captured invocation shapes. An
+explicit word roster additionally reads only those singleton source values.
+These evaluator values never specialize portable MLIR or supply compiler facts.
 """
 
 import json
@@ -76,8 +77,12 @@ def _npz_shapes(path):
     return result
 
 
-def captured_shapes(capture, abi):
-    """Reopen positional shapes without using goldens or loading weight values."""
+def captured_shapes(capture, abi, *, word_bindings=None):
+    """Reopen invocation shapes and explicitly selected scalar storage words.
+
+    All other argument values remain unopened. These are evaluator/runtime
+    inputs, never a compiler value or a result-reference shape inference.
+    """
     capture = Path(capture)
     expected, _dynamic = decode_abi(abi)
     manifest = json.loads((capture / "weights.safetensors.manifest.json").read_text())
@@ -96,11 +101,41 @@ def captured_shapes(capture, abi):
         raise TypeError("model weights require a safetensors tensor dictionary")
     headers = {name: _npz_shapes(capture / name) for name in ("inputs.npz", "extra.npz")}
     shapes = []
+    selected = set()
+    if word_bindings is not None:
+        if not isinstance(word_bindings, dict) or len(word_bindings) > 256:
+            raise ValueError("captured size words require an explicit bounded binding roster")
+        for binding in word_bindings.values():
+            ordinal = binding.get("argument") if isinstance(binding, dict) else None
+            if (type(ordinal) is not int or not 0 <= ordinal < len(expected)
+                    or expected[ordinal]["dtype"] not in ("i8", "i16", "i32", "i64")
+                    or any(type(size) is not int or size != 1 for size in expected[ordinal]["shape"])):
+                raise ValueError("captured size words need exact singleton integer source storage")
+            selected.add(ordinal)
     for index, row in enumerate(expected):
         archive, key = storage_binding(manifest[str(index)], order, weights, headers["extra.npz"])
         shape = weights[key].get("shape") if archive == "weights" else headers[archive].get(key)
         if not isinstance(shape, (tuple, list)):
             raise TypeError("captured model argument has no ranked storage header")
         check_shape(row["shape"], shape)
-        shapes.append(SimpleNamespace(shape=tuple(shape)))
+        if index not in selected:
+            shapes.append(SimpleNamespace(shape=tuple(shape)))
+            continue
+        if archive != "weights":
+            with np.load(capture / archive, allow_pickle=False) as arrays:
+                shapes.append(arrays[key].copy())
+        else:
+            header = weights[key]
+            offsets = header.get("data_offsets")
+            width = int(row["dtype"][1:])
+            if (header.get("dtype") != "I" + str(width) or not isinstance(offsets, list) or len(offsets) != 2
+                    or any(type(offset) is not int for offset in offsets) or not 0 <= offsets[0] <= offsets[1]
+                    or offsets[1]-offsets[0] != width//8
+                    or length + 8 + offsets[1] > (capture / "weights.safetensors").stat().st_size):
+                raise ValueError("captured size word differs from its bounded safetensors storage")
+            with (capture / "weights.safetensors").open("rb") as stream:
+                stream.seek(8 + length + offsets[0])
+                raw = stream.read(width//8)
+            shapes.append(np.frombuffer(raw, dtype=np.dtype("<i" + str(width//8))).astype(
+                np.dtype("i" + str(width//8)), copy=True).reshape(shape))
     return shapes

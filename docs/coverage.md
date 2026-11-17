@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Runtime input-word shapes](input_word_shapes.md) add complete model/interface
+coverage for actual scalar input data controlling Triton result allocation.
+Qualified read intersections retain exact shared SSA and no initialization
+permission. The selected native/host/target and independent runtime replay
+profiles remain distinct; this adds no arbitrary data-dependent/effect/target
+claim and is separate from the historical package inventory.
+
 [Derived model dimensions](derived_model_shapes.md) now qualify three complete
 model/profile configurations through native, Merlin host and Spike, retaining
 all 21 initial results. Twelve unchanged-library host replays check 84 further

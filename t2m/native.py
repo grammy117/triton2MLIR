@@ -39,7 +39,7 @@ def observe_native(mlir_text, inputs, work, *, python=None, shape_abi=None, comp
 
 
 def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_support_root=None, observe_outcome=False, integer_atomic_regions=False):
-    if shape_abi is not None and shape_abi.get("schema") in ("t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3"):
+    if shape_abi is not None and shape_abi.get("schema") in ("t2m.runtime-shapes.v3", "merlin.runtime-shapes.v3", "t2m.runtime-shapes.v4", "merlin.runtime-shapes.v4"):
         from xdsl.dialects import func
         from .model_shape_facts import ShapeFacts
         from .shared_tensor import parse_shared
@@ -48,8 +48,9 @@ def _native(mlir_text, inputs, work, *, python=None, shape_abi=None, compiler_su
                    and op.sym_name.data == "forward" and op.body.blocks]
         if len(entries) != 1:
             raise ValueError("derived native shape allocation requires its executable model entry")
-        ShapeFacts.entry(entries[0], expressions=True).check_contract(
-            entries[0], {**shape_abi, "schema": "t2m.runtime-shapes.v3"})
+        word_profile = shape_abi["schema"].endswith(".v4")
+        ShapeFacts.entry(entries[0], expressions=True, data_words=word_profile).check_contract(
+            entries[0], {**shape_abi, "schema": "t2m.runtime-shapes.v4" if word_profile else "t2m.runtime-shapes.v3"})
     work = Path(work)
     arrays = [np.asarray(x) for x in inputs]
     if sum(x.nbytes for x in arrays) > 64 * 1024 * 1024:
