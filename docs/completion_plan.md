@@ -8,30 +8,38 @@ accepting opaque calls, or counting parsed operations does not meet that goal.
 
 This document records current requirements and the next execution order.
 
-Shared lowering and explicit serial allocation context now pass real cross
-builds and Spike runtime success/failure fixtures. Next connect v6 source-only
-staging and input transport to a generated typed target call, retaining ordinary
-resource/toolchain owners and complete dynamic-result readback. The existing
-package driver still rejects the new receipt before staging; runtime fixture
-execution alone does not close that interface requirement.
+The [execution-owned target package](execution_owned_target_packages.md) now
+closes the selected v6 staging/build/readback boundary. The real three-kernel
+model passes four actual whole-model Spike qualifications with all 28 results;
+source-domain/reference failures cannot publish success. Retained verification
+replays independent source staging and complete input/driver/wire/reference
+checks. The combined frontend selection passes 57 with one optional legacy
+capture skip; Merlin's separate selection passes all 142 checks.
+
+Next close the remaining source-driven composition gates: runtime/zero-trip
+resizing ownership through ordinary native lifetime checks; v4 physical/view
+adapters with independent source correspondence; broader numeric/effect and
+source-version compositions; and additional applicable executor/device support.
+Retain algorithms, source guards, complete results and explicit unsupported
+options throughout. These are semantic/compiler requirements, not a request
+to substitute more passing variants for the missing contracts.
 
 [Checked generated-C result calls](checked_c_results.md) now implement complete
 descriptor/allocation validation and independent copies, with actual seven-result
-TTIR compaction execution and source guards. Next separate reusable lowering
-from host linking, select target allocation context/layout explicitly, extend
-v6 staging and implement complete observed-shape readback before target claims.
+TTIR compaction execution and source guards. Shared lowering, explicit target
+context/layout, v6 staging and complete readback now have the separate serial
+target qualification above; broader source/executor scope remains.
 
 The [execution-sized target plan](execution_result_targets.md) records the
-actual compaction-to-Spike refusal before staging and the next concrete work:
-checked generated-C result handling, reusable owned-result lowering, explicit
-v6 target staging, observed-shape readback and actual full-result execution.
-No new target success is inferred from existing host qualification.
+original compaction-to-Spike refusal and the delivered generated-C/lowering/
+staging/readback integration. New target success comes from actual image
+execution and complete independent references, rather than host qualification.
 
 [Real Triton compaction](compaction.md) now extends the selected host-owned
 package to count, parallel scan, masked scatter and dependent consumption.
 Source-only automatic admission chooses tensor count/copy and guarded
-source-word packing. Continue with v6 native/target materialization, stronger
-scan-dependent range proofs, general views and runtime resizing ownership;
+source-word packing. Selected v6 target materialization now works. Continue
+with stronger scan-dependent range proofs, general views and resizing ownership;
 guarded admission does not establish arbitrary source/target closure.
 
 [Internal computed sizes](executed_model_binding.md) now pass package creation,

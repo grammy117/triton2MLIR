@@ -1,5 +1,14 @@
 # Review handoff — updated 2026-11-17
 
+[Execution-owned target packages](execution_owned_target_packages.md) now
+connect the real three-kernel model to source-only signature-v6 staging, the
+ordinary Merlin builder and actual observed-shape Spike execution. Four qualified
+images check all 28 original/changed-invocation results. Source-domain and wrong
+reference cases cannot publish success; retained verification independently
+replays staging and complete input/driver/wire/reference checks. The source
+package and original archives remain unchanged. Broader view/resizing/numeric/
+effect/executor/accelerator scope remains open; this is no full-coverage claim.
+
 [Production generated owned-result invocation/readback](owned_result_driver.md)
 now executes the real three-kernel model LLVM with separate runtime input bytes.
 Three input capacities reuse their generated executables across four content/
@@ -7,7 +16,8 @@ parameter patterns each; every one of the 84 results matches exact words.
 Two invalid capacities still abort in original source guards before publication.
 Merlin's 63-check driver/readback/legacy transport selection passes. The generic
 controller also checks cleanup after descriptor/allocation/observer failures and
-preserves another caller's busy context. Target package integration remains open.
+preserves another caller's busy context. The selected serial target package
+integration now has separate whole-model evidence above.
 
 Merlin `bb347b1de` separates owned-result lowering from host linking, and
 `f2552dec1` adds explicit serial context/external failure reporting. Both are
@@ -16,7 +26,8 @@ pushed on `ttir-experiment-grammy`, with tips and attribution verified. The fina
 Spike image rechecks are retained under `out/build/pytest-owned-images-retained/`:
 one reports nine exact standard-MLIR results over three calls, and one exits on
 allocation exhaustion without results. Source/tool/image/output digests reopen.
-These are runtime-seam fixtures; production v6 TTIR driver/readback is still open.
+These are historical runtime-seam fixtures; the production v6 TTIR driver/readback
+now has separate selected whole-model qualification above.
 The frontend now pins the common lowerer and its real-TTIR host/C regression
 selection passes eight in `.scratch/compact-c-lowering1.log`. Follow the
 [target integration plan](execution_result_targets.md) for the actual next work.
@@ -44,10 +55,10 @@ on `main`; remote tips and GitHub author/committer attribution were checked.
 That selection used Merlin `e943745a3`; its checked C successor is above.
 Model2MLIR remains `863d797` on `ttir-experiment-grammy`, with the pre-existing
 whitespace edit preserved.
-The actual next [target boundary](execution_result_targets.md) is now probed:
-the existing Spike driver rejects receipt v2 before staging or image creation.
-Checked C invocation/copy now exists; staged target-driver generation and
-explicit v6 target transport remain required before claiming that target path.
+The initial [target boundary](execution_result_targets.md) probe recorded the
+legacy Spike driver's receipt-v2 refusal before staging or image creation.
+That historical probe is superseded by the explicit execution-owned serial
+target path above; default legacy receipt requirements remain unchanged.
 
 [Real TTIR compaction](compaction.md) now reaches the existing qualified
 execution-sized package and Merlin host interface from Python and public CLI.
@@ -63,8 +74,9 @@ three valid standalone sizes and one actual unwritten-result abort. The
 automatic-selection/native/legacy memory selection passes 46 checks in
 `.scratch/auto-final1.log`; the earlier overlapping policy/model selection
 passes 24. Source/memory/effect/numeric/ownership checks remain authoritative.
-V6 generated-C/Spike, stronger scan range proofs, general views/resizing/effects
-and arbitrary source/target coverage remain open. Historical inventory counts
+V6 generated-C/serial Spike now have the separate qualification above. Stronger
+scan range proofs, general views/resizing/effects and arbitrary source/target
+coverage remain open. Historical inventory counts
 are unchanged. This adds no GPU or performance equivalence claim.
 
 The source-to-package-to-Merlin pipeline works for the qualified selections.

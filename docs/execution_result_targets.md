@@ -1,52 +1,43 @@
-# Execution-sized results: next target integration boundary
+# Execution-sized results: target integration
 
-The [generated source-typed driver/readback](owned_result_driver.md) now runs the
-real TTIR compaction model through the production hosted adapter. Twelve calls
-retain all 84 exact results; two actual source-domain failures publish neither
-result frames nor DONE. All 63 Merlin driver/readback/legacy transport checks pass.
-This closes the shared generated call and observed-shape protocol components,
-while their ordinary target staging/build/console integration remains required.
+The [execution-owned target package](execution_owned_target_packages.md) now
+connects actual signature-v6 source-only staging, generated typed calls, serial
+allocator context, ordinary Merlin model building and complete observed-shape
+readback to real RISC-V/Spike execution. Four qualified whole-model images retain
+all 28 original/changed-invocation results. Original source-domain and complete
+reference failures cannot publish success. Retained verification replays independent
+source staging, driver reconstruction and complete input/wire/reference checks.
 
-The shared lowerer and serial allocator seams are now implemented. Merlin
-`bb347b1de` emits source/prepared MLIR, checked bridge and LLVM before runtime
-linking; layout/index values remain explicit caller premises. Merlin
-`f2552dec1` adds explicitly selected nonconcurrent context and external failure
-reporting without changing native TLS/stdio defaults. Source/owner/product
-guards and the default 64-bit descriptor contract remain active.
+The [generated hosted driver](owned_result_driver.md) separately retains all
+84 results across twelve changed-content invocations and two original source
+guard failures. Merlin's current 142-check runtime selection covers production
+image execution, zero-input functions, actual arena exhaustion, strict readback,
+legacy invocation, compiler/index/ISA selection and memory admission.
 
-Actual cross model/bridge objects and a linked Spike runtime fixture now pass.
-The successful standard-MLIR image returns all nine results across three
-invocations; a second image rejects allocation exhaustion before results or
-normal completion. The complete 152-check selection and two retained image
-rechecks pass. These are runtime-seam results, not production receipt-v2/v6
-target-driver qualification. The unchanged Spike package driver still has the
-original receipt gate described below.
+These are explicitly selected functional serial execution profiles. Public source
+MLIR and parent archives remain unchanged. No target mapping is inserted into
+TTIR conversion. Accelerator correctness/performance, broader effects, physical
+views and runtime/zero-trip resizing ownership remain open.
 
-The next implementation must connect actual v6 source-only staging, invocation
-input transport and generated typed calls to the existing target build/resource
-owners. It must then report every actual result shape/payload under an explicit
-readback profile and independently match complete original model references.
-Reusing the binary frame transport is possible, but fixed-shape output metadata
-cannot substitute for observed dimensions. Keep source validation, compiler
-inputs and runtime/evaluator arrays separated throughout that integration.
+## Remaining integration scope
 
-The first reusable C seam is now implemented and exercised by
-[checked C calls](checked_c_results.md): source-typed aggregate invocation,
-complete descriptor/owner validation and independent logical copies. The real
-three-kernel compaction model passes all seven results and source-domain guards
-from a standalone C executable. This does not yet change Spike staging, linking
-or production dynamic-result readback. The source-boundary inventory below
-records the original probe; the implementation order identifies the remaining
-integration requirements.
+- Extend resizing ownership without weakening ordinary lifetime checks.
+- Admit general physical/view and alias/effect combinations with executable
+  contracts; provenance supplies correspondence, not permission.
+- Implement additional executor/console/device/numeric options instead of
+  discarding selected options. The current v6 image builder refuses them.
+- Qualify every applicable source/type/attribute composition and target against
+  complete independent references. Selected images and opcode names do not
+  establish arbitrary-kernel completion.
 
-The real [compaction package](compaction.md) passes Merlin host qualification.
-The unchanged Spike driver still rejects receipt v2 before staging. The actual
-probe is retained in `.scratch/compact-v6-spike-probe.log`; it reports
-`target execution requires a bound model or standalone numeric kernel package`.
-This is a package/harness boundary, not a failed target lowering of the kernel.
-No target image was built and no Spike execution is claimed by that probe.
+## Initial source boundaries, before this implementation
 
-## Current source boundaries
+The following source inventory and sequence record the original failing probe.
+The explicit execution-owned route above now implements the serial package
+integration; the default legacy route retains its original receipt requirements.
+`.scratch/compact-v6-spike-probe.log` is historical refusal evidence, not a current
+claim that the selected v6 path cannot build an image.
+
 
 Source inspected at triton2MLIR `b77da69` and Merlin `e943745a3`:
 
@@ -68,7 +59,7 @@ Source inspected at triton2MLIR `b77da69` and Merlin `e943745a3`:
   Its current context is host thread-local. Bare-metal context selection needs
   an explicit execution contract; silently discarding isolation is invalid.
 
-## Implementation order
+## Original implementation sequence
 
 1. Add a reusable generated-C executor for execution-owned results in Merlin.
    It must validate actual rank/static dimensions/storage, signed offset/strides,

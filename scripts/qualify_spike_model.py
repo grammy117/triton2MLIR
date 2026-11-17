@@ -62,7 +62,7 @@ def worker(mode, root, out, *arguments):
     out = Path(out)
     if mode == "stage":
         from merlin.frontends.compile_inputs import stage_compile_inputs
-        stage_compile_inputs(arguments[0], out / "compiler")
+        stage_compile_inputs(arguments[0], out / "compiler", result_mode=arguments[1] if len(arguments) > 1 else None)
         checked_stage(out / "compiler")
     elif mode == "build":
         from merlin.llvmlower import toolchain
@@ -72,6 +72,9 @@ def worker(mode, root, out, *arguments):
         from consumer_features import select_features
         manifest = checked_stage(out / "compiler")
         signature = json.loads((out / "compiler/signature.json").read_text())
+        if signature.get("schema") == "merlin.compile-signature.v6":
+            from qualify_spike_owned import build
+            return build(root, out, *arguments)
         effect = manifest.get("source_profile") == "standalone-effect-kernel"
         runtime = (effect or manifest.get("source_profile") == "standalone-tensor-kernel"
                    or signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"))
@@ -141,6 +144,9 @@ def worker(mode, root, out, *arguments):
         build = json.loads((out / "build.json").read_text())
         tools = build["tools"]
         report = build["build"]
+        if report.get("result_mode") == "execution-owned":
+            from qualify_spike_owned import observe
+            return observe(mode, root, out)
         if "effect_observation" in report:
             from qualify_spike_effect import observe
             return observe(mode, root, out)
@@ -309,7 +315,14 @@ def compare(capture, out, rtol, atol, *, comparison="values", word_results=(), r
         **({"word_results": list(word_results)} if word_results else {})}
 
 
-def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values", word_results=(), inputs=None, reference=None):
+def qualify(capture, out, *, merlin_root, python=sys.executable, rtol=0, atol=0, features=(), comparison="values", word_results=(), inputs=None, reference=None, result_mode=None):
+    if result_mode is not None:
+        if result_mode != "execution-owned":
+            raise ValueError("unknown selected target result mode")
+        from qualify_spike_owned import qualify as qualify_owned
+        return qualify_owned(capture, out, merlin_root=merlin_root, python=python,
+            rtol=rtol, atol=atol, features=features, comparison=comparison,
+            word_results=word_results, inputs=inputs, reference=reference)
     from t2m.bundle import verify_bundle
     from t2m.model_runtime_inputs import prepare as prepare_runtime_inputs
     capture, out, root = Path(capture).resolve(), Path(out).absolute(), Path(merlin_root).resolve()
@@ -360,6 +373,9 @@ def verify(out, *, merlin_root, python=sys.executable):
     from t2m.model_runtime_inputs import ARCHIVE, RECORD, verify as verify_runtime_inputs
     out = Path(out)
     report = json.loads((out / "qualification.json").read_text())
+    if report.get("schema") == "t2m.spike-owned-result-qualification.v1":
+        from qualify_spike_owned import verify as verify_owned
+        return verify_owned(out, merlin_root=merlin_root, python=python)
     kernel = report.get("schema") == "t2m.spike-kernel-qualification.v1"
     if (report.get("schema") not in {"t2m.spike-model-qualification.v1", "t2m.spike-kernel-qualification.v1"} or report.get("status") != "passed"
             or report.get("execution_scope") != ("functional-riscv-standalone-kernel" if kernel else "functional-riscv-whole-model")):
@@ -444,8 +460,11 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture", type=Path)
-    parser.add_argument("--inputs", type=Path, help="changed standalone runtime argument archive; requires --reference")
-    parser.add_argument("--reference", type=Path, help="independent complete result archive for changed standalone inputs")
+    parser.add_argument("--inputs", type=Path,
+                        help="changed standalone or execution-owned positional model arguments; requires --reference")
+    parser.add_argument("--reference", type=Path, help="independent complete result archive for changed invocation inputs")
+    parser.add_argument("--result-mode", choices=("execution-owned",),
+                        help="explicit returned-result staging, target driver and observed-shape readback")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--merlin-root", type=Path)
     parser.add_argument("--python", type=Path, default=Path(sys.executable))
@@ -467,7 +486,7 @@ def main():
             parser.error("--capture and --merlin-root are required for execution")
         report = qualify(args.capture, args.out, merlin_root=args.merlin_root, python=args.python,
             rtol=args.rtol, atol=args.atol, features=args.feature, comparison=args.comparison, word_results=args.word_result,
-            inputs=args.inputs, reference=args.reference)
+            inputs=args.inputs, reference=args.reference, result_mode=args.result_mode)
     print(json.dumps({"schema": report["schema"], "status": report["status"], "evaluation": report["evaluation"]}))
 
 

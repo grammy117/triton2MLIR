@@ -5,6 +5,8 @@ words. An exact high-word embedding preserves every BF16 encoding, including
 signaling NaNs; legacy numeric NaN payloads cannot supply those original words.
 The input-axis model profile projects the complete positional argument roster,
 including captured weights. Neither projection reads result references.
+Signature v6 explicitly uses projection v3: complete positional source words
+for execution-owned results, without a result-size program or BF16 embedding.
 """
 
 import hashlib
@@ -32,7 +34,8 @@ def project(capture, signature):
     executing a compiler or reading any output/reference value.
     """
     capture = Path(capture)
-    if signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
+    if signature.get("schema") in ("merlin.compile-signature.v3", "merlin.compile-signature.v4",
+                                   "merlin.compile-signature.v5", "merlin.compile-signature.v6"):
         return _positional(capture, signature)
     manifest = json.loads((capture / "weights.safetensors.manifest.json").read_text())
     inputs = signature["inputs"]
@@ -79,8 +82,10 @@ def _positional(capture, signature):
     python = os.environ.get("T2M_NATIVE_PYTHON") or os.environ.get("MERLIN_COMPILER_PYTHON")
     if not python:
         raise ValueError("symbolic model runtime inputs require the existing native materialization environment")
-    contract = {"schema": "t2m.runtime-shapes.v2", "inputs": signature["inputs"],
-                "outputs": signature["outputs"], "dimension_bindings": signature["dimension_bindings"]}
+    executed = signature["schema"] == "merlin.compile-signature.v6"
+    contract = None if executed else {
+        "schema": "t2m.runtime-shapes.v2", "inputs": signature["inputs"],
+        "outputs": signature["outputs"], "dimension_bindings": signature["dimension_bindings"]}
     if signature["schema"] == "merlin.compile-signature.v4":
         contract.update(schema="t2m.runtime-shapes.v3", shape_program=signature["shape_program"])
     elif signature["schema"] == "merlin.compile-signature.v5":
@@ -89,13 +94,14 @@ def _positional(capture, signature):
     with tempfile.TemporaryDirectory(prefix=".model-invocation-", dir=capture.parent) as directory:
         values, bindings = _arguments(capture, parse_shared((capture / "model.mlir").read_text()),
             Path(directory) / "arguments", python, compiler_support_root=os.environ.get("T2M_MERLIN_ROOT"),
-            shape_contract=contract)
+            shape_contract=contract, dynamic_inputs=executed)
     sources = ["inputs.npz", "extra.npz", "input_order.json", "weights.safetensors",
                "weights.safetensors.manifest.json", "parent/meta.json"]
     if (capture / FILENAME).is_file():
         sources.append(FILENAME)
     return {f"in{i}": value for i, value in enumerate(values)}, {
-        "schema": "t2m.runtime-input-projection.v2", "encoding": "positional-model-argument-source-words",
+        "schema": "t2m.runtime-input-projection.v3" if executed else "t2m.runtime-input-projection.v2",
+        "encoding": "positional-execution-owned-source-words" if executed else "positional-model-argument-source-words",
         "source_members": {name: _record(capture / name) for name in sources}, "arguments": bindings}
 
 

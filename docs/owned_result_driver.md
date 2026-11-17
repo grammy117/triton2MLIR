@@ -41,9 +41,9 @@ The focused Merlin driver/readback/legacy transport selection additionally passe
 `out/compact-model-driver/summary.json`; these observations add no opcode coverage.
 
 This establishes production hosted transport for the selected real TTIR model.
-Normal v6 target staging/build integration, a bare-metal console adapter and
-actual target package qualification remain work in
-[the target plan](execution_result_targets.md). A successful decoder establishes
+The [execution-owned target package](execution_owned_target_packages.md) now adds
+normal v6 staging/build integration, a bare-metal console adapter and separate
+actual target qualification. A successful decoder establishes
 transport/input observations; full independent reference comparison and actual
 process success remain separate qualification requirements. General resizing
 ownership, physical/mutating views, effects and accelerator performance remain open.

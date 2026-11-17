@@ -63,9 +63,10 @@ compiled C/Python compaction and existing ownership/persistence regressions.
 
 ## Remaining integration
 
-This implements the reusable checked C invocation/copy seam. Generic staged
-model-driver generation, target allocator context and layout selection, target
-linking, complete observed-shape readback and actual Spike qualification remain
-in the [target plan](execution_result_targets.md). The current bridge retains
-its selected 64-bit host ABI; the C view helper requires matching size/address
-widths. No accelerator or performance result is inferred from these host tests.
+This implements the reusable checked C invocation/copy seam. The separate
+[generated driver](owned_result_driver.md) and
+[execution-owned target package](execution_owned_target_packages.md) now add
+ordinary staged generation, observed compiler layout, serial allocator context,
+actual linking/readback and Spike qualification. The current bridge retains
+its selected 64-bit ABI; the C view helper requires matching size/address widths.
+Broader executors/effects and accelerator/performance qualification remain open.

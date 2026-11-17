@@ -1,12 +1,20 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Execution-owned target packages](execution_owned_target_packages.md) now run
+the real three-kernel TTIR model through source-only v6 staging, the ordinary
+Merlin builder and actual Spike execution. Four qualified images retain all
+28 original/changed-invocation results. Source-domain/reference failures cannot
+publish success. Retained verification independently replays source staging and
+complete driver/input/wire/reference checks. Resizing/views, broader numeric/
+effect compositions, additional executors and accelerator performance remain.
+
 [Generated owned-result runtime transport](owned_result_driver.md) now executes
 the actual three-kernel compaction LLVM through production hosted C and complete
 observed-shape frames. All 84 results over twelve calls retain exact words;
 two invalid source domains abort before output. The 63-check Merlin selection
 covers source-typed drivers, independent readback, cleanup failures and legacy
-OUT_BIN behavior. Target v6 staging/build/console integration remains open; this
-does not change the historical inventory or qualify accelerator performance.
+OUT_BIN behavior. Selected serial target staging/build/console integration now
+has the separate qualification above. The historical inventory is unchanged.
 
 Updated 2026-11-17. **The end-to-end pipeline works for a broad qualified
 selection; arbitrary-kernel coverage remains incomplete.** The goal is a
@@ -20,8 +28,8 @@ and failure reporting. Actual cross objects and two real Spike runtime images
 pass success/failure checks. The complete Merlin selection passes 152; two
 retained image rechecks preserve source/tool/image/output identities. The real
 TTIR host/C model separately retains its eight passing checks. Production v6
-package-driver/readback integration, rather than a new op conversion, remains
-the next target boundary; the historical TTIR inventory is unchanged.
+package-driver/readback integration now has separate selected evidence above;
+the historical TTIR inventory is unchanged.
 
 [Checked C result calls](checked_c_results.md) now execute the actual three-kernel
 TTIR compaction model without predicted result shapes. Six input sets/twelve
@@ -38,7 +46,7 @@ initial results; six unchanged-library replay inputs retain 42 more results.
 The standalone packing kernel handles zero/truncated/full valid sizes and
 actually aborts for unwritten output. The final four integration checks pass.
 Count/copy stay tensors; packing explicitly uses guarded source-word memory.
-General scan ranges, source compositions, v6 targets and arbitrary coverage
+General scan ranges, source compositions, broader targets and arbitrary coverage
 remain open; the historical inventory is unchanged.
 
 [Automatic memory selection](automatic_memory.md) now explicitly chooses the
@@ -201,7 +209,7 @@ declared source and consumer scope, rather than establish another frontend.
 | Memory and state | Masks/fills, signed runtime strides, selected pointers, closed pointer-integer displacements and same-base byte differences, logical descriptors, owning-root updates, typed/byte aliases and selected atomic profiles. | Physical descriptors/escaping addresses, general shared/external state, synchronization and arbitrary alias/dependency compositions remain open. |
 | Numeric intent | Typed accumulators, low-precision/scaled contractions, composite dot profiles and independent per-cast FP8 contracts. | Explicit software profiles do not establish equivalence to every GPU backend's arithmetic or all normalizer/model combinations. |
 | Provenance | Original source, complete operation accounting, separate normalized graphs and emission correspondence. | Custody and intent annotations grant no omitted arithmetic, memory or effect semantics. |
-| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/constants, runtime scalars, complete tuple results, dependent state, selected value views, source-proved dimensions/words and explicitly selected executed-result staging/host transport. | General physical/mutating views, internally computed producer/binding shapes, value-returning TTIR entries/CFGs, normal v6 qualification receipts and native/target evaluators remain open. |
+| Package and enclosing model | Standalone and model2MLIR-bound captures, weights/constants, runtime scalars, complete tuple results, dependent state, selected value views, source-proved dimensions/words and explicitly selected execution-owned staging/host/C/serial-target transport. | General physical/mutating views, internally computed producer/binding shapes, value-returning TTIR entries/CFGs, a second native evaluator and broader effects/executors remain open. |
 | Consumer execution | Real native execution, reusable Merlin host libraries and selected complete model/kernel images executed on RISC-V/Spike. | Functional CPU execution does not qualify accelerators, hardware placement or preserved performance. |
 
 In roadmap terms, R0's minimum demo is delivered. R1–R5 have working

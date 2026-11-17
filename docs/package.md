@@ -1,5 +1,18 @@
 # Package contract and explicit model2MLIR differences
 
+[Execution-owned target packages](execution_owned_target_packages.md) explicitly
+select `t2m.spike-owned-result-qualification.v1` with runtime input projection v3
+(`positional-execution-owned-source-words`). Source-only signature v6 staging,
+the ordinary Merlin builder and actual observed-shape readback retain every
+original result. The original parent/package receipts and archives are unchanged;
+the separate target receipt binds actual image/process/reference evidence.
+Changed model inputs/parameters use complete positional/reference archives
+together. Legacy target receipts/readers keep their prior requirements. The
+current target selection is serial HTIF; broader executors/effects remain separate.
+The target's historical weights-blob section transports the generated positional
+invocation bytes rather than the original safetensors layout. Original package
+archives and all parameter words remain unchanged.
+
 [Generated owned-result runtime transport](owned_result_driver.md) explicitly
 selects `merlin.owned-result-driver.v1` and
 `merlin.execution-owned-readback.v1`. A separate bounded invocation blob fixes
@@ -58,8 +71,9 @@ the derivation and rechecks every retained output word/reference and host
 observation. Compatibility v2 explicitly names the Merlin host compiler and
 original PyTorch oracle; it claims no separate torch-mlir native execution
 backend. Coverage records that distinction. Old/default readers refuse v2
-without explicit execution-owned selection. Separate native evaluator,
-generated C, target and broader shape/view/effect contracts remain open.
+without explicit execution-owned selection. Generated C and the selected serial
+target now have separate qualification; a second native evaluator and broader
+shape/view/effect/target contracts remain open.
 
 [Execution-produced results](execution_owned_results.md) explicitly select
 Merlin signature v6 and its separate allocation/descriptor ABI through
@@ -69,10 +83,11 @@ extents. Original input constraints and package checks remain, and compiler
 staging receives no evaluator arrays or argument paths. Interface v3 and host
 compilation/evaluation v2 observations distinguish this route; saved native
 program v1 reopens fixed products without compilation. Parent archives and
-capture/package receipt schemas are unchanged. Native evaluator, generated C,
-target harness and normal qualification-receipt extensions remain explicit
-further work; older runtime readers reject v6 rather than preallocating guessed
-results. This adds no physical alias/mutation, numeric or target permission.
+capture/package receipt schemas are unchanged. Generated C and serial target
+execution use explicit additional transport/qualification profiles above;
+older runtime readers reject v6 rather than preallocating guessed results.
+A second native evaluator and broader execution/effect/shape contracts remain.
+This adds no physical alias/mutation or numeric permission.
 
 [Runtime input-word shapes](input_word_shapes.md) select model shape v3,
 checked-word arguments, runtime shapes v4, typed program v2 and independent

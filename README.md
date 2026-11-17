@@ -1,19 +1,24 @@
 # triton2MLIR
 
-The [generated owned-result driver](docs/owned_result_driver.md) now runs the
-real three-kernel model through production hosted C and observed-shape readback.
-All 84 results match across changed input/parameter contents; source guards still
-abort invalid calls. Production v6 target staging/build integration remains open.
+The [execution-owned target package](docs/execution_owned_target_packages.md)
+now takes the real three-kernel model through source-only signature-v6 staging,
+the ordinary Merlin builder and actual Spike execution. Four qualified images
+retain all 28 results; invalid source domains and wrong references cannot publish
+success. Broader views/resizing, numeric/effect combinations and targets remain.
+
+The [generated owned-result driver](docs/owned_result_driver.md) also runs that
+model through production hosted C and observed-shape readback. All 84 results
+match across changed input/parameter contents; source guards still abort.
 
 The [owned-result target seams](docs/execution_result_targets.md) now include
 link-independent lowering and explicit serial allocation context. Real Spike
-runtime fixtures pass results and allocation-failure cases; the full v6 TTIR
-package driver/readback remains open. Real TTIR host/C regressions also pass.
+runtime fixtures pass results and allocation-failure cases. The selected v6 TTIR
+package driver/readback above has separate complete-model qualification.
 
 [Checked generated-C results](docs/checked_c_results.md) now execute the real
 three-kernel compaction model from a standalone C program. Six input sets retain
 all 84 results across two calls each; actual source-domain guards still abort.
-Target model-driver generation, allocator context and readback remain open.
+The selected serial target driver/context/readback now have separate qualification.
 
 [Real Triton compaction](docs/compaction.md) now keeps count, parallel scan,
 masked scatter and dependent consumption through a complete PyTorch package

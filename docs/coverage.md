@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Execution-owned target packages](execution_owned_target_packages.md) now
+qualify four actual whole-model TTIR images with all 28 original/changed-input
+results. Source-domain and wrong-reference failures publish no qualification.
+Three rehashed-record/unaccounted-artifact checks retain independent source and
+wire reconstruction. `out/compact-model-target/summary.json` reopens actual
+images, raw outputs, complete references, tools/source identities and outcomes.
+The combined frontend selection passes 57 with one optional legacy capture skip;
+the separate Merlin runtime selection passes all 142 checks. This closes the
+selected serial v6 package path without expanding historical opcode coverage.
+General views/resizing/numeric/effects, other executors and accelerators remain.
+
 [Link-independent lowering and serial context](execution_result_targets.md)
 now pass the complete 152-check Merlin selection, including real cross objects,
 a Spike image with nine exact standard-MLIR results over three calls, and an

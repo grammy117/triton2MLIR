@@ -1,27 +1,35 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+The [execution-owned target package](docs/execution_owned_target_packages.md)
+now connects source-only v6 staging, the ordinary Merlin builder and observed
+shape readback to actual whole-model Spike execution. Four qualified images
+retain all 28 results; source-domain and reference failures publish no success.
+Retained verification replays independent staging and complete source/input/wire
+checks. Broader resizing/views, numeric/effect compositions and targets remain.
+
 The [source-typed owned-result driver](docs/owned_result_driver.md) now closes
 production hosted invocation and observed-shape transport for the real TTIR
 compaction model. Three unchanged drivers retain all 84 results across twelve
 calls; two original source-domain failures publish no results. The 63-check
-Merlin driver/readback/legacy transport selection passes. Target package staging,
-linking, allocator/console selection and actual v6 target qualification remain.
+Merlin driver/readback/legacy transport selection passes. Its selected serial
+target integration now has the separate complete-model evidence above.
 
 [Target runtime seams](docs/execution_result_targets.md) now lower returned
 descriptors independently of host linking and explicitly select serial context
 and failure reporting. A real Spike fixture retains nine content-derived results
 and an allocation-failure image refuses. Production v6 package staging, generated
-invocation and complete observed-shape readback still require integration.
+invocation and complete readback now have separate serial target qualification.
 
 [Checked C result transport](docs/checked_c_results.md) now implements the first
 execution-sized target prerequisite: actual source execution, complete returned
 descriptor/owner validation and independent copies. Real TTIR model results pass
-from C; staged target generation/linking/readback still require implementation.
+from C; selected serial target generation/linking/readback now have separate evidence.
 
 [Real compaction](docs/compaction.md) now extends execution-sized packages to
 actual parallel scan/indexed-store filtering with dependent consumption and
-all original model results. The mixed tensor/guarded payload and host-only
-qualification are explicit; v6 target and general effect/shape closure remain.
+all original model results. The mixed tensor/guarded payload and original host
+qualification are explicit; selected v6 target execution is now qualified too.
+General effect/shape/target closure remains.
 
 [Explicit automatic memory selection](docs/automatic_memory.md) now chooses
 the first admitted tensor, guarded logical or guarded source-word conversion.

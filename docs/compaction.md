@@ -79,10 +79,13 @@ The standalone kernel also permits valid truncated prefixes; requesting more
 results than selected source values must abort through its actual compiled
 complete-write-coverage guard without publishing output.
 
-This selection qualifies the real PyTorch/Triton model on Merlin host. It does
-not qualify v6 generated-C/Spike harnesses, accelerators, arbitrary filtering
-sizes, cross-program scan carries, physical views or unrestricted alias/effect
-compositions. The historical 352-package/50-name inventory stays unchanged.
+This initial selection qualifies the real PyTorch/Triton model on Merlin host.
+Separate [generated C](owned_result_driver.md) and
+[execution-owned target](execution_owned_target_packages.md) selections now
+qualify production driver/readback and actual Spike execution too. Accelerators,
+arbitrary filtering sizes, cross-program scan carries, physical views and
+unrestricted alias/effect compositions remain open. The historical
+352-package/50-name inventory stays unchanged.
 No performance equivalence is claimed.
 
 The [next target integration plan](execution_result_targets.md) records the
