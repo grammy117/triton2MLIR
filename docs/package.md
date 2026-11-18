@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Functional mutation](functional_mutation.md) explicitly selects
+`t2m.functional-kernel-binding.v1` within binding v4. Original schema/base/result
+ties must match the retained readwrite buffer in both producer and independent
+Merlin reconstruction. Public input/buffer effects use the parent model2MLIR
+`m2m.functional-state-results.v1` ports; they add explicit state outputs relative
+to the imperative PyTorch invocation. Initial archives and every state/user
+reference remain retained. Borrowed entry inputs stay readonly; physical aliases
+and automatic caller copyback remain separate invocation work. Receipt v2 and
+Merlin signature v6 retain their schemas; compatibility names this extension.
+
 [Rank-reducing source views](rank_reduced_source_views.md) additionally record
 `retained_axes` in changed-rank steps under coordinate schema v1/view profile v3.
 Both readers derive these axes from original mixed sizes/types. Earlier records

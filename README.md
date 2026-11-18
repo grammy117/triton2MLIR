@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Functional mutation](docs/functional_mutation.md) now preserves actual mutating
+Triton calls through complete internal/public/buffer-state models. Updated state
+and ordinary observations remain explicit results; source ties are independently
+checked against real readwrite buffers. Host replays and three actual Spike
+images retain every result. Public copyback and general mutated views remain open.
+
 [Rank-reducing source views](docs/rank_reduced_source_views.md) now preserve
 dynamic selections, retained unit strides and scalar observations through
 complete i64/f32 learned-state models. All thirteen results and original kernel

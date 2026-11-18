@@ -138,6 +138,9 @@ def bind_model(model_mlir, bindings, *, result_mode=None):
         raise ConversionError("runtime views require explicit execution-owned model binding")
     prepared = [(b, *b.validate()) for b in bindings]
     original_module = parse_shared(model_mlir)
+    from .functional_kernels import FIELDS
+    if any(FIELDS.intersection(op.attributes) or "prov.functional_state" in op.attributes for op in original_module.walk()):
+        raise ConversionError("functional mutation requires explicit execution-owned model binding")
     module = original_module.clone()
     module.verify()
     functions = {op.sym_name.data: op for op in module.ops if isinstance(op, func.FuncOp)}

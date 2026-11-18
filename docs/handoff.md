@@ -1,5 +1,14 @@
 # Review handoff — updated 2026-11-17
 
+[Functional mutation](functional_mutation.md) now has three actual two-call
+Triton models, complete initial/reference state archives and explicit updated
+state ports. Producer and independent Merlin checks bind each mutation to the
+same source readwrite buffer. All twenty initial, sixty replay and twenty actual
+Spike results retain exact words; twelve rehashed claims refuse and two source
+domains abort. `out/functional-mutation/summary.json` reopens that finite evidence.
+Next implement nontrivial mutated views/shared bases and public invocation
+copyback/alias semantics; these are not supplied by state-result annotations.
+
 [Rank-reducing views](rank_reduced_source_views.md) now retain selected unit
 axes and scalar observations through complete four-call i64/f32 models. Every
 snapshot, pointer root and original loop remains independently checked. The

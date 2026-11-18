@@ -108,6 +108,13 @@ def write(
             "Merlin independently reconstructs their source coordinates and standard adapters; "
             "older v4 readers refuse these fields and no physical alias or mutation permission is added"
         )
+    if "functional_kernel_binding_profile" in trace:
+        compatibility["differences"].append(
+            trace["functional_kernel_binding_profile"] + " extends v4 with original whole-base mutation ties; "
+            "Merlin checks every tie against the retained readwrite buffer and complete result order; "
+            "public input/buffer effects use explicit m2m.functional-state-results.v1 result ports; "
+            "borrowed inputs remain readonly and physical aliases/caller copyback require separate invocation support"
+        )
     if "source_layout_binding_profile" in trace:
         compatibility["differences"].append(
             trace["source_layout_binding_profile"] + " extends v4 with exact source-layout scalar bindings; "

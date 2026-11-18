@@ -84,6 +84,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
                      "src/merlin/frontends/execution_call_views.py", "src/merlin/frontends/derived_source_views.py",
                      "src/merlin/frontends/execution_runtime_views.py",
                      "src/merlin/frontends/execution_source_coordinates.py",
+                     "src/merlin/frontends/execution_functional_state.py",
                      "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_abi.py",
                      "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
                      "merlin/runtime/abi/owned_results.c", "src/merlin/llvmlower/owned_result_c.py",

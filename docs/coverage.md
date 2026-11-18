@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Functional mutation](functional_mutation.md) adds three complete two-call Triton
+models with internal, public-input and registered-buffer state. All twenty initial
+host results, sixty results over nine unchanged-library replays and twenty results
+from three actual Spike images retain exact i64 words. Twelve rehashed profile/
+result/base claims refuse in both readers; two invalid source domains actually
+abort without outputs. The 23-check producer/binding selection and 40-check Merlin
+selection pass; model2MLIR's 102-check capture/trace/word/quality selection passes.
+Counts overlap existing selections. General mutation/alias/effect and accelerator
+scope remains open; the historical 352-package/50-name inventory is unchanged.
+
 [Rank-reducing source views](rank_reduced_source_views.md) add two complete
 four-call models, retaining all twenty-six initial results and seventy-eight
 replay results. Independent native checks cover scalar/empty/unit dimensions

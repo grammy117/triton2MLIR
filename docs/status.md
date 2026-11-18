@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Functional mutation](functional_mutation.md) now retains actual mutating Triton
+calls through internal/public/buffer-state models and explicit state-result ports.
+All twenty initial, sixty replay and twenty target results retain exact words;
+twelve rehashed claims refuse in both readers and two source-domain runs abort.
+General mutated views/shared bases, public aliases/copyback and broader effects
+remain open. This is functional state transport, not an imperative caller adapter.
+
 [Rank-reducing views](rank_reduced_source_views.md) now preserve selected axes,
 distinct retained-unit strides and scalar results through complete models.
 Twenty-six initial and seventy-eight replay results retain exact source words.

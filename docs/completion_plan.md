@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Functional mutation](functional_mutation.md) now carries distinct whole bases,
+ordinary observations and public input/buffer state ports through complete actual
+Triton packages, independent readwrite-tie checks and host/Spike execution.
+Continue with nontrivial mutated views/shared bases, optional/list state, public
+physical aliases/caller copyback, source-version/numeric/effect compositions and
+applicable accelerator materialization. The full arbitrary-kernel goal stays open.
+
 [Rank-reducing views](rank_reduced_source_views.md) now retain exact selected
 axes, distinct unit strides and scalar results through complete learned-state
 models. Continue with general reshape/stride-generation, physical/mutating

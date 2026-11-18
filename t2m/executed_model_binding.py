@@ -54,6 +54,10 @@ def bind(model_mlir, bindings):
         raise ConversionError(
             "executed model binding requires one defined forward entry"
         )
+    from .functional_kernels import PROFILE as FUNCTIONAL_PROFILE
+    from .functional_kernels import call as checked_mutation
+    from .functional_kernels import entry as checked_state
+    functional = checked_state(entries[0])
     records, used = [], set()
     for ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
@@ -109,6 +113,7 @@ def bind(model_mlir, bindings):
                 opcode="func.call",
             )
         binding, function, names, outputs, _ = candidates[0]
+        functional = checked_mutation(call, binding.implementation.spec.as_dict(), names, outputs) or functional
         _, numbers = runtime_constants(
             binding.implementation.spec,
             binding.runtime_arguments,
@@ -278,6 +283,7 @@ def bind(model_mlir, bindings):
             "binding_profile": PROFILE,
             "result_mode": MODE,
             "resource_scope": "execution-allocator-accounted",
+            **({"functional_kernel_binding_profile": FUNCTIONAL_PROFILE} if functional else {}),
             **(
                 {"source_layout_binding_profile": "t2m.captured-source-layout.v1"}
                 if any("source_layout_bindings" in record for record in records)

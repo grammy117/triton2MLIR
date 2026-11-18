@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Functional mutation](docs/functional_mutation.md) now retains ordinary returns,
+complete updated bases and public input/buffer state ports through actual Triton
+model packages, Merlin host replay and three Spike images. Continue with general
+mutated views/shared bases, physical aliases/caller copyback and broader effects.
+The original borrowed-input and lifetime gates remain active.
+
 [Rank-reducing views](docs/rank_reduced_source_views.md) now retain actual
 selected axes, distinct unit strides and scalar results through complete
 i64/f32 learned-state models. Original pointer roots, masks, loops and all
