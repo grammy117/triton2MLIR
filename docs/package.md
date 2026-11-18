@@ -1,5 +1,16 @@
 # Package contract and explicit model2MLIR differences
 
+[Shared mutable views](mutating_views.md) select
+`m2m.functional-kernel-storage.v1` / `t2m.functional-kernel-binding.v2` within
+binding v4. Whole cloned bases and actual coordinate SSA replace independent
+mutable argument values. `mutation_pointer_arguments` records original TTIR
+pointer ordinals; both readers check the same readwrite allocation and offset.
+The selected automatic memory profile uses guarded structured addresses, with
+explicit standard-memory/private admission state. Original public types and
+parent archives, receipt v2 and signature v6 retain their meaning. A scalar bias
+uses the existing count-checked one-element dense adapter. Complete updated state
+remains returned explicitly; no public physical alias/copyback permission follows.
+
 [Functional mutation](functional_mutation.md) explicitly selects
 `t2m.functional-kernel-binding.v1` within binding v4. Original schema/base/result
 ties must match the retained readwrite buffer in both producer and independent

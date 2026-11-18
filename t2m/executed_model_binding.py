@@ -57,7 +57,10 @@ def bind(model_mlir, bindings):
     from .functional_kernels import PROFILE as FUNCTIONAL_PROFILE
     from .functional_kernels import call as checked_mutation
     from .functional_kernels import entry as checked_state
+    from .storage_kernel_binding import PROFILE as STORAGE_PROFILE
+    from .storage_kernel_binding import SOURCE_PROFILE as STORAGE_SOURCE
     functional = checked_state(entries[0])
+    storage = any(call.attributes.get("prov.kernel_functionalization") == builtin.StringAttr(STORAGE_SOURCE) for call in calls)
     records, used = [], set()
     for ordinal, call in enumerate(calls):
         symbol = call.callee.root_reference.data
@@ -113,7 +116,9 @@ def bind(model_mlir, bindings):
                 opcode="func.call",
             )
         binding, function, names, outputs, _ = candidates[0]
-        functional = checked_mutation(call, binding.implementation.spec.as_dict(), names, outputs) or functional
+        functional = checked_mutation(call, binding.implementation.spec.as_dict(), names, outputs,
+            provenance=binding.implementation.trace, pointer_arguments=binding.mutation_arguments,
+            runtime_operands=binding.runtime_operands) or functional
         _, numbers = runtime_constants(
             binding.implementation.spec,
             binding.runtime_arguments,
@@ -249,6 +254,8 @@ def bind(model_mlir, bindings):
         )
         if binding.tensor_views is not None:
             records[-1]["tensor_views"] = binding.tensor_views
+        if binding.mutation_arguments:
+            records[-1]["mutation_pointer_arguments"] = binding.mutation_arguments
         if source_views:
             records[-1]["source_tensor_views"] = source_views
         if binding.source_view_policy is not None:
@@ -283,7 +290,7 @@ def bind(model_mlir, bindings):
             "binding_profile": PROFILE,
             "result_mode": MODE,
             "resource_scope": "execution-allocator-accounted",
-            **({"functional_kernel_binding_profile": FUNCTIONAL_PROFILE} if functional else {}),
+            **({"functional_kernel_binding_profile": STORAGE_PROFILE if storage else FUNCTIONAL_PROFILE} if functional else {}),
             **(
                 {"source_layout_binding_profile": "t2m.captured-source-layout.v1"}
                 if any("source_layout_bindings" in record for record in records)

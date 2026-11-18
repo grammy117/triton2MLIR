@@ -682,7 +682,8 @@ def main(argv=None):
                                                runtime_operands=item.get("runtime_operands", {}), tensor_views=item.get("tensor_views"),
                                                source_layout_arguments=item.get("source_layout_arguments", {}),
                                                source_views=item.get("source_views", {}),
-                                               source_view_policy=item.get("source_view_policy")))
+                                               source_view_policy=item.get("source_view_policy"),
+                                               mutation_arguments=item.get("mutation_arguments", {})))
             write_model_bundle(args.capture, bindings, args.out, work=work / "model", python=args.python,
                                merlin_root=args.merlin_root, merlin_python=args.merlin_python,
                                merlin_host=args.merlin_host, merlin_clang=args.merlin_clang,

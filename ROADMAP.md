@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Shared mutable views](docs/mutating_views.md) now retain complete base state,
+actual coordinates and original TTIR pointer relationships through four real
+two-call models. Preserve overlapping update order; continue with general base
+layouts, optional/list state, public alias/copyback and broader effect/target scope.
+
 [Functional mutation](docs/functional_mutation.md) now retains ordinary returns,
 complete updated bases and public input/buffer state ports through actual Triton
 model packages, Merlin host replay and three Spike images. Continue with general

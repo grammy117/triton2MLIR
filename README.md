@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Shared mutable views](docs/mutating_views.md) now preserve overlapping slices,
+interleaved strides, identical views and dynamic matrix columns through actual
+Triton models. Complete bases, source pointers, updates and snapshots survive
+Merlin host/Spike execution. Source-only selection admits guarded structured
+addresses; general storage layouts, public aliases and copyback remain open.
+
 [Functional mutation](docs/functional_mutation.md) now preserves actual mutating
 Triton calls through complete internal/public/buffer-state models. Updated state
 and ordinary observations remain explicit results; source ties are independently

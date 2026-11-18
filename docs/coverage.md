@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Shared mutable views](mutating_views.md) add four complete two-call models with
+overlapping/identical/interleaved views and dynamic matrix columns. Actual source
+coordinate/pointer checks preserve complete updated bases and every snapshot.
+All 36 initial, 108 replay and 36 actual Spike results retain exact words;
+twenty rehashed claims refuse in both readers and four source domains abort.
+Final receipts and exact-word host/replay/Spike evidence are retained in
+`out/mutating-views/summary.json`. Automatic source-only selection admits guarded
+structured addresses after the tensor-gather refusal; source-word fallback is
+unnecessary. General storage/effect/numeric/accelerator scope remains open and
+the historical 352-package/50-name inventory is unchanged.
+
 [Functional mutation](functional_mutation.md) adds three complete two-call Triton
 models with internal, public-input and registered-buffer state. All twenty initial
 host results, sixty results over nine unchanged-library replays and twenty results

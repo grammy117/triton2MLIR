@@ -61,8 +61,13 @@ class KernelBinding:
     # Source runtime-scalar name -> actual schema SSA operand (including singleton tensors).
     runtime_operands: dict[str, str] = field(default_factory=dict)
     source_view_policy: str | None = None
+    # Mutable Torch argument -> original TTIR pointer argument ordinal.
+    mutation_arguments: dict[str, int] = field(default_factory=dict)
 
     def validate(self):
+        if (not isinstance(self.mutation_arguments, dict) or any(not isinstance(name, str) or not name
+                or type(position) is not int or position < 0 for name, position in self.mutation_arguments.items())):
+            raise ValueError("mutable storage needs named original source pointer positions")
         from .source_view_coordinates import POLICY as SOURCE_POLICY
         if self.source_view_policy not in (None, SOURCE_POLICY) or self.source_view_policy and not self.source_views:
             raise ValueError("runtime source view policy requires actual complete view bindings")

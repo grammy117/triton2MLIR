@@ -110,8 +110,9 @@ def write(
         )
     if "functional_kernel_binding_profile" in trace:
         compatibility["differences"].append(
-            trace["functional_kernel_binding_profile"] + " extends v4 with original whole-base mutation ties; "
-            "Merlin checks every tie against the retained readwrite buffer and complete result order; "
+            trace["functional_kernel_binding_profile"] + " extends v4 with complete-base mutation ties and, "
+            "for v2, original mutable-view pointer positions and actual i64 size/stride/offset SSA; "
+            "Merlin checks each view pointer against the same retained readwrite allocation and source offset; "
             "public input/buffer effects use explicit m2m.functional-state-results.v1 result ports; "
             "borrowed inputs remain readonly and physical aliases/caller copyback require separate invocation support"
         )

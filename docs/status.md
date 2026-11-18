@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Shared mutable views](mutating_views.md) now preserve overlapping slices,
+interleaved strides, identical views and dynamic matrix columns through four
+complete two-call models. Source schemas/geometry, actual pointer offsets and
+complete updated bases remain independently checked. Automatic selection admits
+guarded structured-address memory. General storage/effect/target scope remains open.
+
 [Functional mutation](functional_mutation.md) now retains actual mutating Triton
 calls through internal/public/buffer-state models and explicit state-result ports.
 All twenty initial, sixty replay and twenty target results retain exact words;

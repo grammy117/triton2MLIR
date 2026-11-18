@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Shared mutable views](mutating_views.md) now connect source-regenerated geometry,
+complete cloned bases, actual coordinate SSA and independently checked TTIR
+pointer bindings through real two-call models. Automatic memory admission avoids
+unnecessary source-word lowering. General storage layouts, optional/list/metadata
+state, broader coordinate/effect/numeric combinations and targets remain open.
+
 [Functional mutation](functional_mutation.md) now carries distinct whole bases,
 ordinary observations and public input/buffer state ports through complete actual
 Triton packages, independent readwrite-tie checks and host/Spike execution.

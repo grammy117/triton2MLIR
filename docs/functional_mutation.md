@@ -1,5 +1,10 @@
 # Mutating Triton calls as explicit functional state
 
+[Shared mutable views](mutating_views.md) additionally retain slice/as-strided
+arguments sharing one complete base under an explicit v2 binding extension.
+Source pointer ordinals and real coordinate SSA remain independently checked;
+the original whole-base v1 profile retains its meaning.
+
 The actual Torch `auto_functionalized_v2` operator now reaches the execution-owned
 Merlin interface for distinct whole mutable Tensor bases. Ordinary observations
 and updated state remain separate SSA results. Source review uses Torch 2.10's
@@ -89,7 +94,7 @@ python -m pytest -q tests/test_mutating_state_models.py tests/test_model_binding
 
 ## Remaining scope
 
-General mutated views, shared mutable bases, optional/Tensor-list mutation,
+General base layouts, optional/Tensor-list mutation,
 clone overrides, metadata-changing state, arbitrary returned/public aliases,
 automatic caller copyback and broader effect/numeric/source/target compositions
 remain completion work. Functional state results do not establish a public

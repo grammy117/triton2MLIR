@@ -94,6 +94,8 @@ def _reconstruct(out, receipt, trace):
         }
         if "tensor_views" in record:
             fields["tensor_views"] = record["tensor_views"]
+        if "mutation_pointer_arguments" in record:
+            fields["mutation_arguments"] = record["mutation_pointer_arguments"]
         if "source_tensor_views" in record:
             if "source_view_policy" in record:
                 fields["source_view_policy"] = record["source_view_policy"]

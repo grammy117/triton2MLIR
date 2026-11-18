@@ -10,7 +10,7 @@ PROFILE = "t2m.functional-kernel-binding.v1"
 SOURCE_PROFILE = "m2m.functional-kernel-bases.v1"
 STATE_PROFILE = "m2m.functional-state-results.v1"
 FIELDS = {"prov.kernel_functionalization", "prov.kernel_source_schema", "prov.kernel_mutated",
-          "prov.kernel_tied", "prov.kernel_result_slots"}
+          "prov.kernel_tied", "prov.kernel_result_slots", "prov.kernel_storage_bases", "prov.kernel_storage_views"}
 
 
 def entry(function):
@@ -41,11 +41,23 @@ def entry(function):
     return True
 
 
-def call(operation, spec, mapping, outputs):
+def call(operation, spec, mapping, outputs, *, provenance=None, pointer_arguments=None, runtime_operands=None):
+    from .storage_kernel_binding import FIELDS as STORAGE_FIELDS
+    from .storage_kernel_binding import SOURCE_PROFILE as STORAGE_SOURCE
+    from .storage_kernel_binding import check as checked_storage
+
     present = FIELDS.intersection(operation.attributes)
     if not present:
+        if pointer_arguments:
+            raise ValueError("mutable pointer arguments require the actual storage profile")
         return False
-    if present != FIELDS or operation.attributes["prov.kernel_functionalization"] != builtin.StringAttr(SOURCE_PROFILE):
+    if operation.attributes.get("prov.kernel_functionalization") == builtin.StringAttr(STORAGE_SOURCE):
+        if (present != FIELDS or not isinstance(operation.attributes["prov.kernel_source_schema"], builtin.StringAttr)
+                or not operation.attributes["prov.kernel_source_schema"].data):
+            raise ValueError("mutable storage requires its complete known source contract")
+        return checked_storage(operation, spec, mapping, outputs, provenance or {}, pointer_arguments, runtime_operands or {})
+    if (present != FIELDS - STORAGE_FIELDS or pointer_arguments
+            or operation.attributes["prov.kernel_functionalization"] != builtin.StringAttr(SOURCE_PROFILE)):
         raise ValueError("functional kernel needs its complete known mutation profile")
     schema = operation.attributes["prov.kernel_source_schema"]
     names = operation.attributes["prov.kernel_operands"]

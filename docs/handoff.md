@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-17
 
+[Shared mutable views](mutating_views.md) now retain slice/as-strided aliasing,
+complete bases, actual coordinates and original TTIR pointer offsets through
+four two-call models. Source-only automatic selection chooses guarded structured
+memory; original loops/reuse/snapshots remain. Final qualification evidence is
+under `out/mutating-views/summary.json`: 36 initial, 108 replay and 36 target
+results, twenty rehashed refusals and four actual domain aborts. Continue with general storage layouts,
+optional/list/metadata state, public alias/copyback and broader effect/target scope.
+
 [Functional mutation](functional_mutation.md) now has three actual two-call
 Triton models, complete initial/reference state archives and explicit updated
 state ports. Producer and independent Merlin checks bind each mutation to the
