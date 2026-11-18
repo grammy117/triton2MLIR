@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Rank-reducing source views](docs/rank_reduced_source_views.md) now preserve
+dynamic selections, retained unit strides and scalar observations through
+complete i64/f32 learned-state models. All thirteen results and original kernel
+tiles/loops remain independently checked; general view/effect scope stays open.
+
 [Runtime source views](docs/runtime_source_views.md) now retain dynamic
 transpose/slice geometry through complete i64/f32 learned-state models and
 independent Merlin reconstruction. Actual coordinate guards, original kernel

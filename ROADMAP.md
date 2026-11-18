@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Rank-reducing views](docs/rank_reduced_source_views.md) now retain actual
+selected axes, distinct unit strides and scalar results through complete
+i64/f32 learned-state models. Original pointer roots, masks, loops and all
+thirteen results remain. Continue with broader view/ownership/effect and target scope.
+
 [Runtime source views](docs/runtime_source_views.md) now retain actual dynamic
 transpose/slice coordinates, executable scalar agreement and canonical empty
 branches through complete learned-state models. Independent Merlin reconstruction

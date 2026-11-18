@@ -1,5 +1,9 @@
 # Runtime source views through the Merlin interface
 
+[Rank-reducing source views](rank_reduced_source_views.md) additionally retain
+selected unit axes and scalar views through the same explicit profile. The
+rank-preserving selection below retains its original evidence and meaning.
+
 Explicit `source_view_policy="runtime-logical-coordinates-v1"` connects
 runtime logical source coordinates to execution-owned model binding. It selects
 `t2m.execution-checked-call-views.v3` within binding v4. Static v1 and runtime
@@ -88,7 +92,7 @@ python -m pytest -q tests/test_dynamic_permutation_native.py \
 
 ## Remaining scope
 
-Negative or rank-reducing slices, arbitrary stride-generating operations, physical/mutating
+Negative slices, arbitrary stride-generating operations, physical/mutating
 public aliases, ambiguous result-axis recovery, general ownership/effect/numeric
 compositions and applicable accelerators remain open. The source algorithm and
 tiling remain represented; no GPU correspondence or performance verdict follows.

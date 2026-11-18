@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Rank-reducing source views](rank_reduced_source_views.md) add two complete
+four-call models, retaining all twenty-six initial results and seventy-eight
+replay results. Independent native checks cover scalar/empty/unit dimensions
+and actual index aborts. Eight rehashed claims refuse in both readers; two
+actual Spike images retain all twenty-six results. This selection remains
+separate from the historical TTIR inventory.
+
 [Runtime source views](runtime_source_views.md) add two complete dynamic-matrix
 models with three actual Triton calls each. All eighteen initial results and
 seventy-two unchanged-library replay results retain exact source words. Twelve

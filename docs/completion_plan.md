@@ -1,5 +1,10 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Rank-reducing views](rank_reduced_source_views.md) now retain exact selected
+axes, distinct unit strides and scalar results through complete learned-state
+models. Continue with general reshape/stride-generation, physical/mutating
+views, ownership/effect/numeric/source compositions and applicable targets.
+
 [Runtime source views](runtime_source_views.md) close the reproduced dynamic
 transpose/slice coordinate refusal for rank-preserving positive slices. Complete
 i64/f32 models retain original roots, loops, snapshots and all nine results;

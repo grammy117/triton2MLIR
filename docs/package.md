@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Rank-reducing source views](rank_reduced_source_views.md) additionally record
+`retained_axes` in changed-rank steps under coordinate schema v1/view profile v3.
+Both readers derive these axes from original mixed sizes/types. Earlier records
+retain their meaning; consumers lacking this form refuse it. Public scalar
+results use the existing count-checked dense adapter from one-element ranked
+kernel results. Public types, parent archives, receipt v2 and signature v6 remain
+unchanged; no public physical alias or mutation permission follows.
+
 [Runtime source views](runtime_source_views.md) explicitly select per-call
 `runtime-logical-coordinates-v1` and execution view profile v3 within binding v4.
 Runtime shape/stride/offset guards derive from original standard SSA and the

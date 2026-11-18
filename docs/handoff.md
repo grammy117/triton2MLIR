@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-17
 
+[Rank-reducing views](rank_reduced_source_views.md) now retain selected unit
+axes and scalar observations through complete four-call i64/f32 models. Every
+snapshot, pointer root and original loop remains independently checked. The
+same libraries retain all seventy-eight changed-invocation results. General
+view/ownership/effect and applicable accelerator scope remains open. Two actual
+Spike images retain all twenty-six results; eight rehashed rank/guard claims
+refuse in both readers. See `out/rank-reduced-source-views/summary.json`.
+
 [Runtime source views](runtime_source_views.md) now connect complete i64/f32
 dynamic-matrix models through explicit view profile v3. All eighteen initial
 and seventy-two replay results retain exact source words; twelve rehashed

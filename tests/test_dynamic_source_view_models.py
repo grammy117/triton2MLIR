@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/model/Merlin 
 NAMES = ("root_rows", "root_cols", "rows", "cols", "s0", "s1", "origin", "steps", "bias")
 
 
-def implementation(root, dtype="i64"):
+def implementation(root, dtype="i64", *, root_shape=None, stride_bound=64):
     from t2m.examples.model_view_kernels import update_source_view
 
     root.mkdir(parents=True, exist_ok=False)
@@ -33,11 +33,11 @@ def implementation(root, dtype="i64"):
         **{name: "i32" for name in ("rows", "cols", "s0", "s1", "steps")},
         "bias": "i64", "BM": "constexpr", "BN": "constexpr",
     }, {"BM": 8, "BN": 4}))
-    bounds = ((2, 9), (2, 17), (0, 17), (0, 17), (1, 64), (1, 64), (0, 153), (0, 3), (-9, 9))
+    bounds = ((2, 9), (2, 17), (0, 17), (0, 17), (1, stride_bound), (1, stride_bound), (0, 153), (0, 3), (-9, 9))
     scalars = tuple(RuntimeScalar(name, "i64" if name in ("origin", "bias") else "i32", position + 2,
                                  bounds=bound) for position, (name, bound) in enumerate(zip(NAMES, bounds, strict=True)))
     abi = TensorABI("dynamic_source_view_root", (
-        TensorBuffer("state", ("root_rows", "root_cols"), "readwrite", dtype),
+        TensorBuffer("state", ("root_rows", "root_cols") if root_shape is None else root_shape, "readwrite", dtype),
         TensorBuffer("out", ("rows", "cols"), "write", dtype),
     ), runtime_scalars=scalars, grid=(GridExtent("rows", 8), GridExtent("cols", 4)))
     arguments = (PointerArgument("state"), PointerArgument("state", "origin"), PointerArgument("out"),

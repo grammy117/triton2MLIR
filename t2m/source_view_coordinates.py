@@ -53,6 +53,23 @@ def slice_body(op):
     return positive[0]
 
 
+def retained_axes(extraction):
+    """Match TensorOps.cpp getDroppedDims; only static unit axes may vanish."""
+    sizes, target = static(extraction, "static_sizes"), shape(extraction.result)
+    position, kept = len(target) - 1, []
+    for axis in reversed(range(len(sizes))):
+        size = sizes[axis]
+        if size == 1 and (position < 0 or target[position] != 1):
+            continue
+        if position < 0 or size >= 0 and target[position] >= 0 and size != target[position]:
+            raise ValueError("runtime source slice drops a nonunit axis or changes a retained size")
+        kept.append(axis)
+        position -= 1
+    if position != -1:
+        raise ValueError("runtime source slice does not supply every result axis")
+    return list(reversed(kept))
+
+
 def path(view, root, depth=0):
     target = shape(view)
     shape(root)
@@ -66,7 +83,7 @@ def path(view, root, depth=0):
     extraction = slice_body(op)
     parent = extraction.source if extraction is not None else op.operands[0]
     source = shape(parent)
-    if len(source) != len(target):
+    if extraction is None and len(source) != len(target):
         raise ValueError("runtime source view currently requires rank-preserving coordinates")
     if op.name == "linalg.transpose":
         permutation = static(op, "permutation")
@@ -83,6 +100,7 @@ def path(view, root, depth=0):
             if (len(values) != len(source) or sum(v == builtin.DYNAMIC_INDEX for v in values) != len(getattr(extraction, field))
                     or any(v < 0 and v != builtin.DYNAMIC_INDEX for v in values)):
                 raise ValueError("runtime source slice has incomplete mixed coordinates")
+        retained_axes(extraction)
     elif isinstance(op, tensor.CastOp):
         if len(op.operands) != 1 or any(a >= 0 and b >= 0 and a != b for a, b in zip(source, target, strict=True)):
             raise ValueError("runtime source cast changes logical dimensions")
@@ -149,9 +167,12 @@ class Coordinates(RuntimeViews):
                 for origin, stride in zip(origins, strides, strict=True):
                     offset = self.add(offset, self.product([origin, stride]))
                 strides = [self.product([stride, increment]) for stride, increment in zip(strides, increments, strict=True)]
-                expected = sizes
+                kept = retained_axes(extraction)
+                expected = [sizes[axis] for axis in kept]
+                strides = [strides[axis] for axis in kept]
                 steps.append({"op": op.name, "result_type": str(op.results[0].type),
-                    **{name: static(extraction, "static_" + name) for name in ("offsets", "sizes", "strides")}})
+                    **{name: static(extraction, "static_" + name) for name in ("offsets", "sizes", "strides")},
+                    **({"retained_axes": kept} if len(kept) != len(sizes) else {})})
             else:
                 expected = dimensions
                 steps.append({"op": op.name, "result_type": str(op.results[0].type)})
