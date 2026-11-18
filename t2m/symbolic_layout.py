@@ -221,7 +221,30 @@ def recover_axes(abi, buffer, sizes, strides, offsets, facts, *, evidence=None):
         raise ConversionError("upstream dynamic offsets/strides do not match the declared dense logical axes")
     if len(solutions) > 1 and any(result != solutions[0] for result in solutions[1:]):
         raise ConversionError("dynamic dense axis correspondence is ambiguous")
-    return solutions[0]
+    coordinates, axes = solutions[0]
+    # PtrAnalysis can retain a uniform row-origin contribution in the first
+    # *source* axis even when that axis now varies in columns after transpose.
+    # Its flat address remains correct, but the recovered column origin can
+    # then span entire rows. Repartition only exact dense-stride factors when
+    # a trailing origin demonstrably exceeds its declared logical axis. The
+    # usual access/mask/ownership gates still prove each resulting footprint.
+    if any(not isinstance(buffer.shape[i], str) and coordinates[i].bounds(abi.grid_bounds)[1] >= buffer.shape[i]
+           for i in range(1, len(coordinates))):
+        total = sum(values, Polynomial.constant(0))
+        remainder, partitioned = total, []
+        for stride in expected[:-1]:
+            coordinate, remainder = remainder.split_stride(stride)
+            partitioned.append(coordinate.to_linear())
+        partitioned.append(remainder.divide_stride(expected[-1]))
+        reconstructed = sum((Polynomial.affine(c) * stride for c, stride in zip(partitioned, expected, strict=True)),
+                            Polynomial.constant(0))
+        if reconstructed != total:
+            raise ConversionError("dense transposed origin reconstruction failed")
+        coordinates = tuple(partitioned)
+        if evidence is not None:
+            evidence.append({"kind": "exact-dense-transposed-origin-partition", "buffer": buffer.name,
+                             "axes": list(axes), "coordinates": [asdict(c) for c in coordinates]})
+    return coordinates, axes
 
 
 @dataclass(frozen=True)

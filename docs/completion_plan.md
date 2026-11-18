@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Synchronous program barriers](program_barriers.md) now preserve complete
+standard memory phases for ordinary single-CTA pre-layout source. The real
+runtime-loop tile exchange passes native, reusable host and serial target
+checks without changing the logical grid. Continue with protected allocation
+source custody, general shared/async/atomic effects and participation scopes.
+
 [Shared mutable views](mutating_views.md) now connect source-regenerated geometry,
 complete cloned bases, actual coordinate SSA and independently checked TTIR
 pointer bindings through real two-call models. Automatic memory admission avoids

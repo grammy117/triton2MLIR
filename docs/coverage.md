@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Program barriers](program_barriers.md) add actual captured `ttg.barrier`
+coverage outside the historical fifty-name `tt` denominator. Two representations
+retain complete tile-update/transpose phases through native execution, reusable
+Merlin host libraries and two actual Spike images. Cross-program dependencies
+still refuse statically or abort under actual guarded execution. Broader
+barrier/effect, allocation-wrapper and accelerator/performance scope remains
+open; historical package counts are unchanged.
+
 [Shared mutable views](mutating_views.md) add four complete two-call models with
 overlapping/identical/interleaved views and dynamic matrix columns. Actual source
 coordinate/pointer checks preserve complete updated bases and every snapshot.

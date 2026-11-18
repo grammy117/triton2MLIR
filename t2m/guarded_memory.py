@@ -132,7 +132,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
                  "tts.make_gather_scatter_tptr", "tts.load", "tts.store", "tts.gather", "tts.scatter"}
     if atomics:
         supported.update(("tts.unstructured_atomic_rmw", "tt.atomic_cas"))
-    controls = {"scf.for", "scf.if", "scf.while", "scf.condition", "scf.yield"}
+    controls = {"scf.for", "scf.if", "scf.while", "scf.execute_region", "scf.condition", "scf.yield"}
 
     from .control_flow import complete_parallel_rows
     from .standard_ops import ForallOp

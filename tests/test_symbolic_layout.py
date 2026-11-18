@@ -9,6 +9,25 @@ from t2m.shared_indexing import Linear
 from t2m.symbolic_layout import Polynomial as P, expression, recover_axes
 
 
+def test_transposed_uniform_origin_preserves_every_flat_address():
+    from t2m.dynamic_abi import GridExtent
+    from t2m.scalar_abi import RuntimeScalar
+    from t2m.shared_tensor import TensorABI, TensorBuffer
+
+    buffer = TensorBuffer("state", ("n", 4), "readwrite", "i64")
+    abi = TensorABI("exchange", (buffer,), grid=(GridExtent("n", 4),),
+        runtime_scalars=(RuntimeScalar("n", "i32", 1, bounds=(0, 19)),))
+    origin = P.affine(Linear(programs=(16, 0, 0)))
+    evidence = []
+    coordinates, axes = recover_axes(abi, buffer, (4, 4), (1, 4), (origin, 0), {}, evidence=evidence)
+    assert coordinates == (Linear(programs=(4, 0, 0)), Linear()) and axes == (1, 0)
+    for program in range(5):
+        for u in range(4):
+            for v in range(4):
+                assert 16 * program + u + 4 * v == (4 * program + v) * 4 + u
+    assert evidence[0]["kind"] == "exact-dense-transposed-origin-partition"
+
+
 def test_symbolic_zero_extent_cancels_without_runtime_division():
     n = P.affine(Linear(parameters=(("n", 0, 13, 1),)))
     row = Linear(4, (4, 0, 0))

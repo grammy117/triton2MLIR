@@ -71,7 +71,9 @@ def linear(value, facts, grid):
     if not hasattr(op, "name"):
         raise ConversionError("memory index has an unproved loop/block recurrence")
     name = op.name
-    if name == "arith.constant" and isinstance(op.value, IntegerAttr):
+    if name == "scf.execute_region":
+        result = linear(region_yield(value), facts, grid)
+    elif name == "arith.constant" and isinstance(op.value, IntegerAttr):
         result = Linear(op.value.value.data)
     elif name in ("arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
         result = linear(op.operands[0], facts, grid)
@@ -100,6 +102,20 @@ def linear(value, facts, grid):
         raise ConversionError("logical address arithmetic may overflow")
     facts[value] = result
     return result
+
+
+def region_yield(value):
+    """Read an actual exactly-once single-block result, without hint facts."""
+    op = value.owner
+    if (getattr(op, "name", None) != "scf.execute_region" or len(op.regions) != 1
+            or len(op.regions[0].blocks) != 1 or op.regions[0].block.args):
+        raise ConversionError("region result needs one exactly-once argument-free block")
+    terminator = op.regions[0].block.last_op
+    if (terminator is None or terminator.name != "scf.yield"
+            or len(terminator.operands) != len(op.results)
+            or terminator.operands[value.index].type != value.type):
+        raise ConversionError("region result differs from its actual typed yield")
+    return terminator.operands[value.index]
 
 
 def independent_tile(offsets, sizes, grid):
@@ -304,7 +320,9 @@ def check_source_addresses(module, abi):
             facts[value] = result
             return result
         kind = name(op)
-        if kind in ("tt.get_program_id", "tt.get_num_programs"):
+        if kind == "scf.execute_region":
+            low, high = bounds(region_yield(value))
+        elif kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data
             size = abi.grid_bounds[axis] if axis < len(abi.grid) else 1
             low, high = (0, size - 1) if kind == "tt.get_program_id" else (size, size)

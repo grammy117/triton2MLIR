@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Program barriers](docs/program_barriers.md) now become standard exactly-once
+memory phases with complete tensor versions or synchronous standard accesses.
+A real looped tile-transpose kernel retains cross-lane visibility, tails and
+zero trips through native, Merlin host and selected serial Spike execution.
+Cross-program conflicts still fail; general shared/async effects remain open.
+
 [Shared mutable views](docs/mutating_views.md) now preserve overlapping slices,
 interleaved strides, identical views and dynamic matrix columns through actual
 Triton models. Complete bases, source pointers, updates and snapshots survive

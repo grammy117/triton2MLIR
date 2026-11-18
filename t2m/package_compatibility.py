@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(item.get("kind") == "synchronous-program-memory-phase" for item in trace.get("transformations", [])):
+        differences.append("pinned pre-layout single-CTA barriers become standard exactly-once SCF memory phases at original structured control positions; tensor phases yield complete updated memory versions and standard-memory phases retain actual synchronous accesses; original address-space masks and source IDs remain provenance, while disjoint-program or executable conflict/initialization checks remain authoritative; this supplies no inter-CTA, asynchronous, external-state, atomic-composition or physical-placement permission and changes no public tensor/scalar ABI or receipt schema")
     if "memory_selection" in trace:
         differences.append("explicit automatic memory selection tries proved tensor, guarded logical and guarded source-word representations in deterministic order; original source and ABI alone decide admission, refused candidates retain diagnostics, and the selected profile keeps all ordinary source/memory checks; original numeric, effect, byte-order and source-provider policies are unchanged; the selection record grants no source equivalence, numeric, alias, ownership, target or performance permission")
     if any(item.get("kind") == "integer-address-seed-rebase" for item in trace.get("transformations", [])):

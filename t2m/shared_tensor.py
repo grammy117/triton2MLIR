@@ -49,6 +49,19 @@ DTYPES.update(_FP8_BY_NAME)
 
 
 class SharedParser(LiteralParser):
+    def parse_module(self, *args, **kwargs):
+        module = super().parse_module(*args, **kwargs)
+        # LLVM 24 prints this standard field as an inherent property; xDSL's
+        # binding and Merlin's LLVM 23 bridge retain it as a dictionary attr.
+        # This is structural field transport, not permission to inline a phase.
+        for op in module.walk():
+            if op.name == "scf.execute_region" and "no_inline" in op.properties:
+                field = op.properties.pop("no_inline")
+                if not isinstance(field, builtin.UnitAttr) or "no_inline" in op.attributes:
+                    raise ConversionError("execute-region no_inline must be one standard unit field")
+                op.attributes["no_inline"] = field
+        return module
+
     def _parse_optional_builtin_attr(self):
         attribute = super()._parse_optional_builtin_attr()
         # Native MLIR escapes non-ASCII UTF-8 bytes in string attributes.
@@ -250,6 +263,9 @@ def _integer(value):
         raise ConversionError("memory descriptor depends on an unspecialized block argument")
     if op.name == "arith.constant" and isinstance(op.value, IntegerAttr):
         return op.value.value.data
+    if op.name == "scf.execute_region":
+        from .shared_indexing import region_yield
+        return _integer(region_yield(value))
     if op.name in ("arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
         number = _integer(op.operands[0])
         target = value.type
@@ -333,6 +349,9 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
         elif name == "tt.print":
             from .source_prints import contract as print_contract
             records[-1]["source_print"] = print_contract(op,source_id)
+        elif name == "ttg.barrier":
+            from .program_barriers import contract as barrier_contract
+            records[-1]["program_barrier"] = barrier_contract(op, source_id)
         elif name == "tt.extern_elementwise":
             from .external_math import contract as external_math_contract
             records[-1]["external_math"] = external_math_contract(op, source_id)
@@ -763,7 +782,7 @@ def _functionalize(module, abi):
         active = tuple(physical[axis] for axis in axes)
         return buffer, sizes, tuple(offsets), active, axes, mask
 
-    def translate(source_block):
+    def translate(source_block, *, phase_body=False):
         nonlocal body, loop_counter
         for op in source_block.ops:
             name = opcode(op)
@@ -771,6 +790,50 @@ def _functionalize(module, abi):
                 if len(op.results) != 1 or not _pointer_type(op.results[0].type) or not all(
                         _unused_pointer_initialization(use) for use in op.results[0].uses):
                     raise ConversionError("poison is observable outside unused pointer carrier initialization", opcode=name)
+            elif name == "scf.execute_region":
+                if len(op.regions) != 1 or len(op.regions[0].blocks) != 1 or op.regions[0].block.args:
+                    raise ConversionError("tensor memory phases require one argument-free block", opcode=name)
+                source_body = op.regions[0].block
+                terminator = source_body.last_op
+                if terminator is None or opcode(terminator) != "scf.yield" or len(terminator.operands) != len(op.results):
+                    raise ConversionError("tensor memory phase has an incomplete source yield", opcode=name)
+                previous, body = body, Block()
+                translate(source_body, phase_body=True)
+                kept, pointer_results, yielded = [], [], []
+                for result, value in zip(op.results, terminator.operands, strict=True):
+                    if _pointer_type(result.type):
+                        if value not in descriptors:
+                            raise ConversionError("phase pointer result needs a recovered logical descriptor", opcode=name)
+                        pointer_results.append((result, descriptors[value]))
+                    else:
+                        kept.append((result, mapping[value]))
+                        yielded.append(mapping[value])
+                yielded.extend(states[b.name] for b in writable)
+                for _, (_, _, offsets, _) in pointer_results:
+                    for off in offsets:
+                        yielded.append(off.value if off.value is not None else
+                            append(arith.ConstantOp.from_int_and_width(off.form.constant, IndexType()), op).result)
+                body.add_op(scf.YieldOp(*yielded))
+                nested, body = body, previous
+                phase = scf.ExecuteRegionOp([value.type for value in yielded], Region(nested))
+                if "no_inline" in op.attributes:
+                    phase.attributes["no_inline"] = builtin.UnitAttr()
+                append(phase, op)
+                for (old, value), new in zip(kept, phase.results[:len(kept)], strict=True):
+                    mapping[old] = new
+                    if isinstance(value.type, (builtin.IntegerType, IndexType)):
+                        try:
+                            facts[new] = linear(value, facts, grid)
+                        except ConversionError:
+                            pass  # No affine fact follows for arbitrary numeric state.
+                states.update((b.name, value) for b, value in
+                    zip(writable, phase.results[len(kept):len(kept) + len(writable)], strict=True))
+                cursor = len(kept) + len(writable)
+                for result, (buffer, sizes, offsets, strides) in pointer_results:
+                    projected = tuple(Coordinate(off.form, value) for off, value in
+                        zip(offsets, phase.results[cursor:cursor + len(offsets)], strict=True))
+                    descriptors[result] = buffer, sizes, projected, strides
+                    cursor += len(offsets)
             elif name == "scf.if":
                 source_conditionals.append({"source_ids": _source_ids(op.location),
                                             "memory": "branch-results-carry-tensor-versions",
@@ -891,6 +954,8 @@ def _functionalize(module, abi):
                     descriptors[op.results[i]] = buffer, sizes, tuple(final), strides
                     cursor += rank
             elif name == "scf.yield":
+                if phase_body:
+                    continue  # The enclosing phase explicitly yields complete memory versions.
                 values, coordinates = [], []
                 for value in op.operands:
                     if _pointer_type(value.type):
@@ -1220,7 +1285,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     original_precision = any(needs_dot_precision_expansion(op) for op in parsed.walk())
     from .cfg_intake import required as requires_cfg
     has_cfg = requires_cfg(parsed)
-    protect_source = protect_source or original_precision or has_cfg or bool(literal_words)
+    has_barriers = any(opcode(op) == "ttg.barrier" for op in parsed.walk())
+    protect_source = protect_source or original_precision or has_cfg or bool(literal_words) or has_barriers
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
     from .descriptor_arguments import has_parameters
@@ -1246,6 +1312,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if protect_source:
         from .source_graph import inventory
         protected_inventory = inventory(parsed, records, literal_words=literal_words)
+    from .program_barriers import expand as expand_program_barriers
+    barrier_reports = expand_program_barriers(parsed, _source_ids)
     literal_reports = materialize_literal_words(parsed, literal_words, source_ids=_source_ids)
     early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow,
         tensor_carrier="arith") if protect_source else []
@@ -1265,7 +1333,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     stream = StringIO()
     Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(parsed)
     annotated.write_text(stream.getvalue() + "\n")
-    if native_source_print is not None or deferred_descriptor_abi or original_precision or has_cfg:
+    if native_source_print is not None or deferred_descriptor_abi or original_precision or has_cfg or has_barriers:
         # Source contracts are now executable standard arithmetic. Normalize
         # old pointer/descriptor types and composite precision before shared's
         # inliner can fold or discard the original source operations.
@@ -1449,6 +1517,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
             "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
+    transformations.extend(barrier_reports)
     transformations.extend(literal_reports)
     transformations.extend(pointer_address_reports)
     transformations.extend(assembly_reports)
@@ -1571,6 +1640,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         next(iter(result.ops)).attributes["prov.source_prints"] = StringAttr(json.dumps(print_reports,sort_keys=True))
     if source_assertions:
         next(iter(result.ops)).attributes["prov.source_assertions"] = StringAttr(json.dumps(source_assertions, sort_keys=True))
+    if barrier_reports:
+        next(iter(result.ops)).attributes["prov.program_barriers"] = StringAttr(json.dumps(
+            [report["contract"] for report in barrier_reports], sort_keys=True))
     source_names = {r["id"]: r["opcode"] for r in records}
     contractions = {record["id"]: {**record["dot_numeric"], "intake_accumulator_value":record["inputs"][2]}
         for record in records if "dot_numeric" in record}

@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Program barriers](program_barriers.md) add the explicit
+`t2m.synchronous-program-barrier.v1` source contract. Exact masks/source positions
+remain in the original inventory and `prov.program_barriers`; actual standard
+SCF phases carry complete tensor versions or synchronous standard accesses.
+Compatibility names this abstraction and its single-CTA/private invocation
+scope. Public tensor/scalar ABI and receipt schemas are unchanged. This grants
+no shared/external/async or cross-program effects; allocation-source capsules
+still require their separate protection integration.
+
 [Shared mutable views](mutating_views.md) select
 `m2m.functional-kernel-storage.v1` / `t2m.functional-kernel-binding.v2` within
 binding v4. Whole cloned bases and actual coordinate SSA replace independent
