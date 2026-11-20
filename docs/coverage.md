@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Dense mutable storage permutations](storage_permutations.md) now qualify two
+complete transpose/rank-three models with exact source layout proofs and actual
+standard normalization. All sixteen initial, forty-eight host replay and sixteen
+serial target results survive. Ten rehashed claims refuse in both readers;
+two original domains abort. Model2MLIR regression passes 84 plus two revised
+unit-axis cases, Merlin contracts 27, new models ten and legacy matrix one,
+with overlap. `out/storage-permutations/summary.json` reopens the finite evidence.
+General layouts/effects and accelerator coverage remain open; the historical
+352-package opcode inventory is unchanged.
+
 [CFG program phases](cfg_program_phases.md) now qualify scalar early exits,
 tile updates/transpose observations and complete void allocation wrappers.
 Eight native configurations retain 120 results; four protected Merlin libraries

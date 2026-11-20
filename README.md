@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Dense mutable storage permutations](docs/storage_permutations.md) now retain
+transposed/rank-three cloned roots through explicit standard tensor operations.
+Two complete models preserve all eight results through changed-shape host
+replays and actual serial Spike execution. Source stride queries use checked
+dimension products; general storage/effect and accelerator coverage remain open.
+
 [CFG program phases](docs/cfg_program_phases.md) now preserve synchronous tile
 dependencies under original scalar early exits. Complete void allocation
 wrappers retain every source block; native and reusable Merlin execution pass.

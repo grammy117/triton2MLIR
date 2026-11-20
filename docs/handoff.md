@@ -1,5 +1,21 @@
 # Review handoff — updated 2026-11-20
 
+[Dense mutable storage permutations](storage_permutations.md) now close the
+reported `x.T.clone()` refusal and the rank-three source-stride importer gap.
+Model2MLIR `3ebbe89` proves exact zero-origin dense order, reuses standard
+permutation lowering, restores complete updated bases and checks actual source
+shape ancestry. Existing functional storage/package/consumer profiles remain.
+Two complete models retain sixteen initial, forty-eight replay and sixteen
+actual serial results. Ten rehashed claims refuse in both readers and two
+original domains abort. The final new-model selection passes ten, legacy matrix
+one, model2MLIR regression 84 plus two revised unit-axis cases, and independent
+Merlin contracts 27, with overlap. `out/storage-permutations/summary.json`
+reopens source-pinned packages, archives, outputs, targets, refusals and aborts.
+The foreign model2MLIR docstring whitespace remains outside the commit.
+Continue hidden/general storage, metadata/list state, public aliases/copyback,
+broader source/numeric/effect composition and applicable accelerator coverage;
+full arbitrary-kernel coverage stays open.
+
 [CFG program phases](cfg_program_phases.md) now close the reproduced original
 early-return/barrier and complete-void allocation-wrapper refusals. Both readers
 derive scalar whole-program participation from actual CFG edges and block

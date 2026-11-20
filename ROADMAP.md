@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Dense mutable storage permutations](docs/storage_permutations.md) now preserve
+zero-origin transpose/rank-three roots and shared matrix views through complete
+models. Standard normalization/inverse operations retain logical results and
+snapshots. Continue general layouts/hidden storage, optional/list and metadata
+state, public copyback/aliases and broader source/effect/target composition.
+
 [CFG program phases](docs/cfg_program_phases.md) now retain original scalar
 early exits, runtime loops and actual synchronized tile state through native
 and Merlin execution. Complete void allocation entries retain their CFG behind

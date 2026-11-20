@@ -1,5 +1,11 @@
 # Shared mutable views through the Merlin interface
 
+[Dense storage permutations](storage_permutations.md) additionally qualify
+transposed and rank-three cloned roots with explicit standard normalization,
+source stride products and inverse updated-base results. That separate two-model
+selection retains eight user results per model; the original four public-root
+models and their nine-result evidence below keep their original scope.
+
 Actual Torch-functionalized Triton calls may now retain several mutable views
 of one complete base. The compiler preserves shared storage inside each call;
 independent view copies and later scatters would change overlapping updates.

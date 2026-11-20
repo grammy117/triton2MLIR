@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[Dense mutable storage permutations](storage_permutations.md) add real standard
+transpose normalization and inverse updated-base result adapters. The existing
+storage-v1 call, functional binding v2 within executed binding v4, receipt v2
+and signature v6 keep their meanings. Original coordinates address the canonical
+root; ordinary results remain unchanged. Provenance records source intent but
+does not supply normalization semantics. Internal cloned examples return eight
+user results without public-input state ports. Guarded structured/source-word
+payloads remain explicit differences from pure tensor computation; no public
+physical alias, caller copyback or new effect/target contract is introduced.
+
 [CFG program phases](cfg_program_phases.md) optionally add the explicit
 `source_control = whole-program-scalar-cfg-v1` field to existing v1/v2/v3/v4
 barrier contracts. Both readers check actual scalar conditions, same-region

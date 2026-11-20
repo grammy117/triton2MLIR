@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Dense mutable storage permutations](storage_permutations.md) close the concrete
+`x.T.clone()` storage/correspondence refusal and rank-three `sym_stride` gap.
+Two complete two-call models retain every result and snapshot through host
+replays and actual serial images. Standard transposes express normalization;
+source words remain an explicit granularity difference for matrix-view address
+arithmetic. General layouts/hidden storage, aliases/copyback, broader effects
+and accelerator closure remain open.
+
 [CFG program phases](cfg_program_phases.md) now preserve original scalar early
 exits and synchronous tile dependencies through protected source, complete
 i64/f32 models and actual serial target execution. All twelve model results,
