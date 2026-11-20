@@ -132,8 +132,13 @@ reopens those four libraries and the final model: 18 initial results, 78 replay
 results and 36 exact-word serial results across ten actual images, plus the
 invalid-model-step abort. All parent archives, package compatibility and actual
 target receipts are checked. The reopening log is
-`.scratch/runtime-pointer-report4.log`; observed reopening revisions are not a
-claim of complete build dependency closure.
+`.scratch/runtime-pointer-report5.log`; observed reopening revisions are not a
+claim of complete build dependency closure. Thirteen selected implementation,
+test and capture-helper files match commit
+`5d9623573b54686385e83442ae9bd84d06a2334e`. The unchanged companions are
+model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`.
 
 General non-step-coupled or conditional pointer recurrences, while/alias
 ownership, dynamic root projection, variable-step store-image coverage,
@@ -141,3 +146,15 @@ shared/asynchronous participation, broader numeric/source compositions and
 applicable accelerator correctness/performance remain completion work. Retained
 tiling and reuse are not a performance benchmark. These qualifications change
 no TTIR operation-name denominator.
+
+## Next reproduced boundary
+
+`.scratch/runtime-pointer-final-only1/` removes the body loads from the same
+two-stream source, retaining pointer advancement and the final reads. Source
+normalization succeeds, but the native numeric loop then takes the existing
+pure-value cloning path. That path does not bind its actual exit result to the
+checked enclosure, so final coordinate recovery refuses with an unproved
+affine expression. This is a local representation boundary, not a GPU-specific
+operation to discard. Continue by qualifying actual exit-state facts through
+pure numeric loop cloning, while retaining the original loop and final loads.
+The saved conversion refusal is not native, host or target qualification.

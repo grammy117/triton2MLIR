@@ -12,10 +12,18 @@ Logs and historical failed source/harness probes remain in the linked contract.
 `out/runtime-pointer-steps/summary.json` reopens 18 initial, 78 replay and 36
 exact-word serial results across ten images, plus the model abort. Its kernel
 packages come from the subsequent eight-check compatibility/host/target run;
-the reopening log is `.scratch/runtime-pointer-report4.log`.
+the reopening log is `.scratch/runtime-pointer-report5.log`. Thirteen selected
+producer sources match implementation `5d9623573b54686385e83442ae9bd84d06a2334e`;
+unchanged companion pins are model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2`
+and Merlin `53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. This is not a full dependency closure.
 No companion source change is required. Continue conditional/non-step-coupled
 pointer state, while/alias ownership, dynamic roots, variable-step store images,
 shared/async and applicable numeric/source/target closure; the full goal is open.
+The next actual refusal is `.scratch/runtime-pointer-final-only1/`: removing
+body loads leaves a pure numeric loop whose actual exit result currently lacks
+coordinate facts after cloning. Preserve that loop and its final reads while
+extending the same executable exit-edge proof; the linked contract records it.
 
 [Variable source loop headers](runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
