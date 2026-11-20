@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Interleaved fresh tiles](docs/interleaved_tiles.md) now retain independent
+output groups, cross-output observations and predicates, immutable reloads and
+input-state updates as tensor computation. Logical parallelism and original
+memory/data dependencies remain; general memory/effect/target closure is open.
+
 [Fresh tile partitions](docs/tile_partitions.md) now retain data-dependent tile
 writes and intermediate observations as pure tensor computation. Source-ordered
 selects preserve overlap behavior and active tails; logical parallelism remains

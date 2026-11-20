@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-20
 
+[Interleaved fresh tiles](interleaved_tiles.md) now close the distinct-output
+refusal while retaining cross-output observations and predicates, immutable
+reloads and original input-state updates. The 33-check focused selection and
+132 earlier source/tile/memory/attention regressions pass. Reopening
+`out/interleaved-tiles/summary.json` retains 36 initial, 158 replay and 72 exact
+target results, fourteen actual serial images, and an original-domain abort.
+All eleven complete-model results and five state-kernel results remain.
+
+Final logs are `.scratch/interleaved-final1.log`,
+`.scratch/interleaved-regression1.log` and `.scratch/interleaved-report1.log`.
+The first model attempt's missing serial helper import remains recorded; the
+final run fixes the test harness and actually executes both model images.
+The next reproduced tensor-only refusal is
+`.scratch/branch-tile-probe2/source.ttir`, whose complete alternative writes
+cross a scalar branch boundary. It is failed source evidence, not a successful
+package or a refusal measurement for every other profile. General pointer/
+region, shared/async, source/numeric and target requirements remain open.
+
 [Fresh tile partitions](tile_partitions.md) now close the reproduced fresh
 masked-tile refusal while retaining parallel structure, overlap order and
 intermediate observations. A complete two-call model preserves every result

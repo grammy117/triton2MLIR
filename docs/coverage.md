@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Interleaved fresh tiles](interleaved_tiles.md) pass 33 focused checks and 132
+earlier source/tile/memory/attention regressions. The reopening selection retains
+six kernel libraries and one complete model: 36 initial, 158 replay and 72 exact
+target results across fourteen actual serial images, plus an original-domain
+abort. Cross-output data/control observations and updated input state remain.
+General address/region/effect/target closure and the historical operation-name
+denominator remain unchanged.
+
 [Fresh tile partitions](tile_partitions.md) add source-ordered, pointwise
 coverage of same-address fresh writes, including nested alternatives, overlap
 and intermediate observations. Parallel logical tiles and complete model

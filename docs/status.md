@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Interleaved fresh tiles](interleaved_tiles.md) now retain independent result
+groups across ordinary accesses to other roots. Cross-output observations and
+predicates, immutable reloads and input-state updates remain tensor computation.
+All eleven complete-model results reach host/replays and actual serial images.
+General pointer/region dependencies, shared/async and target closure remain open.
+
 [Fresh tile partitions](tile_partitions.md) now close the reproduced first
 masked-write refusal without reading incoming fresh storage. Actual coverage
 re-raises ordered alternatives and intermediate observations into tensor values;

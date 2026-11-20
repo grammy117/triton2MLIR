@@ -12,6 +12,9 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-tile-write-partition" and row.get("independent_roots")
+           for row in trace.get("transformations", [])):
+        differences.append("fresh functional result allocations may keep independent tile write groups across ordinary accesses to other actual ABI roots; same-root observations are re-proved against preceding writes using current SSA after sibling reconstruction; ordinary input-state accesses retain their original operations and order, without granting independence between input roots; unknown addresses, same-root address changes, calls, control regions and nonordinary effects remain boundaries; source widths, complete geometry, ownership, public ABI and receipt schemas retain their separate contracts")
     if any(row.get("kind") == "source-tile-write-partition" for row in trace.get("transformations", [])):
         differences.append("actual same-address fresh tile writes may re-raise to source-ordered pointwise selects when their Boolean union equals a retained source predicate; same-address intermediate reads require implication from their actual active mask to preceding writes and retain their fills; no incoming storage is read or lane declared initialized by a fill; original TTIR and transformation correspondence remain; source bounds, complete geometry, ownership, effects and numeric policies remain independent; public ABI, receipt schemas and artifact rosters are unchanged")
     if any(proof.get("condition_coverage") == "actual-source-boolean-partition"

@@ -1,5 +1,11 @@
 # Fresh tile partitions retain parallel tensor computation
 
+[Interleaved fresh groups](interleaved_tiles.md) extend the original scope below
+across ordinary accesses to distinct actual roots, including input-state
+updates. Same-root observations are re-proved from current SSA; unknown effects,
+changed same-root addresses and control regions remain boundaries. The original
+single-root qualification below retains its recorded revision and scope.
+
 Complementary data-dependent writes to a fresh output tile now re-raise before
 native pointer conversion. The actual same-address source writes become an
 ordered select chain and one covered store; ordinary same-address observations
@@ -41,7 +47,7 @@ and behavior. The decision-diagram budgets still apply.
 `tile_partitions.expand_tile_partitions` requires a fresh ABI root and the same
 typed source pointer expression. It traverses no more than 32 pointer-expression
 levels and collects at most 128 memory events and 128 candidate predicates per
-group. The group stays in its actual block; unknown operations, different memory
+group. The group stays in its actual block; unknown operations, changed same-root
 accesses, region control and volatile observations form boundaries. Intervening
 value operations remain at their original points. Store properties must agree.
 An intermediate read requires its actual active mask to imply a preceding
@@ -128,14 +134,14 @@ python -m pytest -q tests/test_source_boolean.py tests/test_partial_initializati
   tests/test_partition_model.py --basetemp=.scratch/pytest-tile-partitions
 ```
 
-The next reproduced source gap is
+The next reproduced source gap at that revision was
 `.scratch/interleaved-tiles-probe1/source.ttir`: positive writes to distinct
 fresh outputs `a` and `b` precede their complementary negative writes.
-Both results have complete valid-lane coverage, but the current group collector
-treats the other output's store as a boundary and the tensor path refuses.
-Extend collection using actual disjoint fresh-root facts while retaining
-cross-root observations and unknown/overlapping effects. The failed probe
-supplies no package or target qualification.
+Both results have complete valid-lane coverage, but the original collector
+treated the other output's store as a boundary and the tensor path refused.
+The interleaved implementation above now closes this form using actual
+disjoint fresh-root facts while retaining cross-root observations and unknown/
+overlapping effects. The original failed probe supplies no qualification.
 
 General store groups across regions or other memory events, different equivalent
 pointer expressions, inter-lane dependencies, richer numeric predicate facts,

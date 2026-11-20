@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Interleaved fresh tiles](docs/interleaved_tiles.md) now close the reproduced
+two-output refusal. Actual fresh-root disjointness permits independent groups
+while current-SSA proofs retain cross-output data/control dependencies and
+ordinary input-state ordering. Continue general address and region/effect
+dependencies, shared/async participation and applicable targets.
+
 [Fresh tile partitions](docs/tile_partitions.md) now re-raise complementary,
 three-way and overlapping same-address writes into source-ordered selects with
 their actual covered store. Intermediate observations retain their masks/fills;

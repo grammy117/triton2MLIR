@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Interleaved fresh tiles](interleaved_tiles.md) now close the reproduced
+distinct-output refusal using actual functional fresh-root facts. Cross-output
+data/control observations and ordinary input-state order survive complete model
+execution. Continue pointer/region dependencies, shared/async participation,
+source/numeric closure and applicable targets; the full endpoint remains open.
+
 [Fresh tile partitions](tile_partitions.md) now re-raise same-address masked
 writes and intermediate observations before native pointer conversion. Actual
 Boolean coverage preserves source order and active tails without an incoming

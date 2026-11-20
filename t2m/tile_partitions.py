@@ -7,11 +7,24 @@ No incoming storage is read, no lane is invented as initialized, and later
 native pointer/ownership analyses still decide admission.
 """
 
+from dataclasses import dataclass, field
+
 from xdsl.dialects import arith, builtin
 from xdsl.ir import Operation
 from xdsl.rewriter import Rewriter
 
 from .source_boolean import BooleanCoverage
+
+
+@dataclass
+class _Group:
+    key: tuple
+    type: builtin.TensorType
+    properties: dict
+    events: list = field(default_factory=list)
+    independent_roots: set = field(default_factory=set)
+    readonly_reads: list = field(default_factory=list)
+    other_accesses: list = field(default_factory=list)
 
 
 def expand_tile_partitions(module, abi, source_ids):
@@ -21,38 +34,38 @@ def expand_tile_partitions(module, abi, source_ids):
     if len(entries) != 1 or len(entries[0].regions[0].blocks) != 1:
         return []
     entry = entries[0].regions[0].block
-    fresh = {arg for arg, (kind, buffer) in zip(entry.args, abi.source_bindings, strict=True)
-             if kind == "buffer" and buffer.effect == "write"}
+    roots = {arg: buffer for arg, (kind, buffer) in zip(entry.args, abi.source_bindings, strict=True) if kind == "buffer"}
+    fresh = {arg for arg, buffer in roots.items() if buffer.effect == "write"}
     reports = []
 
     def pointer(value, depth=0):
         if depth >= 32:
             return None
-        if value in fresh:
-            return "fresh", value
+        if value in roots:
+            return value, ("root", value)
         op = value.owner
         if not isinstance(op, Operation):
             return None
         name = opcode(op)
         if name not in ("tt.splat", "tt.addptr", "tt.broadcast", "tt.expand_dims", "tt.trans"):
             return None
-        base = pointer(op.operands[0], depth + 1)
-        if base is None:
+        recovered = pointer(op.operands[0], depth + 1)
+        if recovered is None:
             return None
-        return name, value.type, tuple(sorted(op.properties.items())), base, tuple(op.operands[1:])
+        root, base = recovered
+        return root, (name, value.type, tuple(sorted(op.properties.items())), base, tuple(op.operands[1:]))
 
     def ordinary(op, *, load=False):
         if opcode(op) != ("tt.load" if load else "tt.store") or len(op.operands) not in ((1, 2, 3) if load else (2, 3)):
-            return False
-        if not isinstance(op.operands[0].type, builtin.TensorType):
             return False
         if load:
             # Cache/eviction hints carry no value semantics; volatile does.
             volatile = op.properties.get("isVolatile")
             if volatile is not None and (not isinstance(volatile, builtin.IntegerAttr) or volatile.value.data):
                 return False
-            return len(op.results) == 1 and isinstance(op.results[0].type, builtin.TensorType)
-        return not op.results and isinstance(op.operands[1].type, builtin.TensorType)
+            return len(op.results) == 1
+        return (not op.results and isinstance(op.operands[0].type, builtin.TensorType)
+                and isinstance(op.operands[1].type, builtin.TensorType))
 
     def pure(op):
         name = opcode(op)
@@ -60,14 +73,31 @@ def expand_tile_partitions(module, abi, source_ids):
             "tt.splat", "tt.addptr", "tt.make_range", "tt.broadcast", "tt.expand_dims", "tt.trans",
             "tt.reshape", "tt.cat", "tt.join", "tt.split", "tt.bitcast"})
 
-    def flush(events, proof, conditions):
+    def flush(group):
+        events = group.events
         stores = [op for op in events if opcode(op) == "tt.store"]
         if len(stores) < 2:
             return
-        guards = [proof.condition(op.operands[2]) if len(op.operands) == 3 else 1 for op in stores]
-        total = 0
-        for guard in guards:
-            total = proof.combine("or", total, guard)
+        # A sibling group may already have reconstructed an exact observation.
+        # Re-read current actual SSA, including predicates, to avoid stale
+        # candidates or cached facts about erased load results.
+        proof, conditions, total = BooleanCoverage(pointwise_tensors=True), [], 0
+        mask_type = builtin.TensorType(builtin.i1, group.type.get_shape())
+        for op in events:
+            if opcode(op) == "tt.store":
+                if len(op.operands) == 3 and op.operands[2].type != mask_type:
+                    return
+                guard = proof.condition(op.operands[2]) if len(op.operands) == 3 else 1
+                total = proof.combine("or", total, guard)
+                if len(op.operands) == 3:
+                    collect(op.operands[2], conditions, mask_type)
+            else:
+                segments = _array(op, "operandSegmentSizes")
+                valid = segments == (1, 0, 0) or (segments == (1, 1, 1) and op.operands[1].type == mask_type
+                                                               and op.operands[2].type == group.type)
+                premise = proof.condition(op.operands[1]) if len(op.operands) == 3 else 1
+                if not valid or not proof.covers([total], premise=premise):
+                    return
         if total in (None, 0):
             return
         # Prefer an actual dominating source predicate, preserving rectangular
@@ -120,7 +150,10 @@ def expand_tile_partitions(module, abi, source_ids):
             "writes": len(stores), "coverage": "actual-pointwise-boolean-union-equals-retained-source-mask" if total != 1 else
                 "actual-pointwise-boolean-union-is-unconditional", "order": "source-last-active-write",
             "initialization": "no-incoming-storage-read; complete-geometry-and-active-read-proofs-still-required",
-            "memory": "same-typed-source-pointer-expression; fresh-ABI-root; no-intervening-effect",
+            "memory": "same-typed-source-pointer-expression; fresh-functional-result-disjoint-from-other-ABI-roots",
+            "independent_roots": sorted(group.independent_roots),
+            "unchanged_readonly_read_ids": list(dict.fromkeys(group.readonly_reads)),
+            "unchanged_other_access_ids": list(dict.fromkeys(group.other_accesses)),
             "physical_mapping": "undecided"})
 
     def collect(value, conditions, type_, depth=0):
@@ -135,44 +168,59 @@ def expand_tile_partitions(module, abi, source_ids):
 
     blocks = [block for op in tuple(module.walk()) for region in op.regions for block in region.blocks]
     for block in blocks:
-        events, key, types, properties = [], None, None, None
-        proof, conditions, union = BooleanCoverage(pointwise_tensors=True), [], 0
+        groups, event_count = {}, 0
+
+        def finish(groups=groups):
+            for group in groups.values():
+                flush(group)
+            groups.clear()
+
         for op in tuple(block.ops):
-            if not events:
-                if ordinary(op) and len(op.operands) == 3 and (candidate := pointer(op.operands[0])) is not None:
-                    proof = BooleanCoverage(pointwise_tensors=True)
-                    key, types, properties = candidate, (op.operands[1].type, op.operands[2].type), dict(op.properties)
-                    if types[1] != builtin.TensorType(builtin.i1, types[0].get_shape()):
-                        continue
-                    events = [op]
-                    union = proof.condition(op.operands[2])
-                    collect(op.operands[2], conditions, types[1])
+            if pure(op):
                 continue
-            same = pointer(op.operands[0]) == key if ordinary(op) or ordinary(op, load=True) else False
-            if (ordinary(op) and same and op.operands[1].type == types[0] and dict(op.properties) == properties
-                    and (len(op.operands) == 2 or op.operands[2].type == types[1])):
-                events.append(op)
-                guard = proof.condition(op.operands[2]) if len(op.operands) == 3 else 1
-                union = proof.combine("or", union, guard)
-                if len(op.operands) == 3:
-                    collect(op.operands[2], conditions, types[1])
-            elif ordinary(op, load=True) and same and op.results[0].type == types[0]:
-                segments = _array(op, "operandSegmentSizes")
-                valid = segments == (1, 0, 0) or (segments == (1, 1, 1) and op.operands[1].type == types[1]
-                                                               and op.operands[2].type == types[0])
-                premise = proof.condition(op.operands[1]) if len(op.operands) == 3 else 1
-                if valid and proof.covers([union], premise=premise):
-                    events.append(op)
-                else:
-                    flush(events, proof, conditions)
-                    events, conditions, union = [], [], 0
-            elif pure(op):
+            store, load = ordinary(op), ordinary(op, load=True)
+            recovered = pointer(op.operands[0]) if store or load else None
+            if recovered is None:
+                finish()
+                event_count = 0
                 continue
+            root, key = recovered
+            if load and roots[root].effect == "read":
+                for group in groups.values():
+                    group.independent_roots.add(roots[root].name)
+                    group.readonly_reads.extend(source_ids(op.location))
+            elif root in fresh:
+                group = groups.get(root)
+                type_ = op.operands[1].type if store else op.results[0].type
+                if group is not None and (group.key != key or group.type != type_
+                        or store and group.properties != dict(op.properties)):
+                    finish()
+                    event_count = 0
+                    group = None
+                for other, active in groups.items():
+                    if other is not root:
+                        active.independent_roots.add(roots[root].name)
+                if group is None and store:
+                    if len(groups) >= 128:
+                        finish()
+                        event_count = 0
+                    group = groups[root] = _Group(key, type_, dict(op.properties))
+                    group.independent_roots.update(roots[other].name for other in groups if other is not root)
+                if group is not None:
+                    group.events.append(op)
+                    if len(group.events) >= 128:
+                        finish()
+                        event_count = 0
             else:
-                flush(events, proof, conditions)
-                events, conditions, union = [], [], 0
-            if len(events) >= 128:
-                flush(events, proof, conditions)
-                events, conditions, union = [], [], 0
-        flush(events, proof, conditions)
+                # These ordinary input-state accesses cannot observe a fresh
+                # functional result allocation. Keep them and their mutual
+                # ordering; do not derive independence between input roots.
+                for group in groups.values():
+                    group.independent_roots.add(roots[root].name)
+                    group.other_accesses.extend(source_ids(op.location))
+            event_count += 1
+            if event_count >= 1024:
+                finish()
+                event_count = 0
+        finish()
     return reports

@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Interleaved fresh tiles](interleaved_tiles.md) extend existing source coverage
+reports with actual independent roots and retained ordinary accesses. Fresh
+functional result disjointness grants no independence between input roots;
+source masks, observations, input-state order and bounds remain executable.
+Public ABI, result modes, receipts, artifact rosters and effect profiles are
+unchanged. Generated compatibility metadata records the actual proof scope.
+
 [Fresh tile partitions](tile_partitions.md) add actual-source coverage reports
 for same-address masked writes and intermediate observations. Complete groups
 re-raise to ordered selects and a covered store before native pointer conversion.
