@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Pure loop exit coordinates](docs/pure_loop_exits.md) now retain actual exit
+SSA through numeric region cloning. Preloaded tile reuse, word state and final
+pointer observations survive native/host execution and ten actual serial
+images, including a complete dependent-call PyTorch model with ten results.
+Continue general pointer/ownership, source/effect and applicable target closure.
+
 [Runtime pointer streams](docs/runtime_pointer_steps.md) now retain actual
 source-step coupling and final pointer observations as tensor computation.
 Four kernel libraries and a complete two-call PyTorch model pass host replays

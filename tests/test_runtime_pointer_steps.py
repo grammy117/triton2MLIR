@@ -16,16 +16,19 @@ pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/native tools 
 CASES = ((0, 8, 1), (1, 8, 3), (3, 1, 2), (0, 0, 1), (2, 7, 2), (3, 8, 1))
 
 
-def capture(root, transpose=False, dtype="i32", profile="tensor", policy="structured", *, bounds=None, rows=16):
-    from t2m.examples.runtime_header_kernels import bidirectional_sum
+def capture(root, transpose=False, dtype="i32", profile="tensor", policy="structured", *, bounds=None, rows=16, final_only=False, mix=True):
+    from t2m.examples.runtime_header_kernels import bidirectional_sum, final_pointer_mix
 
+    kernel = final_pointer_mix if final_only else bidirectional_sum
     constants = {"N": 17, "R": 16, "B": 8, "TRANSPOSE": transpose}
+    if final_only:
+        constants["MIX"] = mix
     source = root / "source.ttir"
-    source.write_text(capture_ttir(bidirectional_sum,
+    source.write_text(capture_ttir(kernel,
         {**dict.fromkeys(("x", "out", "last"), "*i64"), **dict.fromkeys(("lower", "upper", "stride"), dtype),
          **dict.fromkeys(constants, "constexpr")}, constants))
     bounds = ((0, 3), (0, 8), (1, 3)) if bounds is None else bounds
-    abi = TensorABI("bidirectional_sum", (TensorBuffer("x", (17, rows) if transpose else (rows, 17), "read", "i64"),
+    abi = TensorABI(kernel.__name__, (TensorBuffer("x", (17, rows) if transpose else (rows, 17), "read", "i64"),
         TensorBuffer("out", (17,), "write", "i64"), TensorBuffer("last", (17,), "write", "i64")), grid=(3,),
         runtime_scalars=tuple(RuntimeScalar(name, dtype, index, bounds=interval)
             for name, index, interval in zip(("lower", "upper", "stride"), (3, 4, 5), bounds, strict=True)))
@@ -33,7 +36,7 @@ def capture(root, transpose=False, dtype="i32", profile="tensor", policy="struct
         memory_profile=profile, address_policy=policy)
 
 
-def arguments(transpose, dtype, index):
+def arguments(transpose, dtype, index, *, final_only=False, mix=True):
     lower, upper, stride = CASES[index]
     x = np.arange(16 * 17, dtype=np.int64).reshape(16, 17) * (37 + index) + (1 << 55)
     x[1::2] *= -1
@@ -42,6 +45,12 @@ def arguments(transpose, dtype, index):
     exit_row = lower + len(rows) * stride
     expected = [np.sum(x[rows] ^ (x[15-rows] * np.int64(3)), axis=0, dtype=np.int64),
                 x[exit_row] - x[15-exit_row] * np.int64(3)]
+    if final_only:
+        state = x[0].copy()
+        if mix:
+            for row in rows:
+                state = (state ^ np.int64(row + 2)) * np.int64(3)
+        expected[0] = state ^ x[exit_row]
     integer = np.int32 if dtype == "i32" else np.int64
     return [x.T.copy() if transpose else x, *[np.asarray(value, integer) for value in (lower, upper, stride)]], expected
 

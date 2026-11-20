@@ -12,11 +12,12 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out):
+def capture(out, *, final_only=False):
     source = Path(__file__).resolve().parents[1] / "t2m/examples/runtime_header_kernels.py"
     loader = importlib.util.spec_from_file_location("pointer_step_source", source)
     kernels = importlib.util.module_from_spec(loader)
     loader.loader.exec_module(kernels)
+    kernel = kernels.final_pointer_mix if final_only else kernels.bidirectional_sum
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
     name = "t2m_demo::pointer_step"
@@ -28,7 +29,8 @@ def capture(out):
         if not (0 <= lo <= 3 and 0 <= hi <= 8 and 1 <= step <= 3):
             raise ValueError("pointer-step controls outside the source contract")
         result, last = torch.empty((17,), dtype=x.dtype, device=x.device), torch.empty((17,), dtype=x.dtype, device=x.device)
-        wrap_triton(kernels.bidirectional_sum)[(3,)](x, result, last, lo, hi, step, N=17, R=16, B=8, TRANSPOSE=False)
+        options = {"MIX": True} if final_only else {}
+        wrap_triton(kernel)[(3,)](x, result, last, lo, hi, step, N=17, R=16, B=8, TRANSPOSE=False, **options)
         return result, last
 
     @transform.register_fake
@@ -41,9 +43,15 @@ def capture(out):
         if not (0 <= lo <= 3 and 0 <= hi <= 8 and 1 <= step <= 3):
             raise ValueError("pointer-step controls outside the source contract")
         acc, final_row = torch.zeros((17,), dtype=x.dtype), lo
+        state = x[0].clone()
         for row in range(lo, hi, step):
-            acc = acc + (x[row] ^ (x[15-row] * 3))
+            if final_only:
+                state = (state ^ (row + 2)) * 3
+            else:
+                acc = acc + (x[row] ^ (x[15-row] * 3))
             final_row = row + step
+        if final_only:
+            acc = state ^ x[final_row]
         return acc, x[final_row] - x[15-final_row] * 3
 
     class Model(torch.nn.Module):
@@ -81,6 +89,7 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--final-only", action="store_true")
     args = parser.parse_args()
     torch.set_num_threads(1)
-    print(capture(args.out))
+    print(capture(args.out, final_only=args.final_only))

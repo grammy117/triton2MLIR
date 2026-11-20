@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-20
 
+[Pure loop exit coordinates](pure_loop_exits.md) now close the saved
+final-pointer-only refusal by binding actual cloned result SSA through the
+existing checked initial/yield relation. Original loops, preloaded tile reuse,
+word state and final observations remain. Four new reusable kernel libraries
+and a complete dependent-call PyTorch model preserve all results through host
+replays and ten actual serial images, including all ten model results and an
+invalid-step abort. The focused selection passes 39 and the extended source
+selection twelve with overlap; eight model checks qualify new and original
+forms separately. `out/pure-loop-exits/summary.json` reopens 18 initial, 78
+replay and 36 exact-word serial results. No companion source change is needed;
+the general pointer/ownership/effect/source/target endpoint remains open.
+The corrected related source/control/memory regression selection passes 119
+in `.scratch/pure-exit-regression2.log`. The next actual probe is
+`.scratch/runtime-pointer-independent-step1/`: constant pointer advancement
+independent of the runtime loop step. Guarded source words pass four native
+cases; structured selections retain their upstream boxing refusal. Preserve
+actual iteration-count/state semantics while extending that representation.
+
 [Runtime pointer streams](runtime_pointer_steps.md) now preserve actual
 source-step coupling, forward/reverse row/column traversal and final pointer
 observations through tensor MLIR. Four reusable kernel libraries and a complete

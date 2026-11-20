@@ -915,6 +915,14 @@ def _functionalize(module, abi, *, serial_memory=True):
         active = tuple(physical[axis] for axis in axes)
         return buffer, sizes, tuple(offsets), active, axes, mask
 
+    def bind_exit_induction(source, result, position, domain, identity, evidence):
+        if not is_exit_induction(source, position):
+            return
+        key = f"source-exit-IV-{identity}-{position}"
+        states[key] = result
+        facts[result] = Linear(parameters=((key, *exit_induction_bounds(domain), 1),))
+        evidence.setdefault("actual_exit_induction_results", []).append(position)
+
     def translate(source_block, *, phase_body=False):
         nonlocal body, loop_counter
         for op in source_block.ops:
@@ -1079,7 +1087,12 @@ def _functionalize(module, abi, *, serial_memory=True):
                                          "bounds": "source-SSA; runtime-or-static",
                                          "memory_effects": "no-buffer-accesses",
                                          "recurrence": "original-standard-value-region"})
-                    append(op.clone(value_mapper=mapping), op)
+                    cloned = append(op.clone(value_mapper=mapping), op)
+                    if empty_domain is not None:
+                        for position, result in enumerate(cloned.results):
+                            bind_exit_induction(op, result, position, empty_domain, loop_counter, source_loops[-1])
+                        if source_loops[-1].get("actual_exit_induction_results"):
+                            loop_counter += 1
                     continue
                 arguments = op.body.block.args
                 pointer_slots = [i for i, v in enumerate(arguments[1:]) if _pointer_type(v.type)]
@@ -1175,11 +1188,8 @@ def _functionalize(module, abi, *, serial_memory=True):
                     mapping[op.results[i]] = loop.results[position]
                     if i in final_facts:
                         facts[loop.results[position]] = final_facts[i]
-                    elif is_exit_induction(op, i):
-                        key = f"source-exit-IV-{identity}-{i}"
-                        states[key] = loop.results[position]
-                        facts[loop.results[position]] = Linear(parameters=((key, *exit_induction_bounds(domain), 1),))
-                        loop_evidence.setdefault("actual_exit_induction_results", []).append(i)
+                    else:
+                        bind_exit_induction(op, loop.results[position], i, domain, identity, loop_evidence)
                 states.update((b.name, v) for b, v in zip(writable, loop.results[len(kept):len(kept) + len(writable)], strict=True))
                 cursor = len(kept) + len(writable)
                 for i, rank in zip(pointer_slots, pointer_ranks, strict=True):

@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Pure loop exit coordinates](pure_loop_exits.md) bind checked actual result
+SSA after numeric cloning, using the same initial/yield proof as memory loops.
+Numeric state, source headers, zero-trip initial values, preloaded tiles and
+final reads remain executable. Generated compatibility names the representation;
+public ABI, receipts and artifact rosters are unchanged. Bounds, initialization,
+ownership, source widths and effects retain their independent gates.
+
 [Runtime pointer streams](runtime_pointer_steps.md) add a checked source
 normalization without changing public ABI, receipts or artifact rosters.
 Actual step-coupled pointer updates use source-IV coordinates and an executable

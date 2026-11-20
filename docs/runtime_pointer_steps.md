@@ -147,7 +147,7 @@ applicable accelerator correctness/performance remain completion work. Retained
 tiling and reuse are not a performance benchmark. These qualifications change
 no TTIR operation-name denominator.
 
-## Next reproduced boundary
+## Historical pure-loop boundary
 
 `.scratch/runtime-pointer-final-only1/` removes the body loads from the same
 two-stream source, retaining pointer advancement and the final reads. Source
@@ -158,3 +158,6 @@ affine expression. This is a local representation boundary, not a GPU-specific
 operation to discard. Continue by qualifying actual exit-state facts through
 pure numeric loop cloning, while retaining the original loop and final loads.
 The saved conversion refusal is not native, host or target qualification.
+[Pure loop exit coordinates](pure_loop_exits.md) now close this exact cloning
+boundary and independently qualify richer word-state kernels and complete
+models. General non-step-coupled and conditional pointer streams remain open.

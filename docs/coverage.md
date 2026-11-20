@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Pure loop exit coordinates](pure_loop_exits.md) now retain source-proved
+actual exit results through numeric cloning, including preloaded tile reuse
+and i64 recurrences. Four reusable kernel libraries and the new dependent-call
+PyTorch model preserve all results through host replays and ten actual serial
+images. All ten model results remain and an invalid live step actually aborts.
+The focused kernel/source selection passes 39; the extended source selection
+passes twelve with overlap. Eight complete-model checks cover the original
+body-load and new pure-loop models separately. General pointer/ownership,
+effects, source/numeric and accelerator closure remains open; no historical
+operation-name denominator changes.
+The corrected related source/control/memory selection separately passes 119.
+
 [Runtime pointer streams](runtime_pointer_steps.md) now retain forward/reverse
 source traversal, actual runtime lower/upper/step and final pointer observations
 as tensor MLIR. Four reusable kernel libraries preserve both outputs across

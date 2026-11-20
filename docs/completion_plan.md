@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Pure loop exit coordinates](pure_loop_exits.md) close the reproduced
+final-pointer-only cloning refusal while retaining original numeric loops,
+preloaded tile reuse and every final observation. New and original complete
+models qualify through host/serial execution. General pointer recurrences,
+while/alias ownership, dynamic roots, variable-step write images, shared/async,
+source/numeric compositions and applicable target qualification remain open.
+
 [Runtime pointer streams](runtime_pointer_steps.md) now close the reproduced
 variable-header/final-pointer refusal for source-proved step-coupled additive
 streams. Original tile traversal, numeric state and complete model results

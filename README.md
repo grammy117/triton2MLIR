@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Pure loop exit coordinates](docs/pure_loop_exits.md) now preserve final pointer
+reads after numeric-only loops, including preloaded tile reuse, i64 recurrences
+and zero trips. Four reusable kernel libraries and a complete two-call model
+retain every result through host replays and ten actual serial images. General
+pointer/alias, shared/async, numeric/source and accelerator closure remains open.
+
 [Runtime pointer streams](docs/runtime_pointer_steps.md) now reach tensor MLIR
 with original runtime headers, forward/reverse tile traversal and actual final
 pointer reads. Four reusable kernel libraries and a dependent two-call PyTorch
