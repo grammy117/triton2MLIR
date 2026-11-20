@@ -18,6 +18,53 @@ VOLATILE_SCHEMA = "t2m.synchronous-program-barrier.v3"
 COMBINED_SCHEMA = "t2m.synchronous-program-barrier.v4"
 SPACES = ((1, "local"), (2, "global_read"), (4, "global_write"),
           (8, "tensor_read"), (16, "tensor_write"))
+CFG_PROFILE = "whole-program-scalar-cfg-v1"
+
+
+def cfg_participation(function):
+    """Check whole-program scalar edges before official CFG-to-SCF lifting.
+
+    A scalar TTIR branch chooses one edge for the complete logical program.
+    This grants no per-lane divergence, inter-program order or progress fact.
+    Native source verification and the full effect/encoding audit still apply.
+    """
+    from .shared_tensor import opcode
+    from xdsl.utils.exceptions import VerifyException
+
+    if len(function.regions) != 1 or not function.regions[0].blocks:
+        raise ValueError("program barrier CFG requires one nonempty source function region")
+    blocks = set(function.regions[0].blocks)
+    for block in blocks:
+        terminal = block.last_op
+        if terminal is None or any(op.successors for op in list(block.ops)[:-1]):
+            raise ValueError("program barrier CFG requires complete terminal control edges")
+        name = opcode(terminal)
+        if name == "tt.return":
+            if terminal.successors or terminal.results or terminal.regions:
+                raise ValueError("program barrier CFG return has unexpected control fields")
+            continue
+        if name not in ("cf.br", "cf.cond_br", "cf.switch"):
+            raise ValueError("program barrier CFG has an unsupported terminator")
+        if not terminal.successors or any(target not in blocks for target in terminal.successors):
+            raise ValueError("program barrier CFG edges must stay in the original program region")
+        if name != "cf.br" and (not terminal.operands
+                or not isinstance(terminal.operands[0].type, (builtin.IntegerType, builtin.IndexType))
+                or name == "cf.cond_br" and terminal.operands[0].type != builtin.i1):
+            raise ValueError("program barrier CFG conditions require actual scalar integer control")
+        try:
+            terminal.verify()
+            if name == "cf.br":
+                edges = [(terminal.successor, terminal.arguments)]
+            elif name == "cf.cond_br":
+                edges = [(terminal.then_block, terminal.then_arguments), (terminal.else_block, terminal.else_arguments)]
+            else:
+                edges = [(terminal.default_block, terminal.default_operands),
+                         *zip(terminal.case_blocks, terminal.case_operand, strict=True)]
+            if any([value.type for value in values] != [arg.type for arg in target.args] for target, values in edges):
+                raise ValueError("program barrier CFG successor arguments differ from their original block types")
+        except VerifyException as error:
+            raise ValueError("program barrier CFG has invalid typed successor arguments") from error
+    return CFG_PROFILE
 
 
 def atomic_options(value):
@@ -74,12 +121,18 @@ def contract(op, source_id, *, atomic_effects=None, volatile_effects=None):
             or any(not key.startswith(("prov.", "op_name")) for key in op.attributes)):
         refuse("program barrier requires the pinned operand-free address-space mask")
     parent = op.parent_op()
+    source_control = None
     while parent is not None and parent.name != "builtin.module":
         name = parent.op_name.data if isinstance(parent, builtin.UnregisteredOp) else parent.name
         if name not in {"tt.func", "scf.for", "scf.if", "scf.while"}:
             refuse("barrier participation requires whole-program structured control")
         if any(len(region.blocks) != 1 for region in parent.regions):
-            refuse("barrier participation in a source CFG needs a separate proof")
+            if name != "tt.func":
+                refuse("barrier participation needs single-block structured regions")
+            try:
+                source_control = cfg_participation(parent)
+            except ValueError as error:
+                refuse(str(error))
         parent = parent.parent_op()
     if atomic_effects is not None:
         atomic_options(atomic_effects)
@@ -90,6 +143,7 @@ def contract(op, source_id, *, atomic_effects=None, volatile_effects=None):
     schema = (COMBINED_SCHEMA if atomic_effects is not None and volatile_effects is not None else
               VOLATILE_SCHEMA if volatile_effects is not None else ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA)
     return {"schema": schema,
+            **({"source_control": source_control} if source_control is not None else {}),
             **({"atomic_effects": atomic_effects} if atomic_effects is not None else {}),
             **({"volatile_effects": volatile_effects} if volatile_effects is not None else {}),
             "source_id": source_id, "address_space_mask": space.value.data,

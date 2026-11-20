@@ -98,8 +98,12 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
     if names.count(source_entry) != 1 or abi.entry in names:
         raise ConversionError("allocation entry must be fresh and source entry unique")
     source = functions[names.index(source_entry)]
-    if (len(source.regions[0].blocks) != 1 or source.properties["function_type"].outputs
-            or len(bindings) != len(source.regions[0].block.args)):
+    if len(source.regions) != 1 or not source.regions[0].blocks:
+        raise ConversionError("allocation binding requires a nonempty source function region")
+    arguments = next(iter(source.regions[0].blocks)).args
+    signature = source.properties["function_type"]
+    if (signature.outputs or tuple(signature.inputs) != tuple(arg.type for arg in arguments)
+            or len(bindings) != len(arguments)):
         raise ConversionError("allocation binding requires the complete void source signature")
     if any(op is not source and op.properties.get("sym_visibility") != builtin.StringAttr("private")
            for op in functions):
@@ -115,7 +119,6 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
     pointer_types = {name: SharedParser(ctx, f"!tt.ptr<{root.dtype}>").parse_type()
                      for name, root in roots.items()}
     used_roots, records = set(), []
-    arguments = source.regions[0].block.args
     for arg,binding in zip(arguments,bindings,strict=True):
         if isinstance(binding,PointerArgument):
             root = roots.get(binding.allocation)

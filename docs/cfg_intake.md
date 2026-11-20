@@ -1,5 +1,10 @@
 # Original control-flow graphs through the Merlin interface
 
+[Program phases under scalar CFG control](cfg_program_phases.md) now preserve
+original early exits and synchronized tile observations. Both readers prove
+whole-program scalar edges; complete void allocation wrappers retain every
+original block. Existing source/effect and native ownership checks remain.
+
 Multi-block TTIR entries now use LLVM's official CFG-to-SCF conversion before
 the existing tensor/memory frontend. Original early returns, block arguments
 and backedges remain in the source inventory. The emitted computation retains

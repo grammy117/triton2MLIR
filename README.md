@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[CFG program phases](docs/cfg_program_phases.md) now preserve synchronous tile
+dependencies under original scalar early exits. Complete void allocation
+wrappers retain every source block; native and reusable Merlin execution pass.
+General shared/async participation and broader source/target scope remain open.
+
 [Actual word-source effect admission](docs/word_source_effects.md) now checks
 typed primitives before legacy byte-stage early returns in both readers.
 Rehashed unselected effects refuse; the historical word-source audit passes.

@@ -1,5 +1,10 @@
 # Synchronous program barriers as portable memory phases
 
+[Original scalar CFG control](cfg_program_phases.md) additionally retains
+whole-program early exits and typed edges through the official CFG lifter.
+Complete void allocation entries retain every source block behind their wrapper.
+The optional source-control profile grants no inter-program ordering or progress.
+
 Pinned Triton 3.7.1 emits `tl.debug_barrier()` as `ttg.barrier all` even in
 pre-layout TTIR. This operation orders synchronous memory observations among
 the threads of one source CTA. It is distinct from a cluster barrier or an
@@ -33,9 +38,10 @@ memory conflicts and complete writes at execution. A block barrier cannot grant
 cross-program communication or initialize an unwritten value.
 
 Multi-CTA participation, barriers inside scalar lane/combiner regions, other
-physical operations, and barrier composition with atomic or assembly effects
-still refuse. Shared/external participants, asynchronous effects and general CFG
-participation require their own concrete contracts. Allocation-state wrappers
+physical operations and assembly effects still refuse. Selected atomic/volatile
+composition has its explicit linked contracts. Shared/external participants,
+asynchronous effects and broader CFG participation require their own concrete
+contracts. Allocation-state wrappers
 add the protected-source integration described below, with separate original
 source IDs and independent consumer checks.
 

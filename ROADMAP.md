@@ -1,5 +1,10 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[CFG program phases](docs/cfg_program_phases.md) now retain original scalar
+early exits, runtime loops and actual synchronized tile state through native
+and Merlin execution. Complete void allocation entries retain their CFG behind
+the typed wrapper. Continue broader control/effect and consumer/target closure.
+
 [Actual word-source effect admission](docs/word_source_effects.md) now closes
 the legacy-stage primitive-selection gap in both readers. Continue general
 shared/asynchronous participation, memory/numeric/storage composition and

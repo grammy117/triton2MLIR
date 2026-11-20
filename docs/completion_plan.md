@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[CFG program phases](cfg_program_phases.md) now close the reproduced scalar
+early-return/barrier and complete-void allocation-wrapper refusals. Original
+typed CFG edges and phase payload remain independently checked; the official
+CFG lifter supplies the structured form. General shared/async participation,
+broader control/effect compositions and applicable targets remain open.
+
 [Actual word-source effect admission](word_source_effects.md) now closes the
 legacy-stage primitive-selection gap with independent actual-source checks.
 Continue general shared/asynchronous participation and the composition/target

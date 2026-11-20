@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[CFG program phases](cfg_program_phases.md) optionally add the explicit
+`source_control = whole-program-scalar-cfg-v1` field to existing v1/v2/v3/v4
+barrier contracts. Both readers check actual scalar conditions, same-region
+edges and complete block argument types before native CFG lifting. Complete
+void allocation wrappers retain all original source blocks. Older phase
+readers reject this field; public ABI, receipt schemas and artifact rosters
+are unchanged. No cross-program/async or new numeric/effect permission follows.
+
 [Actual word-source effect admission](word_source_effects.md) parses typed
 source before legacy stage early returns. Unsupported effects now refuse even
 with consistently rehashed artifacts. Public ABI, receipt schemas and artifact
