@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Fresh tile partitions](tile_partitions.md) now close the reproduced first
+masked-write refusal without reading incoming fresh storage. Actual coverage
+re-raises ordered alternatives and intermediate observations into tensor values;
+parallel tiles, reuse and active tails remain. Complete two-call tiled models
+reach host/replays and actual serial images with every result. General memory
+groups, shared/async effects and accelerator closure remain incomplete.
+
 [Source branch/mask partitions](source_partitions.md) now prove collective
 scalar initialization from actual alternatives and local read implications.
 Original masks, branch order, fills, reused values and intermediate observations

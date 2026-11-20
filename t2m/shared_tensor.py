@@ -1620,6 +1620,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                 "control": premise, "fact": fact,
                 "definition_validation": "original-definition-context-before-narrower-use",
                 "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"})
+    from .tile_partitions import expand_tile_partitions
+    tile_partition_reports = expand_tile_partitions(middle_module, abi, _source_ids) if not source_words else []
     pointer_control_reports = []
     isolated_events = False
     checked_event_isolation = False
@@ -1661,7 +1663,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports += expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or pointer_address_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports or scalar_tile_reports:
+    if storage_transport or pointer_address_reports or tile_partition_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports or scalar_tile_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1743,6 +1745,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind":"source-fail-stop-assertions", "assertions":source_assertions,
             "scope":"source diagnostic effects retained at original program/control positions"})
     transformations.extend(boolean_reports)
+    transformations.extend(tile_partition_reports)
     transformations.extend(barrier_reports)
     transformations.extend(literal_reports)
     transformations.extend(pointer_address_reports)

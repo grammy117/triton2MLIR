@@ -1,5 +1,18 @@
 # Measured coverage and remaining boundaries
 
+[Fresh tile partitions](tile_partitions.md) add source-ordered, pointwise
+coverage of same-address fresh writes, including nested alternatives, overlap
+and intermediate observations. Parallel logical tiles and complete model
+results reach host/serial execution. General memory/effect/target closure and
+the historical operation-name denominator remain unchanged.
+
+The final tile selection passes 53 focused checks plus 114 earlier regressions.
+`out/tile-partitions/summary.json` reopens five kernel and two model libraries,
+all 24 initial/92 replay/48 target results, fourteen actual serial images and
+two original-domain aborts. The scalar model is included as regression evidence.
+Selected file hashes are not a full dependency closure. Interleaved writes to
+distinct fresh outputs remain an actual source refusal, recorded in the contract.
+
 [Source branch/mask partitions](source_partitions.md) retain actual Boolean
 alternatives through standard tensor computation, including nested row/column
 reuse, overlapping writes and early masked observations. All seven complete

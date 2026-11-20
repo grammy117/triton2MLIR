@@ -64,3 +64,32 @@ def test_unknown_guard_budget_cannot_supply_a_proof_or_disable_unconditional_cov
     assert values[-2:] == [None, None]
     assert not proof.covers([values[-1], proof.negate(values[-2])])
     assert proof.covers([1], premise=None)
+
+
+def test_pointwise_tensor_cover_keeps_unknown_lanes_independent_of_their_neighbors():
+    type_ = builtin.TensorType(builtin.i1, [8])
+    block = Block(arg_types=[type_, type_, type_])
+    valid, p, q = block.args
+    ones = arith.ConstantOp(builtin.DenseIntOrFPElementsAttr.from_list(type_, [1]))
+    inverse = arith.XOrIOp(p, ones.result)
+    first, second = arith.AndIOp(valid, p), arith.AndIOp(valid, inverse.result)
+    proof = BooleanCoverage(pointwise_tensors=True)
+    guards = [proof.condition(first.result), proof.condition(second.result)]
+    assert proof.covers(guards, premise=proof.condition(valid))
+    assert not proof.covers(guards)
+    assert not proof.covers([guards[0]], premise=proof.condition(arith.AndIOp(valid, q).result))
+    scalar_proof = BooleanCoverage()
+    assert not scalar_proof.covers([scalar_proof.condition(first.result)])
+
+
+def test_large_boolean_splats_and_nonuniform_constants_preserve_lane_semantics():
+    type_ = builtin.TensorType(builtin.i1, [8192])
+    p = Block(arg_types=[type_]).args[0]
+    ones = arith.ConstantOp(builtin.DenseIntOrFPElementsAttr.from_list(type_, [1]))
+    inverse = arith.XOrIOp(p, ones.result)
+    proof = BooleanCoverage(pointwise_tensors=True)
+    assert proof.covers([proof.condition(p), proof.condition(inverse.result)])
+    mixed = arith.ConstantOp(builtin.DenseIntOrFPElementsAttr.from_list(type_, [0, 1] * 4096))
+    assert not proof.covers([proof.condition(mixed.result)])
+    inverse_mixed = arith.XOrIOp(mixed.result, ones.result)
+    assert proof.covers([proof.condition(mixed.result), proof.condition(inverse_mixed.result)])

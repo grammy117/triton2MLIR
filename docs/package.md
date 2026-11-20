@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Fresh tile partitions](tile_partitions.md) add actual-source coverage reports
+for same-address masked writes and intermediate observations. Complete groups
+re-raise to ordered selects and a covered store before native pointer conversion.
+Original TTIR, masks, fills and source correspondence remain; public ABI,
+result modes, receipt schemas and artifact rosters are unchanged. Bounds,
+initialization geometry, ownership, effects and numeric policy remain independent.
+
 [Source branch/mask partitions](source_partitions.md) add actual-SSA Boolean
 cover and read-implication evidence, retaining original source alternatives,
 order, masks and tensor versions. Public ABI, result modes, receipts, artifact

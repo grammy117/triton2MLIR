@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Fresh tile partitions](docs/tile_partitions.md) now re-raise complementary,
+three-way and overlapping same-address writes into source-ordered selects with
+their actual covered store. Intermediate observations retain their masks/fills;
+logical parallel tiles and reuse remain. Native pointer conversion and ordinary
+geometry/ownership checks stay active. Continue region-spanning memory groups,
+general dependencies/effects and applicable target qualification.
+
 [Source branch/mask partitions](docs/source_partitions.md) now close the
 reproduced both-arm whole-output and complementary-mask read refusals. Actual
 SSA Boolean covers retain nested alternatives, overlap order and early masked

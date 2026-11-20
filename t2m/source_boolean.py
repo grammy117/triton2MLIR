@@ -13,9 +13,10 @@ class _Budget(Exception):
 
 
 class BooleanCoverage:
-    def __init__(self):
+    def __init__(self, *, pointwise_tensors=False):
         self.nodes, self.unique, self.atoms = [None, None], {}, {}
         self.cache, self.operations = {}, {}
+        self.pointwise_tensors = pointwise_tensors
 
     @staticmethod
     def scalar(value):
@@ -33,6 +34,17 @@ class BooleanCoverage:
                 word %= 1 << value.type.bitwidth
             return "literal", value.type, word
         return "ssa", value
+
+    @staticmethod
+    def _splat_bit(attribute):
+        # xDSL stores i1 elements as one packed byte each. Check the actual
+        # representation without unpacking a Python tuple for every lane.
+        type_, data = attribute.get_element_type(), attribute.data.data
+        if type_ == builtin.i1 and type_.compile_time_size == 1 and data and data.count(data[0]) == len(data):
+            bit = type_.unpack(data[:1], 1)[0]
+            if bit in (-1, 0, 1):
+                return int(bool(bit))
+        return None
 
     def _node(self, variable, low, high):
         if low == high:
@@ -104,8 +116,12 @@ class BooleanCoverage:
     def condition(self, value, depth=0):
         if value is None or depth >= 128:
             return None
-        value = self.scalar(value)
-        if value is None or value.type != builtin.i1:
+        if not self.pointwise_tensors:
+            value = self.scalar(value)
+        type_ = value.type if value is not None else None
+        if self.pointwise_tensors and isinstance(type_, builtin.TensorType):
+            type_ = type_.element_type
+        if type_ != builtin.i1:
             return None
         if value in self.cache:
             return self.cache[value]
@@ -114,6 +130,14 @@ class BooleanCoverage:
         try:
             if isinstance(owner, arith.ConstantOp) and isinstance(owner.value, builtin.IntegerAttr):
                 result = int(bool(owner.value.value.data))
+            elif (self.pointwise_tensors and isinstance(owner, arith.ConstantOp)
+                  and isinstance(owner.value, builtin.DenseIntOrFPElementsAttr)):
+                result = self._splat_bit(owner.value)
+                if result is None:
+                    result = self._atom(("ssa", value))
+            elif (self.pointwise_tensors and getattr(getattr(owner, "op_name", None), "data", None) == "tt.splat"
+                  and len(owner.operands) == 1):
+                result = self.condition(owner.operands[0], depth + 1)
             elif isinstance(owner, (arith.AndIOp, arith.OrIOp, arith.XOrIOp)):
                 kind = "and" if isinstance(owner, arith.AndIOp) else "or" if isinstance(owner, arith.OrIOp) else "xor"
                 result = self.combine(kind, *(self.condition(v, depth + 1) for v in owner.operands))

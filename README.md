@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Fresh tile partitions](docs/tile_partitions.md) now retain data-dependent tile
+writes and intermediate observations as pure tensor computation. Source-ordered
+selects preserve overlap behavior and active tails; logical parallelism remains
+unmapped. General memory/effect and accelerator closure remains incomplete.
+
 [Source branch/mask partitions](docs/source_partitions.md) now collectively
 initialize scalar addresses and complete tensor outputs. Original predicates,
 overlapping update order, fills and intermediate observations remain executable.

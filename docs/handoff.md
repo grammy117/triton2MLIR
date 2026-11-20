@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-20
 
+[Fresh tile partitions](tile_partitions.md) now close the reproduced fresh
+masked-tile refusal while retaining parallel structure, overlap order and
+intermediate observations. A complete two-call model preserves every result
+through host/replays and actual serial images. General groups across memory
+events/regions, dependencies, shared/async and accelerator closure remain open.
+
+The final focused tile/source/model selection passes 53; the separate earlier
+source/scatter/fresh/attention/conditional selection passes 114. Reopening
+`out/tile-partitions/summary.json` checks 24 initial, 92 replay and 48 exact-word
+target results across fourteen actual serial images, including both model
+domain aborts. One scalar model is regression evidence; the other retains the
+new parallel tiled calls. Final logs are `.scratch/tile-partitions-final2.log`,
+`.scratch/tile-partitions-regression1.log` and
+`.scratch/tile-partitions-report3.log`. Next extend actual disjoint-root facts
+through `.scratch/interleaved-tiles-probe1/source.ttir`, whose complete writes
+to two fresh outputs still encounter the collector's memory-event boundary.
+That failed source supplies no successful package or target qualification.
+
 [Source branch/mask partitions](source_partitions.md) now close the actual
 both-arm final-coverage and complementary-mask local-read refusals. Source
 choices, order, fills, reuse and observations survive complete model host/serial

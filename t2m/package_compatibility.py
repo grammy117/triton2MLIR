@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-tile-write-partition" for row in trace.get("transformations", [])):
+        differences.append("actual same-address fresh tile writes may re-raise to source-ordered pointwise selects when their Boolean union equals a retained source predicate; same-address intermediate reads require implication from their actual active mask to preceding writes and retain their fills; no incoming storage is read or lane declared initialized by a fill; original TTIR and transformation correspondence remain; source bounds, complete geometry, ownership, effects and numeric policies remain independent; public ABI, receipt schemas and artifact rosters are unchanged")
     if any(proof.get("condition_coverage") == "actual-source-boolean-partition"
            for row in trace.get("memory", {}).get("source_loops", [])
            for proof in row.get("complete_scalar_result_proofs", {}).values()):

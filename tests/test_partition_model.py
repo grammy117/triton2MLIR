@@ -10,6 +10,7 @@ import pytest
 
 from t2m.bundle import _record, verify_bundle
 from t2m.consumer import invoke_merlin_host, observe_merlin_host
+from t2m.dynamic_abi import GridExtent
 from t2m.frontend import capture_ttir
 from t2m.model_binding import KernelBinding
 from t2m.model_bundle import write_model_bundle
@@ -21,14 +22,16 @@ TOOLS = all(os.environ.get(name) for name in ("TRITON_SHARED_OPT", "T2M_MODEL2ML
 pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/model/Merlin tools required")
 
 
-@pytest.fixture(scope="module")
-def selected(tmp_path_factory):
+@pytest.fixture(scope="module", params=("scalar", "tile"))
+def selected(tmp_path_factory, request):
     from t2m.examples.partition_kernels import partition_transform
+    from t2m.examples.tile_partition_kernels import tile_partition
 
+    tiled = request.param == "tile"
     root = tmp_path_factory.mktemp("partition-model")
     capture = root / "capture"
     script = Path(__file__).resolve().parents[1] / "scripts/capture_partition_model.py"
-    done = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture)],
+    done = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(capture), *(["--tiled"] if tiled else [])],
         capture_output=True, text=True, timeout=60, check=False,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(root)))
     assert done.returncode == 0, done.stderr
@@ -37,12 +40,14 @@ def selected(tmp_path_factory):
         directory = root / f"kernel-{kind}"
         directory.mkdir()
         source = directory / "source.ttir"
-        source.write_text(capture_ttir(partition_transform,
+        source.write_text(capture_ttir(tile_partition if tiled else partition_transform,
             {**{name: "*i64" for name in ("x", "bias", "out", "seen")},
-             "n": "i64", "control": "i64", "MODE": "constexpr"}, {"MODE": mode}))
-        abi = TensorABI("partition_transform", (TensorBuffer("x", ("n",), "read", "i64"),
+             "n": "i64", "control": "i64", "MODE": "constexpr", **({"B": "constexpr"} if tiled else {})},
+             {"MODE": mode, **({"B": 8} if tiled else {})}))
+        abi = TensorABI("tile_partition" if tiled else "partition_transform", (TensorBuffer("x", ("n",), "read", "i64"),
             TensorBuffer("bias", (1,), "read", "i64"), TensorBuffer("out", ("n",), "write", "i64"),
             TensorBuffer("seen", ("n",), "write", "i64")),
+            grid=(GridExtent("n", 8),) if tiled else (1,),
             runtime_scalars=(RuntimeScalar("n", "i64", 4, bounds=(0, 31)), RuntimeScalar("control", "i64", 5, bounds=(0, 29))))
         result = convert_shared(source, abi, directory / "translation", optimizer=os.environ["TRITON_SHARED_OPT"])
         assert not any(op.name.startswith("memref.") for op in result.module.walk())
@@ -52,11 +57,11 @@ def selected(tmp_path_factory):
         python=os.environ["T2M_NATIVE_PYTHON"], merlin_root=os.environ["T2M_MERLIN_ROOT"],
         merlin_python=os.environ["T2M_MERLIN_PYTHON"], merlin_clang=os.environ["T2M_MERLIN_CLANG"],
         merlin_host=True, result_mode="execution-owned")
-    return root, capture, package
+    return root, capture, package, tiled
 
 
 def test_original_model_results_and_every_parent_archive_survive(selected):
-    _root, capture, package = selected
+    _root, capture, package, _tiled = selected
     receipt = verify_bundle(package)
     for source, destination in receipt["parent_artifact_bindings"].items():
         assert (capture / source).read_bytes() == (package / destination).read_bytes()
@@ -68,19 +73,20 @@ def test_original_model_results_and_every_parent_archive_survive(selected):
                 expected[key].shape, expected[key].dtype, expected[key].tobytes())
 
 
-def invocation(root, package, index):
+def invocation(root, package, index, *, tiled=False):
     n = (2, 7, 31)[index]
     x = np.arange(n, dtype=np.int64) * 37 + (1 << 56)
     x[1::2] *= -1
     x[-1] = (-(1 << 63), (1 << 63)-1, -1)[index]
     bias = np.asarray([(1 << 53) + index], np.int64)
     value = x ^ bias[0]
-    p = value > 0
+    p = (x if tiled else value) > 0
     first = np.where(p & (n != 2), value ^ 1, np.where(p, value ^ 2, value ^ 4))
     shifted = np.add(first, bias)
     value2 = shifted ^ bias[0]
-    second = np.where(value2 > 0, value2 ^ 1, value2 ^ 2)
-    seen = np.where(value2 > 0, value2 ^ 1, -17)
+    positive2 = (shifted if tiled else value2) > 0
+    second = np.where(positive2, value2 ^ 1, value2 ^ 2)
+    seen = np.where(positive2, value2 ^ 1, -17)
     expected = (second, first, first.copy(), seen, x, shifted, bias)
     manifest = json.loads((package / "weights.safetensors.manifest.json").read_text())
     values = {"x": x, "bias": bias}
@@ -91,10 +97,10 @@ def invocation(root, package, index):
 
 
 def test_one_library_keeps_live_controls_words_masks_and_learned_state(selected):
-    root, _capture, package = selected
+    root, _capture, package, tiled = selected
     library = _record(package / "consumer/host/model.so")
     for index in range(3):
-        inputs, _reference, expected = invocation(root, package, index)
+        inputs, _reference, expected = invocation(root, package, index, tiled=tiled)
         actual, report = invoke_merlin_host(package / "consumer", inputs, root / f"invoke-{index}",
             merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"])
         assert report["functional_inputs_preserved"]
@@ -104,7 +110,7 @@ def test_one_library_keeps_live_controls_words_masks_and_learned_state(selected)
 
 
 def test_original_exported_model_domain_still_aborts_without_outputs(selected):
-    root, _capture, package = selected
+    root, _capture, package, _tiled = selected
     manifest = json.loads((package / "weights.safetensors.manifest.json").read_text())
     values = {"x": np.arange(1, dtype=np.int64), "bias": np.asarray([3], np.int64)}
     inputs = root / "invalid-domain.npz"
@@ -123,9 +129,9 @@ def test_actual_serial_images_retain_both_calls_and_all_original_observations(se
     if not TARGET_TOOLS:
         pytest.skip("existing serial target tools required")
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
-    root, _capture, package = selected
+    root, _capture, package, tiled = selected
     for index in (0, 2):
-        inputs, reference, _expected = invocation(root, package, index)
+        inputs, reference, _expected = invocation(root, package, index, tiled=tiled)
         out = root / f"target-{index}"
         report = Q.qualify(package, out, result_mode="execution-owned", comparison="words",
             merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"], inputs=inputs, reference=reference)

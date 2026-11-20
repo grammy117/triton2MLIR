@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Fresh tile partitions](tile_partitions.md) now re-raise same-address masked
+writes and intermediate observations before native pointer conversion. Actual
+Boolean coverage preserves source order and active tails without an incoming
+output read. Parallel tiles and complete two-call model execution qualify.
+Continue groups across other memory events/regions, broader dependencies,
+shared/async participation and applicable targets; full coverage remains open.
+
 [Source branch/mask partitions](source_partitions.md) now close actual
 both-arm full-output and complementary-mask read gaps while retaining every
 source choice, write order and observation. Nested row/column reuse and complete
