@@ -1,4 +1,4 @@
-"""Make source numeric contracts executable before allocation normalization."""
+"""Make source numeric and ordering contracts executable before normalization."""
 
 import json
 from io import StringIO
@@ -40,7 +40,8 @@ def needs_literal_protection(source, work, *, optimizer, source_entry, effect_pr
     from .fp8_casts import validate_fp8_casts
     from .shared_tensor import _source_ids
     validate_fp8_casts(module, _source_ids)
-    return bool(literals)
+    from .shared_tensor import opcode
+    return bool(literals) or any(opcode(op) == "ttg.barrier" for op in module.walk())
 
 
 def protect(
@@ -80,6 +81,8 @@ def protect(
     )
     validate_fp8_casts(module, _source_ids, overflow=fp8_overflow)
     graph = inventory(module, records, literal_words=literals)
+    from .program_barriers import expand as expand_barriers
+    barriers = expand_barriers(module, _source_ids)
     literal_reports = materialize(module, literals, source_ids=_source_ids)
     casts = expand_fp8_casts(
         module, _source_ids, overflow=fp8_overflow, tensor_carrier="arith"
@@ -112,6 +115,8 @@ def protect(
     }
     if literal_reports:
         report["literal_conversions"] = literal_reports
+    if barriers:
+        report["barrier_conversions"] = barriers
     artifacts = {
         "allocation-generic.mlir": generic,
         "allocation-native-print.json": json.dumps(native, indent=2) + "\n",
@@ -129,7 +134,7 @@ def validate(artifacts, original, source_entry):
     report = json.loads(artifacts["allocation-protection.json"])
     native = json.loads(artifacts["allocation-native-print.json"])
     if (
-        set(report) - {"literal_conversions"}
+        set(report) - {"literal_conversions", "barrier_conversions"}
         != {
             "schema",
             "source_entry",
@@ -165,6 +170,9 @@ def validate(artifacts, original, source_entry):
         )
     from .float_literals import validate_reports
     validate_reports(report["source_graph"]["operations"], report.get("literal_conversions", []))
+    from .barrier_protection import validate as validate_barriers
+    validate_barriers(report["source_graph"], report.get("barrier_conversions"),
+        artifacts["allocation-generic.mlir"], artifacts["allocation-protected.ttir"], source_entry=source_entry)
     if (
         set(native)
         != {

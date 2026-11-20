@@ -1,12 +1,13 @@
-# Review handoff — updated 2026-11-17
+# Review handoff — updated 2026-11-19
 
 [Program barriers](program_barriers.md) now retain source-verified CTA phases
 through ordinary shared conversion. A real runtime-loop mutable tile transpose
 qualifies in tensor and guarded forms through native, reusable Merlin host and
 two serial Spike images. Original scopes, zero trips, tails and conflict gates
-remain. Protected allocation source, multi-CTA participation and broader
-shared/async/atomic effects remain full-goal work; the historical inventory is
-unchanged.
+remain. Protected allocation source and complete three-call models now retain
+original phase custody, independent source/payload/order checks and every result.
+Continue with multi-CTA participation and broader shared/async/atomic effects;
+the historical inventory is unchanged.
 
 [Shared mutable views](mutating_views.md) now retain slice/as-strided aliasing,
 complete bases, actual coordinates and original TTIR pointer offsets through

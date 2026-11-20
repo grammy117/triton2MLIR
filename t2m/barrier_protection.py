@@ -1,0 +1,103 @@
+"""Replay protected source phases without granting numeric/effect authority."""
+
+from .diagnostics import ConversionError
+
+
+def validate(graph, reports, generic, protected, *, source_entry):
+    records = graph["operations"]
+    required = [row for row in records if row.get("opcode") == "ttg.barrier"]
+    from .program_barriers import expand
+    from .shared_tensor import (
+        _preflight,
+        _source_ids,
+        opcode,
+        parse_shared,
+        parse_shared_source,
+    )
+    from .source_graph import inventory
+
+    module, literals = parse_shared_source(generic.decode() if isinstance(generic, bytes) else generic)
+    present = any(opcode(op) == "ttg.barrier" for op in module.walk())
+    if not present and not required and reports is None:
+        return
+    if not present or not required or not isinstance(reports, list) or not reports:
+        raise ValueError("allocation source barriers require complete phase declarations")
+    try:
+        actual = _preflight(module, source_entry=source_entry, allow_composite_dots=True, literal_words=literals)
+        if inventory(module, actual, literal_words=literals) != graph:
+            raise ValueError("allocation barrier inventory differs from its actual typed source")
+        expected = expand(module, _source_ids)
+    except ConversionError as error:
+        raise ValueError("allocation barrier source is outside its participation profile") from error
+    if reports != expected:
+        raise ValueError("allocation source barrier declarations differ from original phases")
+    retained = parse_shared(protected.decode() if isinstance(protected, bytes) else protected)
+    check_phases(module, retained, reports, _source_ids, opcode)
+
+
+def check_phases(expected, retained, reports, source_ids, opcode):
+    """Check real phase boundaries, scopes, results and retained source payload."""
+    from xdsl.dialects import builtin
+
+    ids = {row["contract"]["source_id"] for row in reports}
+
+    def phases(module):
+        result = {}
+        for op in module.walk():
+            selected = set(source_ids(op.location)) & ids
+            if opcode(op) == "scf.execute_region" and selected:
+                if len(selected) != 1 or next(iter(selected)) in result:
+                    raise ValueError("allocation barrier has duplicate or ambiguous phases")
+                result[next(iter(selected))] = op
+        if set(result) != ids:
+            raise ValueError("allocation source barrier lost an executable phase")
+        return result
+
+    def position(op):
+        path = []
+        while op.parent_op() is not None:
+            block, region, parent = op.parent_block(), op.parent_region(), op.parent_op()
+            path.append((opcode(parent), source_ids(parent.location),
+                         list(parent.regions).index(region), list(region.blocks).index(block)))
+            op = parent
+        return path
+
+    original, current = phases(expected), phases(retained)
+    effects = {"tt.load", "tt.store", "tt.call", "tt.assert", "cf.assert", "tt.print"}
+    effect_ids = {sid for op in expected.walk() if opcode(op) in effects for sid in source_ids(op.location)}
+
+    def events(phase):
+        result = []
+        for child in phase.walk():
+            if opcode(child) in effects:
+                selected = [sid for sid in source_ids(child.location) if sid in effect_ids]
+                if not selected and opcode(child) != "cf.assert":
+                    raise ValueError("allocation barrier contains an unaccounted source memory effect")
+                if selected:
+                    result.append((opcode(child), selected))
+        return result
+
+    if events(expected) != events(retained):
+        raise ValueError("allocation barrier protection changed original source memory order")
+
+    for report in reports:
+        source_id = report["contract"]["source_id"]
+        before, after = original[source_id], current[source_id]
+        marker = after.properties.get("no_inline", after.attributes.get("no_inline"))
+        if (len(after.regions) != 1 or len(after.regions[0].blocks) != 1
+                or after.regions[0].block.args or not isinstance(marker, builtin.UnitAttr)
+                or position(before) != position(after)
+                or [str(v.type) for v in after.results] != report["live_value_types"]):
+            raise ValueError("allocation barrier changed its executable phase scope or results")
+        block = after.regions[0].block
+        if (block.last_op is None or opcode(block.last_op) != "scf.yield"
+                or [v.type for v in block.last_op.operands] != [v.type for v in after.results]):
+            raise ValueError("allocation barrier phase lacks its complete typed yield")
+        observed = {sid for child in after.walk() for sid in source_ids(child.location)}
+        if not set(report["phase_source_ids"]) <= observed:
+            raise ValueError("allocation barrier phase lost original source payload")
+        if events(before) != events(after):
+            raise ValueError("allocation barrier phase changed original source memory effects or order")
+    for op in retained.walk():
+        if opcode(op).startswith(("ttg.", "ttng.", "gpu.", "nvvm.", "rocdl.")):
+            raise ValueError("protected program barrier retains an unresolved physical operation")

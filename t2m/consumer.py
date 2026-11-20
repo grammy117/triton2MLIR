@@ -70,6 +70,7 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
     report["merlin_root"] = str(root)
     for name in ("src/merlin/frontends/linalg_mlir.py", "src/merlin/llvmlower/c_runtime.py",
                  "src/merlin/frontends/compile_inputs.py", "src/merlin/frontends/derived_compile_inputs.py",
+                 "src/merlin/frontends/kernel_allocation_evidence.py", "src/merlin/frontends/kernel_barrier_evidence.py",
                  "src/merlin/xdsl_dialects/standard_tensor.py", "src/merlin/frontends/derived_runtime_arguments.py",
                  "src/merlin/frontends/derived_live_arguments.py", "src/merlin/frontends/source_index_ranges.py",
                  "src/merlin/frontends/model_shape_facts.py", "src/merlin/frontends/derived_symbolic_shapes.py",

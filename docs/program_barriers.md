@@ -36,8 +36,8 @@ Multi-CTA participation, barriers inside scalar lane/combiner regions, other
 physical operations, and barrier composition with atomic or assembly effects
 still refuse. Shared/external participants, asynchronous effects and general CFG
 participation require their own concrete contracts. Allocation-state wrappers
-currently need the additional protected-source integration described below;
-the present source-captured standalone qualification does not claim that route.
+add the protected-source integration described below, with separate original
+source IDs and independent consumer checks.
 
 ## Real source example
 
@@ -100,9 +100,54 @@ barrier/layout selection passes 26, with one subsequent direct abort-observation
 check retaining actual SIGABRT, diagnostic bytes and absence of outputs. Counts
 overlap. The selected report is `out/program-barriers/summary.json`.
 
-## Remaining allocation-source integration
+## Allocation source and complete models
 
-`convert_allocations` has a separate pre-wrapper protected-source capsule. It
-must also expand these phases before its source-version normalizer, preserve
-original barrier contracts and add matching independent consumer custody checks.
-Standalone source conversion and its package do not bypass that boundary.
+`convert_allocations` expands the phases before its separate pre-wrapper source
+normalizer. The source-protection report explicitly adds `barrier_conversions`;
+older readers reject this extension. Original/generic/protected source and the
+complete typed graph remain retained. The bound trace records these contracts
+under `protected-allocation-program-memory-phases`, whose `source_graph` is
+`allocation-original`: their IDs must not be confused with the wrapper's graph.
+
+Producer replay and Merlin's independent `kernel_barrier_evidence.py` reconstruct
+scope masks, source participation, prefix membership, live results and actual
+protected SCF regions. Memory events must remain present and in original order,
+both inside each phase and across phases. Keeping a deleted store's location on
+an inert operation cannot supply the missing effect. Moving an intact phase
+cannot supply the original ordering. These checks provide source/phase custody;
+they do not establish arbitrary numeric or memory equivalence.
+
+`scripts/capture_barrier_model.py` supplies a real PyTorch model:
+
+```python
+original = x + self.bias
+first, a = exchange(original, x.shape[0], 2)
+second, b = exchange(first, x.shape[0], 3)
+empty, z = exchange(x[:0], 0, 4)
+return second, first, a, b, original, x, empty, z, self.bias
+```
+
+Each call clones its incoming state, executes the original synchronized Triton
+tile loops, and returns updated state plus the observed transpose. The two
+dependent calls preserve earlier snapshots. The explicit empty call retains
+zero-size results; no sample value predicts output contents or chooses compiler
+behavior. Torch CPU implementations supply the original reference values.
+
+The model keeps its original `[2,19]` row domain and learned four-element i64
+bias. Binding uses the existing executed-call profile, receipt v2 and Merlin
+signature v6. Actual returned descriptors supply runtime extents. Every original
+archive/result remains retained, and borrowed caller inputs stay readonly.
+The selected tensor and guarded-memory forms have separate host/serial execution
+evidence. No public physical mutation, asynchronous/external effect, accelerator
+or performance permission follows.
+
+The selected two models retain 18 initial host results, 54 results over six
+unchanged-library invocations and 18 results across two actual Spike images as
+exact i64 words. Fourteen rehashed phase/payload/order claims refuse in both
+readers; two original public-domain violations actually abort without outputs.
+The final producer/model/source-protection/FP8 selection passes 80 checks and
+Merlin's independent phase/capsule/literal selection passes 103. Counts overlap
+earlier selections. `out/allocation-program-barriers/summary.json` retains the
+selected package, replay, failure and target evidence. General shared/async/
+atomic participation, source/numeric compositions and accelerator performance
+remain full-goal work; the historical opcode inventory is unchanged.

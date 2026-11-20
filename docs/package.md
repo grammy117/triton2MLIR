@@ -6,8 +6,12 @@ remain in the original inventory and `prov.program_barriers`; actual standard
 SCF phases carry complete tensor versions or synchronous standard accesses.
 Compatibility names this abstraction and its single-CTA/private invocation
 scope. Public tensor/scalar ABI and receipt schemas are unchanged. This grants
-no shared/external/async or cross-program effects; allocation-source capsules
-still require their separate protection integration.
+no shared/external/async or cross-program effects. Allocation capsules explicitly
+add `barrier_conversions` to source-protection v1; older readers reject the field.
+Both readers reopen actual generic/protected source and check scope, payload and
+memory order. Bound traces label these IDs `allocation-original`, separately
+from wrapper IDs. Complete models retain receipt v2 and signature v6. Selected
+host/serial qualification additionally binds the independent source reader.
 
 [Shared mutable views](mutating_views.md) select
 `m2m.functional-kernel-storage.v1` / `t2m.functional-kernel-binding.v2` within

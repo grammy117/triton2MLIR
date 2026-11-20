@@ -301,6 +301,7 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
             "fp8_conversions": protection["fp8_conversions"],
             "assembly_conversions": protection["assembly_conversions"],
             **({"literal_conversions": protection["literal_conversions"]} if "literal_conversions" in protection else {}),
+            **({"barrier_conversions": protection["barrier_conversions"]} if "barrier_conversions" in protection else {}),
             "grants_semantics": False}, sort_keys=True))
         precisions = {operation["id"]: {**operation["dot_precision"],
             "inputs": operation["inputs"], "input_types": operation["input_types"],
@@ -314,6 +315,11 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
                 if operation is entry or operation.name in ("linalg.matmul", "linalg.batch_matmul"):
                     operation.attributes["prov.allocation_original_dot_precisions"] = intent
         result.trace["abi_difference"] += "; original allocation numeric intent remains separately annotated; source contracts execute as standard arithmetic"
+        if "barrier_conversions" in protection:
+            result.trace["transformations"].append({"kind": "protected-allocation-program-memory-phases",
+                "source_graph": "allocation-original", "source_entry": source_entry,
+                "source_sha256": report["original_source_sha256"], "phases": protection["barrier_conversions"]})
+            result.trace["abi_difference"] += "; original allocation barriers retain protected standard memory phases and source contracts"
     if descriptor_bindings:
         entry = next(iter(result.module.ops))
         entry.attributes["prov.kernel_descriptor_state_bindings"] = builtin.StringAttr(json.dumps(descriptor_bindings, sort_keys=True))

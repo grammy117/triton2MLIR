@@ -3,8 +3,9 @@
 [Synchronous program barriers](docs/program_barriers.md) now retain source
 address-space masks and actual phase dependencies through a real runtime-loop
 tile exchange in tensor and guarded-memory forms. Native/host/serial-target
-checks pass; multi-CTA, shared/async/atomic compositions and protected allocation
-source integration remain separate completion work.
+checks pass. Protected allocation source and complete three-call models now use
+the same phases with independent typed-source/payload/order checks. Multi-CTA
+and general shared/async/atomic compositions remain completion work.
 
 [Shared mutable views](docs/mutating_views.md) now retain complete base state,
 actual coordinates and original TTIR pointer relationships through four real

@@ -3,8 +3,29 @@
 [Synchronous program barriers](program_barriers.md) now preserve complete
 standard memory phases for ordinary single-CTA pre-layout source. The real
 runtime-loop tile exchange passes native, reusable host and serial target
-checks without changing the logical grid. Continue with protected allocation
-source custody, general shared/async/atomic effects and participation scopes.
+checks without changing the logical grid. Protected allocation source and real
+three-call models now retain original phase custody and independent consumer
+checks. Continue with general shared/async/atomic effects and participation scopes.
+
+## Remaining execution sequence
+
+The full endpoint still requires every supported kernel's observable computation
+and effects to reach the Merlin interface with applicable execution evidence.
+The following order closes semantic families and their actual integration gates;
+more variants of a passing example do not close an unrelated requirement.
+
+| Work | Required result and evidence |
+|---|---|
+| Program phases through source/model intake | Retain original and bound graphs separately; preserve complete phases, snapshots, runtime dimensions and all results. Protected allocation/model integration is now delivered; the linked contract records its finite scope. |
+| Shared and asynchronous effects | Represent participation, publication, completion and memory dependencies explicitly. Reuse upstream analyses and standard operations; retain useful overlap/reuse. Qualify real execution rather than deleting difficult operations or accepting opaque calls. |
+| General memory/state composition | Extend actual root, view, index, alias, ownership and control proofs through remaining valid compositions. Keep source-width arithmetic, masks, complete initialization and conflict/lifetime checks. |
+| Numeric/source-version closure | Track types, attributes, regions and supporting dialects across pinned versions, including interactions with effects. The historical fifty-name `tt` inventory is not this denominator. |
+| Consumer and target closure | Complete remaining branch/while/permuted ownership and executor materialization paths. Qualify each applicable target with actual images, complete results and separately measured performance. |
+
+Hardware-dependent observations need an explicit source/effect contract and a
+working consumer implementation. Provenance records original intent and checked
+facts; it cannot supply an omitted effect. Any package/interface differences
+remain explicit in [package.md](package.md). The full goal remains active.
 
 [Shared mutable views](mutating_views.md) now connect source-regenerated geometry,
 complete cloned bases, actual coordinate SSA and independently checked TTIR
@@ -43,7 +64,7 @@ results across host replays and three actual target images. Runtime non-dense
 coordinates, remaining result-axis/source-layout bindings and broader effects
 and accelerators remain open.
 
-Updated 2026-11-17. **The full goal is active and incomplete.** Every valid
+Updated 2026-11-19. **The full goal is active and incomplete.** Every valid
 kernel in each pinned supported TTIR version must reach a working Merlin
 compiler interface with its observable computation/effects represented, useful
 algorithm retained, and applicable execution evidence. Host-only support,

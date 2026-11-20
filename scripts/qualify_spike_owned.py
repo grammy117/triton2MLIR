@@ -29,6 +29,7 @@ SOURCES = (
     "src/merlin/frontends/execution_source_coordinates.py",
     "src/merlin/frontends/execution_functional_state.py",
     "src/merlin/frontends/execution_storage_views.py",
+    "src/merlin/frontends/kernel_allocation_evidence.py", "src/merlin/frontends/kernel_barrier_evidence.py",
     "merlin/runtime/c/owned_result_driver.c", "merlin/runtime/c/owned_result_driver.h",
     "merlin/runtime/c/owned_result_readback.c", "merlin/runtime/c/owned_result_readback.h",
     "merlin/runtime/abi/owned_results.c", "merlin/runtime/abi/owned_result_views.c",

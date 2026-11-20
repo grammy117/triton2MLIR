@@ -5,8 +5,12 @@ coverage outside the historical fifty-name `tt` denominator. Two representations
 retain complete tile-update/transpose phases through native execution, reusable
 Merlin host libraries and two actual Spike images. Cross-program dependencies
 still refuse statically or abort under actual guarded execution. Broader
-barrier/effect, allocation-wrapper and accelerator/performance scope remains
-open; historical package counts are unchanged.
+barrier/effect and accelerator/performance scope remains
+open; historical package counts are unchanged. Protected allocation wrappers and
+two complete three-call models now retain all nine original results through
+Merlin host, changed-row/parameter replay and actual serial target execution.
+Typed-source checks reject deleted effects and reordered intact phases; metadata
+cannot hide a real source barrier. See the linked contract for the finite scope.
 
 [Shared mutable views](mutating_views.md) add four complete two-call models with
 overlapping/identical/interleaved views and dynamic matrix columns. Actual source

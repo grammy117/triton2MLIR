@@ -3,8 +3,10 @@
 [Program barriers](program_barriers.md) now reify pinned pre-layout CTA
 rendezvous as actual standard SCF memory phases. Tensor versions or standard
 accesses retain cross-lane visibility and iteration ordering through native,
-reusable Merlin host and two actual Spike images. Multi-CTA/shared/async effects,
-atomic compositions and protected allocation-source integration remain open.
+reusable Merlin host and actual Spike images. Protected allocation wrappers now
+retain these phases through complete three-call models, including nine results,
+runtime rows, parameters and snapshots. Multi-CTA/shared/async and broader atomic
+compositions remain open.
 
 [Shared mutable views](mutating_views.md) now preserve overlapping slices,
 interleaved strides, identical views and dynamic matrix columns through four
