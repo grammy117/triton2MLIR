@@ -105,6 +105,13 @@ correspondence remain checked. Selected source hashes do not constitute a
 complete dependency closure, and serial execution establishes no accelerator
 correctness or performance equivalence.
 
+Implementation `f271d7ab1b3127aebb033ce241451f7fccb23d9e` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba` on
+`ttir-experiment-grammy`. All nine selected implementation/test source files
+match the actual producer commit bytes; the reopening report records that
+separate match alongside its original observed revisions.
+
 Final logs are `.scratch/tile-partitions-final2.log`,
 `.scratch/tile-partitions-regression1.log` and
 `.scratch/tile-partitions-report3.log`. The earlier 52-check run and its successful

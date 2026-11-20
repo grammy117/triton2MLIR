@@ -18,6 +18,13 @@ through `.scratch/interleaved-tiles-probe1/source.ttir`, whose complete writes
 to two fresh outputs still encounter the collector's memory-event boundary.
 That failed source supplies no successful package or target qualification.
 
+Tile implementation `f271d7ab1b3127aebb033ce241451f7fccb23d9e` retains
+model2MLIR `a3ce8ed` and Merlin `53e7b0115` on `ttir-experiment-grammy`.
+All nine selected implementation/test sources match actual committed bytes;
+the report records that check separately from the original reopening revisions.
+This is selected evidence, not a full dependency closure. The producer stays
+on `main`; no companion source change or branch rename was required.
+
 [Source branch/mask partitions](source_partitions.md) now close the actual
 both-arm final-coverage and complementary-mask local-read refusals. Source
 choices, order, fills, reuse and observations survive complete model host/serial
