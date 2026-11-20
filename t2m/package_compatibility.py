@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-loop-body-ranges" for row in trace.get("transformations", [])):
+        differences.append("source address widths use definition-scoped intervals before narrower loop-body facts; actual signed serial reachability proves positive upper bounds and nonnegative product factors only inside their original regions; division/remainder checks retain source widths and poison refusals, while zero remains in valid entry domains; provenance describes the analysis and grants no source rewrite, ownership, numeric policy or public ABI change")
     if any(row.get("address") == "checked-scalar-flat-index" for row in trace.get("memory", {}).get("source_scatters", [])):
         differences.append("serial scalar indexed state uses ordered standard tensor versions with active signed bounds checks and source-proved fresh initialization; scalar-addressed multidimensional roots may carry complete linear tensor storage with logical shapes restored at the public boundary; one lane and one logical program grant no parallel ownership, alias, atomic or volatile permission; guards remain executable and the unguarded buffer continuation cannot inherit a tensor-only runtime check; public tensor/scalar types, receipts and artifact rosters are unchanged")
     if trace.get("memory", {}).get("volatile_profile") == "private-invocation-volatile-loads-v1":

@@ -6,7 +6,34 @@ import math
 import pytest
 
 from t2m.diagnostics import ConversionError
-from t2m.integer_intervals import division_bounds
+from t2m.integer_intervals import division_bounds, remainder_bounds
+
+
+def test_signed_remainder_bounds_contain_every_four_bit_value():
+    for lower in range(-8, 8):
+        for upper in range(lower, 8):
+            for dl in range(-8, 8):
+                for du in range(dl, 8):
+                    if dl <= 0 <= du or lower == -8 and dl <= -1 <= du:
+                        with pytest.raises(ConversionError):
+                            remainder_bounds((lower, upper), (dl, du), width=4)
+                        continue
+                    bounds = remainder_bounds((lower, upper), (dl, du), width=4)
+                    for a in range(lower, upper + 1):
+                        for b in range(dl, du + 1):
+                            actual = a - math.trunc(Fraction(a, b)) * b
+                            assert bounds[0] <= actual <= bounds[1]
+
+
+@pytest.mark.parametrize("width", (8, 16, 32, 64))
+def test_remainder_width_zero_and_native_overflow_domains_remain_checked(width):
+    low, high = -(1 << (width - 1)), (1 << (width - 1)) - 1
+    for left, right in (((0, 1), (0, 1)), ((low, low), (-1, -1)), ((0, high + 1), (1, 1))):
+        with pytest.raises(ConversionError) as error:
+            remainder_bounds(left, right, width=width)
+        assert error.value.opcode == "arith.remsi"
+    assert remainder_bounds((low, high), (3, 3), width=width) == (-2, 2)
+    assert remainder_bounds((high, high), (-7, -7), width=width) == (high % 7, high % 7)
 
 
 @pytest.mark.parametrize(

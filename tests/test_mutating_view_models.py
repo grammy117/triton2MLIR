@@ -85,8 +85,7 @@ def test_complete_shared_view_models_keep_one_allocation_and_all_snapshots(selec
     assert len(trace["calls"]) == 2 and all(row["mutation_pointer_arguments"] == {"left": 0, "right": 1} for row in trace["calls"])
     kernel = next(iter(trace["kernels"].values()))
     assert kernel["memory_selection"]["attempts"][-1] == {
-        "memory_profile": "guarded-buffer" if kind == "permuted-base" else "tensor",
-        "address_policy": "source-words" if kind == "permuted-base" else "structured",
+        "memory_profile": "tensor", "address_policy": "structured",
         "status": "admitted"}
     with np.load(capture / "goldens.npz", allow_pickle=False) as expected, np.load(
         package / "consumer/host/outputs.npz", allow_pickle=False) as actual:

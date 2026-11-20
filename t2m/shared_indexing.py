@@ -271,41 +271,63 @@ def check_source_addresses(module, abi):
         return op.op_name.data if op.name == "builtin.unregistered" else op.name
 
     function = next(op for op in module.ops if name(op) == "tt.func")
-    facts = {v: (binding, binding) for v, (kind, binding) in
+    inputs = {v: (binding, binding) for v, (kind, binding) in
              zip(function.regions[0].block.args, abi.source_bindings, strict=True) if kind == "constant"}
-    facts.update((value, scalar.bounds) for value, (kind, scalar) in
+    inputs.update((value, scalar.bounds) for value, (kind, scalar) in
                  zip(function.regions[0].block.args, abi.source_bindings, strict=True)
                  if kind == "runtime" and scalar.bounds is not None)
-    pending = set()
+    from .source_scope_ranges import SourceScopes, definition_scope
+    facts, pending = {}, set()
 
-    def bounds(value):
-        if value in facts:
-            return facts[value]
+    def bounds(value, scope=None):
+        defined = definition_scope(value)
+        scope = defined if scope is None else scope
+        key = (value, scope)
+        if key in facts:
+            return facts[key]
+        # A later body fact must never validate arithmetic executed earlier.
+        if scope is not defined:
+            bounds(value, defined)
+        local = scopes.facts(scope)
         op = value.owner
+        if value in inputs:
+            low, high = inputs[value]
+            if value in local:
+                low, high = max(low, local[value][0]), min(high, local[value][1])
+            type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+            width = getattr(getattr(type_, "width", None), "data", 64)
+            if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
+                raise ConversionError("source input range exceeds its signed width")
+            facts[key] = low, high
+            return low, high
+
+        def operand(argument):
+            return bounds(argument, scope)
+
         if not hasattr(op, "name"):
             parent = op.parent_op()
             if parent is None or parent.name != "scf.for":
                 raise ConversionError("source memory index needs a loop/runtime range proof")
             require_signed_loop(parent)
-            limits = [bounds(v) for v in parent.operands[:3]]
+            limits = [bounds(v, parent.parent) for v in parent.operands[:3]]
             width = getattr(getattr(value.type, "width", None), "data", 64)
             domain = bounded_loop(limits, width=width)
             iterations = domain.maximum_iterations
             if value.index == 0:
                 result = domain.induction_bounds
             else:
-                if value in pending:
+                if key in pending:
                     raise ConversionError("source memory recurrence has cyclic/unproved increments")
-                pending.add(value)
-                initial = bounds(parent.operands[value.index + 2])
+                pending.add(key)
+                initial = bounds(parent.operands[value.index + 2], parent.parent)
                 yielded = parent.body.block.last_op.operands[value.index - 1]
                 delta = (0, 0)
                 if yielded is not value:
                     update = yielded.owner
                     if getattr(update, "name", "") == "arith.addi" and value in update.operands:
-                        delta = bounds(update.operands[1] if update.operands[0] is value else update.operands[0])
+                        delta = operand(update.operands[1] if update.operands[0] is value else update.operands[0])
                     elif getattr(update, "name", "") == "arith.subi" and update.operands[0] is value:
-                        lo, hi = bounds(update.operands[1])
+                        lo, hi = operand(update.operands[1])
                         delta = -hi, -lo
                     else:
                         raise ConversionError("source memory recurrence needs an invariant affine increment")
@@ -313,15 +335,17 @@ def check_source_addresses(module, abi):
                     raise ConversionError("source memory recurrence increment is not invariant")
                 span = (iterations - 1) * delta[0]
                 result = initial[0] + min(0, span), initial[1] + max(0, span)
-                pending.remove(value)
+                pending.remove(key)
             width = getattr(getattr(value.type, "width", None), "data", 64)
             if not -(1 << (width - 1)) <= result[0] <= result[1] < 1 << (width - 1):
                 raise ConversionError("source address recurrence may overflow before upstream index promotion")
-            facts[value] = result
+            if value in local:
+                result = max(result[0], local[value][0]), min(result[1], local[value][1])
+            facts[key] = result
             return result
         kind = name(op)
         if kind == "scf.execute_region":
-            low, high = bounds(region_yield(value))
+            low, high = operand(region_yield(value))
         elif kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data
             size = abi.grid_bounds[axis] if axis < len(abi.grid) else 1
@@ -351,21 +375,24 @@ def check_source_addresses(module, abi):
                 low, high = min(values), max(values)
             else:
                 raise ConversionError("memory offset constant must be integer")
+        elif kind == "arith.bitcast" and value.type == op.operands[0].type:
+            low, high = operand(op.operands[0])
         elif kind in ("tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans", "tt.reshape",
                        "arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
-            low, high = bounds(op.operands[0])
+            low, high = operand(op.operands[0])
             if kind == "arith.extui" and low < 0:
                 raise ConversionError("source unsigned address extension needs a nonnegative range")
         elif kind == "arith.select":
-            a, b = (bounds(v) for v in op.operands[1:])
+            a, b = (operand(v) for v in op.operands[1:])
             low, high = min(a[0], b[0]), max(a[1], b[1])
-        elif kind in ("arith.divsi", "arith.ceildivsi", "arith.floordivsi"):
-            from .integer_intervals import division_bounds
+        elif kind in ("arith.divsi", "arith.ceildivsi", "arith.floordivsi", "arith.remsi"):
+            from .integer_intervals import division_bounds, remainder_bounds
             type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
             width = getattr(getattr(type_, "width", None), "data", 64)
-            low, high = division_bounds(*(bounds(v) for v in op.operands),width=width,opcode=kind)
+            infer = remainder_bounds if kind == "arith.remsi" else division_bounds
+            low, high = infer(*(operand(v) for v in op.operands),width=width,opcode=kind)
         elif kind in ("arith.addi", "arith.subi", "arith.muli", "arith.minsi", "arith.maxsi"):
-            a, b = (bounds(v) for v in op.operands)
+            a, b = (operand(v) for v in op.operands)
             if kind == "arith.addi":
                 low, high = a[0] + b[0], a[1] + b[1]
             elif kind == "arith.subi":
@@ -383,9 +410,13 @@ def check_source_addresses(module, abi):
         width = getattr(getattr(type_, "width", None), "data", 64)
         if not -(1 << (width - 1)) <= low <= high < 1 << (width - 1):
             raise ConversionError("source address arithmetic may overflow before upstream index promotion", opcode=kind)
-        facts[value] = low, high
+        if value in local:
+            low, high = max(low, local[value][0]), min(high, local[value][1])
+        facts[key] = low, high
         return low, high
 
+    scopes = SourceScopes(bounds, name)
     for op in module.walk():
         if name(op) == "tt.addptr":
-            bounds(op.operands[1])
+            bounds(op.operands[1], op.parent)
+    return scopes.proofs

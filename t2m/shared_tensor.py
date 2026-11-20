@@ -1497,6 +1497,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "boolean-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
+    source_range_reports = []
     if source_words:
         for op in middle_module.walk():
             if opcode(op) in ("tt.ptr_to_int", "tt.int_to_ptr"):
@@ -1507,7 +1508,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             if opcode(op) == "tt.map_elementwise" and any(opcode(child) == "tt.load" for child in op.walk()):
                 raise ConversionError("mapped source memory requires guarded-buffer memory with source-words addresses",
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
-        check_source_addresses(middle_module, abi)
+        source_range_reports = [{"kind": "source-loop-body-ranges", "source_ids": _source_ids(loop.location),
+            "narrowed_values": count, "control": "actual-signed-serial-for-body-reachability",
+            "fact": "positive-upper-bound-and-nonnegative-product-factors",
+            "definition_validation": "original-definition-context-before-narrower-use",
+            "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"}
+            for loop, count in check_source_addresses(middle_module, abi)]
     pointer_control_reports = []
     isolated_events = False
     if source_words:
@@ -1590,6 +1596,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             report["source_ids"] = ids
             print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
+    transformations.extend(source_range_reports)
     if native_source_print is not None:
         transformations.append({"kind": "native-verified-source-serialization", **native_source_print,
             "source_graph": "original", "scope": "complete-source-serialization; no-normalization-or-source-equivalence-grant"})

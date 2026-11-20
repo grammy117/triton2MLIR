@@ -19,6 +19,9 @@ dev = ["pytest>=8,<10"]
 [project.scripts]
 t2m = "t2m.cli:main"
 
+[tool.setuptools]
+license-files = ["docs/licenses/*LICENSE*", "docs/licenses/*NOTICE*"]
+
 [tool.setuptools.packages.find]
 include = ["t2m*"]
 
