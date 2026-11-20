@@ -1,5 +1,18 @@
 # Review handoff — updated 2026-11-19
 
+[Composed atomic/volatile effects](atomic_volatile_effects.md) now preserve
+both original effects through protected sources and complete i64/f32 models.
+All 26 initial, 78 replay and 26 actual serial model results retain exact words;
+twelve changed model claims refuse and two source domains abort. The actual
+public CLI global/override paths retain 26 further host results. The source
+selection passes 21, two additional component checks pass, legacy frontend
+selection 155, complete models ten, default model regressions two and independent
+Merlin selections 467/206, with overlapping scope. Five new target images and
+all evidence reopen in `out/atomic-volatile-effects/summary.json`.
+Continue actual source effect admission across legacy stages, remaining
+memory/numeric/storage composition and general shared/asynchronous participation.
+Full arbitrary-kernel and accelerator closure remain open.
+
 [Volatile program phases](volatile_program_phases.md) now preserve actual
 private observations through original allocation source and complete i64/f32
 models. All 18 initial, 54 replay and 18 actual serial model results retain exact

@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Composed atomic/volatile effects](atomic_volatile_effects.md) now retain
+both executable components and atomic numeric/ownership rules. RMW/CAS and
+complete i64/f32 models qualify through host and actual serial execution, with
+all thirteen model results and original snapshots. Public binding preserves
+explicit f32 policy. General source/effect/storage and accelerator scope remain.
+
 [Volatile program phases](volatile_program_phases.md) now retain original
 private observations and cross-lane visibility through complete i64/f32 models.
 All nine results and parameter/snapshot words survive reusable host and actual

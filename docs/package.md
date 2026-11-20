@@ -7,6 +7,10 @@ barriers use v4 and bind both selections. The standard atomic computation and
 localized LLVM volatile reads remain executable. Public tensor/scalar ABI and
 capture receipts are unchanged; older admission/word/barrier readers refuse the
 new versions. `bind-model` forwards explicit global/per-kernel f32 policy.
+Complete mixed-effect models keep executed binding v4, receipt v2 and signature
+v6, all thirteen results and every parent archive byte. API host/replay/serial
+and public CLI host scopes remain separate. No new state copyback, source
+equivalence, shared/async participation or accelerator contract follows.
 
 [Volatile program phases](volatile_program_phases.md) additionally select
 `t2m.synchronous-program-barrier.v3` when actual private volatile observations

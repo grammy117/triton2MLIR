@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Composed atomic/volatile effects](docs/atomic_volatile_effects.md) now retain
+both original effects through protected sources and complete i64/f32 models.
+All thirteen model results survive host replays and actual serial images;
+public CLI binding carries global/per-kernel f32 policy. Continue actual effect
+selection across legacy stages, general memory/numeric/storage composition and
+shared/asynchronous participation before applicable accelerator qualification.
+
 [Volatile program phases](docs/volatile_program_phases.md) now compose private
 observations with synchronous barriers through original allocation sources and
 complete i64/f32 models. All nine results, runtime shapes and earlier snapshots

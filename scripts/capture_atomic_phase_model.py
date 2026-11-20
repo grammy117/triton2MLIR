@@ -12,25 +12,28 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out, dtype="i64"):
+def capture(out, dtype="i64", *, volatile=False):
     out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=False)
-    source = Path(__file__).resolve().parents[1] / "t2m/examples/atomic_barrier_kernels.py"
+    source = Path(__file__).resolve().parents[1] / "t2m/examples" / (
+        "atomic_volatile_kernels.py" if volatile else "atomic_barrier_kernels.py")
     spec = importlib.util.spec_from_file_location("atomic_phase_model_kernel", source)
     kernels = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(kernels)
+    kernel = kernels.atomic_volatile_updates if volatile else kernels.atomic_phases
+    state_size = 32 if volatile else 16
     name = "t2m_demo::atomic_phases"
 
     @triton_op(name, mutates_args={})
     def exchange(x: torch.Tensor, state: torch.Tensor, n: int, steps: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         updated, old, seen = state.clone(), torch.empty_like(x), torch.empty_like(x)
-        wrap_triton(kernels.atomic_phases)[((n + 7) // 8,)](
+        wrap_triton(kernel)[((n + 7) // 8,)](
             x, updated, old, seen, n, steps, B=8, CROSS=False)
         return updated, old, seen
 
     @exchange.register_kernel("cpu")
     def reference(x, state, n, steps):
-        assert tuple(x.shape) == (n,) and tuple(state.shape) == (16,)
+        assert tuple(x.shape) == (n,) and tuple(state.shape) == (state_size,)
         updated = state.clone()
         old, seen = torch.full_like(x, -7), torch.full_like(x, -7)
         for _ in range(steps):
@@ -49,7 +52,7 @@ def capture(out, dtype="i64"):
         def __init__(self):
             super().__init__()
             self.bias = torch.nn.Parameter(torch.tensor(2, dtype=dt), requires_grad=False)
-            self.state = torch.nn.Parameter(torch.arange(16, dtype=dt) - 3, requires_grad=False)
+            self.state = torch.nn.Parameter(torch.arange(state_size, dtype=dt) - 3, requires_grad=False)
 
         def forward(self, x):
             original = x + self.bias
@@ -84,5 +87,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--dtype", choices=("i64", "f32"), default="i64")
+    parser.add_argument("--volatile", action="store_true", help="retain private volatile observations alongside atomic phases")
     args = parser.parse_args()
-    print(capture(args.out, args.dtype))
+    print(capture(args.out, args.dtype, volatile=args.volatile))

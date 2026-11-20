@@ -121,3 +121,52 @@ selection passes 21 checks; two additional absent-component checks pass. The
 existing atomic/volatile/automatic/CAS selection passes 155. Merlin's independent
 source selection passes 467 and its separate standalone interface selection
 passes 206. These are overlapping regression scopes, not new opcode counts.
+
+## Complete models and the public binder
+
+`scripts/capture_atomic_phase_model.py --volatile --dtype i64|f32` captures
+actual PyTorch/Triton models with learned bias and a 32-element initial state:
+
+```python
+original = x + self.bias
+first, old1, seen1 = exchange(original, self.state, x.shape[0], 2)
+second, old2, seen2 = exchange(original, first, x.shape[0], 3)
+empty, old0, seen0 = exchange(x[:0], second, 0, 1)
+return second, first, old1, seen1, old2, seen2, original, x, empty, old0, seen0, self.state, self.bias
+```
+
+The original wrapper clones incoming state. Both dependent calls retain actual
+RMW old values and volatile observations across the original phases. The empty
+call preserves incoming state and returns empty observation tensors. Every
+earlier snapshot, parameter word and original parent archive remains intact.
+Existing executed-call binding v4, receipt v2 and Merlin signature v6 retain all
+thirteen results. Updated private state remains functional SSA; no public
+physical mutation or caller copyback is introduced.
+
+The two models retain 26 initial host results, 78 results across six
+unchanged-library invocations and 26 results across two actual serial Spike
+images, all as exact words. Twelve rehashed component/source/stage claims refuse
+in both readers; two original public shape-domain violations abort without
+outputs. All ten model pytest checks pass. The default nonvolatile script path
+also passes both existing complete-model regressions.
+
+A separate retained-fixture check invokes the real `bind-model` CLI twice on
+the f32 model: once with global IEEE policy, once overriding global FTZ with
+per-kernel IEEE selection. Both complete host packages retain all thirteen
+original results, for 26 additional comparisons. This closes the missing public
+numeric-policy forwarding rather than granting an implicit default. These CLI
+packages have host qualification; their selected API counterparts have the
+separate target qualification above. The test is part of
+`tests/test_atomic_volatile_models.py` for fresh reproduction; the retained run
+has ten pytest checks plus this additional two-case invocation.
+
+`out/atomic-volatile-effects/summary.json` reopens all packages, arrays, original
+archives, library/input identities, refusals and aborts, plus the five new actual
+target images. It records current independent readers and keeps the standalone,
+complete API-model and public-CLI scopes separate. The historical fifty-name
+inventory is unchanged; general source/effect/storage and target closure remain.
+
+```bash
+python -m pytest -q tests/test_atomic_volatile_models.py \
+  --basetemp=.scratch/pytest-atomic-volatile-models
+```

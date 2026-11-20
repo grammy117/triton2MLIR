@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Composed atomic/volatile effects](atomic_volatile_effects.md) now qualify
+RMW/CAS and original source phases through native/host/serial execution.
+Complete i64/f32 models retain 26 initial, 78 replay and 26 actual target
+results; public CLI global/override paths retain 26 further host results.
+Twelve changed model claims refuse and two source domains abort. Broader
+source/effect/storage/target scope remains; the historical inventory is unchanged.
+
 [Volatile program phases](volatile_program_phases.md) now qualify selected
 private observations through protected allocation and complete i64/f32 models.
 All 18 initial, 54 replay and 18 actual model target results retain exact words;

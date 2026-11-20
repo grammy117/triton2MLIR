@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Composed atomic/volatile effects](atomic_volatile_effects.md) now preserve
+both primitive contracts, numeric policy and ownership through original
+allocation sources and complete i64/f32 models. All thirteen results survive
+host/serial execution; the public binder retains explicit policy overrides.
+Continue source effect selection across legacy envelopes, remaining memory/
+numeric/storage composition and general shared/asynchronous participation.
+
 [Volatile program phases](volatile_program_phases.md) now retain unused and
 cross-lane observations through protected source, reusable host and complete
 i64/f32 models on serial targets. Original phases, all nine results, snapshots
@@ -36,6 +43,7 @@ more variants of a passing example do not close an unrelated requirement.
 
 | Work | Required result and evidence |
 |---|---|
+| Actual effect selection across stage versions | Audit actual typed source before legacy word-stage early returns. Unsupported original effects must refuse even when byte-bound declarations are rehashed; custody alone supplies no semantic admission. |
 | Program phases through source/model intake | Retain original and bound graphs separately; preserve complete phases, snapshots, runtime dimensions and all results. Protected allocation/model integration is now delivered; the linked contract records its finite scope. |
 | Shared and asynchronous effects | Represent participation, publication, completion and memory dependencies explicitly. Reuse upstream analyses and standard operations; retain useful overlap/reuse. Qualify real execution rather than deleting difficult operations or accepting opaque calls. |
 | General memory/state composition | Extend actual root, view, index, alias, ownership and control proofs through remaining valid compositions. Keep source-width arithmetic, masks, complete initialization and conflict/lifetime checks. |
