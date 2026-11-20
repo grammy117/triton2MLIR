@@ -9,6 +9,11 @@ serial images. Consumer destination/deallocation checks pass 165; broader
 ownership passes 163 with two skips, and structure checks pass. These extend
 control/memory composition; general ownership, source ranges, effects and
 accelerator coverage remain incomplete and the opcode denominator is unchanged.
+The producer selection passes 25 and the overlapping memory/control/pointer/
+attention regression 150. `out/while-tensor-memory/summary.json` reopens five
+host packages, 28 initial and 126 replay results, plus 56 exact results across
+ten actual serial images. Selected source hashes and actual revisions are
+recorded without claiming a full dependency closure or accelerator performance.
 
 [Branch-local source ranges](branch_source_ranges.md) add selected signed/
 unsigned comparisons and boolean implications without changing source entry

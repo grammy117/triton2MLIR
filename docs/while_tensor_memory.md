@@ -112,6 +112,26 @@ Merlin signatures are unchanged. Generated compatibility metadata explicitly
 describes while memory and its final false edge. Both readers still enforce
 the ordinary source, numeric, initialization, ownership and lifetime contracts.
 
+At producer `1d4e8a1d40926b5066e3238d18ad25485d831ed7` and Merlin
+`b6d664a9ec5462f21e22ee0c51b9858eee315354`, the final focused selection passes
+25 checks and memory/control/pointer/attention regression passes 150. The
+consumer destination/deallocation selection passes 165, broader ownership 163
+with two skips, and repository structure passes. These selections overlap.
+Targeted Ruff passes; `shared_tensor.py` retains the same five pre-existing
+diagnostics as its committed baseline.
+
+`out/while-tensor-memory/summary.json` reopens all five host packages, every
+saved reference/result archive, original model-parent bytes and ten actual
+target qualifications. Four kernel libraries retain fourteen initial and
+seventy replay results; the complete model retains fourteen initial and
+fifty-six replay results. Eight kernel images retain twenty-eight results;
+two complete-model images retain another twenty-eight. All comparisons use
+exact words. Selected source hashes and actual revisions are recorded; this
+does not claim a full dependency closure. Reopening passes in
+`.scratch/while-memory-report1.log`, with final tests in `.scratch/while-final1.log`
+and `.scratch/while-regression1.log`. Earlier failed logs retain their original
+outcomes and are not relabeled as current qualification.
+
 General loop-carried address/range proofs, partial/nested fresh initialization,
 resizing or permuted owners, irregular parallel dependencies, shared/async
 effects and applicable accelerator correctness/performance remain open. This

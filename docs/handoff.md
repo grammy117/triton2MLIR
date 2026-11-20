@@ -19,6 +19,16 @@ Next extend while-carried source ranges, partial/nested fresh initialization,
 resizing/permuted owners and broader parallel/effect/target composition. The
 full goal remains incomplete; public ABI, receipts and signatures are unchanged.
 
+Producer `1d4e8a1d40926b5066e3238d18ad25485d831ed7` passes 25 focused and 150
+memory/control/pointer/attention checks. `out/while-tensor-memory/summary.json`
+reopens five host packages, all original model-parent bytes, 28 initial and
+126 replay results, plus 56 results from ten actual serial images. The report
+records selected source hashes and exact revisions, not a full dependency
+closure. Final logs are `.scratch/while-final1.log`, `.scratch/while-regression1.log`
+and `.scratch/while-memory-report1.log`. The source/consumer attribute refusals
+and fresh zero-trip initialization refusal remain explicit checks. Selected
+Ruff passes; shared tensor code retains its five existing baseline diagnostics.
+
 [Branch-local source ranges](branch_source_ranges.md) at `60f3bad` now retain
 actual scalar signed/unsigned comparison constraints and necessary boolean
 implications. Original definitions still precede narrower use facts. Source
