@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Actual word-source effect admission](word_source_effects.md) now checks typed
+primitives before legacy stage returns in both readers. The 26 producer and
+861 independent Merlin checks pass; six real-source rehashes refuse in both
+gates and six full staging cases publish nothing. All 293 historical word
+contexts pass the separate source audit. Complete mixed-effect models retain
+26 initial, 78 replay and 26 fresh source-pinned serial-target results, plus
+26 public-CLI host results. The 11 model checks pass with one expected skip;
+two additional target test calls require the actual reader pin. The report
+`out/word-source-effects/summary.json` records the finite scopes separately.
+General shared/async, composition and accelerator coverage remain open.
+
 [Composed atomic/volatile effects](atomic_volatile_effects.md) now qualify
 RMW/CAS and original source phases through native/host/serial execution.
 Complete i64/f32 models retain 26 initial, 78 replay and 26 actual target

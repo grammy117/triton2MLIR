@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Actual word-source effect admission](word_source_effects.md) now closes the
+legacy-stage primitive-selection gap without changing public ABI or artifact
+rosters. Independent actual-source checks precede byte-custody early returns;
+the historical compatibility audit and fresh complete model/serial execution
+pass. The execution-owned target builder now also pins the actual reader.
+General shared/asynchronous participation, remaining source/memory/numeric/
+storage compositions and applicable accelerator qualification stay open.
+
 [Composed atomic/volatile effects](atomic_volatile_effects.md) now retain
 both executable components and atomic numeric/ownership rules. RMW/CAS and
 complete i64/f32 models qualify through host and actual serial execution, with

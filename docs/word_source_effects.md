@@ -67,6 +67,23 @@ that leave no published compiler directory. A retained compatibility audit
 reopens 293 actual word-source contexts from 352 historical packages, with no
 primitive-admission failures. These scopes overlap and add no opcode count.
 
+Complete i64/f32 mixed-effect models additionally pass 11 checks, with one
+expected i64 skip for the f32-only public policy test. All 26 initial, 78 replay
+and 26 serial-target results retain exact words; public CLI global/override
+binding retains 26 further host results. Twelve changed model claims refuse
+and two source domains actually abort. Original parent archives remain intact.
+
+Retained-record reopening exposed a separate source-list omission in the
+execution-owned target builder. `qualify_spike_owned.py` now pins the independent
+reader too, and the actual model target test requires its exact current bytes.
+Two new target images were built from the same unchanged model packages; the
+updated integration test body passed for both. The earlier functional images
+remain retained but lack this pin and are not counted as current-reader images.
+`out/word-source-effects/summary.json` reopens original before/after probes,
+real-source refusals, six no-publication staging cases, historical source audit,
+complete model/replay/CLI results and both fresh source-pinned target records.
+This report keeps the historical audit and new execution scopes separate.
+
 This gate proves selection and primitive fields only. General shared/external/
 asynchronous effects, byte-backed volatile views, source equivalence, broader
 type/control/storage/numeric compositions and accelerator correctness/performance

@@ -1,5 +1,21 @@
 # Review handoff — updated 2026-11-19
 
+[Actual word-source effect admission](word_source_effects.md) now closes the
+legacy early-return gap in both complete memory gates. Producer selection
+passes 26 and independent Merlin passes 861. Six consistently rehashed real
+source changes refuse in both readers; six full staging cases publish nothing.
+The separate historical audit admits 293 actual word contexts from 352 packages.
+Complete mixed-effect models retain 26 initial, 78 replay and 26 fresh serial
+results, with all original parent archives intact. Public CLI binding retains
+26 further results; twelve changed model claims refuse and two source domains
+abort. Eleven model checks pass with one expected skip. Record reopening found
+the separate execution-owned builder's omitted reader pin; both actual target
+test bodies additionally pass against newly built images with the exact pin.
+Earlier images remain retained in their original scope, not relabeled.
+`out/word-source-effects/summary.json` reopens the before/after probes, finite
+audit and current source-pinned model/target evidence. Continue shared/async
+participation, broader composition and applicable accelerator work.
+
 [Composed atomic/volatile effects](atomic_volatile_effects.md) now preserve
 both original effects through protected sources and complete i64/f32 models.
 All 26 initial, 78 replay and 26 actual serial model results retain exact words;
@@ -9,8 +25,8 @@ selection passes 21, two additional component checks pass, legacy frontend
 selection 155, complete models ten, default model regressions two and independent
 Merlin selections 467/206, with overlapping scope. Five new target images and
 all evidence reopen in `out/atomic-volatile-effects/summary.json`.
-Continue actual source effect admission across legacy stages, remaining
-memory/numeric/storage composition and general shared/asynchronous participation.
+Continue remaining memory/numeric/storage composition and general
+shared/asynchronous participation.
 Full arbitrary-kernel and accelerator closure remain open.
 
 [Volatile program phases](volatile_program_phases.md) now preserve actual

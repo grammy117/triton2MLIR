@@ -150,6 +150,9 @@ def test_actual_serial_target_preserves_the_whole_mixed_effect_model(selected):
         report = Q.qualify(package, root / "target", result_mode="execution-owned", comparison="words",
             merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"], inputs=inputs, reference=reference)
         assert report["evaluation"]["result_count"] == 13
+        reader = "src/merlin/frontends/kernel_word_source_effects.py"
+        build = json.loads((root / "target/build.json").read_text())
+        assert build["merlin_sources"][reader] == _record(Path(os.environ["T2M_MERLIN_ROOT"]) / reader)
     finally:
         sys.path.remove(scripts)
 
