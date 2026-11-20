@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Source loop-body ranges](source_scope_ranges.md) describe a source-width
+analysis extension with no public ABI, receipt or artifact-schema change.
+Actual signed-loop reachability gives local positivity only after original
+definition checks. Generated compatibility records the analysis; provenance
+grants no operation, ownership, effect, rewrite or target permission. Valid
+empty entry dimensions remain and guarded profiles retain their own contracts.
+
 [Serial scalar tensor memory](serial_tensor_memory.md) uses ordered tensor
 versions, active signed bounds and source-proved initialization without adding
 public arguments or artifact/receipt versions. `prov.serial_tensor_storage`

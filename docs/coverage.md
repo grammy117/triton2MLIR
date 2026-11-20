@@ -1,6 +1,17 @@
 # Measured coverage and remaining boundaries
 
-[Serial scalar tensor memory](serial_tensor_memory.md) now qualifies five
+[Source loop-body ranges](source_scope_ranges.md) now qualify all six shared-view
+models as pure tensor computation, including the rank-three matrix-view form.
+The source/domain, memory and complete-model selections pass 39/91/30, with
+overlap. All 52 initial, 156 changed-invocation and 52 actual serial target
+results retain exact words; thirty rehashed claims refuse in both readers and
+six original domains abort. Native and unchanged-library matrix runs each
+retain six results, including valid empty shapes. The source-pinned reopening
+report is `out/source-scope-ranges/summary.json`. General conditional/while
+ranges, ownership/effect composition and accelerators remain incomplete; this
+does not expand the historical opcode denominator or establish performance.
+
+[Serial scalar tensor memory](serial_tensor_memory.md) at `1ceb878` qualifies five
 complete model forms with no memref payload. Source-frozen memory/model
 selections pass 91/30 with overlap. All 44 initial, 132 replay and 44 tensor
 target results retain exact words; 25 changed claims refuse and five original

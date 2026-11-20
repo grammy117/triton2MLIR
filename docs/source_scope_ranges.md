@@ -103,6 +103,16 @@ each retain six exact results with valid empty domains.
 Final logs are `.scratch/source-scopes9.log`,
 `.scratch/scoped-memory-pinned1.log` and `.scratch/scoped-models-pinned1.log`.
 The source-pinned reopening report is `out/source-scope-ranges/summary.json`.
+It independently reopens complete parent archives, every model result, all
+target receipts and the six native/host matrix invocations. The rank-three
+comparison retains identical typed source-operation records after excluding
+locations: emitted memref operations change from 51 to zero, with four tensor
+insertions and three local range reports. This measures abstraction rather
+than execution speed or physical allocation reuse. Reopening passes in
+`.scratch/source-scope-report2.log`; the first invocation's missing Python
+module path remains in its original failed log. Distribution checking in
+`.scratch/source-range-wheel3.log` verifies the LLVM notice/license and existing
+xDSL license bytes in the built wheel using the installed build backend.
 The historical opcode inventory remains unchanged; these checks establish
 semantic compositions and abstraction, not new operation-name breadth.
 

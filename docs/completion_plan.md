@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Source loop-body ranges](source_scope_ranges.md) now close the concrete
+rank-three quotient/remainder refusal while retaining empty entry domains and
+original-definition overflow/poison checks. Continue conditional/while range
+relations, partial/nested initialization and irregular parallel ownership,
+alongside the remaining source/numeric/effect and consumer families below.
+
 [CFG program phases](cfg_program_phases.md) now close the reproduced scalar
 early-return/barrier and complete-void allocation-wrapper refusals. Original
 typed CFG edges and phase payload remain independently checked; the official

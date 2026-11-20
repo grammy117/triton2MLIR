@@ -1,10 +1,18 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Source loop-body ranges](docs/source_scope_ranges.md) now close the rank-three
+matrix-view divisor refusal without narrowing valid zero-sized entry domains.
+Definition-scoped checks precede body-only positivity facts; source arithmetic,
+loops and state reuse remain. Continue general conditional/while constraints,
+partial/nested initialization, irregular parallel ownership and broader
+source/numeric/effect/consumer coverage.
+
 [Serial scalar tensor memory](docs/serial_tensor_memory.md) now raises selected
 ordered state updates and complete fresh scalar loops into standard tensor
 versions. Preserve this path's source proofs and native lifetime checks.
-Next close region-local range/reachability facts, broader irregular parallel
-ownership and partial initialization without discarding source loops or reuse.
+Product-bounded signed-loop reachability now has the separate proof above.
+Continue broader irregular parallel ownership and partial initialization
+without discarding source loops or reuse.
 
 [Dense mutable storage permutations](docs/storage_permutations.md) now preserve
 zero-origin transpose/rank-three roots and shared matrix views through complete

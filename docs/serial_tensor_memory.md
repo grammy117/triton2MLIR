@@ -1,5 +1,10 @@
 # Serial scalar memory as tensor data flow
 
+[Source loop-body ranges](source_scope_ranges.md) additionally close the
+rank-three example's divisor/reachability refusal. All six shared-view forms
+can now select tensors; the five-tensor/one-guarded results below retain their
+original implementation scope and are not relabeled.
+
 Single-program scalar indexed reads and writes can now remain standard tensor
 computation instead of requiring private guard arrays and a memref payload.
 This closes the reproduced tensor-admission refusal in the actual shared-view
@@ -67,8 +72,9 @@ one reused bias load, overlapping write order, learned parameters, prior
 snapshots and every returned state remain executable. Automatic selection may
 now admit the tensor candidate directly for these five forms.
 
-The rank-three matrix-view form retains its existing guarded source-word path.
-Its structured source-width audit cannot yet prove that the divisor is nonzero
+At this milestone the rank-three matrix-view form retained its guarded
+source-word path. Its structured source-width audit could not prove that the
+divisor was nonzero
 only inside the `range(rows * cols)` body when the public scalar range admits
 zero. That is a real reachability/range-analysis obligation, not a GPU-specific
 operation to discard. Its original complete working interface remains available.
@@ -79,8 +85,9 @@ four stores. Its emitted kernel changes from 49 memref operations to none,
 with four standard tensor insertions. This measures the abstraction change;
 it is not a timing or allocation-reuse benchmark.
 
-The next proof belongs in `shared_indexing.check_source_addresses`: actual
-loop-body reachability can establish positive factors for a nonnegative product
+The subsequent [local source proof](source_scope_ranges.md) is implemented in
+`shared_indexing.check_source_addresses`: actual loop-body reachability
+establishes positive factors for a nonnegative product
 bound. Such facts must stay local to the defining region and must not validate
 an earlier, already-executed division outside that region. Preserve valid empty
 entry domains, source-width checks and separate caches for distinct contexts;

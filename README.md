@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Source loop-body ranges](docs/source_scope_ranges.md) now keep zero-sized
+entry domains while proving actual quotient/remainder indexing inside executed
+nonnegative product-bounded loops. Original-definition checks prevent body
+facts from hiding earlier overflow or unsafe divisions outside the loop.
+The rank-three shared-view form can now use tensor MLIR; broader conditional/
+while facts, ownership and accelerator qualification remain open.
+
 [Serial scalar tensor memory](docs/serial_tensor_memory.md) now keeps selected
 shared-view updates in tensor/SCF data flow, with source-proved fresh results
 and actual bounds checks. Logical root shapes and snapshots remain intact;

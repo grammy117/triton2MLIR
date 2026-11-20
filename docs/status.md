@@ -1,11 +1,24 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Source loop-body ranges](source_scope_ranges.md) now admit the rank-three
+shared matrix-view form as tensor computation. Actual signed product-bound
+reachability supplies local positivity; original definitions retain independent
+width/poison checks and valid zero entry dimensions remain. No source rewrite,
+public ABI or ownership/effect contract changes. Broader conditional/while
+constraints, initialization, parallel irregular ownership and targets remain.
+The 39/91/30 source/domain, memory and complete-model selections pass with
+overlap. All six tensor models retain 52 initial, 156 replay and 52 actual
+serial target results. Thirty changed claims refuse in both readers and six
+original domains abort. `out/source-scope-ranges/summary.json` retains the
+reopening evidence; general coverage and accelerator performance remain open.
+
 [Serial scalar tensor memory](serial_tensor_memory.md) now removes the guarded
 memory requirement from five shared-view model forms. Source masks, loops,
 overlapping update order, complete results and earlier snapshots remain.
 Pure tensor versions retain actual active bounds and source-proved fresh
-initialization. The rank-three division/reachability case keeps its working
-guarded source-word path; general layouts/effects/targets remain incomplete.
+initialization. The earlier rank-three guarded source-word path remains
+available; the new local range proof above admits its tensor form too.
+General layouts/effects/targets remain incomplete.
 
 [Dense mutable storage permutations](storage_permutations.md) close the concrete
 `x.T.clone()` storage/correspondence refusal and rank-three `sym_stride` gap.

@@ -2,8 +2,9 @@
 
 [Serial scalar tensor memory](serial_tensor_memory.md) additionally admits the
 transpose/column source as pure tensor computation. The rank-three matrix-view
-example retains the guarded source-word selection described below; original
-qualification records are not relabeled as new tensor-path evidence.
+example now also has a [source loop-body range proof](source_scope_ranges.md)
+for tensor admission. Its earlier guarded source-word qualification described
+below remains historical evidence and is not relabeled as tensor-path evidence.
 
 Complete mutable roots may retain a proved dense axis permutation instead of
 requiring row-major source strides. The actual source examples are:

@@ -1,5 +1,36 @@
 # Review handoff — updated 2026-11-20
 
+[Source loop-body ranges](source_scope_ranges.md) at `fe65631` now close the
+rank-three shared matrix-view form's tensor refusal. Original definitions are
+validated before narrower use facts; actual signed product-bound reachability
+proves local positivity without excluding zero at entry. Original division,
+remainder, loops, update order and reused bias remain. Public types, receipts,
+artifact rosters, effect/ownership profiles and Merlin signatures are unchanged.
+LLVM remainder inference attribution and distribution licenses are retained.
+
+The source/domain selection passes 39, memory regression 91 and complete-model
+selection 30, with overlap. All six models select tensors, retaining 52 initial,
+156 replay and 52 actual serial target results. Thirty rehashed claims refuse
+in both readers and six original domains abort without results. A nontrivial
+i64 matrix computation retains six exact native results and six results from
+one reused Merlin library, including three zero-sized shapes. Final logs are
+`.scratch/source-scopes9.log`, `.scratch/scoped-memory-pinned1.log` and
+`.scratch/scoped-models-pinned1.log`; reopening evidence is
+`out/source-scope-ranges/summary.json`. The corrected replay-test API error and
+earlier test-driver failures remain in their original logs.
+Reopening passes in `.scratch/source-scope-report2.log`. Original rank-three
+typed source operations remain identical after excluding locations; its
+emitted memref count drops from 51 to zero with four tensor insertions.
+
+Next extend actual conditional/while constraints and partial/nested fresh
+initialization, then irregular parallel ownership and general storage/effect
+composition. Reuse `source_index_ranges`' checked comparison/dominance work
+where applicable; sequential assertions need instruction-position facts rather
+than indiscriminate block-wide assumptions. Nested range-audit positives do not
+qualify nested output ownership. Accelerator correctness/performance and full
+arbitrary-kernel coverage remain open. No Merlin/model2MLIR source change is
+needed for this capability; the foreign model2MLIR docstring edit remains.
+
 [Serial scalar tensor memory](serial_tensor_memory.md) at `1ceb878` now closes
 the five shared-view forms' guarded-memory requirement. Source masks, ordering,
 loops, bias reuse, initialization and native lifetime checks remain. Actual
@@ -15,8 +46,9 @@ refusals and domain abort. Native primitives retain 49 results over thirteen
 invocations and three actual bounds aborts, including exact nonfinite copies.
 `out/serial-tensor-memory/summary.json` reopens all source-pinned evidence.
 No Merlin/model2MLIR source change is needed; the foreign m2m docstring edit
-remains. Next prove region-local range/reachability without strengthening valid
-empty entry domains, then broaden irregular parallel ownership/initialization,
+remains. The subsequent source-loop proof above closes the concrete local
+range/reachability gap without strengthening valid empty entry domains.
+Continue broader irregular parallel ownership/initialization,
 storage/effect composition and applicable accelerator qualification. Full
 arbitrary-kernel coverage and performance remain open.
 
