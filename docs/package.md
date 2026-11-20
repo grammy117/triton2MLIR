@@ -8,6 +8,11 @@ values, source order and sticky conflict guards remain actual computation.
 Public tensor/scalar ABI, receipt schemas and source-capsule artifact rosters
 are unchanged. Older barrier-v1 readers refuse v2. No grid-wide, external,
 async, new numeric-policy or accelerator permission follows.
+Complete i64/f32 atomic-phase models retain the existing executed-call binding
+v4, receipt v2 and signature v6, with all original parent archives/results.
+Separate host and serial target qualification binds the independent atomic
+source reader as well as allocation/phase readers; no new public result schema
+or caller copyback contract is introduced.
 
 [Program barriers](program_barriers.md) add the explicit
 `t2m.synchronous-program-barrier.v1` source contract. Exact masks/source positions

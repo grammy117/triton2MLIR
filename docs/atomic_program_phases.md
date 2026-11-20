@@ -64,9 +64,62 @@ standard acq_rel implementation. Cross-program ordinary/atomic conflicts still
 abort through the actual compiled guard. A CTA barrier neither resets that
 guard nor grants grid-wide publication. Shared/external/asynchronous effects,
 multi-CTA participation, broader numeric compositions and accelerator performance
-remain open. Complete model/target qualification is a separate next gate.
+remain open. The complete model/serial-target selection below has its own evidence.
 
 The public tensor/scalar ABI, receipt schemas and source capsule artifact roster
 are unchanged. Compatibility explicitly names v2; readers restricted to v1
 refuse it. Guarded standard memory and private admission state remain a declared
 difference from pure model2MLIR tensor payloads.
+
+## Complete models and actual serial targets
+
+`scripts/capture_atomic_phase_model.py --dtype i64|f32` captures real
+`torch.library.triton_op` calls with parameter state and bias:
+
+```python
+original = x + self.bias
+first, old1, seen1 = exchange(original, self.state, x.shape[0], 2)
+second, old2, seen2 = exchange(original, first, x.shape[0], 3)
+empty, old0, seen0 = exchange(x[:0], second, 0, 1)
+return second, first, old1, seen1, old2, seen2, original, x, empty, old0, seen0, self.state, self.bias
+```
+
+The original wrapper clones its incoming state and returns three functional
+values. Both dependent calls retain the original tile/atomic/phase algorithm;
+the explicit empty call preserves the incoming state and returns empty old/
+observation tensors. All earlier snapshots and parameter words remain intact.
+Independent Torch CPU implementations supply the original thirteen references.
+Changed-shape/parameter replays and target inputs use a separate NumPy oracle.
+
+Existing allocation-source capsules, executed-call binding v4, receipt v2 and
+Merlin signature v6 carry both complete models. Each original archive and every
+result remain retained. Actual descriptors supply result sizes, and borrowed
+public inputs remain readonly. The selected guarded standard-memory payload and
+v2 barrier contract remain explicit compatibility differences.
+
+The two models retain 26 initial host results, 78 results across six additional
+unchanged-library invocations, and 26 results across two actual RISC-V/Spike
+images, all as exact words for the selected finite integer/dyadic inputs.
+Six rehashed model claims refuse in both readers; two original source-domain
+violations abort without outputs. The standalone selection additionally retains
+sixteen changed source/effect claims refused by both readers and an actual
+cross-program-conflict abort. These are separate scopes, not additive unique
+kernel coverage.
+
+The frontend regression selection passes 158 checks; the final focused atomic
+phase selection passes 16. Complete model execution and model-refusal/domain
+selections pass six and four checks respectively. Merlin's independent reader
+selection passes 423. Counts overlap earlier selections. Retained source,
+package, unchanged-library, full-result, refusal and target records are linked
+from `out/atomic-program-phases/summary.json`. Retained verification reopens both
+packages and actual target images with current independent-reader fingerprints.
+
+```bash
+python -m pytest -q tests/test_atomic_barriers.py tests/test_atomic_phase_models.py \
+  --basetemp=.scratch/pytest-atomic-program-phases
+```
+
+Use the existing source/model/native/Merlin/serial-target environments from the
+README. This qualifies the selected private synchronous effect composition;
+general shared/async/external participation, broader source/numeric/ownership
+compositions and accelerator correctness/performance remain completion work.

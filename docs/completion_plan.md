@@ -2,9 +2,10 @@
 
 [Atomic program phases](atomic_program_phases.md) now retain selected atomic
 old values and synchronized observations through direct/protected allocation
-conversion and reusable Merlin host execution. Next qualify complete dependent
-models and serial target images, then continue general shared/async effects,
-participation scopes and remaining source/consumer compositions.
+conversion, reusable Merlin host and complete dependent i64/f32 models on actual
+serial target images. Independent source/effect/model refusal checks and original
+source-domain guards remain. Continue general shared/async effects, participation
+scopes and remaining source/consumer compositions.
 
 [Synchronous program barriers](program_barriers.md) now preserve complete
 standard memory phases for ordinary single-CTA pre-layout source. The real

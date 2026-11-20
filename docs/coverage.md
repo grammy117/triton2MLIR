@@ -3,10 +3,11 @@
 [Atomic program phases](atomic_program_phases.md) now compose selected i64/f32
 atomic updates, returned old values and ordinary synchronized observations
 through direct/protected allocation conversion and reusable Merlin host
-execution. Both source readers check actual primitive fields and memory order;
-cross-program conflicts remain compiled aborts. Complete model/target and
-general shared/async compositions remain separate gates. The historical
-fifty-name inventory is unchanged.
+execution. Complete i64/f32 models additionally retain 26 initial, 78 replay and
+26 actual serial-target results. Both source readers check primitive fields and
+memory order; cross-program conflicts remain compiled aborts. General shared/
+async/external participation, broader compositions and accelerator performance
+remain open. The historical fifty-name inventory is unchanged.
 
 [Program barriers](program_barriers.md) add actual captured `ttg.barrier`
 coverage outside the historical fifty-name `tt` denominator. Two representations

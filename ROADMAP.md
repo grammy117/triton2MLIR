@@ -1,10 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
 Selected [atomic program phases](docs/atomic_program_phases.md) now retain
-original old values and synchronized observations through native and reusable
-Merlin host execution. Finish complete-model/serial-target qualification before
-extending general shared/async effects and participation scopes. This does not
-close arbitrary-kernel coverage or expand the historical opcode inventory.
+original old values and synchronized observations through native, reusable
+Merlin host and complete i64/f32 models on serial Spike. Independent source and
+model refusal checks retain all thirteen results per model and actual source
+guards. Continue general shared/async effects, participation scopes and remaining
+source/consumer compositions; arbitrary-kernel coverage remains incomplete.
 
 [Synchronous program barriers](docs/program_barriers.md) now retain source
 address-space masks and actual phase dependencies through a real runtime-loop
