@@ -7,6 +7,17 @@ qualify through host/replays and actual serial images. The 59-check source/model
 selection and eleven math/state checks pass with overlap. General vector/masked/
 conditional initialization, ownership/effects and accelerator closure remain open.
 
+Implementation `b077a2b` additionally passes 209 earlier memory/control checks;
+the final package selection passes 24 after the compatibility note. The report
+`out/partial-initialization/summary.json` reopens 39 initial, 177 replay and 78
+exact target results across 22 actual serial images and an original-domain
+abort. Eleven selected files match committed bytes. The next actual source
+refusals are `.scratch/partition-initialization-probe1/False/source.ttir` (both
+branch arms initialize each element but final coverage refuses) and its `True`
+sibling (complementary masked stores still lack local read credit). Preserve
+those actual alternatives and masks while extending the proof; failed probes
+supply no successful package or target qualification.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) now retains fresh
 results from nested/permuted traversals and complete branch arms. The original
 two-call PyTorch model, runtime parameter slices and all seven results qualify

@@ -92,6 +92,33 @@ read's source-derived witness kind, axis count and local scope. Provenance grant
 no initialization, active bounds, ownership or physical-alias permission.
 Guarded and buffer continuations keep their own admission requirements.
 
+## Qualification and next source gap
+
+Producer `b077a2be61ef43669eb74faaf8204779e76089f0` passes 59 source/kernel/model
+checks, eleven overlapping math/state checks and 209 earlier memory/control
+regressions. The final package selection additionally passes all 24 checks after
+adding the explicit compatibility note. New-file targeted Ruff passes; existing
+shared-tensor and initialization diagnostics retain their original five/one
+findings. Companion revisions remain model2MLIR `a3ce8ed` and Merlin `53e7b0115`
+on `ttir-experiment-grammy`; no companion code change was needed for this feature.
+
+`out/partial-initialization/summary.json` reopens ten kernel libraries and one
+complete model, all original parent archives, complete output/reference words,
+replay receipts and 22 actual serial images. It retains 39 initial, 177 replay
+and 78 exact target results. An original-model-domain invocation aborts without
+results. All eleven selected implementation/test files match committed bytes;
+selected source hashes do not constitute a full dependency closure. Reopening
+passes in `.scratch/partial-output-report1.log`. Direct native positive/refusal
+checks retain their separate pytest-log evidence.
+
+The next reproduced gap is saved in `.scratch/partition-initialization-probe1/`.
+Both source forms write exactly one value to each visited element, then read it:
+one uses both arms of an actual branch; the other uses complementary store masks.
+The branch form now admits its local read but refuses final whole-output coverage.
+The masked form still refuses the local read. These are failed conversion probes,
+not qualified packages. Closing them requires source-derived guarded images and
+coverage across actual alternatives, retaining masks, order and every result.
+
 General vector-lane initialization, conditional/masked write partitions,
 while-state relations, resizing/permuted ownership, irregular parallel
 dependencies, shared/async effects and applicable accelerator execution and

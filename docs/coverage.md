@@ -8,6 +8,14 @@ The complete two-call PyTorch model retains all nine results. Partial membership
 grants no complete-output, bounds or parallel ownership permission; broader
 source/effect/target coverage and the arbitrary-kernel endpoint remain open.
 
+Producer `b077a2b` also passes 209 previous memory/control checks. The final
+24-check package selection retains the explicit compatibility note and all
+results. `out/partial-initialization/summary.json` reopens ten kernel libraries,
+one complete model and 22 actual serial images: 39 initial, 177 replay and 78
+exact target results, plus an actual original-domain abort. Eleven selected
+source/test files match committed bytes; this does not establish a full
+dependency closure, accelerator support or performance preservation.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) passes the 51
 focused source/model checks. Nested/permuted traversal, unit/empty axes and
 complete branch joins retain source reuse and exact results through native,
