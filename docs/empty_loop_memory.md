@@ -149,7 +149,9 @@ producer sources and two selected companion sources match actual committed
 bytes. These matches remain separate from observed reopening revisions and
 are not a full dependency closure, accelerator or performance qualification.
 
-## Next concrete representation boundary
+<a id="next-concrete-representation-boundary"></a>
+
+## Historical runtime-header representation boundary
 
 `.scratch/runtime-loop-headers1/` retains a real selected-row sum:
 
@@ -183,3 +185,10 @@ the actual SSA bounds/step. Initialization, aliases and conflicting writes keep
 independent gates; a trip-count interval must not replace the original loop or
 supply write coverage. General pointer carriers and variable-step write images
 remain separate from that readonly conversion.
+
+
+The source-width and readonly tile gates above now have separate
+[tensor-level qualification](runtime_headers.md), including original SSA
+headers, row/column slices and dependent partial-tile model execution.
+The failed/prototype artifacts remain historical evidence. General pointer
+recurrences, variable-step write images, aliases and effects remain separate.

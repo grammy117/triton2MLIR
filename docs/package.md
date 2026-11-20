@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Variable source loop headers](runtime_headers.md) and readonly rank-reduced
+slices extend source analysis without changing public ABI, receipts or artifact
+rosters. Actual lower/upper/step SSA and numeric carriers remain. Checked
+source-width enclosures grant no ordinal, pointer recurrence or complete-write
+permission. Projected reads preserve original tile order, mask/fill and every
+root-axis bound; retained unit axes use actual constant-one mixed sizes.
+Generated compatibility names both adaptations. Numeric/effect, alias and
+ownership profiles retain their separate contracts.
+
 [Wholly nonexecuting source loops](empty_loop_memory.md) add a checked source
 edge without changing public ABI, receipts, artifact rosters or numeric/effect
 profiles. Every original initial carrier and incoming tensor version remains;

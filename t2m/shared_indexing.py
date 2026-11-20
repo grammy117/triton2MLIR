@@ -6,7 +6,7 @@ from xdsl.dialects import builtin
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
-from .loop_domains import bounded_loop, require_signed_loop
+from .loop_domains import enclosed_loop, require_signed_loop
 from .dynamic_abi import GridExtent
 
 
@@ -191,14 +191,15 @@ def scalar_bounds(value, facts, grid, *, _cache=None):
     return result
 
 
-def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer, *, exact_iterations=True):
+def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, step, integer, *, exact_iterations=True, domain=None):
     """Reuse upstream's pointer-to-index recurrences, retaining source loop SSA.
 
     Only invariant affine increments are established. Other carried values stay
     ordinary computation; using an unproved recurrence as an address still fails.
     """
-    iterations = (upper - lower + step - 1) // step
-    ordinal = (facts[arguments[0]] + Linear(-lower)).divide(step)
+    varying = domain is not None and domain.variable_header
+    iterations = domain.maximum_iterations if varying else (upper - lower + step - 1) // step
+    ordinal = None if varying else (facts[arguments[0]] + Linear(-lower)).divide(step)
     yielded = operation.body.block.last_op.operands
     finals, evidence = {}, []
     for position, (old, target, initial, result) in enumerate(zip(operation.body.block.args[1:], arguments[1:],
@@ -219,13 +220,14 @@ def seed_recurrences(operation, arguments, mapping, facts, grid, lower, upper, s
                         delta = integer(mapping.get(a, a))
                 except ConversionError:
                     pass
-        if delta is None:
+        if delta is None or varying and delta != 0:
             continue
         try:
             start = linear(mapping.get(initial, initial), facts, grid)
         except ConversionError:
             continue
-        current, final = start + ordinal.scale(delta), start + Linear(iterations * delta)
+        current = start if delta == 0 else start + ordinal.scale(delta)
+        final = start + Linear(iterations * delta)
         width = getattr(getattr(old.type, "width", None), "data", 64)
         for form in (current, final):
             low, high = form.bounds(grid)
@@ -253,7 +255,8 @@ def logical_coordinates(total, strides, grid):
     for stride in strides:
         quotient = Linear(remainder.constant // stride,
                           tuple(c // stride if c % stride == 0 else 0 for c in remainder.programs),
-                          tuple((i, lo, hi, c // stride) for i, lo, hi, c in remainder.loops if c % stride == 0))
+                          tuple((i, lo, hi, c // stride) for i, lo, hi, c in remainder.loops if c % stride == 0),
+                          tuple((i, lo, hi, c // stride) for i, lo, hi, c in remainder.parameters if c % stride == 0))
         remainder = remainder + quotient.scale(-stride)
         low, high = remainder.bounds(grid)
         if low < 0 or high >= stride:
@@ -325,7 +328,7 @@ def check_source_addresses(module, abi, *, loop_domains=None):
             require_signed_loop(parent)
             limits = [bounds(v, parent.parent) for v in parent.operands[:3]]
             width = getattr(getattr(value.type, "width", None), "data", 64)
-            domain = bounded_loop(limits, width=width)
+            domain = enclosed_loop(limits, width=width)
             iterations = domain.maximum_iterations
             if value.index == 0:
                 result = domain.induction_bounds
@@ -438,7 +441,7 @@ def check_source_addresses(module, abi, *, loop_domains=None):
         if operation not in domains:
             require_signed_loop(operation)
             width = getattr(getattr(operation.lb.type, "width", None), "data", 64)
-            domains[operation] = bounded_loop([bounds(v, operation.parent) for v in operation.operands[:3]],
+            domains[operation] = enclosed_loop([bounds(v, operation.parent) for v in operation.operands[:3]],
                 width=width, allow_empty=True)
         return domains[operation]
 

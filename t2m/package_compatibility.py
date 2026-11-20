@@ -12,6 +12,11 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("induction") == "source-IV-enclosure; not-an-iteration-ordinal"
+           for row in trace.get("memory", {}).get("source_loops", [])):
+        differences.append("bounded variable lower/upper/positive-step operands retain their original SSA loop and numeric carriers; reachable source IVs and the final source-width update are enclosed before index promotion; count bounds grant no iteration replacement, pointer recurrence, congruence or complete-write credit; actual entry scalar guards and independent initialization/ownership/effect proofs remain; public ABI and receipt schemas are unchanged")
+    if trace.get("memory", {}).get("source_projected_reads"):
+        differences.append("rank-deficient readonly structured tiles recover an injective logical axis map and standard rank-reducing tensor slices; every retained and dropped axis access is proved, original tile order and masked fills remain, and no per-lane gather, flattened public root, physical alias or effect permission is introduced; public ABI and receipt schemas are unchanged")
     if any(row.get("maximum_iterations") == 0 for row in trace.get("memory", {}).get("source_loops", [])):
         differences.append("a wholly inactive source loop returns its complete original initial tuple and preserves incoming tensor versions without body reads or write credit; checked source bounds validate the empty edge and live address definitions, and actual entry scalar guards retain the original domain; native loops remain until independent source-read validation, with scalar premises also reified in an emitted memory continuation; public ABI, receipts, numeric and effect profiles are unchanged")
     if any(row.get("retained_value_region_source_ids") for row in trace.get("transformations", [])):

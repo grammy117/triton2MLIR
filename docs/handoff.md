@@ -1,5 +1,12 @@
 # Review handoff — updated 2026-11-20
 
+[Variable source loop headers](runtime_headers.md) now retain actual
+lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
+tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass
+host replays and fourteen actual serial images, retaining all seven model
+results. General pointer/ownership, effects, source/numeric and accelerator
+closure remains open.
+
 [Wholly nonexecuting source loops](empty_loop_memory.md) now retain
 complete original initial tuples and incoming tensor versions without body
 read/write credit. Four kernel libraries and a dependent two-call PyTorch model
@@ -22,17 +29,17 @@ Producer `e670c8aadfb74a7da26737bd5361b30a59a502dd` retains model2MLIR
 `53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both companions on
 `ttir-experiment-grammy`. Eleven selected producer and two companion sources
 match committed bytes. These pins are not a full dependency closure or
-accelerator/performance qualification. General while/alias and ownership,
-variable lower bounds/steps, shared/async and source/numeric composition remain.
+accelerator/performance qualification. General while/alias ownership, pointer
+recurrences, variable-step store images, shared/async and source/numeric composition remain.
 
-The next concrete probe is the
+The historical boundary probe is the
 [selected-row sum with runtime loop headers](empty_loop_memory.md#next-concrete-representation-boundary)
 under `.scratch/runtime-loop-headers1/`. Guarded source-word conversion passes
 four native cases, one initial host invocation, four unchanged-library replays
-and two actual serial images. Tensor and structured-address variants still
-refuse the constant-lower/constant-step requirement. Continue checked variable
-IV/final-update facts and readonly row-tile extraction; these finite prototype
-artifacts do not supply a new shipped capability or arbitrary-loop qualification.
+and two actual serial images. Its original tensor/structured-address refusals
+are now closed by [the runtime-header implementation](runtime_headers.md).
+The original finite prototype artifacts remain separate from that new shipped
+capability and its qualification; neither establishes arbitrary-loop coverage.
 
 [Functional regions in tile memory](region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile

@@ -7,9 +7,11 @@ from .launch_domains import affine_bounds
 
 
 def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets=False, dimensions=None, proven_axes=None,
-                     domains=()):
+                     domains=(), allow_rank_reduction=False):
     rank = len(buffer.shape)
-    if len(strides) != rank or len(offsets) != rank:
+    source_rank = len(strides)
+    if (len(offsets) != rank or len(active) != source_rank or not (source_rank == rank
+            or allow_rank_reduction and physical_offsets and 0 < source_rank < rank)):
         raise ConversionError("structured tensor view does not fit declared rank/strides/bounds")
     empty = not all(maximum(n) for n in active)
     dimensions = buffer.shape if dimensions is None else dimensions
@@ -26,25 +28,27 @@ def axis_permutation(buffer, strides, offsets, active, grid, *, physical_offsets
         return matched_stride and (empty or low >= 0 and bounded)
 
     if proven_axes is not None:
-        if sorted(proven_axes) != list(range(rank)) or not all(matches(i, j) for i, j in enumerate(proven_axes)):
+        if (len(proven_axes) != source_rank or len(set(proven_axes)) != source_rank
+                or any(not 0 <= axis < rank for axis in proven_axes)
+                or not all(matches(i, j) for i, j in enumerate(proven_axes))):
             raise ConversionError("active structured access exceeds the declared tensor bounds")
         return proven_axes
-    if all(matches(i, i) for i in range(rank)):
+    if source_rank == rank and all(matches(i, i) for i in range(rank)):
         return tuple(range(rank))
     if rank > 8:
         raise ConversionError("nonidentity tensor axis recovery exceeds the eight-axis analysis budget")
     # Degenerate dimensions can share a physical stride. Bounds, not an
     # arbitrary stride sort, determine which axis can carry nonunit extents.
-    choices = [[j for j in range(rank) if matches(i, j)] for i in range(rank)]
-    order = sorted(range(rank), key=lambda i: len(choices[i]))
-    result, attempts = [None] * rank, 0
+    choices = [[j for j in range(rank) if matches(i, j)] for i in range(source_rank)]
+    order = sorted(range(source_rank), key=lambda i: len(choices[i]))
+    result, attempts = [None] * source_rank, 0
 
     def solve(position, used):
         nonlocal attempts
         attempts += 1
         if attempts > 256:
             raise ConversionError("tensor axis recovery exhausted its bounded search")
-        if position == rank:
+        if position == source_rank:
             return True
         source = order[position]
         for destination in choices[source]:

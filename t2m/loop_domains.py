@@ -24,6 +24,18 @@ class LoopDomain:
     maximum_iterations: int
 
     @property
+    def variable_header(self):
+        return False
+
+    @property
+    def lower_interval(self):
+        return self.lower, self.lower
+
+    @property
+    def step_interval(self):
+        return self.step, self.step
+
+    @property
     def exact(self):
         return self.upper[0] == self.upper[1]
 
@@ -48,3 +60,54 @@ def bounded_loop(limits, *, width=64, allow_empty=False):
     if not -(1 << (width - 1)) <= lb <= final < 1 << (width - 1):
         raise ConversionError("source memory loop induction update may overflow")
     return LoopDomain(lb, tuple(upper), stride, *counts)
+
+
+@dataclass(frozen=True)
+class IntervalLoopDomain:
+    lower_interval: tuple[int, int]
+    upper: tuple[int, int]
+    step_interval: tuple[int, int]
+    minimum_iterations: int
+    maximum_iterations: int
+
+    @property
+    def variable_header(self):
+        return True
+
+    @property
+    def exact(self):
+        return False
+
+    @property
+    def induction_bounds(self):
+        if self.maximum_iterations == 0:
+            raise ConversionError("empty source loop has no reachable induction value")
+        return self.lower_interval[0], min(self.upper[1] - 1,
+            self.lower_interval[1] + (self.maximum_iterations - 1) * self.step_interval[1])
+
+
+def enclosed_loop(limits, *, width=64, allow_empty=False):
+    """Enclose actual positive-step SSA loops without inventing an ordinal.
+
+    LLVM IntegerRangeAnalysis uses the incoming lower/upper enclosures for IVs.
+    Also check the source-width update after the final body, and require actual
+    step positivity rather than assuming an undiscoverable step is positive.
+    Counts supply no stride, congruence, complete-write or replacement bound.
+    """
+    lower, upper, step = (tuple(interval) for interval in limits)
+    minimum, maximum = -(1 << (width - 1)), (1 << (width - 1)) - 1
+    if any(not minimum <= low <= high <= maximum for low, high in (lower, upper, step)):
+        raise ConversionError("source loop bounds exceed their signed integer width")
+    if lower[0] == lower[1] and step[0] == step[1]:
+        return bounded_loop((lower, upper, step), width=width, allow_empty=allow_empty)
+    if step[0] <= 0:
+        raise ConversionError("memory loop requires a proved positive runtime step")
+    counts = (max(0, (upper[0] - lower[1] + step[1] - 1) // step[1]),
+              max(0, (upper[1] - lower[0] + step[0] - 1) // step[0]))
+    if counts[1] == 0 and not allow_empty:
+        raise ConversionError("memory loop has no proved reachable iteration; needs empty-region elimination")
+    final = lower[1] if counts[1] == 0 else max(lower[1], min(
+        lower[1] + counts[1] * step[1], upper[1] - 1 + step[1]))
+    if final > maximum:
+        raise ConversionError("source memory loop induction update may overflow")
+    return IntervalLoopDomain(lower, upper, step, *counts)

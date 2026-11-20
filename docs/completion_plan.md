@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Variable source loop headers](runtime_headers.md) now retain actual
+lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
+tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass
+host replays and fourteen actual serial images, retaining all seven model
+results. General pointer/ownership, effects, source/numeric and accelerator
+closure remains open.
+
 [Wholly nonexecuting source loops](empty_loop_memory.md) now retain
 complete original initial tuples and incoming tensor versions without body
 read/write credit. Four kernel libraries and a dependent two-call PyTorch model
@@ -26,17 +33,16 @@ The wholly nonexecuting declared trip domain now has independent
 [empty-edge qualification](empty_loop_memory.md). Its original failed probes
 remain retained in [the loop contract](loop_tiles.md#historical-source-boundary-probes).
 The reproduced pure-reduction composition also has separate functional-region
-qualification. General while/alias and ownership relations, variable source
-lower bounds/steps, shared/async and applicable target requirements remain.
+qualification. General while/alias ownership, pointer recurrences,
+variable-step store images, shared/async and applicable target requirements remain.
 
-The next [runtime-header probe](empty_loop_memory.md#next-concrete-representation-boundary)
-distinguishes a representation gap from interface support. A selected-row sum
-with live lower/upper/stride operands already passes native, reusable Merlin
-host and actual serial execution under guarded source-word memory. Tensor and
-structured-address paths still need a checked source-width induction enclosure
-and readonly tile extraction for variable lower/step operands. Preserve the
-original SSA loop, useful row tiles and independent initialization/ownership
-gates; do not substitute worst-case bounds or infer complete writes from a count.
+The original [runtime-header probe](empty_loop_memory.md#next-concrete-representation-boundary)
+now has [tensor-level qualification](runtime_headers.md), including source-width
+induction enclosures and readonly row/column tile extraction. Source SSA controls,
+partial-tile state and complete model results remain. Continue general pointer
+recurrences, while/alias ownership and variable-step store images, plus dynamic
+root projection, effects and applicable targets. Count bounds still grant no
+complete writes or loop replacement.
 
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.

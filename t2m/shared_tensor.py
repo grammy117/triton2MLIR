@@ -25,7 +25,7 @@ from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
-from .loop_domains import bounded_loop, require_signed_loop
+from .loop_domains import enclosed_loop, require_signed_loop
 from .launch_domains import launch_domains
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
@@ -540,6 +540,7 @@ def _functionalize(module, abi, *, serial_memory=True):
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
     writes, reads, source_loops, source_conditionals, source_gathers, source_scatters = {}, [], [], [], [], []
+    source_projected_reads = []
     launch_iv = body.args[0] if parallel else None
     loop_counter = 0
     loop_values = {}
@@ -569,6 +570,13 @@ def _functionalize(module, abi, *, serial_memory=True):
     class Coordinate:
         form: Linear
         value: object = None
+
+    @dataclass(frozen=True)
+    class ProjectedRead:
+        buffer: object
+        sizes: tuple
+        offsets: tuple
+        strides: tuple
 
     def resolve(op, field, operands, coordinates=False, raw=False):
         dynamic = iter(operands)
@@ -620,6 +628,12 @@ def _functionalize(module, abi, *, serial_memory=True):
             return buffer, sizes, coordinates, DenseAxes(axes)
         strides = resolve(op, "static_strides", slices[0])
         offsets = resolve(op, "static_offsets", slices[1], coordinates=True)
+        if (0 < len(sizes) < len(buffer.shape) and buffer.effect == "read"
+                and all(size > 0 for size in buffer.shape)
+                and len(strides) == len(offsets) == len(sizes)
+                and all(stride > 0 or stride == 0 and size == 1 for stride, size in zip(strides, sizes, strict=True))
+                and all(opcode(use.operation) == "tts.load" for use in op.results[0].uses)):
+            return ProjectedRead(buffer, sizes, offsets, strides)
         if (len(sizes) != len(buffer.shape) or len(strides) != len(sizes) or
                 any(stride < 0 or stride == 0 and size != 1 for stride, size in zip(strides, sizes, strict=True))):
             raise ConversionError("descriptor requires matching logical rank and positive structured strides", opcode=opcode(op))
@@ -757,17 +771,23 @@ def _functionalize(module, abi, *, serial_memory=True):
         empty = append(tensor.EmptyOp(dynamic, target), source).tensor
         return append(TransposeOp(value, empty, DenseArrayBase.from_list(builtin.i64, axes)), source).results[0]
 
-    def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False):
+    def slice_op(source, offsets, sizes, *, destination=None, parallel_insert=False, retained_axes=None, unit_size=None):
         dynamic = [off.value for off in offsets if off.value is not None]
         static = [DYNAMIC_INDEX if off.value is not None else off.form.constant for off in offsets]
         shape = [DYNAMIC_INDEX if isinstance(n, TailExtent) else n for n in sizes]
-        dynamic_sizes = [n.value for n in sizes if isinstance(n, TailExtent)]
+        if unit_size is not None:
+            for axis in retained_axes:
+                if shape[axis] == 1:
+                    shape[axis] = DYNAMIC_INDEX
+        dynamic_sizes = [n.value if isinstance(n, TailExtent) else unit_size
+                         for n, size in zip(sizes, shape, strict=True) if size == DYNAMIC_INDEX]
         properties = {"static_offsets": DenseArrayBase.from_list(builtin.i64, static),
                       "static_sizes": DenseArrayBase.from_list(builtin.i64, shape),
                       "static_strides": DenseArrayBase.from_list(builtin.i64, [1] * len(sizes))}
         if destination is None:
+            result_shape = shape if retained_axes is None else [shape[axis] for axis in retained_axes]
             return tensor.ExtractSliceOp.build(operands=[source, dynamic, dynamic_sizes, []], properties=properties,
-                       result_types=[TensorType(source.type.get_element_type(), shape)])
+                       result_types=[TensorType(source.type.get_element_type(), result_shape)])
         cls = ParallelInsertSliceOp if parallel_insert else tensor.InsertSliceOp
         return cls.build(operands=[source, destination, dynamic, dynamic_sizes, []], properties=properties,
                          result_types=[] if parallel_insert else [destination.type])
@@ -789,6 +809,68 @@ def _functionalize(module, abi, *, serial_memory=True):
         if dynamic_high:
             loaded = append(tensor.CastOp.build(operands=[loaded],
                 result_types=[TensorType(loaded.type.element_type, sizes)]), source).dest
+        return loaded
+
+    def projected_read(op, descriptor):
+        buffer, sizes = descriptor.buffer, descriptor.sizes
+        segments = _array(op, "operandSegmentSizes")
+        mask = _array(op, "static_mask_dims")
+        if len(segments) != 3 or segments[0] != 1 or segments[2] not in (0, 1) or sum(segments) != len(op.operands):
+            raise ConversionError("projected load has invalid operand segments", opcode=opcode(op))
+        if tuple(op.results[0].type.get_shape()) != sizes:
+            raise ConversionError("projected load result differs from its source tile", opcode=opcode(op))
+        total = Linear()
+        for coordinate in descriptor.offsets:
+            total += coordinate.form
+        forms = logical_coordinates(total, buffer.strides, grid)
+        offsets = tuple(Coordinate(form, affine_index(form, launch_iv, grid, launch, states, loop_values,
+            lambda value: append(value, op)) if form.dynamic else None) for form in forms)
+        dynamic = iter(op.operands[1:1 + segments[1]])
+        if mask:
+            if len(mask) != len(sizes):
+                raise ConversionError("projected load mask rank differs from its tile", opcode=opcode(op))
+            active = []
+            for value, size in zip(mask, sizes, strict=True):
+                if value == DYNAMIC_INDEX:
+                    source = next(dynamic, None)
+                    if source is None:
+                        raise ConversionError("projected load mask is missing its source operand", opcode=opcode(op))
+                    value = recover_extent(mapping.get(source, source), size, forms, facts, grid, allow_read_subset=True)
+                active.append(value)
+            active = tuple(active)
+        else:
+            active = sizes
+        if next(dynamic, None) is not None or any(maximum(n) < 0 or maximum(n) > size
+                for n, size in zip(active, sizes, strict=True)):
+            raise ConversionError("projected load needs a bounded rectangular source mask", opcode=opcode(op))
+        if any(n == 0 for n in active):
+            offsets = tuple(Coordinate(Linear()) for _ in offsets)
+        axes = axis_permutation(buffer, descriptor.strides, [off.form for off in offsets], active, grid,
+            physical_offsets=True, domains=domains, allow_rank_reduction=True)
+        physical = [1] * len(buffer.shape)
+        for axis, size in zip(axes, active, strict=True):
+            physical[axis] = size
+        axis_permutation(buffer, buffer.strides, [off.form for off in offsets], physical, grid,
+            physical_offsets=True, domains=domains, proven_axes=tuple(range(len(buffer.shape))))
+        retained = sorted(axes)
+        # Keep retained units distinct from dropped units, as in model2MLIR's
+        # literal selection adapter. The mixed operand is actually one.
+        unit_size = (append(arith.ConstantOp.from_int_and_width(1, IndexType()), op).result
+                     if any(physical[axis] == 1 for axis in retained) else None)
+        loaded = append(slice_op(states[buffer.name], offsets, physical, retained_axes=retained, unit_size=unit_size), op).result
+        if unit_size is not None:
+            shape = [DYNAMIC_INDEX if isinstance(physical[axis], TailExtent) else physical[axis] for axis in retained]
+            loaded = append(tensor.CastOp.build(operands=[loaded],
+                result_types=[TensorType(loaded.type.element_type, shape)]), op).dest
+        loaded = transpose(loaded, tuple(retained.index(axis) for axis in axes), op)
+        if active != sizes:
+            if segments[2] != 1 or op.operands[-1] not in mapping:
+                raise ConversionError("projected masked load needs a defined translated fill", opcode=opcode(op))
+            loaded = pad_tile(loaded, sizes, active, op, mapping[op.operands[-1]])
+        source_projected_reads.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+            "source_tile": sizes, "retained_axes": axes, "root_rank": len(buffer.shape),
+            "representation": "rank-reducing-tensor-slice; original-source-tile-order-and-fill",
+            "bounds": "all-retained-and-dropped-axis-accesses-proved"})
         return loaded
 
     def scatter_access(op):
@@ -970,7 +1052,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                 try:
                     require_signed_loop(op)
                     from .shared_indexing import scalar_bounds
-                    empty_domain = bounded_loop([scalar_bounds(mapping[v], facts, grid) for v in op.operands[:3]],
+                    empty_domain = enclosed_loop([scalar_bounds(mapping[v], facts, grid) for v in op.operands[:3]],
                         width=getattr(getattr(op.body.block.args[0].type, "width", None), "data", 64), allow_empty=True)
                 except (ConversionError, KeyError):
                     pass
@@ -984,7 +1066,9 @@ def _functionalize(module, abi, *, serial_memory=True):
                         if not found and result.uses:
                             raise ConversionError("empty source loop initial value has no qualified representation", opcode=name)
                     source_loops.append({"source_ids": _source_ids(op.location), "control": "scf.for",
-                        "lower": empty_domain.lower, "upper_interval": empty_domain.upper, "step": empty_domain.step,
+                        **({"lower_interval": empty_domain.lower_interval, "step_interval": empty_domain.step_interval}
+                           if empty_domain.variable_header else {"lower": empty_domain.lower, "step": empty_domain.step}),
+                        "upper_interval": empty_domain.upper,
                         "minimum_iterations": 0, "maximum_iterations": 0,
                         "memory_effects": "none; body-never-executed-within-guarded-entry-domain",
                         "initialization": "unchanged-entry-facts; no-body-write-credit",
@@ -1011,13 +1095,17 @@ def _functionalize(module, abi, *, serial_memory=True):
                 require_signed_loop(op)
                 limits = [mapping[v] for v in op.operands[:3]]
                 from .shared_indexing import scalar_bounds
-                domain = bounded_loop([scalar_bounds(v, facts, grid) for v in limits],
+                domain = enclosed_loop([scalar_bounds(v, facts, grid) for v in limits],
                                       width=getattr(getattr(arguments[0].type, "width", None), "data", 64))
-                lb, ub, step = domain.lower, domain.upper[1], domain.step
+                lb, ub, step = domain.lower_interval[0], domain.upper[1], domain.step_interval[0]
                 if not domain.exact and pointer_slots:
                     raise ConversionError("runtime pointer carriers need final-state normalization", opcode=name)
                 loop_evidence = {"source_ids": _source_ids(op.location), "lower": lb, "step": step,
                                  "memory_effects": "functional-loop-carried-tensor-versions"}
+                if domain.variable_header:
+                    del loop_evidence["lower"], loop_evidence["step"]
+                    loop_evidence.update(lower_interval=domain.lower_interval, step_interval=domain.step_interval,
+                        induction="source-IV-enclosure; not-an-iteration-ordinal")
                 if domain.exact:
                     loop_evidence.update(upper=ub, iterations=domain.maximum_iterations)
                 else:
@@ -1032,19 +1120,20 @@ def _functionalize(module, abi, *, serial_memory=True):
                                          *([IndexType()] * sum(pointer_ranks))])
                 mapping.update(zip(kept_arguments, nested.args[:len(kept_arguments)], strict=True))
                 states.update((b.name, v) for b, v in zip(writable, nested.args[len(kept_arguments):len(kept_arguments) + len(writable)], strict=True))
-                iterations = (ub - lb + step - 1) // step
-                facts[nested.args[0]] = Linear(lb, loops=((loop_counter, 0, iterations - 1, step),))
+                iterations = domain.maximum_iterations
+                facts[nested.args[0]] = (Linear(loops=((loop_counter, *domain.induction_bounds, 1),))
+                    if domain.variable_header else Linear(lb, loops=((loop_counter, 0, iterations - 1, step),)))
                 final_facts, recurrences = seed_recurrences(op, [mapping.get(v) for v in arguments], mapping,
-                                                           facts, grid, lb, ub, step, _integer, exact_iterations=domain.exact)
+                    facts, grid, lb, ub, step, _integer, exact_iterations=domain.exact, domain=domain)
                 source_loops[-1]["index_recurrences"] = recurrences
                 identity = loop_counter
                 loop_counter += 1
                 previous, body = body, nested
                 before_loop = initialization.snapshot()
-                loop_values[identity] = (nested.args[0], lb, step)
+                loop_values[identity] = (nested.args[0], 0, 1) if domain.variable_header else (nested.args[0], lb, step)
                 translate(op.body.block)
                 complete, complete_proofs, partial = [], {}, []
-                if serial_memory and not parallel:
+                if serial_memory and not parallel and not domain.variable_header:
                     from .loop_write_coverage import complete_loop_writes, scalar_stores
                     from .partial_initialization import store_image
                     try:
@@ -1219,6 +1308,9 @@ def _functionalize(module, abi, *, serial_memory=True):
                 if name != "tts.gather" and op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
                 desc = unit_descriptor(op) if name == "tts.gather" else descriptors[op.operands[0]]
+                if isinstance(desc, ProjectedRead):
+                    mapping[op.results[0]] = projected_read(op, desc)
+                    continue
                 buffer, sizes, offsets, active, axes = access(op, desc)
                 physical = tuple(active[i] for i in inverse_permutation(axes))
                 initialization.load(buffer, tuple(off.form for off in offsets), physical,
@@ -1385,6 +1477,7 @@ def _functionalize(module, abi, *, serial_memory=True):
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
     output.attributes["prov.source_scatters"] = StringAttr(json.dumps(source_scatters, sort_keys=True))
+    output.attributes["prov.source_projected_reads"] = StringAttr(json.dumps(source_projected_reads, sort_keys=True))
     if any(storage_types[b.name] != b.type for b in writable):
         output.attributes["prov.serial_tensor_storage"] = StringAttr(json.dumps({
             b.name: {"logical_shape": b.shape, "storage": "complete-dense-linear-tensor", "public_type_unchanged": True}
@@ -2034,6 +2127,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     trace["memory"]["source_conditionals"] = json.loads(entry.attributes["prov.source_conditionals"].data) if entry else [r for r in admission["control_flow"] if r["opcode"] == "scf.if"]
     trace["memory"]["source_gathers"] = json.loads(entry.attributes["prov.source_gathers"].data) if entry else [r for r in admission["accesses"] if r["opcode"] == "tts.gather"]
     trace["memory"]["source_scatters"] = json.loads(entry.attributes["prov.source_scatters"].data) if entry else [r for r in admission["accesses"] if r["opcode"] == "tts.scatter"]
+    trace["memory"]["source_projected_reads"] = json.loads(entry.attributes["prov.source_projected_reads"].data) if entry else []
     if entry is not None and "prov.source_dense_origins" in entry.attributes:
         trace["memory"]["dense_origin_recoveries"] = json.loads(entry.attributes["prov.source_dense_origins"].data)
     if admission is not None:

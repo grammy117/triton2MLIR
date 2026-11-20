@@ -8,7 +8,7 @@ or an assumption about sampled sizes, GPU threads or backend integer promotion.
 """
 
 from .diagnostics import ConversionError
-from .loop_domains import bounded_loop, require_signed_loop
+from .loop_domains import enclosed_loop, require_signed_loop
 from .source_predicates import branch_constraints, signed_comparison_enclosure
 
 
@@ -62,13 +62,13 @@ class SourceScopes:
                 require_signed_loop(owner)
                 limits = [self.bounds(value, parent) for value in owner.operands[:3]]
                 width = getattr(getattr(block.args[0].type, "width", None), "data", 64)
-                domain = bounded_loop(limits, width=width)
+                domain = enclosed_loop(limits, width=width)
             except ConversionError:
                 # No optional reachability fact. Actual IV/address uses still
                 # require their ordinary source-width/control proof below.
                 self.cache[block] = facts
                 return facts
-            if domain.lower >= 0:
+            if domain.lower_interval[0] >= 0:
                 selected, narrowed = set(), set()
 
                 def positive(value):

@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Variable source loop headers](docs/runtime_headers.md) now retain actual
+lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
+tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass
+host replays and fourteen actual serial images, retaining all seven model
+results. General pointer/ownership, effects, source/numeric and accelerator
+closure remains open.
+
 [Wholly nonexecuting source loops](docs/empty_loop_memory.md) now retain
 complete original initial tuples and incoming tensor versions without body
 read/write credit. Four kernel libraries and a dependent two-call PyTorch model
