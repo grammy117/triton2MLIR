@@ -3,6 +3,8 @@
 [CFG program phases](docs/cfg_program_phases.md) now preserve synchronous tile
 dependencies under original scalar early exits. Complete void allocation
 wrappers retain every source block; native and reusable Merlin execution pass.
+Complete i64/f32 models retain all twelve results through host replays and
+actual serial images; surrounding dynamic fill initialization stays executable.
 General shared/async participation and broader source/target scope remain open.
 
 [Actual word-source effect admission](docs/word_source_effects.md) now checks

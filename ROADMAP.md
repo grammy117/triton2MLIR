@@ -4,6 +4,8 @@
 early exits, runtime loops and actual synchronized tile state through native
 and Merlin execution. Complete void allocation entries retain their CFG behind
 the typed wrapper. Continue broader control/effect and consumer/target closure.
+Complete i64/f32 models now retain all twelve results through host replays and
+actual serial images. General shared/async and accelerator qualification remain.
 
 [Actual word-source effect admission](docs/word_source_effects.md) now closes
 the legacy-stage primitive-selection gap in both readers. Continue general

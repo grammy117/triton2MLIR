@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[CFG program phases](cfg_program_phases.md) now preserve original scalar early
+exits and synchronous tile dependencies through protected source, complete
+i64/f32 models and actual serial target execution. All twelve model results,
+old states and snapshots remain; original domains still abort when violated.
+Complete void source wrappers retain every CFG block. Surrounding dynamic
+`full_like` now uses actual dimension operands in model2MLIR. General shared/
+async participation, broader control/effect and accelerator closure remain open.
+
 [Actual word-source effect admission](word_source_effects.md) now closes the
 legacy-stage primitive-selection gap without changing public ABI or artifact
 rosters. Independent actual-source checks precede byte-custody early returns;

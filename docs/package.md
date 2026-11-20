@@ -7,6 +7,10 @@ edges and complete block argument types before native CFG lifting. Complete
 void allocation wrappers retain all original source blocks. Older phase
 readers reject this field; public ABI, receipt schemas and artifact rosters
 are unchanged. No cross-program/async or new numeric/effect permission follows.
+Complete CFG-phase models retain executed binding v4, receipt v2 and signature
+v6, with all twelve results and every original archive intact. Surrounding
+model2MLIR dynamic `full_like` uses standard dimension/splat computation. No
+new public mutation/copyback or accelerator contract is introduced.
 
 [Actual word-source effect admission](word_source_effects.md) parses typed
 source before legacy stage early returns. Unsupported effects now refuse even

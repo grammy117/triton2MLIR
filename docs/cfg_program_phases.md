@@ -57,13 +57,50 @@ actual Merlin execution and sixteen unchanged-library replays, retaining twelve
 initial and 48 replay results as exact words. Three changed participation claims
 refuse both source readers. The 62-check frontend/regression selection and the
 independent 336-check Merlin selection pass, with overlapping scopes.
-Complete enclosing-model and serial-target qualification is tracked separately;
-these kernel results alone supply no whole-model or accelerator verdict.
+Complete enclosing-model and serial-target qualification is recorded below;
+these kernel checks retain their separate scope.
 
 ```bash
 python -m pytest -q tests/test_cfg_barriers.py \
   --basetemp=.scratch/pytest-cfg-program-phases
 ```
+
+## Complete model and serial-target qualification
+
+`scripts/capture_cfg_barrier_model.py` captures real i64 ordinary and f32
+atomic/volatile models. Each call clones all three incoming states. The second
+call selects the complementary programs; original old-value/observation states
+survive skipped programs. An empty third call retains empty results:
+
+```python
+original = x + self.bias
+old, seen = torch.full_like(original, -17), torch.full_like(original, -23)
+first, a, b = exchange(original, old, seen, x.shape[0], 2, 0)
+second, c, d = exchange(first, a, b, x.shape[0], 3, 1)
+empty, e, f = exchange(x[:0], a[:0], b[:0], 0, 1, 1)
+return second, first, a, b, c, d, original, x, empty, e, f, self.bias
+```
+
+Model intake exposed a separate `full_like` initialization gap. Model2MLIR now
+passes actual source `tensor.dim` values into dynamic `tensor.splat`, retaining
+existing literal conversion and explicit dtype without an opaque call or sample
+extent. Its 56 selected fill/pointwise/literal checks pass. The static fill
+differential oracle lowers in both frontends with matching result types; this
+oracle does not supply dynamic execution evidence.
+
+The complete ten-check model selection retains 24 initial and 72 unchanged-
+library replay results, plus 24 results across two actual serial Spike images.
+All twelve model outputs retain exact words and every parent archive stays
+byte-identical. Six consistently rehashed model participation claims refuse in
+both readers; two original public-domain violations abort without results.
+The target records pin the actual independent barrier reader. Existing executed
+binding v4, receipt v2 and signature v6 remain unchanged. Generated compatibility
+metadata names the source-control extension separately from effect permissions.
+
+`out/cfg-program-phases/summary.json` reopens original failure evidence, all
+forty native observations, four protected libraries/replays, complete model/
+target results, refusal/abort records and exact source pins. Historical opcode
+inventory counts are unchanged. No accelerator or performance verdict follows.
 
 General CFG compositions, value-returning public source entries, shared/async
 participation, source-version/numeric/storage closure and applicable accelerator

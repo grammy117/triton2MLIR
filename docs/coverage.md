@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[CFG program phases](cfg_program_phases.md) now qualify scalar early exits,
+tile updates/transpose observations and complete void allocation wrappers.
+Eight native configurations retain 120 results; four protected Merlin libraries
+retain twelve initial and 48 replay results. Complete i64/f32 models retain
+24 initial, 72 replay and 24 actual serial-target results, all as exact words.
+Three changed source claims and six changed model claims refuse in both readers;
+two model domains abort without results. The focused selections pass 62 producer,
+336 Merlin, 56 model2MLIR and ten complete-model checks, with overlap. Retained
+records reopen in `out/cfg-program-phases/summary.json`. This extends compositions,
+not the historical fifty-name denominator or general shared/async/target scope.
+
 [Actual word-source effect admission](word_source_effects.md) now checks typed
 primitives before legacy stage returns in both readers. The 26 producer and
 861 independent Merlin checks pass; six real-source rehashes refuse in both

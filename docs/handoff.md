@@ -1,4 +1,25 @@
-# Review handoff — updated 2026-11-19
+# Review handoff — updated 2026-11-20
+
+[CFG program phases](cfg_program_phases.md) now close the reproduced original
+early-return/barrier and complete-void allocation-wrapper refusals. Both readers
+derive scalar whole-program participation from actual CFG edges and block
+argument types; original phase payload and memory order remain. Core changes
+are pushed: triton2MLIR `b5b0385`, Merlin `5cb916ef2` and model2MLIR `67abffb`.
+The latter closes surrounding dynamic `full_like` initialization with actual
+source dimension operands and existing literal conversion. Remote tips and
+GitHub author/committer attribution were verified for each.
+
+Final model selection passes ten. Complete i64/f32 models retain 24 initial,
+72 replay and 24 actual serial-target results, with all twelve results and every
+parent archive intact. Six rehashed model claims refuse and two original public
+domains abort. Native/direct/protected regression passes 62, independent Merlin
+336 and model2MLIR fill/pointwise/literal regression 56, with overlap. The static
+fill differential oracle also lowers with matching result types; dynamic model
+execution is separately checked. `out/cfg-program-phases/summary.json` reopens
+source failure/positive evidence, complete results, refusals/aborts and current
+reader pins. The pre-existing model2MLIR docstring whitespace edit is preserved.
+Continue broader CFG/type/control/effect composition, general shared/async
+participation and applicable accelerator qualification; full coverage stays open.
 
 [Actual word-source effect admission](word_source_effects.md) now closes the
 legacy early-return gap in both complete memory gates. Producer selection
