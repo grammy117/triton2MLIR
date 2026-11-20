@@ -7,6 +7,24 @@ pass native/host checks and ten actual serial images, retaining all seven model
 results. Signed shape-derived controls such as `2 - n` now cross model2MLIR as
 checked i64 SSA. General memory/effect/source and accelerator closure remains open.
 
+`out/empty-loops/summary.json` reopens four kernel libraries and one complete
+model library: 15 initial, 69 unchanged-library replay and 30 exact-word target
+results across ten actual serial images, plus the original model-domain abort
+and independently guarded native-continuation abort. All parent archives and
+actual source-loop links remain checked. The reopening log is
+`.scratch/empty-loop-report1.log`. The source/domain, kernel and model selections
+pass 83 + 31 + 4; the separate composition regression passes 36. Two historical
+memory expectations reproduce at the old baseline; corrected checks pass in
+both source states, and the original failed logs remain explicit.
+
+Producer `e670c8aadfb74a7da26737bd5361b30a59a502dd` retains model2MLIR
+`f3f0de1ae130faebbd27bd36374d11e1e211daa2` and unchanged Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both companions on
+`ttir-experiment-grammy`. Eleven selected producer and two companion sources
+match committed bytes. These pins are not a full dependency closure or
+accelerator/performance qualification. General while/alias and ownership,
+variable lower bounds/steps, shared/async and source/numeric composition remain.
+
 [Functional regions in tile memory](region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass

@@ -132,3 +132,19 @@ General while/alias and ownership relations, variable lower bounds/steps,
 shared/asynchronous participation, broader source/numeric compositions and
 applicable accelerator correctness/performance remain full-goal work. This
 capability changes no TTIR opcode denominator.
+
+`out/empty-loops/summary.json` reopens four kernel libraries and one complete
+model library: 15 initial, 69 unchanged-library replay and 30 exact-word target
+results across ten actual serial images, plus the original model-domain abort
+and the independently guarded native-continuation abort. Every parent archive
+and original source-loop link remains checked. Original failed regression runs
+remain explicit records beside their baseline reproduction and corrected checks.
+The reopening log is `.scratch/empty-loop-report1.log`.
+
+Implementation `e670c8aadfb74a7da26737bd5361b30a59a502dd` retains companion
+model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and unchanged Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. All eleven selected
+producer sources and two selected companion sources match actual committed
+bytes. These matches remain separate from observed reopening revisions and
+are not a full dependency closure, accelerator or performance qualification.
