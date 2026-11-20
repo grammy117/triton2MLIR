@@ -4,9 +4,15 @@
 recurrences and selected-path observations as tensor computation. Actual source
 fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
 kernel libraries and a complete two-call model qualify native/host execution and
-twelve actual serial images, retaining all seven model results. Related regression
-qualification is being recorded. General memory/effect/source and accelerator closure
+twelve actual serial images, retaining all seven model results. The related regression
+selection passes 221 checks. General memory/effect/source and accelerator closure
 remains open.
+
+The next reproduced loop-state gates are the wholly nonexecuting declared
+trip domain and pure reduction containers inside partial-tile recurrences.
+Their actual source and refusals are retained in [the loop contract](loop_tiles.md#next-reproduced-source-boundaries).
+Close these through source-domain/control and actual region-purity proofs;
+shared/async semantics and applicable target requirements remain independent.
 
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.

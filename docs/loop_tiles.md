@@ -105,8 +105,8 @@ results. Its length domain is 2..31, including zero trips at length two. The
 registered PyTorch CPU implementation supplies an independent reference;
 no Triton CPU backend executes the source kernels. All four complete-model checks pass: byte-identical parent archives, all seven
 initial results, three changed-input/parameter replays, two actual serial images
-and an original-domain abort without outputs. The related regression selection
-is being recorded alongside this change.
+and an original-domain abort without outputs. The related regression selection passes 221 checks in
+`.scratch/loop-tiles-regression1.log`.
 
 The final focused selection passes 80 proof/source/prepass checks, 25 kernel
 checks and four whole-model checks in three recorded runs (109 selected checks).
@@ -117,3 +117,37 @@ fixture declares its actual tensor result explicitly and all 80 checks pass;
 that first parser error is not a semantic-refusal qualification. Targeted Ruff
 and `git diff --check` pass. Modified established source files retain their prior
 import-order diagnostics, and shared_tensor retains its prior B023 diagnostic.
+
+## Next reproduced source boundaries
+
+`.scratch/loop-tile-next-probe1/` retains two fresh probes against this change.
+With the complete-prefix form's entire `steps` domain set to `[-2, 0]`, native
+intake still refuses with `memory loop has no proved reachable iteration; needs
+empty-region elimination`. The zero-after partial-prefix form also refuses in
+that domain. This is a source-domain/control gap: valid nonexecuting loops must
+preserve entry values and numeric initial results without evaluating the body.
+The qualified mixed nonpositive/positive domains above do not close it.
+
+A positive-trip form additionally computes `tl.sum(observed, 0)` inside the
+loop. Original native source verification succeeds, but partial-tile conversion
+still refuses at `normalized.ttir.op.0028 (tts.scatter)` with the fresh-output
+initialization diagnostic. The planner currently declines the pure reduction
+region container. General scalar/tuple reduction expansion already exists; the
+next extension must admit its actual pure region without hiding source-memory
+or effectful combiners. Both probes remain unqualified, with original source
+and diagnostics retained in `empty.log` and `reduction.log` respectively.
+
+`out/loop-tiles/summary.json` reopens five kernel libraries and one complete
+model library: 17 initial, 81 unchanged-library replay and 34 exact-word target
+results across twelve actual serial images, plus one original-domain abort.
+All parent archives and source store/read/loop correspondence remain checked.
+The reopening log is `.scratch/loop-tiles-report1.log`.
+
+Implementation `df4248f929bfa4bc918eaa4d69bbc8736e3e992c` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. All eleven selected
+implementation/test sources match actual committed bytes. These hashes are
+recorded separately from observed revisions and are not a full dependency
+closure, accelerator or performance qualification. No companion source change
+was required for this capability.

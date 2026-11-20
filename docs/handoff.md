@@ -4,9 +4,24 @@
 recurrences and selected-path observations as tensor computation. Actual source
 fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
 kernel libraries and a complete two-call model qualify native/host execution and
-twelve actual serial images, retaining all seven model results. Related regression
-qualification is being recorded. General memory/effect/source and accelerator closure
+twelve actual serial images, retaining all seven model results. The related regression
+selection passes 221 checks. General memory/effect/source and accelerator closure
 remains open.
+
+`out/loop-tiles/summary.json` reopens five kernel libraries and one complete
+model library: 17 initial, 81 unchanged-library replay and 34 exact-word target
+results across twelve actual serial images, plus one original-domain abort.
+All parent archives and source store/read/loop correspondence remain checked.
+The reopening log is `.scratch/loop-tiles-report1.log`.
+
+Implementation `df4248f929bfa4bc918eaa4d69bbc8736e3e992c` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. All eleven selected
+implementation/test sources match actual committed bytes. These hashes are
+recorded separately from observed revisions and are not a full dependency
+closure, accelerator or performance qualification. No companion source change
+was required for this capability.
 
 [Branch-completed tiles](branch_tiles.md) now close the scalar branch-boundary
 tensor refusal. Prefix observations, nested/absent-else choices, two fresh roots
