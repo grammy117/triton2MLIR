@@ -41,7 +41,10 @@ def convert(root, profile, mode):
 def test_runtime_write_state_survives_empty_loops_and_source_branches(tmp_path, profile, mode):
     result = convert(tmp_path, profile, mode)
     loop = result.trace["memory"]["source_loops"][0]
-    assert loop["memory_effects"] == "conditional-loop-carried-tensor-versions"
+    # The preinitialized same-tile stores become numeric loop state, leaving
+    # only source reads inside that loop. Other forms retain memory versions.
+    assert loop["memory_effects"] == ("read-only-source-accesses; no-write-credit-from-iterations" if mode == "preinit"
+                                      else "conditional-loop-carried-tensor-versions")
     assert loop["initialization"] == ("post-body-facts; positive-trip-count-proved" if mode == "fresh-positive"
                                       else "entry-facts-only; zero-trip-reachable")
     x, old = np.arange(-6, 7, dtype=np.float32) / np.float32(3.14), np.arange(13, dtype=np.float32) * 7 + 99
