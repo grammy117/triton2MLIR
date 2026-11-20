@@ -22,7 +22,7 @@ TOOLS = all(os.environ.get(name) for name in ("TRITON_SHARED_OPT", "T2M_MODEL2ML
 pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/model/Merlin tools required")
 
 
-def implementation(root, kind):
+def implementation(root, kind, *, profile="auto"):
     from t2m.examples.mutating_views import update_matrix_views, update_views
 
     root.mkdir()
@@ -52,7 +52,7 @@ def implementation(root, kind):
         PointerArgument("old_left"), PointerArgument("old_right"), PointerArgument("bias"),
         *(ScalarArgument(name) for name in scalar_names))
     converted = convert_allocations(source, abi, arguments, root / "translation", source_entry=kernel.__name__,
-        optimizer=os.environ["TRITON_SHARED_OPT"], memory_profile="auto")
+        optimizer=os.environ["TRITON_SHARED_OPT"], memory_profile=profile)
     return KernelBinding("t2m_demo::mutating_views", converted, operands={"bias": "bias", "state": "@base0"},
         results=("old_left", "old_right", "state"), runtime_operands=fields, mutation_arguments={"left": 0, "right": 1},
         tensor_views="dense-row-major-runtime-v1")
@@ -85,7 +85,8 @@ def test_complete_shared_view_models_keep_one_allocation_and_all_snapshots(selec
     assert len(trace["calls"]) == 2 and all(row["mutation_pointer_arguments"] == {"left": 0, "right": 1} for row in trace["calls"])
     kernel = next(iter(trace["kernels"].values()))
     assert kernel["memory_selection"]["attempts"][-1] == {
-        "memory_profile": "guarded-buffer", "address_policy": "source-words" if kind == "permuted-base" else "structured",
+        "memory_profile": "guarded-buffer" if kind == "permuted-base" else "tensor",
+        "address_policy": "source-words" if kind == "permuted-base" else "structured",
         "status": "admitted"}
     with np.load(capture / "goldens.npz", allow_pickle=False) as expected, np.load(
         package / "consumer/host/outputs.npz", allow_pickle=False) as actual:

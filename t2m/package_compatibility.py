@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("address") == "checked-scalar-flat-index" for row in trace.get("memory", {}).get("source_scatters", [])):
+        differences.append("serial scalar indexed state uses ordered standard tensor versions with active signed bounds checks and source-proved fresh initialization; scalar-addressed multidimensional roots may carry complete linear tensor storage with logical shapes restored at the public boundary; one lane and one logical program grant no parallel ownership, alias, atomic or volatile permission; guards remain executable and the unguarded buffer continuation cannot inherit a tensor-only runtime check; public tensor/scalar types, receipts and artifact rosters are unchanged")
     if trace.get("memory", {}).get("volatile_profile") == "private-invocation-volatile-loads-v1":
         differences.append("explicit atomic-volatile effects use memory admission v6 and source-word stages v4; the existing typed atomic numeric profile, f32 policy and atomic participant ownership remain intact alongside a separate private volatile observation component; exported MLIR retains both standard atomic computation and LLVM volatile descriptor reads, including unused observations; neither component overwrites the other, and older admission/word readers refuse; the public tensor/scalar ABI and capture receipts are unchanged")
     if trace.get("memory", {}).get("effect_profile") == "private-invocation-volatile-loads-v1":

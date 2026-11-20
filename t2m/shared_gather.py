@@ -25,7 +25,17 @@ Masked loads without `other` remain refused until definedness is propagated.
 # SOFTWARE.
 
 from xdsl.dialects import arith, builtin, cf, scf, tensor
-from xdsl.dialects.builtin import AffineMapAttr, ArrayAttr, DenseArrayBase, DYNAMIC_INDEX, IndexType, IntegerAttr, IntegerType, StringAttr, TensorType
+from xdsl.dialects.builtin import (
+    DYNAMIC_INDEX,
+    AffineMapAttr,
+    ArrayAttr,
+    DenseArrayBase,
+    IndexType,
+    IntegerAttr,
+    IntegerType,
+    StringAttr,
+    TensorType,
+)
 from xdsl.dialects.linalg.attrs import IteratorTypeAttr
 from xdsl.dialects.linalg.ops import GenericOp, IndexOp, YieldOp
 from xdsl.ir import Block, Region
@@ -34,12 +44,12 @@ from xdsl.ir.affine import AffineMap
 from .diagnostics import ConversionError
 
 
-def gather(source, buffer, base, mapping, append, *, maximum_shape=None):
-    """Only read-only allocations: repeated/cross-program reads need no owner."""
+def gather(source, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False):
+    """Immutable reads, or source-proved initialized serial tensor versions."""
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
 
-    if buffer.effect != "read":
+    if buffer.effect != "read" and not serial_initialized:
         refuse("irregular reads from writable buffers need an initialization/ownership proof")
     segments = source.properties.get("operandSegmentSizes")
     if not isinstance(segments, DenseArrayBase):
@@ -51,10 +61,10 @@ def gather(source, buffer, base, mapping, append, *, maximum_shape=None):
     mask = mapping[source.operands[2]] if segments[2] else None
     other = mapping[source.operands[-1]] if segments[3] else None
     return _gather(source, buffer, base, index, mask, other, append,
-                   maximum_shape=maximum_shape)
+                   maximum_shape=maximum_shape, serial_initialized=serial_initialized)
 
 
-def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum_shape=None):
+def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False):
     """Keep the upstream rank-one gather descriptor and exact prefix predicate."""
     def array(op, key):
         value = op.properties.get(key)
@@ -78,14 +88,14 @@ def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum
     if prefix == sizes[0]:
         prefix = None
     return _gather(source, buffer, base, mapping[pointer.operands[1]], None, other, append, prefix=prefix,
-                   maximum_shape=maximum_shape)
+                   maximum_shape=maximum_shape, serial_initialized=serial_initialized)
 
 
-def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, maximum_shape=None):
+def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, maximum_shape=None, serial_initialized=False):
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
 
-    if buffer.effect != "read":
+    if buffer.effect != "read" and not serial_initialized:
         refuse("irregular reads from writable buffers need an initialization/ownership proof")
     type_ = source.results[0].type
     if not isinstance(type_, TensorType) or not isinstance(index.type, TensorType):
@@ -111,8 +121,8 @@ def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, ma
         refuse("prefix-masked gather needs a rank-one tensor and explicit defined fill")
     # Match upstream's collapsed immutable base tensor. Dense ABI storage is a
     # view: do not decode every source flat offset into row/column coordinates.
-    if len(buffer.shape) > 1:
-        reassociation = ArrayAttr([ArrayAttr(IntegerAttr(i, builtin.i64) for i in range(len(buffer.shape)))])
+    if len(base.type.get_shape()) > 1:
+        reassociation = ArrayAttr([ArrayAttr(IntegerAttr(i, builtin.i64) for i in range(len(base.type.get_shape())))])
         flat_type = TensorType(scalar, [DYNAMIC_INDEX if dynamic else maximum])
         base = append(tensor.CollapseShapeOp.build(operands=[base], result_types=[flat_type],
             properties={"reassociation": reassociation}), source).result

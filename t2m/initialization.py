@@ -5,12 +5,20 @@ stores cover every returned element and every observed load is initialized.
 This analysis does not consume caller provenance as a proof.
 """
 
+from dataclasses import dataclass
 from math import prod
 
 from .diagnostics import ConversionError
-from .tail_masks import TailExtent, maximum
 from .dynamic_abi import GridExtent
 from .shared_indexing import Linear
+from .tail_masks import TailExtent, maximum
+
+
+@dataclass(frozen=True)
+class WholeWrite:
+    """An independently checked complete serial source-loop overwrite."""
+
+    coverage: str = "serial-contiguous-source-loop"
 
 
 class DefiniteWrites:
@@ -25,6 +33,8 @@ class DefiniteWrites:
     def load(self, buffer, offsets, sizes, *, source_id=None, opcode=None):
         if buffer.name not in self.fresh or not all(maximum(n) for n in sizes):
             return
+        if self.complete(buffer):
+            return
         for written, extent in self.writes[buffer.name]:
             differences = [read + start.scale(-1) for read, start in zip(offsets, written, strict=True)]
             if all((delta.constant == 0 and not delta.dynamic and size == bound) or
@@ -38,6 +48,32 @@ class DefiniteWrites:
     def store(self, buffer, offsets, sizes):
         if buffer.name in self.fresh and all(maximum(n) for n in sizes):
             self.writes[buffer.name].append((offsets, sizes))
+
+    def completion(self, buffer):
+        if any(isinstance(row, WholeWrite) for row in self.writes[buffer.name]):
+            return "serial-contiguous-source-loop"
+        if len(buffer.shape) != 1 or not isinstance(buffer.shape[0], int) or prod(self.grid) != 1 or self.varying_axes:
+            return None
+        intervals = []
+        for offsets, sizes in self.writes[buffer.name]:
+            if len(offsets) != 1 or offsets[0].dynamic or len(sizes) != 1 or not isinstance(sizes[0], int):
+                continue
+            left, right = offsets[0].constant, offsets[0].constant + sizes[0]
+            if 0 <= left <= right <= buffer.shape[0]:
+                intervals.append((left, right))
+        covered = 0
+        for left, right in sorted(intervals):
+            if left > covered:
+                break
+            covered = max(covered, right)
+        return "serial-source-constant-interval-union" if intervals and covered == buffer.shape[0] else None
+
+    def complete(self, buffer):
+        return buffer.name not in self.fresh or self.completion(buffer) is not None
+
+    def store_whole(self, buffer):
+        if buffer.name in self.fresh:
+            self.writes[buffer.name].append(WholeWrite())
 
     def snapshot(self):
         return {name: list(values) for name, values in self.writes.items()}
@@ -55,6 +91,10 @@ class DefiniteWrites:
     def finish(self, *, source_id=None):
         evidence = {}
         for name, buffer in self.fresh.items():
+            if coverage := self.completion(buffer):
+                evidence[name] = {"initial_value_required": False, "coverage": coverage,
+                                  "reads": "dominated-by-covering-source-stores"}
+                continue
             shape = tuple(self.abi.dimension(n) for n in buffer.shape)
             if any(isinstance(n, Linear) and n.bounds(self.grid) == (0, 0) for n in shape):
                 evidence[name] = {"initial_value_required": False, "coverage": "zero-element-result", "reads": "separately-checked"}

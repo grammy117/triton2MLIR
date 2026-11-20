@@ -473,7 +473,7 @@ def _restore_accumulators(module, records):
     return repaired
 
 
-def _functionalize(module, abi):
+def _functionalize(module, abi, *, serial_memory=True):
     if any(opcode(op) == "tt.print" for op in module.walk()):
         # Keep the original registered TTIR intact for the independent memory
         # continuation; only this tensor witness receives the late expansion.
@@ -495,9 +495,30 @@ def _functionalize(module, abi):
         guard_scalar(scalar, states[scalar.name], outer, function.location)
     dimensions = bind_dimensions(abi, states, outer, function.location)
     launch = launch_sizes(abi, dimensions, outer, function.location) if abi.dynamic else None
+    from .serial_tensor_memory import collapse, flat_storage_type, restore
+    storage_types = {b.name: b.type for b in writable}
+    if serial_memory and not parallel:
+        for arg, (kind, buffer) in zip(function.regions[0].block.args, abi.source_bindings, strict=True):
+            if kind != "buffer" or buffer.effect == "read":
+                continue
+            flat = flat_storage_type(arg, buffer, opcode)
+            if flat is not None:
+                storage_types[buffer.name] = flat
+                if buffer.effect == "readwrite":
+                    view = collapse(states[buffer.name], flat)
+                    view.location = function.location
+                    view.attributes.update({"prov.family": StringAttr("memory"), "prov.op": StringAttr("logical_storage_collapse")})
+                    outer.add_op(view)
+                    states[buffer.name] = view.result
     for buffer in abi.buffers:
         if buffer.effect == "write":
-            empty = tensor.EmptyOp([dimensions[n] for n in buffer.shape if isinstance(n, str)], buffer.type)
+            sizes = [dimensions[n] for n in buffer.shape if isinstance(n, str)]
+            target = storage_types[buffer.name]
+            if target != buffer.type and sizes:
+                sizes = [shape_product([dimensions[n] if isinstance(n, str) else shape_emit(outer,
+                    arith.ConstantOp.from_int_and_width(n, IndexType()), function.location, "logical-storage-dimension")
+                    for n in buffer.shape], lambda op: shape_emit(outer, op, function.location, "logical-storage-product"))]
+            empty = tensor.EmptyOp(sizes, target)
             outer.add_op(empty)
             states[buffer.name] = empty.tensor
     initial = [states[b.name] for b in writable]
@@ -876,7 +897,7 @@ def _functionalize(module, abi):
                 body = previous
                 initialization.merge_branches(*initialized)
                 branch = append(scf.IfOp(mapping[op.cond], [*[v.type for v in op.results],
-                                                          *[b.type for b in writable]], *regions), op)
+                                                          *[storage_types[b.name] for b in writable]], *regions), op)
                 mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
                 states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
             elif name == "scf.for":
@@ -918,7 +939,7 @@ def _functionalize(module, abi):
                 memory_inputs = [states[b.name] for b in writable]
                 pointer_ranks = [len(arguments[i + 1].type.get_shape()) for i in pointer_slots]
                 kept_arguments = [arguments[0], *[arguments[i + 1] for i in kept]]
-                nested = Block(arg_types=[*[v.type for v in kept_arguments], *[b.type for b in writable],
+                nested = Block(arg_types=[*[v.type for v in kept_arguments], *[storage_types[b.name] for b in writable],
                                          *([IndexType()] * sum(pointer_ranks))])
                 mapping.update(zip(kept_arguments, nested.args[:len(kept_arguments)], strict=True))
                 states.update((b.name, v) for b, v in zip(writable, nested.args[len(kept_arguments):len(kept_arguments) + len(writable)], strict=True))
@@ -933,6 +954,13 @@ def _functionalize(module, abi):
                 before_loop = initialization.snapshot()
                 loop_values[identity] = (nested.args[0], lb, step)
                 translate(op.body.block)
+                complete = []
+                if serial_memory and not parallel:
+                    from .serial_tensor_memory import complete_loop_writes
+                    try:
+                        complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode)
+                    except ConversionError:
+                        pass  # Missing algebraic equality supplies no new write credit.
                 del loop_values[identity]
                 if not domain.exact:
                     changed = any(states[b.name] is not nested.args[len(kept_arguments) + i]
@@ -944,6 +972,10 @@ def _functionalize(module, abi):
                         loop_evidence["initialization"] = "entry-facts-only; zero-trip-reachable"
                     else:
                         loop_evidence["initialization"] = "post-body-facts; positive-trip-count-proved"
+                for buffer in complete:
+                    initialization.store_whole(buffer)
+                if complete:
+                    loop_evidence["complete_scalar_results"] = [buffer.name for buffer in complete]
                 body = previous
                 initial = [mapping[op.operands[i + 3]] for i in kept]
                 zeros = [append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result for _ in range(sum(pointer_ranks))]
@@ -1027,19 +1059,40 @@ def _functionalize(module, abi):
                     raise ConversionError("structured gather base must be a declared logical allocation", opcode=name)
                 buffer = buffers[pointer.operands[0]]
                 mapping[op.results[0]] = structured_gather(op, pointer, buffer, states[buffer.name], mapping, append,
-                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape),
+                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer))
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "rectangular-prefix-branch-no-inactive-extraction",
                                        "representation": "upstream-structured-gather-descriptor"})
-            elif name == "tts.gather" and op.operands[0] in buffers and buffers[op.operands[0]].effect == "read":
+            elif name == "tts.gather" and op.operands[0] in buffers and (buffers[op.operands[0]].effect == "read"
+                    or serial_memory and not parallel and initialization.complete(buffers[op.operands[0]])):
                 buffer = buffers[op.operands[0]]
                 mapping[op.results[0]] = gather(op, buffer, states[buffer.name], mapping, append,
-                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                    maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape),
+                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer))
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "per-lane-branch-no-inactive-extraction",
-                                       "repeated_indices": "immutable-reads; no-ownership-conflict"})
+                                       "repeated_indices": "immutable-reads; no-ownership-conflict" if buffer.effect == "read" else
+                                           "initialized-serial-tensor-version; no-other-logical-program"})
+            elif name == "tts.scatter" and op.operands[0] in buffers and serial_memory and not parallel and isinstance(
+                    mapping[op.operands[1]].type, TensorType) and all(size == 1 for size in mapping[op.operands[1]].type.get_shape()) and not all(
+                    size == 1 for size in buffers[op.operands[0]].shape):
+                from .serial_tensor_memory import scatter
+                buffer = buffers[op.operands[0]]
+                states[buffer.name], index = scatter(op, buffer, states[buffer.name], mapping, append,
+                    tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                if len(op.operands) == 3 and len(buffer.shape) == 1:
+                    try:
+                        coordinate = linear(index, facts, grid)
+                        if not coordinate.dynamic:
+                            initialization.store(buffer, (coordinate,), (1,))
+                    except ConversionError:
+                        pass
+                source_scatters.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+                    "address": "checked-scalar-flat-index", "mask": "active-branch" if len(op.operands) == 4 else "unmasked",
+                    "write_independence": "one-source-lane-one-logical-program", "initialization": "separately-proved-source-stores"})
             elif name in ("tts.load", "tt.load", "tts.gather"):
                 if name != "tts.gather" and op.operands[0] not in descriptors:
                     raise ConversionError("load pointer is not a qualified structured descriptor", opcode=name)
@@ -1114,7 +1167,9 @@ def _functionalize(module, abi):
                     initialization.store(buffer, tuple(off.form for off in offsets), physical)
             elif name == "tt.return":
                 if not parallel:
-                    append(func.ReturnOp(*(states[b.name] for b in writable)), op)
+                    values = [states[b.name] if states[b.name].type == b.type else append(restore(states[b.name], b.type,
+                        [dimensions[n] for n in b.shape if isinstance(n, str)]), op).result for b in writable]
+                    append(func.ReturnOp(*values), op)
             else:
                 for child in op.walk():
                     child_name = opcode(child)
@@ -1208,6 +1263,10 @@ def _functionalize(module, abi):
     output.attributes["prov.source_conditionals"] = StringAttr(json.dumps(source_conditionals, sort_keys=True))
     output.attributes["prov.source_gathers"] = StringAttr(json.dumps(source_gathers, sort_keys=True))
     output.attributes["prov.source_scatters"] = StringAttr(json.dumps(source_scatters, sort_keys=True))
+    if any(storage_types[b.name] != b.type for b in writable):
+        output.attributes["prov.serial_tensor_storage"] = StringAttr(json.dumps({
+            b.name: {"logical_shape": b.shape, "storage": "complete-dense-linear-tensor", "public_type_unchanged": True}
+            for b in writable if storage_types[b.name] != b.type}, sort_keys=True))
     if dense_origins:
         output.attributes["prov.source_dense_origins"] = StringAttr(json.dumps(dense_origins, sort_keys=True))
     if abi.runtime_scalars:
@@ -1597,7 +1656,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             scalar_events = normalize_scalars(lowered, _source_ids)
             transformations.append({"kind": "scalar-memory-unit-carrier", "events": scalar_events,
                 "expansion": "one-element-tensor-with-original-predicate-and-defined-fill"})
-        result = witness = _functionalize(lowered, abi)
+        # Serial irregular access checks are executable tensor operations, not
+        # static premises for the separate unguarded memory continuation.
+        result = witness = _functionalize(lowered, abi, serial_memory=memory_profile == "tensor")
     auxiliary = dict(cfg_artifacts)
     if source_words:
         auxiliary.update({"word-input.mlir": word_input,
