@@ -112,6 +112,13 @@ eleven. Original parent archives and every result are checked. Selected source
 hashes are not a full dependency closure; serial execution establishes no
 accelerator correctness or performance claim.
 
+Implementation `6716ba902f6519703133081de99d0dda19c6e884` retains
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba` on
+`ttir-experiment-grammy`. All six selected implementation/test source files
+match the actual producer commit bytes. The reopening report records that
+match separately from its original observed revisions.
+
 Final logs are `.scratch/interleaved-final1.log`,
 `.scratch/interleaved-regression1.log` and `.scratch/interleaved-report1.log`.
 Reproduction uses the existing tool environments documented in the README:

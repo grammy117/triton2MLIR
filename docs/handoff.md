@@ -18,6 +18,13 @@ cross a scalar branch boundary. It is failed source evidence, not a successful
 package or a refusal measurement for every other profile. General pointer/
 region, shared/async, source/numeric and target requirements remain open.
 
+Producer `6716ba902f6519703133081de99d0dda19c6e884` retains companion
+model2MLIR `a3ce8ed` and Merlin `53e7b0115`, both on
+`ttir-experiment-grammy`. All six selected source files match committed bytes;
+the report keeps that verification separate from its observed reopening
+revisions. These hashes are not a full dependency closure. The producer stays
+on `main`; companion source changes were unnecessary for this capability.
+
 [Fresh tile partitions](tile_partitions.md) now close the reproduced fresh
 masked-tile refusal while retaining parallel structure, overlap order and
 intermediate observations. A complete two-call model preserves every result
