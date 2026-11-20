@@ -18,6 +18,13 @@ neither is relabeled as a successful source/target qualification. General
 pointer/loop/alias, shared/async, numeric/source-version and applicable target
 requirements remain open.
 
+Producer `3c09f8e6015b0334841c61b2fb12a28566c1e3b7` retains companion
+model2MLIR `a3ce8ed` and Merlin `53e7b0115` on `ttir-experiment-grammy`.
+All ten selected implementation/test sources match committed bytes; the
+reopening report records that match separately from observed revisions.
+These hashes are not a full dependency closure. The producer remains on
+`main`, and no companion source change was required for this capability.
+
 [Interleaved fresh tiles](interleaved_tiles.md) now close the distinct-output
 refusal while retaining cross-output observations and predicates, immutable
 reloads and original input-state updates. The 33-check focused selection and

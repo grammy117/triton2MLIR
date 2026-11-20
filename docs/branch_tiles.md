@@ -141,6 +141,13 @@ accounted. The reopening log is `.scratch/branch-report1.log`. Selected source
 hashes do not establish a full dependency closure or accelerator/performance
 qualification.
 
+Implementation `3c09f8e6015b0334841c61b2fb12a28566c1e3b7` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. All ten selected implementation/test source files
+match the actual producer commit bytes. The reopening report records that
+match separately from its original observed revisions.
+
 Reproduction uses the existing tool environments documented in the README:
 
 ```bash
