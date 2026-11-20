@@ -1,5 +1,11 @@
 # Actual iteration ordinals for affine pointer streams
 
+[Independent invariant runtime strides](invariant_runtime_strides.md) now extend
+the constant-per-execution form below with separately sampled signed/zero memory
+progress and non-speculated body-local arithmetic. Those actual progress values
+have their own coordinate facts; they are not unit execution ordinals. The
+earlier implementation and qualification here retain their original scope.
+
 Pointer streams now reach tensor MLIR when their increment is
 `a * actual_loop_step + b`, with source-proved integer constants `a` and `b`.
 The new constant term advances once per actual execution, independently of

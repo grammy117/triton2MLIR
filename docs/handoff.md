@@ -11,6 +11,14 @@ the final invariant/width selection passes ten, with overlap. General pointer/
 alias/dynamic-root/write-image, shared/async, numeric/source and accelerator
 closure remains open. See the linked contract for the explicit representation.
 
+Implementation `6786adb68239600516fc593d22ad904dc748b039` is published with
+verified `grammy117` author/committer attribution. The final reopening in
+`.scratch/invariant-stride-report2.log` checks all sixty initial, 244 replay
+and 120 exact-word target results, plus four domain aborts; fourteen selected
+source/test/helper files match that commit. The retained report is
+`out/invariant-runtime-strides/summary.json`. Selected hashes are not a full
+dependency closure; companion branch names/pins remain unchanged.
+
 [Actual iteration ordinals](iteration_ordinals.md) now retain pointer
 increments of the form `a * actual_step + b`, including actual final positions.
 Twelve reusable kernel libraries and three new dependent-call PyTorch models

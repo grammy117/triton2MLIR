@@ -1,5 +1,10 @@
 # Runtime pointer streams through tensor MLIR
 
+[Independent invariant runtime strides](invariant_runtime_strides.md) now extend
+the step-coupled form below with signed/zero memory progress, mixed step terms,
+body-local arithmetic and complete model qualification. The earlier source and
+qualification records here retain their original step-coupled scope.
+
 Source pointer recurrences coupled to a bounded positive runtime loop step now
 reach standard tensor MLIR, including reads from both final pointer positions.
 The actual loop, tiling, masks, numeric state and logical grid remain. No GPU

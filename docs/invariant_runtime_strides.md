@@ -134,6 +134,25 @@ compatibility and target receipts remain checked. The first reopening log is
 `.scratch/invariant-stride-report1.log`. Selected source hashes do not establish
 a complete build dependency closure.
 
+The final reopening log, `.scratch/invariant-stride-report2.log`, additionally
+matches fourteen selected implementation/test/helper files to committed producer
+`6786adb68239600516fc593d22ad904dc748b039`. The unchanged companions are
+model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. Observed reopening
+revisions and selected source matches remain separate from full build dependency
+closure. The implementation commit is published with author/committer attribution
+to `grammy117`.
+
+Reproduce with the existing source/native/model/Merlin/serial tool variables
+documented in the README, using the source environment:
+
+```bash
+python -m pytest -q tests/test_invariant_recurrences.py \
+  tests/test_invariant_stride_kernels.py tests/test_invariant_stride_model.py \
+  --basetemp=.scratch/pytest-invariant-runtime-strides
+```
+
 General conditional/while pointer state, varying increments, nested relational
 invariants, alias ownership, dynamic-root projections, variable-step complete
 write images, shared/asynchronous participation, broader numeric/source versions
