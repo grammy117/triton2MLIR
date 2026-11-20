@@ -54,8 +54,8 @@ volatile or atomic accesses, changed same-root addresses and unavailable bounds
 decline this optional planner. Its current budgets are 1024 visited operations,
 128 target memory events and 32 nested control levels per plan, plus the existing
 Boolean node/atom/work budgets. General while-carried partial tiles, effectful
-spans, arbitrary varying coverage and pure region-container compositions remain
-further work; existing paths retain their independent scope.
+spans and arbitrary varying coverage remain further work. Selected functional
+region-container compositions now qualify under [the region contract](region_tile_memory.md); existing paths retain their independent scope.
 
 ## Native reuse and source correspondence
 
@@ -118,7 +118,7 @@ that first parser error is not a semantic-refusal qualification. Targeted Ruff
 and `git diff --check` pass. Modified established source files retain their prior
 import-order diagnostics, and shared_tensor retains its prior B023 diagnostic.
 
-## Next reproduced source boundaries
+## Historical source-boundary probes
 
 `.scratch/loop-tile-next-probe1/` retains two fresh probes against this change.
 With the complete-prefix form's entire `steps` domain set to `[-2, 0]`, native
@@ -131,11 +131,12 @@ The qualified mixed nonpositive/positive domains above do not close it.
 A positive-trip form additionally computes `tl.sum(observed, 0)` inside the
 loop. Original native source verification succeeds, but partial-tile conversion
 still refuses at `normalized.ttir.op.0028 (tts.scatter)` with the fresh-output
-initialization diagnostic. The planner currently declines the pure reduction
-region container. General scalar/tuple reduction expansion already exists; the
+initialization diagnostic. This region-container refusal is now resolved for selected functional
+compositions in [the region contract](region_tile_memory.md). General scalar/tuple reduction expansion already exists; the
 next extension must admit its actual pure region without hiding source-memory
-or effectful combiners. Both probes remain unqualified, with original source
-and diagnostics retained in `empty.log` and `reduction.log` respectively.
+or effectful combiners. The original failed probes remain recorded in `empty.log` and `reduction.log`;
+new region qualification does not relabel those failures. The wholly nonexecuting
+declared loop domain remains a current refusal.
 
 `out/loop-tiles/summary.json` reopens five kernel libraries and one complete
 model library: 17 initial, 81 unchanged-library replay and 34 exact-word target

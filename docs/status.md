@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Functional regions in tile memory](region_tile_memory.md) now retain reductions,
+coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
+dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
+native/host and sixteen actual serial images, retaining all seven model results. The
+focused selections pass 38 + 28 + 4; related regressions are being recorded. General
+memory/effect/source and accelerator closure remains open.
+
 [Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
 recurrences and selected-path observations as tensor computation. Actual source
 fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five

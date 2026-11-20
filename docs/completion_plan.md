@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Functional regions in tile memory](region_tile_memory.md) now retain reductions,
+coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
+dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
+native/host and sixteen actual serial images, retaining all seven model results. The
+focused selections pass 38 + 28 + 4; related regressions are being recorded. General
+memory/effect/source and accelerator closure remains open.
+
 [Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
 recurrences and selected-path observations as tensor computation. Actual source
 fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
@@ -8,11 +15,11 @@ twelve actual serial images, retaining all seven model results. The related regr
 selection passes 221 checks. General memory/effect/source and accelerator closure
 remains open.
 
-The next reproduced loop-state gates are the wholly nonexecuting declared
-trip domain and pure reduction containers inside partial-tile recurrences.
-Their actual source and refusals are retained in [the loop contract](loop_tiles.md#next-reproduced-source-boundaries).
-Close these through source-domain/control and actual region-purity proofs;
-shared/async semantics and applicable target requirements remain independent.
+The wholly nonexecuting declared trip domain remains the next reproduced
+loop-state gate. Its actual source/refusal is retained in [the loop contract](loop_tiles.md#historical-source-boundary-probes).
+The reproduced pure-reduction composition now has separate functional-region
+qualification. General while/alias, shared/async and applicable target requirements
+remain independent.
 
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.

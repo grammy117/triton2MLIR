@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Functional regions in tile memory](region_tile_memory.md) add recursive
+numeric/effect admission without changing pass order, public ABI, result modes,
+receipts or artifact rosters. Every actual descendant and capture remains checked;
+original region conversion retains tuple order, source initialization, precision and
+packing contracts. Transformation records bind retained region definition/callsite
+locations, and generated compatibility explicitly names the admission. Provenance
+supplies no effect or rewrite permission.
+
 [Loop-carried partial tiles](loop_tiles.md) add numeric tensor state through original
 source control. Actual masks/fills, zero-trip entry coverage and source fallback
 writes determine initialization; source widths, geometry, ownership and effects remain

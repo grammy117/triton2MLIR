@@ -25,6 +25,7 @@ class _Group:
     independent_roots: set = field(default_factory=set)
     readonly_reads: list = field(default_factory=list)
     other_accesses: list = field(default_factory=list)
+    value_regions: list = field(default_factory=list)
 
 
 def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
@@ -68,9 +69,11 @@ def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
                 and isinstance(op.operands[1].type, builtin.TensorType))
 
     def pure(op):
-        from .value_regions import tensor_computation
+        from .value_regions import pure_value_region, tensor_computation
 
         name = opcode(op)
+        if op.regions:
+            return pure_value_region(op)
         return not op.regions and (name.startswith(("arith.", "math.")) or tensor_computation(op) or name in {
             "tt.splat", "tt.addptr", "tt.make_range", "tt.broadcast", "tt.expand_dims", "tt.trans",
             "tt.reshape", "tt.cat", "tt.join", "tt.split", "tt.bitcast"})
@@ -150,6 +153,7 @@ def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
             "independent_roots": sorted(group.independent_roots),
             "unchanged_readonly_read_ids": list(dict.fromkeys(group.readonly_reads)),
             "unchanged_other_access_ids": list(dict.fromkeys(group.other_accesses)),
+            "retained_value_region_source_ids": list(dict.fromkeys(group.value_regions)),
             "physical_mapping": "undecided"})
 
     def distribution_cover(group, conditional):
@@ -229,6 +233,9 @@ def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
             if op.parent is not block:
                 continue
             if pure(op):
+                if op.regions:
+                    for group in groups.values():
+                        group.value_regions.extend(source_ids(op.location))
                 continue
             if isinstance(op, (scf.ForOp, scf.IfOp)) and loop_domains:
                 from .loop_tile_state import plan_loop_state
@@ -281,6 +288,7 @@ def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
                     reports.append({"kind": "source-tile-prefix-distribution",
                         "source_ids": list(dict.fromkeys(sid for store in stores for sid in source_ids(store.location))),
                         "branch_source_ids": source_ids(op.location), "observed_read_ids": observed,
+                        "retained_value_region_source_ids": list(dict.fromkeys(group.value_regions)),
                         "root": roots[root].name, "stores": len(stores), "static_copies": 2,
                         "execution": "exactly-one-original-scalar-if-successor; no-arithmetic-speculation",
                         "coverage": "each-selected-source-path-completes-retained-prefix-cover",

@@ -98,6 +98,60 @@ def tensor_computation(operation):
     )
 
 
+def pure_value_region(operation, *, maximum_operations=1024):
+    """Recognize numeric regions without granting their conversion contracts.
+
+    Inspect every descendant, including unused instructions and captures.
+    Parent Pure traits and provenance never hide an effect. Source containers
+    remain intact for the existing postorder expansion, which separately checks
+    geometry, initialization, tuple order, packing and numeric semantics.
+    """
+    from xdsl.dialects import arith, scf
+    from xdsl.traits import is_side_effect_free
+
+    from .shared_tensor import opcode
+
+    if not operation.regions:
+        return False
+    containers = {"tt.reduce": {"axis"}, "tt.scan": {"axis", "reverse"},
+                  "tt.map_elementwise": {"pack"}}
+    terminals = {"tt.reduce.return", "tt.scan.return", "tt.map_elementwise.return"}
+    pending, count = [(operation, 0)], 0
+    while pending:
+        child, depth = pending.pop()
+        count += 1
+        if count > maximum_operations or depth > 32 or child.successors:
+            return False
+        values = [*child.operands, *child.results,
+            *(arg for region in child.regions for block in region.blocks for arg in block.args)]
+        if not all(numeric_value(value.type) for value in values):
+            return False
+        name = opcode(child)
+        if name in containers:
+            if len(child.regions) != 1 or any(
+                    key not in {"op_name", "op_name__", *containers[name]} and not key.startswith("prov.")
+                    for key in (*child.properties, *child.attributes)):
+                return False
+        elif isinstance(child, (scf.IfOp, scf.ForOp, scf.WhileOp)):
+            pass
+        elif child.regions:
+            if not tensor_computation(child):
+                return False
+        elif name in terminals or isinstance(child, (scf.YieldOp, scf.ConditionOp)):
+            pass
+        elif not (tensor_computation(child) or child.name.split(".", 1)[0] in {"arith", "math"}
+                and (is_side_effect_free(child) or isinstance(child, (arith.ExtSIOp, arith.RemUIOp)))):
+            return False
+        for region in child.regions:
+            if len(region.blocks) != 1:
+                # Verified SCF permits an absent false region on a void if.
+                if isinstance(child, scf.IfOp) and region is child.false_region and not region.blocks and not child.results:
+                    continue
+                return False
+            pending.extend((nested, depth + 1) for nested in region.block.ops)
+    return True
+
+
 def clone_body_operation(operation, mapping, generated_guards):
     """Transport guard authority only along the actual compiler clone edge."""
     cloned = operation.clone(value_mapper=mapping)

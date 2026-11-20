@@ -31,7 +31,7 @@ class LoopTilePlan:
         from .shared_tensor import opcode
 
         stores = [op for op in self.group.events if opcode(op) == "tt.store"]
-        reads, loops = [], []
+        reads, loops, values = [], [], list(self.group.value_regions)
 
         def inventory(nodes):
             for op, kind, children in nodes:
@@ -44,12 +44,15 @@ class LoopTilePlan:
                         loops.append(op)
                     for child in children:
                         inventory(child)
+                elif op.regions:
+                    values.extend(source_ids(op.location))
 
         inventory(self.nodes)
         report = {"kind": "source-loop-tile-state",
             "source_ids": list(dict.fromkeys(sid for op in stores for sid in source_ids(op.location))),
             "observed_read_ids": list(dict.fromkeys(sid for op in reads for sid in source_ids(op.location))),
             "loop_source_ids": list(dict.fromkeys(sid for op in loops for sid in source_ids(op.location))),
+            "retained_value_region_source_ids": list(dict.fromkeys(values)),
             "recurrence": "original-loop-bounds-and-numeric-state; additional-functional-tile-carrier",
             "initialization": "actual-source-ordered-writes; zero-trip-keeps-entry-coverage",
             "coverage": "complete-retained-source-mask-before-final-store; independent-geometry-required",

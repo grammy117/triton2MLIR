@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("retained_value_region_source_ids") for row in trace.get("transformations", [])):
+        differences.append("functional numeric region containers may remain inside proved tile-memory spans only after every descendant and capture passes effect-free numeric admission; original containers and source locations remain for existing postorder reduction/scan/map conversion with independent initialization, tuple order, packing, precision and bounds contracts; annotations and parent Pure traits grant no effect, memory, geometry or public ABI permission")
     if any(row.get("kind") == "source-loop-tile-state" for row in trace.get("transformations", [])):
         differences.append("same-address fresh tile memory may become an additional numeric tensor carrier through original for/if regions; each read retains source masks/fills and requires preceding selected-path initialization; zero trips retain entry coverage and require actual source completion before a covered final store; loop bounds, numeric recurrences, tiling and source operation correspondence remain; bounds, geometry, ownership, effects and numeric policies stay independent; public ABI, receipts and artifact rosters are unchanged")
     if any(row.get("kind") == "source-tile-prefix-distribution" for row in trace.get("transformations", [])):
