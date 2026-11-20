@@ -124,6 +124,7 @@ def worker(mode, root, out, *arguments):
                 "src/merlin/xdsl_dialects/standard_linalg.py",
                 "src/merlin/xdsl_dialects/standard_scf.py",
                 "src/merlin/xdsl_dialects/standard_llvm.py", "src/merlin/frontends/kernel_volatile_evidence.py",
+                "src/merlin/frontends/kernel_word_source_effects.py",
                 "src/merlin/llvmlower/loop_tensor_destinations.py",
                 "src/merlin/llvmlower/atomic_compare_exchange.py",
                 "src/merlin/llvmlower/atomic_word_views.py",

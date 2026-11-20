@@ -1,11 +1,16 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Actual word-source effect admission](word_source_effects.md) now closes the
+legacy-stage primitive-selection gap with independent actual-source checks.
+Continue general shared/asynchronous participation and the composition/target
+closure below; the full endpoint remains active and incomplete.
+
 [Composed atomic/volatile effects](atomic_volatile_effects.md) now preserve
 both primitive contracts, numeric policy and ownership through original
 allocation sources and complete i64/f32 models. All thirteen results survive
 host/serial execution; the public binder retains explicit policy overrides.
-Continue source effect selection across legacy envelopes, remaining memory/
-numeric/storage composition and general shared/asynchronous participation.
+Continue remaining memory/numeric/storage composition and general
+shared/asynchronous participation.
 
 [Volatile program phases](volatile_program_phases.md) now retain unused and
 cross-lane observations through protected source, reusable host and complete
@@ -43,7 +48,7 @@ more variants of a passing example do not close an unrelated requirement.
 
 | Work | Required result and evidence |
 |---|---|
-| Actual effect selection across stage versions | Audit actual typed source before legacy word-stage early returns. Unsupported original effects must refuse even when byte-bound declarations are rehashed; custody alone supplies no semantic admission. |
+| Actual effect selection across stage versions | Delivered for actual word-source primitives: both readers parse before legacy early returns, rehashed unsupported effects refuse, and the retained historical audit passes. Broader source/effect compositions still require their own contracts and execution. |
 | Program phases through source/model intake | Retain original and bound graphs separately; preserve complete phases, snapshots, runtime dimensions and all results. Protected allocation/model integration is now delivered; the linked contract records its finite scope. |
 | Shared and asynchronous effects | Represent participation, publication, completion and memory dependencies explicitly. Reuse upstream analyses and standard operations; retain useful overlap/reuse. Qualify real execution rather than deleting difficult operations or accepting opaque calls. |
 | General memory/state composition | Extend actual root, view, index, alias, ownership and control proofs through remaining valid compositions. Keep source-width arithmetic, masks, complete initialization and conflict/lifetime checks. |

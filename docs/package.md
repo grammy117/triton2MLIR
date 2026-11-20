@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Actual word-source effect admission](word_source_effects.md) parses typed
+source before legacy stage early returns. Unsupported effects now refuse even
+with consistently rehashed artifacts. Public ABI, receipt schemas and artifact
+rosters are unchanged. Host/target qualification additionally pins the independent
+reader; historical images are not relabeled as current-gate qualification.
+
 [Composed atomic/volatile effects](atomic_volatile_effects.md) explicitly select
 admission v6 and word stages v4. Atomic `effect_profile`, numeric policy and
 participant ownership remain intact alongside `volatile_profile`; actual mixed

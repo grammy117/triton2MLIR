@@ -96,9 +96,10 @@ it does not establish deterministic GPU lane scheduling or device-bit equality.
 
 General shared/external/asynchronous participation, byte-backed volatile views,
 broader numeric/storage/control compositions and accelerator correctness/
-performance remain completion work. Actual primitive selection in legacy word
-envelopes also needs its own source-driven audit; historical custody-only stage
-evidence is not a source-equivalence proof. The arbitrary-kernel goal stays open.
+performance remain completion work. [Actual primitive selection](word_source_effects.md)
+now runs before legacy word-stage early returns in both readers; historical
+custody-only stage evidence remains separate from source equivalence. The
+arbitrary-kernel goal stays open.
 
 ```bash
 python -m pytest -q tests/test_atomic_volatile.py \

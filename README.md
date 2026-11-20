@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Actual word-source effect admission](docs/word_source_effects.md) now checks
+typed primitives before legacy byte-stage early returns in both readers.
+Rehashed unselected effects refuse; the historical word-source audit passes.
+General shared/async and broader composition/target coverage remain open.
+
 [Composed atomic/volatile effects](docs/atomic_volatile_effects.md) now retain
 both executable components, original numeric policy and atomic ownership.
 Selected RMW/CAS kernels and complete i64/f32 models pass native/host/serial

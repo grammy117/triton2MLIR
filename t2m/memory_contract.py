@@ -110,7 +110,9 @@ def validate_memory_evidence(trace, artifacts):
             validate_evidence(admission, memory, records, buffers)
     if profile == WORD_PROFILE:
         from .word_evidence import check_word_stage, replay_events
+        from .word_source_effects import validate_source_effects
         word_stage = json.loads(artifacts["word-stage.json"])
+        validate_source_effects(artifacts["word-input.mlir"], word_stage, memory, records)
         if (not version2 or admission.get("address_policy") != "source-words-offset64"
                 or memory.get("address_policy") != "source-words-offset64"
                 or memory.get("word_stage_sha256") != record(artifacts["word-stage.json"])["sha256"]

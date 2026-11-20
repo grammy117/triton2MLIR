@@ -1,10 +1,15 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Actual word-source effect admission](docs/word_source_effects.md) now closes
+the legacy-stage primitive-selection gap in both readers. Continue general
+shared/asynchronous participation, memory/numeric/storage composition and
+applicable consumer/target materialization; arbitrary coverage remains open.
+
 [Composed atomic/volatile effects](docs/atomic_volatile_effects.md) now retain
 both original effects through protected sources and complete i64/f32 models.
 All thirteen model results survive host replays and actual serial images;
-public CLI binding carries global/per-kernel f32 policy. Continue actual effect
-selection across legacy stages, general memory/numeric/storage composition and
+public CLI binding carries global/per-kernel f32 policy. Continue general
+memory/numeric/storage composition and
 shared/asynchronous participation before applicable accelerator qualification.
 
 [Volatile program phases](docs/volatile_program_phases.md) now compose private
