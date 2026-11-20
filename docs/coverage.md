@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Rectangular source-loop coverage](nested_output_coverage.md) passes the 51
+focused source/model checks. Nested/permuted traversal, unit/empty axes and
+complete branch joins retain source reuse and exact results through native,
+Merlin host and actual serial execution. The complete two-call model retains
+runtime parameter slices and all seven results. General initialization,
+ownership/effect/target closure remains open; the historical opcode inventory
+is unchanged.
+
 [While-carried word indices](while_word_ranges.md) now qualify fixed-width
 state, wrapped/direct lookups and actual final counter observations through
 standard tensor memory. Four reusable kernel libraries retain all three

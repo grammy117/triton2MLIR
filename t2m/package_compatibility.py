@@ -12,6 +12,11 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(0 in row.get("shape", []) for row in trace.get("spec", {}).get("buffers", [])):
+        differences.append("static tensor dimensions may be zero with their exact rank/type and no runtime size binding; older readers requiring positive static extents refuse these packages; logical grid bounds remain positive and empty storage grants no active access, ownership or effect permission; artifact schemas and field meanings are unchanged")
+    if any(proof.get("coverage") == "serial-rectangular-source-loop-nest"
+           for row in trace.get("memory", {}).get("source_loops", []) for proof in row.get("complete_scalar_result_proofs", {}).values()):
+        differences.append("actual independent zero-based unit-step rectangular source loops prove fresh initialization by exact bound-product equality and mixed-radix index coverage, including permuted traversal and reachable unit axes; original loops, reused values, guards and tensor versions remain; both branch paths need complete source writes, and empty results authorize no active read; no source rewrite, tracker storage, ownership, public ABI or effect-profile change follows")
     if any(row.get("kind") == "source-while-word-ranges" for row in trace.get("transformations", [])):
         differences.append("actual fixed-width while region arguments/results use their full signed word enclosure without an induction/no-wrap assumption; original numeric state and modular updates remain executable; dependent address arithmetic retains separate overflow/cast/divisor checks and active allocation bounds; no trip-count, initialization, ownership, public ABI or effect-profile change")
     if any(row.get("control") == "scf.while" for row in trace.get("memory", {}).get("source_loops", [])):

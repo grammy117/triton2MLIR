@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Rectangular source-loop coverage](nested_output_coverage.md) now closes the
+reproduced nested/permuted fresh-output refusal, complete branch joins and
+static-empty tensor-port gap. Model2MLIR runtime parameter slices compose with
+both original loop nests through complete model host/serial execution. Continue
+partial row-local and masked/conditional initialization, while/ownership facts,
+irregular parallel dependencies, shared/async effects and target closure.
+
 [While-carried word indices](while_word_ranges.md) now close the concrete
 typed-word enclosure gap without inventing an induction/no-wrap premise.
 Original loops and all results survive complete model host/serial execution.

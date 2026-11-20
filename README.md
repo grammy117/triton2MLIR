@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Rectangular source loop nests](docs/nested_output_coverage.md) now initialize
+fresh tensor results while retaining permuted traversal and outer-loop reuse.
+Two dependent calls, runtime parameter slices and all seven PyTorch model results
+pass Merlin host/replays and actual serial execution. Static empty tensor ports
+retain exact types and active-access guards. General partial initialization,
+ownership/effect compositions and accelerator closure remain open.
+
 [While-carried word indices](docs/while_word_ranges.md) now retain actual i32/
 i64 modular state through tensor memory, including wrapped table lookups and
 final counter observations. Dynamic prefix loops and a complete two-call

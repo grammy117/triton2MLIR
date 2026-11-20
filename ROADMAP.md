@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Rectangular source-loop coverage](docs/nested_output_coverage.md) now extends
+fresh-output initialization through nested/permuted traversals, unit/empty axes
+and independently complete branch arms. A complete two-call model retains
+runtime parameter slices, reuse and every result through host and actual serial
+execution. Continue partial row-local/masked/conditional initialization,
+while/ownership relations, irregular parallel dependencies, shared/async effects
+and applicable target closure; the arbitrary-kernel endpoint remains incomplete.
+
 [While-carried word indices](docs/while_word_ranges.md) now use actual full
 storage-width enclosures while retaining original modular state and final
 counter values. Standard tensor memory handles dynamic prefix loops and

@@ -30,8 +30,6 @@ from xdsl.dialects import arith, builtin, cf, scf, tensor
 from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
-from .shared_indexing import Linear
-from .symbolic_layout import Polynomial, expression
 
 
 def flat_storage_type(pointer, buffer, opcode):
@@ -135,36 +133,3 @@ def scatter(source, buffer, base, mapping, append, maximum_shape):
                  for axis, size in enumerate(shape) if size < 0]
         updated = add(tensor.ExpandShapeOp(updated, sizes, group, shape, base.type)).result
     return updated, raw
-
-
-def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode):
-    """Prove an unmasked i=0..numel-1 direct store on every source iteration.
-
-    Reuse the bounded exact polynomial source analysis, including every typed
-    intermediate's overflow checks. Neither matching interval maxima nor
-    provenance supplies an equality between the loop bound and result shape.
-    """
-    limits = [mapping[v] for v in loop.operands[:3]]
-    if expression(limits[0], facts, abi.grid_bounds) != Polynomial.constant(0) or expression(
-            limits[2], facts, abi.grid_bounds) != Polynomial.constant(1):
-        return []
-    upper = expression(limits[1], facts, abi.grid_bounds)
-    induction = expression(mapping[loop.body.block.args[0]], facts, abi.grid_bounds)
-    complete = []
-    for op in loop.body.block.ops:
-        if opcode(op) != "tts.scatter" or len(op.operands) != 3 or op.operands[0] not in buffers:
-            continue
-        buffer = buffers[op.operands[0]]
-        if buffer.effect != "write":
-            continue
-        index = mapping[op.operands[1]]
-        if not isinstance(index.owner, tensor.FromElementsOp) or len(index.owner.operands) != 1:
-            continue
-        actual = expression(index.owner.operands[0], facts, abi.grid_bounds)
-        expected = Polynomial.constant(1)
-        for dimension in buffer.shape:
-            value = abi.dimension(dimension)
-            expected *= Polynomial.affine(value) if isinstance(value, Linear) else Polynomial.constant(value)
-        if actual == induction and upper == expected:
-            complete.append(buffer)
-    return complete

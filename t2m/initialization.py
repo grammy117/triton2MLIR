@@ -49,13 +49,18 @@ class DefiniteWrites:
         if buffer.name in self.fresh and all(maximum(n) for n in sizes):
             self.writes[buffer.name].append((offsets, sizes))
 
-    def completion(self, buffer):
-        if any(isinstance(row, WholeWrite) for row in self.writes[buffer.name]):
-            return "serial-contiguous-source-loop"
+    def completion(self, buffer, *, values=None):
+        dimensions = (self.abi.dimension(n) for n in buffer.shape)
+        if any(n == 0 if isinstance(n, int) else n.bounds(self.grid) == (0, 0) for n in dimensions):
+            return "zero-element-result"
+        values = self.writes[buffer.name] if values is None else values
+        for row in values:
+            if isinstance(row, WholeWrite):
+                return row.coverage
         if len(buffer.shape) != 1 or not isinstance(buffer.shape[0], int) or prod(self.grid) != 1 or self.varying_axes:
             return None
         intervals = []
-        for offsets, sizes in self.writes[buffer.name]:
+        for offsets, sizes in values:
             if len(offsets) != 1 or offsets[0].dynamic or len(sizes) != 1 or not isinstance(sizes[0], int):
                 continue
             left, right = offsets[0].constant, offsets[0].constant + sizes[0]
@@ -71,9 +76,9 @@ class DefiniteWrites:
     def complete(self, buffer):
         return buffer.name not in self.fresh or self.completion(buffer) is not None
 
-    def store_whole(self, buffer):
+    def store_whole(self, buffer, *, coverage="serial-contiguous-source-loop"):
         if buffer.name in self.fresh:
-            self.writes[buffer.name].append(WholeWrite())
+            self.writes[buffer.name].append(WholeWrite(coverage))
 
     def snapshot(self):
         return {name: list(values) for name, values in self.writes.items()}
@@ -82,11 +87,16 @@ class DefiniteWrites:
         self.writes = {name: list(values) for name, values in state.items()}
 
     def merge_branches(self, first, second):
-        # A store in only one branch cannot initialize the other branch. Keep
-        # boxes established on both paths; unions/intersections of differently
-        # partitioned boxes need a separate coverage rule.
-        self.writes = {name: [box for box in boxes if box in second[name]]
-                       for name, boxes in first.items()}
+        merged = {}
+        for name, boxes in first.items():
+            a = self.completion(self.fresh[name], values=boxes)
+            b = self.completion(self.fresh[name], values=second[name])
+            if a and b:
+                merged[name] = [WholeWrite(a if a == b else "intersection-of-complete-source-overwrites")]
+            else:
+                # A store on just one path gives no fact on the other path.
+                merged[name] = [box for box in boxes if box in second[name]]
+        self.writes = merged
 
     def finish(self, *, source_id=None):
         evidence = {}

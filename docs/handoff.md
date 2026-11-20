@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-20
 
+[Rectangular source-loop coverage](nested_output_coverage.md) now retains fresh
+results from nested/permuted traversals and complete branch arms. The original
+two-call PyTorch model, runtime parameter slices and all seven results qualify
+through host/replays and actual serial images. Static empty ports retain exact
+types and active-access guards. Continue partial row-local/masked/conditional
+initialization, while/ownership relations, irregular parallel dependencies,
+shared/async effects and applicable targets; full coverage remains incomplete.
+
 [While-carried word indices](while_word_ranges.md) now admit actual i32/i64
 ports by their complete word domain, retaining original modular updates and
 post-loop values. Other address arithmetic still needs its own source checks.

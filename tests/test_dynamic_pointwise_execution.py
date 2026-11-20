@@ -14,7 +14,7 @@ pytestmark = pytest.mark.skipif(not all(os.environ.get(name) for name in
     ("T2M_NATIVE_PYTHON", "T2M_MODEL2MLIR_PYTHON")), reason="existing native/model2MLIR environments required")
 
 
-def emitter_program(tmp_path, shapes, *, operation="add", slicing=None, result_shape=None):
+def emitter_program(tmp_path, shapes, *, operation="add", slicing=None, result_shape=None, runtime_bounds=False):
     """Isolate the source frontend's pinned xDSL environment from the consumer."""
     import json
     import subprocess
@@ -32,6 +32,7 @@ shape=options['result_shape']
 types=[builtin.TensorType(builtin.i32,[builtin.DYNAMIC_INDEX if n is None else n for n in shape]) for shape in options['shapes']]
 input_count=len(types)
 types += [builtin.i64 for size in shape if size is None]
+if options['runtime_bounds']:types += [builtin.i64,builtin.i64]
 block=Block(arg_types=types)
 if options['slicing'] is None:
  names={'add':('AddfOp','AddiOp'),'sub':('SubfOp','SubiOp'),'mul':('MulfOp','MuliOp')}
@@ -40,7 +41,9 @@ if options['slicing'] is None:
  operations,value=result.ops,result.result
 else:
  target=builtin.TensorType(builtin.i32,[builtin.DYNAMIC_INDEX if n is None else n for n in shape])
- operations,value=extract_slice(block.args[0],target,options['slicing'])
+ arguments=options['slicing']
+ if options['runtime_bounds']:arguments=[arguments[0],*block.args[-2:],arguments[3]]
+ operations,value=extract_slice(block.args[0],target,arguments)
 block.add_ops(operations)
 block.add_op(func.ReturnOp(value))
 module=builtin.ModuleOp([func.FuncOp('forward',(types,[value.type]),region=Region(block))])
@@ -48,7 +51,8 @@ module.verify()
 with open(sys.argv[2],'w') as stream:Printer(stream=stream,print_generic_format=True).print_op(module)
 '''
     source = tmp_path / "source.mlir"
-    options = {"shapes": shapes, "operation": operation, "slicing": slicing, "result_shape": result_shape}
+    options = {"shapes": shapes, "operation": operation, "slicing": slicing, "result_shape": result_shape,
+               "runtime_bounds": runtime_bounds}
     (tmp_path / "source-spec.json").write_text(json.dumps(options, sort_keys=True) + "\n")
     process = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], "-c", script, json.dumps(options), str(source)],
         capture_output=True, text=True, timeout=30, check=False,
@@ -119,6 +123,30 @@ def test_actual_slice_body_clips_bounds_without_example_specialization(tmp_path,
             python=os.environ["T2M_NATIVE_PYTHON"], shape_abi=contract,
             compiler_support_root=os.environ.get("T2M_MERLIN_ROOT"))
         assert (actual.shape, actual.dtype, actual.tobytes()) == (expected.shape, expected.dtype, expected.tobytes())
+
+
+@pytest.mark.parametrize("static", (False, True))
+@pytest.mark.parametrize("step", (1, 3, (1 << 63) - 1))
+def test_runtime_ssa_slice_bounds_keep_signed_extremes_and_empty_results(tmp_path, static, step):
+    from t2m.native import execute_native
+
+    shapes, result_shape = [[7 if static else None]], [None]
+    source = emitter_program(tmp_path, shapes, slicing=[0, None, None, step], result_shape=result_shape,
+                             runtime_bounds=True)
+    cases = ((0, 0, 0), (1, -8, -1), (7, -(1 << 63), (1 << 63)-1),
+             (31, (1 << 63)-1, -(1 << 63)), (7, 1, 100), (31, -100, 100))
+    for index, (length, start, end) in enumerate(cases):
+        x = np.arange(7 if static else length, dtype=np.int32) * 37 - 11
+        expected = x[start:end:step].copy()
+        arrays, contract = invocation(shapes, [x], result_shape, expected)
+        arrays.extend((np.asarray(start, np.int64), np.asarray(end, np.int64)))
+        contract["inputs"].extend(({"shape": [], "dtype": "i64", "scalar": "start"},
+                                   {"shape": [], "dtype": "i64", "scalar": "end"}))
+        (actual,), report = execute_native(source, arrays, tmp_path / f"runtime-{index}",
+            python=os.environ["T2M_NATIVE_PYTHON"], shape_abi=contract,
+            compiler_support_root=os.environ.get("T2M_MERLIN_ROOT"))
+        assert (actual.shape, actual.dtype, actual.tobytes()) == (expected.shape, expected.dtype, expected.tobytes())
+        assert report["native_mlir_verified"] and report["llvm_lowering_verified"]
 
 
 @pytest.mark.parametrize("lengths", [(2, 3), (0, 2)])

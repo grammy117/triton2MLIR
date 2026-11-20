@@ -109,8 +109,8 @@ class TensorBuffer:
 
     def __post_init__(self):
         if not self.name.isidentifier() or not self.shape or any(
-                not (type(n) is int and n > 0 or isinstance(n, str) and n.isidentifier()) for n in self.shape):
-            raise ValueError("tensor buffers require a name and positive static or named runtime dimensions")
+                not (type(n) is int and n >= 0 or isinstance(n, str) and n.isidentifier()) for n in self.shape):
+            raise ValueError("tensor buffers require a name and nonnegative static or named runtime dimensions")
         if self.dtype not in DTYPES or self.effect not in ("read", "write", "readwrite"):
             raise ValueError("tensor buffers require a supported dtype and read/write/readwrite effect")
 
@@ -1005,11 +1005,11 @@ def _functionalize(module, abi, *, serial_memory=True):
                 before_loop = initialization.snapshot()
                 loop_values[identity] = (nested.args[0], lb, step)
                 translate(op.body.block)
-                complete = []
+                complete, complete_proofs = [], {}
                 if serial_memory and not parallel:
-                    from .serial_tensor_memory import complete_loop_writes
+                    from .loop_write_coverage import complete_loop_writes
                     try:
-                        complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode)
+                        complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode, evidence=complete_proofs)
                     except ConversionError:
                         pass  # Missing algebraic equality supplies no new write credit.
                 del loop_values[identity]
@@ -1024,9 +1024,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                     else:
                         loop_evidence["initialization"] = "post-body-facts; positive-trip-count-proved"
                 for buffer in complete:
-                    initialization.store_whole(buffer)
+                    initialization.store_whole(buffer, coverage=complete_proofs[buffer.name]["coverage"])
                 if complete:
                     loop_evidence["complete_scalar_results"] = [buffer.name for buffer in complete]
+                    loop_evidence["complete_scalar_result_proofs"] = complete_proofs
                 body = previous
                 initial = [mapping[op.operands[i + 3]] for i in kept]
                 zeros = [append(arith.ConstantOp.from_int_and_width(0, IndexType()), op).result for _ in range(sum(pointer_ranks))]

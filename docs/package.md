@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Rectangular source-loop coverage](nested_output_coverage.md) adds post-loop
+initialization proofs without changing executable traversal, public arguments,
+receipts or artifact rosters. Static zero tensor extents extend the accepted
+value domain under existing schemas; older positive-only readers reject them.
+Exact types and positive logical grids remain. Runtime parameter slices use
+ordinary model2MLIR SSA and checked clipping. Empty-value and coverage facts
+grant no active-access, ownership, public alias/copyback, effect or target
+permission. Provenance records actual loop/source evidence only.
+
 [While-carried word ranges](while_word_ranges.md) retain original fixed-width
 state and modular updates; mathematical address arithmetic keeps independent
 source overflow/cast/divisor checks and executable active bounds. Provenance

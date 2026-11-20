@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Rectangular source-loop coverage](nested_output_coverage.md) now admits fresh
+results from nested/permuted source traversals and joins independently complete
+branch arms. Static empty ports preserve exact types and active-access guards.
+A complete two-call PyTorch model retains runtime parameter slices, reuse and
+all seven results through host replays and actual serial images. General partial
+initialization, while/ownership relations, irregular parallel dependencies,
+shared/async effects and applicable accelerator closure remain incomplete.
+
 [While-carried word indices](while_word_ranges.md) now retain actual fixed-width
 state through tensor computation without claiming a mathematical induction
 proof. Dynamic prefix and wrapped/direct lookups, final counter observations
