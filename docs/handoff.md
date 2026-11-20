@@ -4,8 +4,24 @@
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
 native/host and sixteen actual serial images, retaining all seven model results. The
-focused selections pass 38 + 28 + 4; related regressions are being recorded. General
+focused selections pass 38 + 28 + 4; related regressions pass 212. General
 memory/effect/source and accelerator closure remains open.
+
+`out/region-tiles/summary.json` reopens seven kernel libraries and one complete
+model library: 21 initial, 105 unchanged-library replay and 42 exact-word target
+results across sixteen actual serial images, plus one original-domain abort.
+Every parent archive and actual original/normalized source-region link remains
+checked. Definition and callsite IDs retain their actual opcodes separately.
+The reopening log is `.scratch/region-tiles-report1.log`.
+
+Implementation `9218ad836c1a2be7c1a1be120c82cc3aa7c7092c` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. All twelve selected
+implementation/test/helper sources match committed bytes. These hashes remain
+separate from observed revisions and are not a full dependency closure,
+accelerator or performance qualification. No companion source change was
+required for this capability.
 
 [Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
 recurrences and selected-path observations as tensor computation. Actual source

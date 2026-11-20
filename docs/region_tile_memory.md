@@ -108,8 +108,8 @@ report-kind names and failed seven assertions after successful conversion.
 Correcting those expectations required no compiler change; that failed run is
 not execution qualification. Logs are `.scratch/region-tiles-proof1.log`,
 `.scratch/region-tiles-kernels1.log` and `.scratch/region-model1.log`.
-Targeted Ruff and `git diff --check` pass. Related regression and reopening
-qualification are being recorded alongside this change.
+Targeted Ruff and `git diff --check` pass. The related memory/control/reduction/scan/map/tensor-region selection passes 212
+checks in `.scratch/region-tiles-regression1.log`. Reopening qualification is recorded below.
 
 The wholly nonexecuting declared trip domain remains an actual source refusal
 under [the earlier loop contract](loop_tiles.md#historical-source-boundary-probes).
@@ -117,3 +117,28 @@ General while-carried partial tiles, source memory inside region combiners,
 shared/async participation, numeric/source-version closure and applicable target
 correctness/performance remain full-goal work. This finite i64 qualification
 changes no operation-name denominator and establishes no accelerator support.
+
+Reproduction uses the existing native/Merlin environments from the README:
+
+```bash
+python -m pytest -q tests/test_pure_value_regions.py \
+  tests/test_value_region_contract.py tests/test_source_combiner_effects.py \
+  tests/test_region_tiles.py tests/test_region_model.py \
+  --basetemp=.scratch/pytest-region-tile-memory
+```
+
+`out/region-tiles/summary.json` reopens seven kernel libraries and one complete
+model library: 21 initial, 105 unchanged-library replay and 42 exact-word target
+results across sixteen actual serial images, plus one original-domain abort.
+Every parent archive and actual original/normalized source-region link remains
+checked. Definition and callsite IDs retain their actual opcodes separately.
+The reopening log is `.scratch/region-tiles-report1.log`.
+
+Implementation `9218ad836c1a2be7c1a1be120c82cc3aa7c7092c` retains companion
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`. All twelve selected
+implementation/test/helper sources match committed bytes. These hashes remain
+separate from observed revisions and are not a full dependency closure,
+accelerator or performance qualification. No companion source change was
+required for this capability.

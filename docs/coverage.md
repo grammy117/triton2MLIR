@@ -4,7 +4,7 @@
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
 native/host and sixteen actual serial images, retaining all seven model results. The
-focused selections pass 38 + 28 + 4; related regressions are being recorded. General
+focused selections pass 38 + 28 + 4; related regressions pass 212. General
 memory/effect/source and accelerator closure remains open.
 
 [Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
