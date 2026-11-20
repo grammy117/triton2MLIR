@@ -88,6 +88,25 @@ serial images. Comparisons retain exact i64 words, including values above 2**53.
 native slice tests cover signed-i64 extremes, clipped/empty results and large
 positive steps on static and dynamic tensors. Earlier failed logs are retained.
 
+Producer `7c9f0a9b00a675d0b928449d243c22b2689724ea`, model2MLIR
+`a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba` supply the implementation.
+The additional original-model-domain check passes and actually aborts two
+safe-kernel shapes outside the exported model domain. The overlapping producer
+regression passes 188; independent Merlin checks pass 150 with two skips,
+model2MLIR checks 68 and targeted new-file Ruff passes. Merlin structure/docs
+gates pass. These finite counts are separate from arbitrary-kernel coverage.
+
+`out/nested-output-coverage/summary.json` independently reopens all nine kernel
+packages, the complete model and original parent archives, saved output/reference
+words, replay receipts and eighteen actual serial qualifications. It retains
+25 initial, 91 replay and 46 target results, six actual active-access aborts,
+two original-model-domain aborts and 36 native runtime-bound slice invocations.
+Fourteen selected implementation/test files match actual committed bytes across
+all three repositories. Reopening passes in `.scratch/nested-output-report1.log`;
+the report records actual implementation revisions and selected source hashes,
+without claiming a full dependency closure or accelerator performance.
+
 Partial row-local initialization, unions of conditional/masked source writes,
 general while initialization, resizing/permuted ownership, irregular parallel
 dependencies, shared/async effects and applicable accelerator execution and

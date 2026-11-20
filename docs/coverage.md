@@ -8,6 +8,15 @@ runtime parameter slices and all seven results. General initialization,
 ownership/effect/target closure remains open; the historical opcode inventory
 is unchanged.
 
+`out/nested-output-coverage/summary.json` reopens nine kernel packages and the
+complete model: 25 initial, 91 replay and 46 exact target results across eighteen
+actual serial images. Six active-access and two original-model-domain runs
+abort without outputs; 36 native runtime-bound slice invocations retain signed
+extremes and empty/clipped results. The additional model-domain check passes,
+producer regressions pass 188, independent Merlin checks 150 with two skips and
+model2MLIR checks 68, with overlap. Fourteen selected files match committed
+bytes; this is not a full dependency closure or an accelerator/performance claim.
+
 [While-carried word indices](while_word_ranges.md) now qualify fixed-width
 state, wrapped/direct lookups and actual final counter observations through
 standard tensor memory. Four reusable kernel libraries retain all three

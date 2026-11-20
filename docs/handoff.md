@@ -8,6 +8,15 @@ types and active-access guards. Continue partial row-local/masked/conditional
 initialization, while/ownership relations, irregular parallel dependencies,
 shared/async effects and applicable targets; full coverage remains incomplete.
 
+Implementation revisions are producer `7c9f0a9`, model2MLIR `a3ce8ed` and
+Merlin `53e7b0115`. The 51 focused checks plus one original-domain check,
+188 overlapping producer regressions, 150 consumer checks with two skips and
+68 model2MLIR checks pass. The reopened report is
+`out/nested-output-coverage/summary.json`: 25 initial, 91 replay and 46 exact
+target results, eighteen actual serial images, six active-access aborts and
+two model-domain aborts. Both companion repositories retain branch
+`ttir-experiment-grammy`; the producer remains on `main`.
+
 [While-carried word indices](while_word_ranges.md) now admit actual i32/i64
 ports by their complete word domain, retaining original modular updates and
 post-loop values. Other address arithmetic still needs its own source checks.
