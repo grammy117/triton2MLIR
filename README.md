@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Branch-completed tiles](docs/branch_tiles.md) now retain partial prefixes,
+intermediate observations and branch-local arithmetic as tensor dataflow.
+Nested and absent-else choices keep their actual execution; logical parallel
+tiles and reuse remain. General memory/effect and target closure remains open.
+
 [Interleaved fresh tiles](docs/interleaved_tiles.md) now retain independent
 output groups, cross-output observations and predicates, immutable reloads and
 input-state updates as tensor computation. Logical parallelism and original

@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Branch-completed tiles](docs/branch_tiles.md) now close the reproduced scalar
+branch-boundary refusal. Actual selected paths retain prefix observations,
+conditional arithmetic and output coverage; ordinary memory remains visible
+when numeric data interfaces use the checked native prepass option. Continue
+general pointer/loop/effect dependencies and applicable target qualification.
+
 [Interleaved fresh tiles](docs/interleaved_tiles.md) now close the reproduced
 two-output refusal. Actual fresh-root disjointness permits independent groups
 while current-SSA proofs retain cross-output data/control dependencies and

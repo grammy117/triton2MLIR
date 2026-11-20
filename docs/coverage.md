@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Branch-completed tiles](branch_tiles.md) pass 37 proof/prepass, 38 kernel and
+four complete-model checks in separate recorded runs, plus 191 earlier
+regressions. Reopening retains eight kernel and one model libraries: 23 initial,
+117 replay and 46 exact target results across eighteen actual serial images,
+plus an original-domain abort. Conditional division remains in its selected
+region, all seven model results and original archives remain. Selected hashes
+are not a full dependency closure; the operation-name denominator is unchanged.
+
 [Interleaved fresh tiles](interleaved_tiles.md) pass 33 focused checks and 132
 earlier source/tile/memory/attention regressions. The reopening selection retains
 six kernel libraries and one complete model: 36 initial, 158 replay and 72 exact

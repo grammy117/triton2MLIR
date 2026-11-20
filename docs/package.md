@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Branch-completed tiles](branch_tiles.md) add selected-path prefix distribution
+and local mask proofs. Exactly one prefix copy executes, earlier observations
+retain their original masks/fills, and branch-local arithmetic is not speculated.
+Actual source operations and independent memory/ownership checks remain. The
+public ABI, result modes, receipts, artifact rosters and effect profiles are
+unchanged; generated compatibility metadata names the source transformation.
+
 [Interleaved fresh tiles](interleaved_tiles.md) extend existing source coverage
 reports with actual independent roots and retained ordinary accesses. Fresh
 functional result disjointness grants no independence between input roots;

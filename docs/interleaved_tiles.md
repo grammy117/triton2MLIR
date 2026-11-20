@@ -128,12 +128,13 @@ python -m pytest -q tests/test_interleaved_tiles.py tests/test_interleaved_model
   --basetemp=.scratch/pytest-interleaved
 ```
 
-The next reproduced tensor-admission gap is
+The next reproduced tensor-admission gap at that revision was
 `.scratch/branch-tile-probe2/source.ttir`: an initial positive-lane write precedes
 an actual scalar branch whose two arms each complete the negative lanes with
 different values. Its control admits the complete signed-i32 domain. The current
-collector stops at the region boundary, and the default tensor path refuses at
-the first masked scatter. This failed probe is not a package/target result and
+collector stopped at the region boundary, and the default tensor path refused at
+the first masked scatter. [Branch-completed tiles](branch_tiles.md) now close
+that form. The failed probe is not a package/target result and
 does not establish that every other memory profile refuses. Region-aware tile
 state remains separate from the broader shared/async and target requirements.
 

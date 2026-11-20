@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Branch-completed tiles](branch_tiles.md) now preserve partial prefixes and
+earlier observations through actual scalar successors, including nested and
+absent-else choices. Conditional arithmetic stays in its original arm. Numeric
+data interfaces retain ordinary memory through checked native prepass selection.
+All seven complete-model results qualify through host/replays and actual serial
+images. General pointer/loop/effect and accelerator closure remains incomplete.
+
 [Interleaved fresh tiles](interleaved_tiles.md) now retain independent result
 groups across ordinary accesses to other roots. Cross-output observations and
 predicates, immutable reloads and input-state updates remain tensor computation.

@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
+refusal with actual source-path coverage and non-speculated arithmetic.
+Prefix observations, nested/absent-else paths and a complete two-call model
+qualify. Native numeric-data interface selection keeps ordinary memory visible
+and declines pointer/mask dependencies. General loops, aliases, effects,
+source/numeric versions and applicable target qualification remain full-goal work.
+
 [Interleaved fresh tiles](interleaved_tiles.md) now close the reproduced
 distinct-output refusal using actual functional fresh-root facts. Cross-output
 data/control observations and ordinary input-state order survive complete model

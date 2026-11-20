@@ -32,13 +32,31 @@ def test_numeric_tensor_recurrence_uses_the_supported_upstream_option(width):
 
 
 @pytest.mark.parametrize("body",[
-    '"tt.load"(%ptr) : (!tt.ptr<i64>) -> i64',
-    '"tt.store"(%ptr, %value) : (!tt.ptr<i64>, tensor<4xi64>) -> ()',
     '"tt.extern_elementwise"(%state) : (tensor<4xi64>) -> ()',
     '"func.call"(%state) <{callee = @unknown}> : (tensor<4xi64>) -> ()',
 ])
-def test_buffer_accesses_or_unknown_effects_retain_the_original_prepass(body):
+def test_unknown_effects_retain_the_original_prepass(body):
     assert data_control_report(loop_module(body=body),_source_ids) is None
+
+
+@pytest.mark.parametrize("body",[
+    '"tt.load"(%ptr) : (!tt.ptr<i64>) -> i64',
+    '"tt.store"(%ptr, %state) : (!tt.ptr<i64>, tensor<4xi64>) -> ()',
+])
+def test_independent_original_memory_keeps_numeric_control_state_unboxed(body):
+    module = loop_module(body=body)
+    assert data_control_report(module, _source_ids)["upstream_option"] == "skip-prepass=true"
+    assert "tt.load" in str(module) or "tt.store" in str(module)
+
+
+@pytest.mark.parametrize("body",[
+    '"tt.addptr"(%ptr,%state) : (!tt.ptr<i64>,tensor<4xi64>) -> tensor<4x!tt.ptr<i64>>',
+    '''%zero = arith.constant dense<0> : tensor<4xi64>
+       %mask = "arith.cmpi"(%state,%zero) <{predicate=0:i64}> : (tensor<4xi64>,tensor<4xi64>) -> tensor<4xi1>
+       "tt.store"(%ptr,%value,%mask) : (!tt.ptr<i64>,tensor<4xi64>,tensor<4xi1>) -> ()''',
+])
+def test_carried_body_arguments_cannot_hide_pointer_or_mask_dependencies(body):
+    assert data_control_report(loop_module(body=body), _source_ids) is None
 
 
 @pytest.mark.parametrize("after",[

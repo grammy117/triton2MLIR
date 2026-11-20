@@ -1,5 +1,23 @@
 # Review handoff — updated 2026-11-20
 
+[Branch-completed tiles](branch_tiles.md) now close the scalar branch-boundary
+tensor refusal. Prefix observations, nested/absent-else choices, two fresh roots
+and branch-local division retain original execution. I64 data results use the
+existing checked prepass option while ordinary memory remains visible; carried
+pointer/mask state retains the original path. The recorded focused runs pass
+37 + 38 + 4; earlier source/tile/while/effect regressions pass 191.
+
+`out/branch-tiles/summary.json` reopens eight kernel and one model libraries,
+23 initial, 117 replay and 46 exact target results across eighteen actual
+serial images, plus an original-domain abort. All seven complete-model results
+and parent archives remain. Final logs are `.scratch/branch-math2.log`,
+`.scratch/branch-kernels1.log`, `.scratch/branch-model1.log`,
+`.scratch/branch-regression1.log` and `.scratch/branch-report1.log`. The earlier
+structured-state verifier failure and invalid negative fixture remain recorded;
+neither is relabeled as a successful source/target qualification. General
+pointer/loop/alias, shared/async, numeric/source-version and applicable target
+requirements remain open.
+
 [Interleaved fresh tiles](interleaved_tiles.md) now close the distinct-output
 refusal while retaining cross-output observations and predicates, immutable
 reloads and original input-state updates. The 33-check focused selection and
@@ -12,11 +30,11 @@ Final logs are `.scratch/interleaved-final1.log`,
 `.scratch/interleaved-regression1.log` and `.scratch/interleaved-report1.log`.
 The first model attempt's missing serial helper import remains recorded; the
 final run fixes the test harness and actually executes both model images.
-The next reproduced tensor-only refusal is
-`.scratch/branch-tile-probe2/source.ttir`, whose complete alternative writes
-cross a scalar branch boundary. It is failed source evidence, not a successful
-package or a refusal measurement for every other profile. General pointer/
-region, shared/async, source/numeric and target requirements remain open.
+The original tensor-only refusal in `.scratch/branch-tile-probe2/source.ttir`
+crossed a scalar branch boundary. The branch-completed implementation above now
+closes that form. Its original failed source remains separate from successful
+packages and does not measure every other profile. General pointer/loop,
+shared/async, source/numeric and target requirements remain open.
 
 Producer `6716ba902f6519703133081de99d0dda19c6e884` retains companion
 model2MLIR `a3ce8ed` and Merlin `53e7b0115`, both on

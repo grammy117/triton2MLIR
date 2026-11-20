@@ -3,8 +3,9 @@
 Meta 17f0c234's TritonToStructuredPass.cpp boxes integer tensor loop state,
 then relies on canonicalization to remove boxes unrelated to pointers. The
 installed 0c27923 binary boxes i64 data although its structured-state verifier
-accepts only i32. Reuse its supported skip-prepass option when the entire
-control-flow state is demonstrably numeric. No source region is rewritten,
+accepts only i32. Reuse its supported skip-prepass option when the control
+interfaces are numeric and their state has no pointer/mask dependencies.
+Independent ordinary memory in those regions stays visible. No region is rewritten,
 outlined or hidden from pointer conversion or later memory/ownership checks.
 """
 
@@ -16,6 +17,8 @@ NUMERIC_TT = {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans",
     "tt.reduce.return", "tt.make_range", "tt.get_program_id", "tt.get_num_programs"}
 CONTROL = {"scf.for", "scf.if", "scf.while", "scf.yield", "scf.condition"}
 DIAGNOSTICS = {"tt.print", "tt.assert", "cf.assert"}
+POINTER_MEMORY = {"tt.load", "tt.store", "tt.addptr", "tt.make_tensor_ptr", "tt.advance",
+                  "tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans", "tt.bitcast"}
 
 
 def _numeric(type_):
@@ -29,8 +32,9 @@ def data_control_report(module, source_ids):
 
     A numeric recurrence may be stored as data or observed by diagnostics.
     Its transitive results may not reach pointer arithmetic, load/store masks,
-    calls, unknown operations or another region with buffer access. In
-    particular, a scalar integer address cast is not numeric data here.
+    calls or unknown operations. Original ordinary accesses may occur inside
+    a region when independent of every carried/result state. In particular,
+    a scalar integer address cast is not numeric data here.
     """
     from .shared_tensor import opcode
 
@@ -51,10 +55,18 @@ def data_control_report(module, source_ids):
             and isinstance(v.type.element_type, builtin.IntegerType)
             for op in controls for v in (*op.operands, *op.results)):
         return None
-    if any(not numeric_op(nested) for op in controls for nested in op.walk()):
+    def supported(op):
+        return numeric_op(op) or opcode(op) in POINTER_MEMORY and not op.regions
+
+    if any(not numeric_op(op) or any(not supported(nested) for nested in op.walk()) for op in controls):
         return None
 
     pending = [value for op in controls for value in op.results]
+    for op in controls:
+        for region in op.regions:
+            for block in region.blocks:
+                # The for induction variable is not boxed carried state.
+                pending.extend(block.args[1:] if opcode(op) == "scf.for" else block.args)
     visited = set()
     while pending:
         value = pending.pop()
@@ -73,7 +85,7 @@ def data_control_report(module, source_ids):
                 pending.extend(op.parent_op().results)
 
     return {"kind": "numeric-control-without-pointer-state",
-        "analysis": "all-control-regions-numeric; transitive-state-uses-data-only",
+        "analysis": "numeric-control-interfaces; ordinary-memory-retained; transitive-state-uses-data-only",
         "source_ids": list(dict.fromkeys(sid for op in controls for sid in source_ids(op.location))),
         "upstream_option": "skip-prepass=true",
         "scope": "pointer conversion, source-width and memory/ownership checks remain active"}

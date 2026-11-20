@@ -1,5 +1,10 @@
 # Fresh tile partitions retain parallel tensor computation
 
+[Branch-completed tiles](branch_tiles.md) additionally distribute eligible
+partial prefixes across actual scalar successors. Prefix reads keep their
+pre-branch facts, branch reads use actual selected edges, and conditional
+arithmetic stays in its original arm. General loop and effect scope remains open.
+
 [Interleaved fresh groups](interleaved_tiles.md) extend the original scope below
 across ordinary accesses to distinct actual roots, including input-state
 updates. Same-root observations are re-proved from current SSA; unknown effects,

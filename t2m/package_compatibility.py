@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-tile-prefix-distribution" for row in trace.get("transformations", [])):
+        differences.append("a fresh tile write prefix may distribute into the two actual scalar-if successors only after every selected source path completes the same retained cover; prefix reads require their original pre-branch facts and retain their original values/fills; exactly one store copy executes and branch-local arithmetic is not speculated; actual lexical conditions may simplify masks inside their selected regions; source bounds, geometry, ownership, effects and numeric policy remain independent; public ABI, receipts and artifact rosters are unchanged")
     if any(row.get("kind") == "source-tile-write-partition" and row.get("independent_roots")
            for row in trace.get("transformations", [])):
         differences.append("fresh functional result allocations may keep independent tile write groups across ordinary accesses to other actual ABI roots; same-root observations are re-proved against preceding writes using current SSA after sibling reconstruction; ordinary input-state accesses retain their original operations and order, without granting independence between input roots; unknown addresses, same-root address changes, calls, control regions and nonordinary effects remain boundaries; source widths, complete geometry, ownership, public ABI and receipt schemas retain their separate contracts")
