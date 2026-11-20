@@ -7,6 +7,14 @@ model results survive host/replays and actual serial images. General vector,
 numeric predicate, ownership/effect and accelerator closure remain open; the
 historical operation-name inventory is unchanged.
 
+Implementation `658c226` passes focused runs of 66, four f32 checks and one
+NaN-hole refusal, plus 259 earlier memory/control/model regressions. The report
+`out/source-partitions/summary.json` reopens ten kernel libraries, one complete
+model, 27 initial results, 121 replay results and 54 exact-word target results
+across 22 actual serial images. An original model-domain violation actually
+aborts without outputs. Twelve selected source files match committed bytes;
+these hashes are not a full dependency closure or accelerator evidence.
+
 [Partial source initialization](partial_initialization.md) passes the 59-check
 source/kernel/model selection and eleven focused math/state checks, with overlap.
 Actual rows, strided columns, planes, point updates and reread recurrences retain

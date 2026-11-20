@@ -108,6 +108,15 @@ a complete dependency closure. Native execution, host execution and serial
 target execution remain separate evidence; none establishes accelerator
 correctness or preserved performance.
 
+Implementation `658c2265d2531228922fe2f0aa9e0cdf399961ab` uses unchanged
+model2MLIR `a3ce8ed153e64b1948bfa3c1c005f184f10ee1c7` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. All twelve selected source files match the actual
+implementation commit bytes. The final reopening log is
+`.scratch/source-partitions-report2.log`; a post-review math/state check also
+passes 17 in `.scratch/partition-review1.log`. These counts overlap the
+focused checks and do not expand the historical operation-name denominator.
+
 General vector-lane partitions, richer arithmetic/floating predicate relations,
 while/ownership invariants, irregular parallel dependencies, shared/async effects
 and applicable accelerator execution/performance remain full-goal work. The

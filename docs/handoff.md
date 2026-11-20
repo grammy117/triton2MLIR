@@ -7,6 +7,17 @@ execution. All seven original model results remain. Continue vector-lane,
 numeric predicate, while/ownership, shared/async and applicable target closure;
 the full goal stays incomplete.
 
+Producer `658c2265d2531228922fe2f0aa9e0cdf399961ab` retains companion revisions
+model2MLIR `a3ce8ed` and Merlin `53e7b0115`, both on
+`ttir-experiment-grammy`. The focused recorded runs pass 66 + 4 + 1; the
+earlier memory/control/model regression selection passes 259. Reopening
+`out/source-partitions/summary.json` checks all 27 initial, 121 replay and
+54 target results, 22 actual serial images, one original-domain abort and
+twelve selected source files against committed bytes. No full dependency
+closure or accelerator/performance qualification is claimed. Original logs
+are `.scratch/source-partitions-{final1,float1,float-gap1,regression1}.log`;
+the reopening log is `.scratch/source-partitions-report2.log`.
+
 [Partial source initialization](partial_initialization.md) now closes completed
 row reads and preserves strided column/plane observations, point updates and
 reread recurrences through standard tensor MLIR. All nine complete-model results
@@ -18,12 +29,12 @@ Implementation `b077a2b` additionally passes 209 earlier memory/control checks;
 the final package selection passes 24 after the compatibility note. The report
 `out/partial-initialization/summary.json` reopens 39 initial, 177 replay and 78
 exact target results across 22 actual serial images and an original-domain
-abort. Eleven selected files match committed bytes. The next actual source
-refusals are `.scratch/partition-initialization-probe1/False/source.ttir` (both
-branch arms initialize each element but final coverage refuses) and its `True`
-sibling (complementary masked stores still lack local read credit). Preserve
-those actual alternatives and masks while extending the proof; failed probes
-supply no successful package or target qualification.
+abort. Eleven selected files match committed bytes. The original source
+refusals remain in `.scratch/partition-initialization-probe1/False/source.ttir`
+(both branch arms initialize each element but final coverage refused) and its
+`True` sibling (complementary masked stores lacked local read credit). The
+source partition implementation above now closes those two forms. Their
+original failed probes supply no successful package or target qualification.
 
 [Rectangular source-loop coverage](nested_output_coverage.md) now retains fresh
 results from nested/permuted traversals and complete branch arms. The original
