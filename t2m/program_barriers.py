@@ -14,6 +14,7 @@ from .diagnostics import ConversionError
 
 SCHEMA = "t2m.synchronous-program-barrier.v1"
 ATOMIC_SCHEMA = "t2m.synchronous-program-barrier.v2"
+VOLATILE_SCHEMA = "t2m.synchronous-program-barrier.v3"
 SPACES = ((1, "local"), (2, "global_read"), (4, "global_write"),
           (8, "tensor_read"), (16, "tensor_write"))
 
@@ -42,7 +43,24 @@ def atomic_selection(effect_profile, f32_atomic_add):
     return value
 
 
-def contract(op, source_id, *, atomic_effects=None):
+def volatile_options(value):
+    """Decode only the selected private volatile-read observation contract."""
+    from .volatile_memory import EFFECT_PROFILE
+
+    if value != {"profile": EFFECT_PROFILE}:
+        raise ValueError("program barrier needs an explicit private volatile effect profile")
+    return {"effect_profile": "volatile"}
+
+
+def volatile_selection(effect_profile):
+    from .volatile_memory import EFFECT_PROFILE
+
+    if effect_profile != "volatile":
+        raise ValueError("volatile program phases require the selected private volatile effect profile")
+    return {"profile": EFFECT_PROFILE}
+
+
+def contract(op, source_id, *, atomic_effects=None, volatile_effects=None):
     """Check the native-verified, pinned source operation's complete fields."""
     def refuse(message):
         raise ConversionError(message, source_id=source_id, opcode="ttg.barrier")
@@ -64,8 +82,13 @@ def contract(op, source_id, *, atomic_effects=None):
         parent = parent.parent_op()
     if atomic_effects is not None:
         atomic_options(atomic_effects)
-    return {"schema": ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA,
+    if volatile_effects is not None:
+        volatile_options(volatile_effects)
+        if atomic_effects is not None:
+            refuse("mixed volatile/atomic program phases need a combined effect profile")
+    return {"schema": VOLATILE_SCHEMA if volatile_effects is not None else ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA,
             **({"atomic_effects": atomic_effects} if atomic_effects is not None else {}),
+            **({"volatile_effects": volatile_effects} if volatile_effects is not None else {}),
             "source_id": source_id, "address_space_mask": space.value.data,
             "address_spaces": [name for bit, name in SPACES if space.value.data & bit],
             "participants": "complete-pre-layout-program; single-CTA",
@@ -93,6 +116,9 @@ def expand(module, source_ids, *, effect_profile="ordinary", f32_atomic_add=None
                               opcode="ttg.barrier")
 
     atomics = [op for op in module.walk() if opcode(op) in {"tt.atomic_rmw", "tt.atomic_cas"}]
+    volatile_reads = [op for op in module.walk() if opcode(op) == "tt.load"
+                      and isinstance(op.properties.get("isVolatile"), builtin.IntegerAttr)
+                      and op.properties["isVolatile"].value.data]
     atomic_effects = None
     if atomics:
         try:
@@ -102,6 +128,15 @@ def expand(module, source_ids, *, effect_profile="ordinary", f32_atomic_add=None
         from .atomic_memory import contract as atomic_contract
         for op in atomics:
             atomic_contract(op, source_ids, typed=effect_profile == "typed-atomics", f32_atomic_add=f32_atomic_add)
+    volatile_effects = None
+    if volatile_reads:
+        try:
+            volatile_effects = volatile_selection(effect_profile)
+        except ValueError as error:
+            refuse(str(error))
+        from .volatile_memory import contract as volatile_contract
+        for op in volatile_reads:
+            volatile_contract(op, next(iter(source_ids(op.location)), "ttir.volatile"))
     for op in module.walk():
         ctas = op.attributes.get("ttg.num-ctas", op.properties.get("ttg.num-ctas"))
         if ctas is not None and (not isinstance(ctas, builtin.IntegerAttr) or ctas.value.data != 1):
@@ -113,7 +148,8 @@ def expand(module, source_ids, *, effect_profile="ordinary", f32_atomic_add=None
             if isinstance(value.type, builtin.TensorType) and not isinstance(value.type.encoding, builtin.NoneAttr):
                 refuse("program barriers require pre-layout values without physical encodings")
 
-    contracts = [(op, contract(op, next(iter(source_ids(op.location)), "ttir.barrier"), atomic_effects=atomic_effects))
+    contracts = [(op, contract(op, next(iter(source_ids(op.location)), "ttir.barrier"),
+                              atomic_effects=atomic_effects, volatile_effects=volatile_effects))
                  for op in barriers]
     reports, previous = [], {}
     # Snapshot before mutations: a phase can itself contain a structured region

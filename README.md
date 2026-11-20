@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Volatile program phases](docs/volatile_program_phases.md) now retain private
+observations across synchronous single-CTA boundaries. Native, reusable host
+and selected serial images preserve unused reads, transpose observations and
+runtime loops; shared/async and mixed atomic scope remain open.
+
 [Private volatile reads](docs/volatile_reads.md) now preserve every actual
 observation, including unused values, through native, reusable Merlin host and
 selected serial Spike execution. Original allocation wrappers and complete

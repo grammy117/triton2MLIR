@@ -6,7 +6,7 @@ from .diagnostics import ConversionError
 def validate(graph, reports, generic, protected, *, source_entry):
     records = graph["operations"]
     required = [row for row in records if row.get("opcode") == "ttg.barrier"]
-    from .program_barriers import atomic_options, expand
+    from .program_barriers import atomic_options, expand, volatile_options
     from .shared_tensor import (
         _preflight,
         _source_ids,
@@ -23,11 +23,15 @@ def validate(graph, reports, generic, protected, *, source_entry):
     if not present or not required or not isinstance(reports, list) or not reports:
         raise ValueError("allocation source barriers require complete phase declarations")
     atomics = any(opcode(op) in ("tt.atomic_rmw", "tt.atomic_cas") for op in module.walk())
-    options = atomic_options(reports[0].get("contract", {}).get("atomic_effects")) if atomics else {}
+    from xdsl.dialects import builtin
+    volatile = any(opcode(op) == "tt.load" and isinstance(op.properties.get("isVolatile"), builtin.IntegerAttr)
+                   and op.properties["isVolatile"].value.data for op in module.walk())
+    options = (atomic_options(reports[0].get("contract", {}).get("atomic_effects")) if atomics else
+               volatile_options(reports[0].get("contract", {}).get("volatile_effects")) if volatile else {})
     try:
         actual = _preflight(module, source_entry=source_entry, allow_composite_dots=True, literal_words=literals,
             atomics=atomics, typed_atomics=options.get("effect_profile") == "typed-atomics",
-            f32_atomic_add=options.get("f32_atomic_add"))
+            f32_atomic_add=options.get("f32_atomic_add"), volatile=volatile)
         if inventory(module, actual, literal_words=literals) != graph:
             raise ValueError("allocation barrier inventory differs from its actual typed source")
         expected = expand(module, _source_ids, **options)
@@ -87,6 +91,26 @@ def check_phases(expected, retained, reports, source_ids, opcode):
                 actual = atomic(op)
                 if not any(declared.get(sid) == actual for sid in source_ids(op.location)):
                     raise ValueError("allocation barrier protection changed original atomic fields")
+    from .volatile_memory import contract as volatile_contract
+    loads = {sid: op for op in expected.walk() if opcode(op) == "tt.load" for sid in source_ids(op.location)}
+    for op in retained.walk():
+        if opcode(op) != "tt.load":
+            continue
+        selected = set(source_ids(op.location)) & set(loads)
+        if len(selected) != 1:
+            raise ValueError("allocation barrier contains an unaccounted source read")
+        sid = next(iter(selected))
+        before = loads[sid]
+        flag = before.properties.get("isVolatile")
+        after_flag = op.properties.get("isVolatile")
+        if isinstance(flag, builtin.IntegerAttr) and flag.value.data:
+            try:
+                if volatile_contract(before, sid) != volatile_contract(op, sid):
+                    raise ValueError("allocation barrier protection changed original volatile fields")
+            except ConversionError as error:
+                raise ValueError("allocation barrier protection lost an original volatile read") from error
+        elif isinstance(after_flag, builtin.IntegerAttr) and after_flag.value.data:
+            raise ValueError("allocation barrier protection invented a volatile read")
 
     def events(phase):
         result = []

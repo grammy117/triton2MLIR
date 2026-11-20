@@ -103,6 +103,9 @@ def validate(trace, artifacts, source):
                 or trace.get("memory", {}).get("f32_atomic_add") != selection["f32_atomic_add"]
             ):
                 raise ValueError("allocation barrier atomic selection differs from bound memory effects")
+            volatile = phase["contract"].get("volatile_effects")
+            if volatile is not None and trace.get("memory", {}).get("effect_profile") != volatile["profile"]:
+                raise ValueError("allocation barrier volatile selection differs from bound memory effects")
     arguments = json.loads(artifacts["allocation-arguments.json"])
     if (
         arguments.get("schema")

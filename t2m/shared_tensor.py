@@ -328,6 +328,11 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
     if atomics and any(opcode(child) in ("tt.atomic_rmw", "tt.atomic_cas") for child in module.walk()):
         from .program_barriers import atomic_selection
         barrier_atomic_effects = atomic_selection("typed-atomics" if typed_atomics else "atomics", f32_atomic_add)
+    barrier_volatile_effects = None
+    if volatile and any(opcode(child) == "tt.load" and isinstance(child.properties.get("isVolatile"), IntegerAttr)
+                        and child.properties["isVolatile"].value.data for child in module.walk()):
+        from .program_barriers import volatile_selection
+        barrier_volatile_effects = volatile_selection("volatile")
     records, values = [], {}
     for op in module.walk():
         for region in op.regions:
@@ -355,7 +360,8 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
             records[-1]["source_print"] = print_contract(op,source_id)
         elif name == "ttg.barrier":
             from .program_barriers import contract as barrier_contract
-            records[-1]["program_barrier"] = barrier_contract(op, source_id, atomic_effects=barrier_atomic_effects)
+            records[-1]["program_barrier"] = barrier_contract(op, source_id,
+                atomic_effects=barrier_atomic_effects, volatile_effects=barrier_volatile_effects)
         elif name == "tt.extern_elementwise":
             from .external_math import contract as external_math_contract
             records[-1]["external_math"] = external_math_contract(op, source_id)
@@ -1299,8 +1305,6 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .cfg_intake import required as requires_cfg
     has_cfg = requires_cfg(parsed)
     has_barriers = any(opcode(op) == "ttg.barrier" for op in parsed.walk())
-    if volatile and has_barriers:
-        raise ConversionError("volatile program-barrier composition needs its source phase contract", opcode="ttg.barrier")
     protect_source = protect_source or original_precision or has_cfg or bool(literal_words) or has_barriers
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)

@@ -15,7 +15,7 @@ TOOLS = all(os.environ.get(name) for name in ("TRITON_SHARED_OPT", "T2M_NATIVE_P
 REQUIRED = pytest.mark.skipif(not TOOLS, reason="existing source/native/Merlin tools required")
 
 
-def merlin_refusal(root, members, *, trace=None, source=None):
+def merlin_refusal(root, members, *, trace=None, source=None, source_entry="atomic_phases"):
     """Exercise the selected consumer checkout in its own supported environment."""
     request = root / "consumer-refusal.json"
     request.write_text(json.dumps({"members": members, "trace": trace, "source": source}))
@@ -27,7 +27,7 @@ request = json.loads(Path(sys.argv[2]).read_text())
 members = {name: value.encode() for name, value in request["members"].items()}
 try:
     if request["trace"] is None:
-        _checked_protection(members, "atomic_phases")
+        _checked_protection(members, sys.argv[3])
     else:
         checked_allocation_sources(members.__getitem__, request["trace"], request["source"].encode())
 except ValueError as error:
@@ -36,7 +36,7 @@ else:
     raise AssertionError("consumer accepted the changed atomic phase evidence")
 '''
     done = subprocess.run([os.environ["T2M_MERLIN_PYTHON"], "-c", script,
-        os.environ["T2M_MERLIN_ROOT"], str(request)], capture_output=True, text=True, timeout=30,
+        os.environ["T2M_MERLIN_ROOT"], str(request), source_entry], capture_output=True, text=True, timeout=30,
         env=dict(os.environ, TMPDIR=str(root), OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1"))
     assert done.returncode == 0, done.stderr
     return done.stdout

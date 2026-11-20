@@ -9,8 +9,9 @@ tensor tiles, source loops and reused values remain visible above this leaf.
 This profile requires `--memory-profile guarded-buffer --address-policy
 source-words`, or explicit automatic memory selection with the same effect
 profile. It does not admit external participants, physical pointer identity,
-source byte reinterpretation or atomic/barrier
-composition. Those require additional source/effect contracts. A source
+source byte reinterpretation or mixed atomic composition. Selected synchronous
+program barriers additionally require the explicit [v3 phase contract](volatile_program_phases.md).
+Other effects require additional source/effect contracts. A source
 volatile request cannot silently become a stable tensor read.
 Pinned TTIR forbids volatile map reads; native verification still rejects them.
 
@@ -75,7 +76,8 @@ private memory observations, not GPU cache, external publication or performance
 equivalence.
 
 Original allocation wrappers and complete dependent models now have the separate
-qualification below. Next compose program phases and the remaining numeric/
+qualification below. Selected [program phases](volatile_program_phases.md) now
+have their own source/consumer contract. Next compose the remaining numeric/
 storage/effect profiles.
 Shared/external state, asynchronous publication/progress and applicable
 accelerator correctness/performance remain completion work. Observing all fifty
@@ -132,5 +134,5 @@ those retained libraries. Merlin's source/derived-interface selection passes
 results, unchanged library/input bytes and actual target qualification with
 current independent-reader fingerprints. It links the logs and failure evidence.
 
-General external/shared state, atomic/barrier and broader numeric/storage
+General external/shared state, mixed atomic and broader numeric/storage
 composition, applicable accelerators and measured performance remain open.

@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Volatile program phases](volatile_program_phases.md) additionally select
+`t2m.synchronous-program-barrier.v3` when actual private volatile observations
+compose with synchronous barriers. Both readers check original/protected
+primitive flags, phase scope/order and matching bound volatile memory evidence.
+Standard memory guards and localized LLVM leaves remain explicit granularity
+differences. Public tensor/scalar ABI, receipt schemas and original-source
+capsules are unchanged; earlier barrier readers refuse v3.
+
 [Private volatile reads](volatile_reads.md) explicitly select admission v5,
 source-word stages v3 and `private-invocation-volatile-loads-v1`. Defined
 compiler-only identity calls preserve observations before standard LLVM volatile
