@@ -1,5 +1,14 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Branch-local source ranges](docs/branch_source_ranges.md) now qualify selected
+signed/unsigned conditions, true conjunctions and false disjunctions through
+tensor MLIR and native/host/serial execution. Original-definition checks and
+complete state observations remain; full signed i32 entry domains qualify.
+Native residual memory uses the existing event adapter after the structured
+path, retaining successful tile/reuse proofs. Continue varying-value relations,
+disjunctive and while-carried domains, partial/nested initialization, irregular
+parallel ownership and broader source/effect/target coverage.
+
 [Source loop-body ranges](docs/source_scope_ranges.md) now close the rank-three
 matrix-view divisor refusal without narrowing valid zero-sized entry domains.
 Definition-scoped checks precede body-only positivity facts; source arithmetic,

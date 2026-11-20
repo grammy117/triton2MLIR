@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Branch-local source ranges](branch_source_ranges.md) add selected signed/
+unsigned comparisons and boolean implications without changing source entry
+domains. Six source forms retain 48 direct native results; four reusable Merlin
+libraries retain 48 replay results and six actual serial images retain twelve
+results. Two configurations admit full signed i32 divisor and unrestricted
+allow words. Two public pre-execution refusals and two actual native guard
+aborts retain distinct evidence. Focused checks pass 66 plus one advisory-tag
+negative and two full-domain qualifications; memory/control passes 109 and
+existing pointer/events 23, with overlap. Evidence reopens under
+`out/branch-source-ranges/summary.json`. This does not establish a new complete
+PyTorch model, arbitrary-kernel closure, accelerator support or performance.
+
 [Source loop-body ranges](source_scope_ranges.md) now qualify all six shared-view
 models as pure tensor computation, including the rank-three matrix-view form.
 The source/domain, memory and complete-model selections pass 39/91/30, with

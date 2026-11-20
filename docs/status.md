@@ -1,5 +1,15 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Branch-local source ranges](branch_source_ranges.md) now qualify actual
+conditional indexing and complete state observations through standard tensor
+MLIR. Four Merlin libraries retain 48 replay results; six serial images retain
+twelve exact results, including full signed i32 controls. The focused selection
+passes 66, plus one advisory-tag refusal and two full-domain qualifications;
+memory/control passes 109 and existing pointer/events 23, with overlap. Public
+pre-execution domain refusals remain separate from native executable guard
+aborts. General varying/disjunctive/while ranges, ownership/effects and applicable
+accelerators remain incomplete; the historical opcode denominator is unchanged.
+
 [Source loop-body ranges](source_scope_ranges.md) now admit the rank-three
 shared matrix-view form as tensor computation. Actual signed product-bound
 reachability supplies local positivity; original definitions retain independent

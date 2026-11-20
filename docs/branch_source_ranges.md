@@ -110,6 +110,10 @@ Evidence reopens under `out/branch-source-ranges/summary.json`; final test logs
 are `.scratch/branch-ranges4.log`, `.scratch/branch-memory2.log` and
 `.scratch/branch-event-regression2.log`. Earlier incorrect test expectations
 remain in their original logs and are not relabeled as compiler failures.
+Reopening passes in `.scratch/branch-range-report1.log`, pinning implementation
+`60f3bad`, all four source packages/libraries, 24 host replays, six target
+receipts, 24 direct native invocations and the distinct refusal/abort outcomes.
+The full-domain selection passes separately in `.scratch/branch-full-signed1.log`.
 
 General comparisons between two varying values, disjunctive nonzero domains,
 while-carried constraints, partial/nested initialization, irregular parallel

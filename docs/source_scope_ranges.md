@@ -1,5 +1,9 @@
 # Source integer ranges inside executed loop bodies
 
+[Branch-local ranges](branch_source_ranges.md) additionally qualify selected
+signed/unsigned conditions and boolean implications. The loop-specific evidence
+and reachability contract below retain their original scope.
+
 The structured-address frontend now proves a nonzero divisor inside selected
 actual source loops without rejecting valid zero-sized inputs at entry. This
 closes the rank-three shared matrix-view example's tensor-admission refusal.

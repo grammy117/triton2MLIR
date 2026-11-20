@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Branch-local source ranges](docs/branch_source_ranges.md) now retain safe
+conditional indexing without narrowing the valid entry domain. Signed/unsigned
+word comparisons and actual boolean implications stay local to their selected
+regions. Existing native event conversion handles residual source memory;
+successful structured tiling keeps its original path. Native, reusable Merlin
+host and selected serial execution include full signed i32 controls.
+
 [Source loop-body ranges](docs/source_scope_ranges.md) now keep zero-sized
 entry domains while proving actual quotient/remainder indexing inside executed
 nonnegative product-bounded loops. Original-definition checks prevent body

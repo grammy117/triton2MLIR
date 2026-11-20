@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Branch-local source ranges](branch_source_ranges.md) keep existing public
+tensor/scalar types, receipts, artifact rosters and Merlin signatures. Actual
+scalar conditions refine selected source regions only after definition checks.
+If native structured conversion leaves source memory, the existing isolated
+event adapter runs on the original checked computation; successful structured
+tiles keep their original path. Compatibility and transformation records
+describe this choice and grant no arithmetic, effect or ownership permission.
+Tensor runtime guards remain independent of the unguarded buffer witness.
+
 [Source loop-body ranges](source_scope_ranges.md) describe a source-width
 analysis extension with no public ABI, receipt or artifact-schema change.
 Actual signed-loop reachability gives local positivity only after original

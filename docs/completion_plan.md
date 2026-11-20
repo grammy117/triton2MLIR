@@ -1,5 +1,13 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Branch-local source ranges](branch_source_ranges.md) now retain actual
+fixed-width comparison constraints and necessary boolean implications through
+native/host/serial execution, including full signed i32 controls. Source width,
+initialization, ownership and successful structured tile proofs remain. Continue
+relations between varying values, disjunctive/while domains, partial/nested
+initialization, irregular parallel ownership and general source/effect/target
+closure. This selected kernel qualification does not close the full endpoint.
+
 [Source loop-body ranges](source_scope_ranges.md) now close the concrete
 rank-three quotient/remainder refusal while retaining empty entry domains and
 original-definition overflow/poison checks. Continue conditional/while range

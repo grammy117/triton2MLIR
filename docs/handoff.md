@@ -1,5 +1,35 @@
 # Review handoff — updated 2026-11-20
 
+[Branch-local source ranges](branch_source_ranges.md) at `60f3bad` now retain
+actual scalar signed/unsigned comparison constraints and necessary boolean
+implications. Original definitions still precede narrower use facts. Source
+operations, conditions and both state observations remain; no annotations
+grant facts. Six source forms retain 48 direct native results. Four unchanged
+Merlin libraries retain 48 replay results, and six actual serial images retain
+twelve results. Two configurations admit the full signed i32 divisor domain
+and unrestricted allow words, including negative extremes and zero.
+
+The focused selection passes 66, plus one advisory-tag refusal and two full
+signed-domain native/host/serial qualifications. Memory/control passes 109 and
+existing pointer/events 23, with overlap. Two public domain checks reject before
+execution; two separate native runs abort at serialized executable scalar
+guards. Earlier incorrect test expectations are retained, not relabeled.
+The original native structured attempt remains recorded. Only actual residual
+source loads/stores select the existing event adapter; successful structured
+tiles keep their previous conversion and proofs. Public ABI, receipts, artifact
+rosters, effect profiles and Merlin signatures are unchanged.
+
+Final logs are `.scratch/branch-ranges4.log`, `.scratch/branch-memory2.log`,
+`.scratch/branch-event-regression2.log` and `.scratch/branch-full-signed1.log`.
+The additional advisory check is `.scratch/branch-event-regression1.log`.
+Reopening passes in `.scratch/branch-range-report1.log`; evidence is
+`out/branch-source-ranges/summary.json`. Continue varying-
+value relations, disjunctive/while constraints, partial/nested initialization,
+irregular parallel ownership and broader numeric/storage/effect and applicable
+target coverage. This is no new complete PyTorch model or accelerator/
+performance qualification. No Merlin/model2MLIR source change is needed; the
+foreign model2MLIR docstring edit remains. Full arbitrary-kernel coverage is open.
+
 [Source loop-body ranges](source_scope_ranges.md) at `fe65631` now close the
 rank-three shared matrix-view form's tensor refusal. Original definitions are
 validated before narrower use facts; actual signed product-bound reachability
