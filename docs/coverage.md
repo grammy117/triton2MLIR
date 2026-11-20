@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Independent runtime memory strides](invariant_runtime_strides.md) pass 51
+kernel checks and 62 combined model/source checks. Four complete models retain
+all eleven results, both original calls, learned state and live controls.
+Eight kernel libraries and four model libraries pass changed-invocation host
+replays and twenty-four actual serial images. The earlier source/control
+regression selection passes 159; the final invariant/width selection passes ten,
+with overlap. General conditional/while/alias, dynamic-root/write-image,
+shared/async, source/numeric and accelerator closure remains open. This changes
+no operation-name denominator or arbitrary-kernel completion claim.
+
 [Actual iteration ordinals](iteration_ordinals.md) now retain constant and
 mixed step/iteration pointer streams, body/pure word state and final reads as
 tensor MLIR. The kernel selection passes 75; twenty complete-model checks cover

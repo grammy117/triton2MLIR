@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Independent runtime memory strides](invariant_runtime_strides.md) close the
+reproduced separate-scalar stride refusal while retaining signed/zero logical
+progress, original controls and body-local non-speculated arithmetic. Kernel
+and complete-model host/serial qualification retain every observation. Continue
+conditional/while pointer state, varying increments, alias ownership, dynamic
+roots, variable-step complete writes, shared/async and applicable target closure.
+
 [Actual iteration ordinals](iteration_ordinals.md) close the reproduced
 constant-per-execution pointer refusal and compose constant/mixed streams with
 body memory, pure word state, complete models and actual serial execution.

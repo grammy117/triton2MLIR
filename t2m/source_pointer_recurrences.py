@@ -72,13 +72,13 @@ def _increment(value, argument, step, opcode):
     return None
 
 
-def raise_pointer_recurrences(module, source_ids, loop_domains):
+def raise_pointer_recurrences(module, source_ids, loop_domains, *, scalar_ranges=None):
     from .shared_tensor import _pointer_type, opcode
 
     reports = []
     for loop in reversed([op for op in module.walk() if isinstance(op, scf.ForOp)]):
         domain = loop_domains.get(loop)
-        if (domain is None or domain.exact or domain.maximum_iterations == 0
+        if (domain is None or domain.maximum_iterations == 0
                 or not isinstance(loop.lb.type, builtin.IntegerType) or loop.lb.type.width.data > 64):
             continue
         source = loop.body.block
@@ -88,6 +88,13 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
         coefficients = {i: _increment(source.last_op.operands[i], source.args[i + 1], loop.step, opcode)
                         for i in pointer_slots}
         if any(value is None for value in coefficients.values()):
+            if scalar_ranges:
+                from .runtime_pointer_recurrences import raise_runtime_loop
+                report = raise_runtime_loop(loop, domain, source_ids, scalar_ranges)
+                if report is not None:
+                    reports.append(report)
+            continue
+        if domain.exact:
             continue
         ordinal = any(increment for _coefficient, increment in coefficients.values())
         if ordinal and domain.maximum_iterations >= 1 << 63:

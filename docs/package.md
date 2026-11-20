@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Independent invariant runtime pointer increments](invariant_runtime_strides.md)
+use actual zero-initialized logical progress carriers, source constant axis
+factors and any actual-loop-step term. Body-defined increments stay in their
+original regions; final reads use actual returned state, including zero trips.
+Actual additive scalar SCF edges supply separately width-checked body/result
+coordinates, with loop-local expiry. Generated compatibility names both
+extensions; they grant no bounds, complete-write, ownership, alias or effect
+permission. Public ABI, receipt schemas and artifact rosters are unchanged.
+
 [Actual iteration ordinals](iteration_ordinals.md) retain executable zero-plus-one
 source loop state and affine step/constant pointer recurrences. Body facts use
 the actual scalar and expire with their loop; returned counts retain actual

@@ -21,12 +21,36 @@ def test_zero_plus_one_result_keeps_the_original_loop_and_its_own_fact(width):
     assert not evidence.get("actual_exit_induction_results")
 
 
-@pytest.mark.parametrize("changes", [{"initial": "%lo"}, {"update": "%wrong_ordinal"},
-    {"update": "%step_ordinal"}, {"slot": 1}, {"bounds": None}, {"bounds": (0, 3)}, {"unsigned": True}])
+@pytest.mark.parametrize("changes", [{"update": "%wrong_ordinal"},
+    {"slot": 1}, {"bounds": None}, {"bounds": (0, 3)}, {"unsigned": True}])
 def test_unproved_initial_increment_tuple_slot_or_header_cannot_supply_an_ordinal(changes):
     options = {"initial": "%zero", "update": "%ordinal", **changes}
     with pytest.raises(ConversionError):
         projected_exit(**options)
+
+
+@pytest.mark.parametrize("initial,update", [("%lo", "%ordinal"), ("%zero", "%step_ordinal")])
+def test_valid_other_additive_states_do_not_claim_unit_ordinal_semantics(initial, update):
+    module = projected_exit(initial=initial, update=update)
+    evidence = json.loads(next(iter(module.ops)).attributes["prov.source_loops"].data)[0]
+    assert not evidence.get("actual_iteration_ordinal_results")
+    assert evidence["actual_invariant_recurrence_results"] == [0]
+    module.verify()
+
+
+@pytest.mark.skipif(not os.environ.get("T2M_NATIVE_PYTHON"), reason="existing native environment required")
+@pytest.mark.parametrize("initial,update", [("%lo", "%ordinal"), ("%zero", "%step_ordinal")])
+def test_other_additive_states_execute_their_actual_initial_and_increment(tmp_path, initial, update):
+    from t2m.ir import text
+    from t2m.native import execute_native
+
+    module = projected_exit(initial=initial, update=update)
+    x = np.arange(32, dtype=np.int64) * 37 + (1 << 55)
+    for index, (lo, hi, step) in enumerate(((1, 8, 3), (3, 1, 2), (0, 0, 1))):
+        position = lo + len(range(lo, hi, step)) if initial == "%lo" else len(range(lo, hi, step)) * step
+        arrays = [x, *[np.asarray(v, np.int32) for v in (lo, hi, step, 2)]]
+        (actual,), _ = execute_native(text(module), arrays, tmp_path / f"native-{index}", python=os.environ["T2M_NATIVE_PYTHON"])
+        assert actual.tobytes() == x[position:position+1].tobytes()
 
 
 def test_source_counter_width_must_cover_the_actual_maximum_count():

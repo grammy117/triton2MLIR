@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Independent runtime memory strides](docs/invariant_runtime_strides.md) now
+retain signed/zero additive progress, source constant axis factors, original
+loop controls, reused tiles and final reads as tensor computation. Eight kernel
+libraries and four complete dependent-call models qualify through native/host
+and twenty-four actual serial images. General conditional/while state, alias
+ownership, dynamic-root and variable-step write images, shared/async and
+applicable accelerator correctness/performance remain completion requirements.
+
 [Actual iteration ordinals](docs/iteration_ordinals.md) now preserve pointer
 increments combining actual-loop-step and constant-per-execution terms. Twelve
 kernel libraries and three complete models pass host replays and thirty actual

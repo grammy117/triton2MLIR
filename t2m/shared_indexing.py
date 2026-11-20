@@ -6,6 +6,7 @@ from xdsl.dialects import builtin
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
+from .invariant_recurrences import invariant_increment, recurrence_bounds
 from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, is_iteration_ordinal, require_signed_loop
 from .dynamic_abi import GridExtent
 
@@ -265,7 +266,7 @@ def logical_coordinates(total, strides, grid):
     return tuple(result)
 
 
-def check_source_addresses(module, abi, *, loop_domains=None):
+def check_source_addresses(module, abi, *, loop_domains=None, scalar_ranges=None, requested_values=(), audit_addresses=True):
     """Check source integer widths before upstream re-raises them to index.
 
     Checking only recovered index arithmetic would miss an i32 overflow that
@@ -328,8 +329,7 @@ def check_source_addresses(module, abi, *, loop_domains=None):
             require_signed_loop(parent)
             limits = [bounds(v, parent.parent) for v in parent.operands[:3]]
             width = getattr(getattr(value.type, "width", None), "data", 64)
-            domain = enclosed_loop(limits, width=width)
-            iterations = domain.maximum_iterations
+            domain = enclosed_loop(limits, width=getattr(getattr(parent.lb.type, "width", None), "data", 64))
             if value.index == 0:
                 result = domain.induction_bounds
             else:
@@ -337,21 +337,14 @@ def check_source_addresses(module, abi, *, loop_domains=None):
                     raise ConversionError("source memory recurrence has cyclic/unproved increments")
                 pending.add(key)
                 initial = bounds(parent.operands[value.index + 2], parent.parent)
-                yielded = parent.body.block.last_op.operands[value.index - 1]
-                delta = (0, 0)
-                if yielded is not value:
-                    update = yielded.owner
-                    if getattr(update, "name", "") == "arith.addi" and value in update.operands:
-                        delta = operand(update.operands[1] if update.operands[0] is value else update.operands[0])
-                    elif getattr(update, "name", "") == "arith.subi" and update.operands[0] is value:
-                        lo, hi = operand(update.operands[1])
-                        delta = -hi, -lo
-                    else:
-                        raise ConversionError("source memory recurrence needs an invariant affine increment")
-                if delta[0] != delta[1]:
-                    raise ConversionError("source memory recurrence increment is not invariant")
-                span = (iterations - 1) * delta[0]
-                result = initial[0] + min(0, span), initial[1] + max(0, span)
+                recurrence = invariant_increment(parent, value.index - 1, name)
+                if recurrence is None:
+                    raise ConversionError("source memory recurrence needs an invariant affine increment")
+                increment, sign = recurrence
+                delta = (0, 0) if increment is None else operand(increment)
+                if sign < 0:
+                    delta = -delta[1], -delta[0]
+                result, _final = recurrence_bounds(domain, initial, delta, width=width)
                 pending.remove(key)
             width = getattr(getattr(value.type, "width", None), "data", 64)
             if not -(1 << (width - 1)) <= result[0] <= result[1] < 1 << (width - 1):
@@ -369,6 +362,20 @@ def check_source_addresses(module, abi, *, loop_domains=None):
             domain = enclosed_loop(limits, width=getattr(getattr(op.lb.type, "width", None), "data", 64), allow_empty=True)
             low, high = (exit_induction_bounds(domain) if is_exit_induction(op, value.index)
                          else (domain.minimum_iterations, domain.maximum_iterations))
+        elif kind == "scf.for":
+            require_signed_loop(op)
+            recurrence = invariant_increment(op, value.index, name)
+            if recurrence is None:
+                raise ConversionError("returned source state needs an invariant recurrence proof", opcode=kind)
+            domain = enclosed_loop([bounds(v, op.parent) for v in op.operands[:3]],
+                width=getattr(getattr(op.lb.type, "width", None), "data", 64), allow_empty=True)
+            initial = bounds(op.iter_args[value.index], op.parent)
+            increment, sign = recurrence
+            delta = (0, 0) if increment is None else bounds(increment, op.body.block)
+            if sign < 0:
+                delta = -delta[1], -delta[0]
+            _body, (low, high) = recurrence_bounds(domain, initial, delta,
+                width=getattr(getattr(value.type, "width", None), "data", 64))
         elif kind == "scf.execute_region":
             low, high = operand(region_yield(value))
         elif kind in ("tt.get_program_id", "tt.get_num_programs"):
@@ -486,12 +493,19 @@ def check_source_addresses(module, abi, *, loop_domains=None):
             elif hasattr(owner, "operands"):
                 pending_values.extend(owner.operands)
 
-    for op in module.walk():
+    for op in module.walk() if audit_addresses else ():
         if name(op) == "tt.addptr":
             if inactive(op.parent):
                 audit_live_ins(op.operands[1])
             else:
                 bounds(op.operands[1], op.parent)
+    for value in requested_values:
+        try:
+            bounds(value, definition_scope(value))
+        except ConversionError:
+            # Optional coordinate facts do not bypass an address audit or
+            # supply a range for an unknown/overflowing scalar expression.
+            continue
     if loop_domains is not None:
         # Optional transformation witnesses reuse the original definition/scope
         # checks. Failure grants no rewrite and changes no existing admission.
@@ -502,4 +516,7 @@ def check_source_addresses(module, abi, *, loop_domains=None):
                 loop_domains[op] = source_domain(op)
             except ConversionError:
                 continue
+    if scalar_ranges is not None:
+        scalar_ranges.update((value, interval) for (value, scope), interval in facts.items()
+            if scope is definition_scope(value) and isinstance(value.type, (builtin.IntegerType, builtin.IndexType)))
     return [*scopes.proofs, *((loop, len(values)) for loop, values in while_words.items())]

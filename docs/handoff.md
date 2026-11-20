@@ -1,5 +1,16 @@
 # Review handoff — updated 2026-11-20
 
+[Independent runtime memory strides](invariant_runtime_strides.md) now close
+the separate-runtime-increment refusal as tensor computation. Four modes retain
+body memory, preloaded reuse, mixed step/progress and body-local division with
+valid zero-trip entries. Eight reusable kernel libraries and four complete
+two-call PyTorch models qualify host replays and twenty-four serial images,
+retaining every result and source-domain refusal. Kernel checks pass 51;
+combined model/source checks pass 62; earlier source/control checks pass 159;
+the final invariant/width selection passes ten, with overlap. General pointer/
+alias/dynamic-root/write-image, shared/async, numeric/source and accelerator
+closure remains open. See the linked contract for the explicit representation.
+
 [Actual iteration ordinals](iteration_ordinals.md) now retain pointer
 increments of the form `a * actual_step + b`, including actual final positions.
 Twelve reusable kernel libraries and three new dependent-call PyTorch models

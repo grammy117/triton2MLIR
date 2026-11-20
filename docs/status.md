@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Independent runtime memory strides](invariant_runtime_strides.md) now retain
+signed/zero logical progress independently of actual source loop controls.
+Eight kernel libraries and four complete dependent-call models preserve all
+eleven results per model through host replays and twenty-four actual serial
+images. Body-local arithmetic remains non-speculated; general memory/effect/
+source/accelerator closure stays incomplete. The historical opcode denominator
+is unchanged.
+
 [Functional regions in tile memory](region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass

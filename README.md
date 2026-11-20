@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Independent runtime memory strides](docs/invariant_runtime_strides.md) now
+retain signed/zero logical progress independently of source loop controls.
+Eight kernel libraries and four complete two-call PyTorch models preserve all
+results through host replays and twenty-four actual serial images. Body-local
+arithmetic stays in its original loop, including legal zero trips; broader
+memory/effect/source/accelerator closure remains open.
+
 [Actual iteration ordinals](docs/iteration_ordinals.md) now retain constant
 and mixed step/iteration pointer streams as tensor computation. Twelve kernel
 libraries and three dependent-call PyTorch models preserve all results through

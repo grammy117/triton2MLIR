@@ -12,6 +12,11 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-invariant-runtime-pointer-recurrences" for row in trace.get("transformations", [])):
+        differences.append("independent invariant runtime pointer increments use actual zero-initialized logical progress carriers, retaining source constant axis factors and any actual-loop-step term; original loops, numeric state and final pointer observations remain executable; body-defined increments stay in their original bodies, including legal zero trips, with no speculative arithmetic; original and introduced arithmetic are separately width-checked; public ABI, receipt schemas, bounds, initialization, ownership and effect permissions are unchanged")
+    if any(row.get("actual_invariant_recurrence_arguments") or row.get("actual_invariant_recurrence_results")
+           for row in trace.get("memory", {}).get("source_loops", [])):
+        differences.append("invariant scalar recurrence coordinates require actual additive SCF initial/yield edges, a loop-invariant integer dependency closure and checked original-width body/final enclosures; each varying carrier has its own actual scalar coordinate and facts expire with its original loop; returned states bind actual result SSA and preserve zero-trip initials; source-local range facts grant no arithmetic hoisting, complete-write, ownership, effect or ABI permission")
     if any(row.get("induction") == "source-IV-enclosure; not-an-iteration-ordinal"
            for row in trace.get("memory", {}).get("source_loops", [])):
         differences.append("bounded variable lower/upper/positive-step operands retain their original SSA loop and numeric carriers; reachable source IVs and the final source-width update are enclosed before index promotion; count bounds grant no iteration replacement, pointer recurrence, congruence or complete-write credit; actual entry scalar guards and independent initialization/ownership/effect proofs remain; public ABI and receipt schemas are unchanged")
