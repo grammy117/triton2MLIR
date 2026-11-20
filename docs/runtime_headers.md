@@ -141,3 +141,19 @@ General pointer/while and alias ownership, variable-step store images, dynamic
 root projection, shared/asynchronous participation, remaining numeric/source
 compositions and accelerator correctness/performance remain full-goal work.
 These finite qualifications change no TTIR operation-name denominator.
+
+`out/runtime-headers/summary.json` reopens six kernel libraries and one complete
+model library: 15 initial, 69 unchanged-library replay and 30 exact-word target
+results across fourteen actual serial images, plus the original model-domain
+abort and three compiled invalid-header aborts. Both original model callsites,
+every parent archive and actual source-load/loop links remain checked. The
+reopening log is `.scratch/runtime-headers-report2.log`.
+
+Implementation `182eafa780ea2f9d70b175f41f388b86b54f2a1a` retains unchanged
+model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both companions on
+`ttir-experiment-grammy`; the producer remains on `main`. All thirteen selected
+producer implementation/test/helper sources match actual committed bytes.
+The report keeps that match separate from the observed reopening revisions.
+These pins are not a full dependency closure, accelerator or performance
+qualification. No companion source change was needed for this capability.

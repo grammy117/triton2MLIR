@@ -7,6 +7,27 @@ host replays and fourteen actual serial images, retaining all seven model
 results. General pointer/ownership, effects, source/numeric and accelerator
 closure remains open.
 
+`out/runtime-headers/summary.json` reopens six kernel libraries and one complete
+model library: 15 initial, 69 unchanged-library replay and 30 exact-word target
+results across fourteen actual serial images. Both original model callsites,
+all parent archives, the original domain abort and three actual compiled header
+aborts remain checked. Final logs are `.scratch/runtime-headers-proofs2.log`
+(103), `.scratch/runtime-headers-final1.log` (45),
+`.scratch/runtime-header-guards2.log` (three),
+`.scratch/runtime-header-projection2.log` (one), and
+`.scratch/runtime-headers-regression2.log` (133). The reopening log is
+`.scratch/runtime-headers-report2.log`; original failed regression/baseline runs
+remain separate historical evidence.
+
+Producer `182eafa780ea2f9d70b175f41f388b86b54f2a1a` retains unchanged
+model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. Thirteen selected producer sources match committed
+bytes, separately from observed reopening revisions. This is not a full
+dependency closure or accelerator/performance qualification. Continue general
+pointer recurrences, while/alias ownership, variable-step store images,
+dynamic root projection and shared/async/source/numeric compositions.
+
 [Wholly nonexecuting source loops](empty_loop_memory.md) now retain
 complete original initial tuples and incoming tensor versions without body
 read/write credit. Four kernel libraries and a dependent two-call PyTorch model
