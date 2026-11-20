@@ -528,9 +528,11 @@ def _functionalize(module, abi, *, serial_memory=True):
         def check(index, mask, prefix):
             from .partial_initialization import initialized_read
 
-            proof = initialized_read(source, index, mask, prefix, initialization.images(buffer), mapping, facts, abi)
+            proof = initialized_read(source, index, mask, prefix, initialization.images(buffer), mapping, facts, abi,
+                                     booleans=initialization.booleans)
             if proof is None:
-                return False
+                raise ConversionError("active gather from fresh storage has no source-proved initialized region",
+                    source_id=next(iter(_source_ids(source.location)), None), opcode=opcode(source))
             evidence.update(proof)
             return True
 
@@ -907,7 +909,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     regions.append(Region(body))
                     initialized.append(initialization.snapshot())
                 body = previous
-                initialization.merge_branches(*initialized)
+                initialization.merge_branches(*initialized, condition=mapping[op.cond], scopes=tuple(loop_values))
                 branch = append(scf.IfOp(mapping[op.cond], [*[v.type for v in op.results],
                                                           *[storage_types[b.name] for b in writable]], *regions), op)
                 mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
@@ -1022,8 +1024,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                     from .loop_write_coverage import complete_loop_writes, scalar_stores
                     from .partial_initialization import store_image
                     try:
-                        complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode, evidence=complete_proofs)
-                        for buffer, domains, index in scalar_stores(op, abi, buffers, mapping, facts, opcode, outer_bounds=True):
+                        complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode, evidence=complete_proofs,
+                                                       booleans=initialization.booleans)
+                        for buffer, domains, index in scalar_stores(op, abi, buffers, mapping, facts, opcode, outer_bounds=True,
+                                                                   booleans=initialization.booleans):
                             image = store_image(domains, index, grid)
                             if image is not None:
                                 partial.append((buffer, image))
@@ -1167,12 +1171,14 @@ def _functionalize(module, abi, *, serial_memory=True):
                 buffer = buffers[op.operands[0]]
                 states[buffer.name], index = scatter(op, buffer, states[buffer.name], mapping, append,
                     tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
-                if len(op.operands) == 3:
+                if len(op.operands) in (3, 4):
                     from .partial_initialization import WriteImage
                     from .symbolic_layout import expression
 
                     try:
-                        initialization.store_image(buffer, WriteImage(expression(index, facts, grid), ()))
+                        guard = initialization.booleans.condition(mapping[op.operands[3]]) if len(op.operands) == 4 else 1
+                        initialization.store_image(buffer, WriteImage(expression(index, facts, grid), (), guard,
+                            tuple(loop_values) if guard != 1 else ()))
                     except ConversionError:
                         pass
                 if len(op.operands) == 3 and len(buffer.shape) == 1:

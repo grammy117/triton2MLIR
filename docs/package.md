@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Source branch/mask partitions](source_partitions.md) add actual-SSA Boolean
+cover and read-implication evidence, retaining original source alternatives,
+order, masks and tensor versions. Public ABI, result modes, receipts, artifact
+rosters, numeric and effect profiles are unchanged. `condition_coverage`
+records the local proof and grants no address, ownership, alias, effect or target
+permission. Complete geometry and ordinary active bounds remain independent.
+
 [Partial source initialization](partial_initialization.md) adds source-image
 membership evidence for individual active scalar reads without changing the
 public ABI, result modes, receipts, artifact rosters or effect profiles. Actual

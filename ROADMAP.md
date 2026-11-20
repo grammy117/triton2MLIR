@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Source branch/mask partitions](docs/source_partitions.md) now close the
+reproduced both-arm whole-output and complementary-mask read refusals. Actual
+SSA Boolean covers retain nested alternatives, overlap order and early masked
+observations. Row/column reuse and all seven complete-model results reach host
+and serial execution. Continue vector-lane and numeric predicate relations,
+while/ownership invariants, irregular parallel dependencies, shared/async effects
+and applicable targets; the arbitrary-kernel endpoint remains incomplete.
+
 [Partial source initialization](docs/partial_initialization.md) now closes the
 reproduced completed-row read refusal, plus strided column/plane, immediate
 read-after-write and reread-loop forms. Each active scalar read needs a source

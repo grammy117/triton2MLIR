@@ -1,5 +1,12 @@
 # Review handoff — updated 2026-11-20
 
+[Source branch/mask partitions](source_partitions.md) now close the actual
+both-arm final-coverage and complementary-mask local-read refusals. Source
+choices, order, fills, reuse and observations survive complete model host/serial
+execution. All seven original model results remain. Continue vector-lane,
+numeric predicate, while/ownership, shared/async and applicable target closure;
+the full goal stays incomplete.
+
 [Partial source initialization](partial_initialization.md) now closes completed
 row reads and preserves strided column/plane observations, point updates and
 reread recurrences through standard tensor MLIR. All nine complete-model results

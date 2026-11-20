@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Source branch/mask partitions](source_partitions.md) now close actual
+both-arm full-output and complementary-mask read gaps while retaining every
+source choice, write order and observation. Nested row/column reuse and complete
+model host/serial execution qualify. Continue vector-lane and numeric predicate
+relations, while/ownership invariants, irregular parallel dependencies,
+shared/async effects and applicable target closure.
+
 [Partial source initialization](partial_initialization.md) now proves active
 scalar membership in actual completed source-store images. Row/column/plane
 observations and reread recurrences preserve the original algorithm through a

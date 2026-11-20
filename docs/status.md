@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Source branch/mask partitions](source_partitions.md) now prove collective
+scalar initialization from actual alternatives and local read implications.
+Original masks, branch order, fills, reused values and intermediate observations
+remain. Complete two-call model execution retains all seven results through
+host/replays and actual serial images. General vector/numeric predicate,
+while/ownership, effect and accelerator closure remains incomplete.
+
 [Partial source initialization](partial_initialization.md) now retains scalar
 observations of completed rows, strided columns and planes before whole-output
 coverage. Source-point writes and subsequent reread recurrences remain actual

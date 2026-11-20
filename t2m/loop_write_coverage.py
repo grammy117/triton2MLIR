@@ -103,45 +103,69 @@ def rectangular_bijection(domains, index, *, grid):
     return {"memory_digit_order": order, "unit_loops": unit}
 
 
-def scalar_stores(loop, abi, buffers, mapping, facts, opcode, *, outer_bounds=False):
-    """Actual unconditional scalar stores under rectangular zero-based loops."""
-    pending = [(loop, ())]
+def scalar_stores(loop, abi, buffers, mapping, facts, opcode, *, outer_bounds=False, booleans=None, evidence=None):
+    """Scalar addresses written on every Boolean path of a rectangular nest."""
+    pending, groups = [(loop, (), 1)], {}
     while pending:
-        current, ancestors = pending.pop()
-        try:
-            require_signed_loop(current)
-            lower, upper, step = (expression(mapping[value], facts, abi.grid_bounds) for value in current.operands[:3])
-            if lower != ZERO or step != ONE or upper.bounds(abi.grid_bounds)[0] < 0 or not outer_bounds and any(
-                    atom[0] == "l" for atoms, _ in upper.terms for atom in atoms):
-                continue
-            induction = expression(mapping[current.body.block.args[0]], facts, abi.grid_bounds)
-        except ConversionError:
+        op, domains, guard = pending.pop()
+        if guard == 0:
             continue
-        domains = (*ancestors, (induction, upper))
-        for op in current.body.block.ops:
-            if opcode(op) == "scf.for":
-                pending.append((op, domains))
-                continue
-            # Conditional/masked stores supply no unconditional write credit.
-            if opcode(op) != "tts.scatter" or len(op.operands) != 3 or op.operands[0] not in buffers:
-                continue
-            buffer = buffers[op.operands[0]]
-            if buffer.effect != "write":
-                continue
-            index = mapping[op.operands[1]]
-            if not isinstance(index.owner, tensor.FromElementsOp) or len(index.owner.operands) != 1:
-                continue
+        name = opcode(op)
+        if name == "scf.for":
             try:
-                actual = expression(index.owner.operands[0], facts, abi.grid_bounds)
+                require_signed_loop(op)
+                lower, upper, step = (expression(mapping[value], facts, abi.grid_bounds) for value in op.operands[:3])
+                if lower != ZERO or step != ONE or upper.bounds(abi.grid_bounds)[0] < 0 or not outer_bounds and any(
+                        atom[0] == "l" for atoms, _ in upper.terms for atom in atoms):
+                    continue
+                induction = expression(mapping[op.body.block.args[0]], facts, abi.grid_bounds)
             except ConversionError:
                 continue
+            pending.extend((child, (*domains, (induction, upper)), guard) for child in reversed(tuple(op.body.block.ops)))
+            continue
+        if name == "scf.if" and booleans is not None:
+            condition = booleans.condition(mapping.get(op.operands[0]))
+            for region, selected in zip(op.regions, (condition, booleans.negate(condition)), strict=True):
+                if len(region.blocks) == 1:
+                    pending.extend((child, domains, booleans.combine("and", guard, selected))
+                                   for child in reversed(tuple(region.block.ops)))
+            continue
+        if name != "tts.scatter" or len(op.operands) not in (3, 4) or op.operands[0] not in buffers:
+            continue
+        buffer = buffers[op.operands[0]]
+        if buffer.effect != "write":
+            continue
+        if len(op.operands) == 4:
+            if booleans is None:
+                continue
+            guard = booleans.combine("and", guard, booleans.condition(mapping[op.operands[3]]))
+        index = mapping[op.operands[1]]
+        if not isinstance(index.owner, tensor.FromElementsOp) or len(index.owner.operands) != 1:
+            continue
+        try:
+            actual = expression(index.owner.operands[0], facts, abi.grid_bounds)
+        except ConversionError:
+            continue
+        key = buffer.name, domains, actual
+        if key not in groups:
+            groups[key] = buffer, [], False
+        saved, guards, conditional = groups[key]
+        guards.append(guard)
+        groups[key] = saved, guards, conditional or guard != 1
+    for (_name, domains, actual), (buffer, guards, conditional) in groups.items():
+        if (booleans.covers(guards) if booleans is not None else 1 in guards):
+            if evidence is not None:
+                evidence.clear()
+                if conditional:
+                    evidence["condition_coverage"] = "actual-source-boolean-partition"
             yield buffer, domains, actual
 
 
-def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence=None):
+def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence=None, booleans=None):
     """Prove actual unconditional stores cover the complete result allocation."""
-    complete = {}
-    for buffer, domains, actual in scalar_stores(loop, abi, buffers, mapping, facts, opcode):
+    complete, conditions = {}, {}
+    for buffer, domains, actual in scalar_stores(loop, abi, buffers, mapping, facts, opcode,
+                                                booleans=booleans, evidence=conditions):
         if buffer.name in complete:
             continue
         count, expected = ONE, ONE
@@ -158,5 +182,5 @@ def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence
             if evidence is not None:
                 evidence[buffer.name] = {"coverage": "serial-contiguous-source-loop" if len(domains) == 1 else
                     "serial-rectangular-source-loop-nest", "nest_depth": len(domains),
-                    "extent_equality": "actual-loop-upper-product-equals-result-element-count", **proof}
+                    "extent_equality": "actual-loop-upper-product-equals-result-element-count", **proof, **conditions}
     return list(complete.values())

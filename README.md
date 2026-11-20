@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Source branch/mask partitions](docs/source_partitions.md) now collectively
+initialize scalar addresses and complete tensor outputs. Original predicates,
+overlapping update order, fills and intermediate observations remain executable.
+Nested row/column kernels retain reuse, and a complete two-call model preserves
+all seven results through Merlin host/replays and actual serial execution.
+General vector/numeric/ownership/effect and accelerator closure remains open.
+
 [Partial source initialization](docs/partial_initialization.md) now admits
 scalar reads from completed rows, strided columns and planes before the whole
 output is written. Original write/reread loops, point updates, fills and reuse

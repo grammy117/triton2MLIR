@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Source branch/mask partitions](source_partitions.md) retain actual Boolean
+alternatives through standard tensor computation, including nested row/column
+reuse, overlapping writes and early masked observations. All seven complete
+model results survive host/replays and actual serial images. General vector,
+numeric predicate, ownership/effect and accelerator closure remain open; the
+historical operation-name inventory is unchanged.
+
 [Partial source initialization](partial_initialization.md) passes the 59-check
 source/kernel/model selection and eleven focused math/state checks, with overlap.
 Actual rows, strided columns, planes, point updates and reread recurrences retain

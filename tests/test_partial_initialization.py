@@ -101,3 +101,38 @@ def test_collapsed_unit_axis_still_needs_an_actual_nonempty_write_premise():
     assert not proof.contains(image, query)
     proof.positive(unit)
     assert proof.contains(image, query)
+
+
+def test_masked_point_writes_need_real_complements_and_do_not_grant_complete_coverage():
+    from xdsl.dialects import builtin
+    from xdsl.ir import Block
+
+    output = TensorBuffer("out", (7,), "write", "i64")
+    state = DefiniteWrites(TensorABI("kernel", (output,)))
+    block = Block(arg_types=[builtin.i1, builtin.i1])
+    p, q = (state.booleans.condition(value) for value in block.args)
+    zero = Polynomial.constant(0)
+    state.store_image(output, WriteImage(zero, (), p, (7,)))
+    state.store_image(output, WriteImage(zero, (), state.booleans.negate(q), (7,)))
+    assert not state.booleans.covers([row.guard for row in state.images(output)])
+    state.store_image(output, WriteImage(zero, (), state.booleans.negate(p), (7,)))
+    assert state.booleans.covers([row.guard for row in state.images(output)])
+    assert not state.complete(output)
+
+
+def test_branch_local_images_stay_guarded_and_expire_with_their_loop_scope():
+    from xdsl.dialects import builtin
+    from xdsl.ir import Block
+
+    output = TensorBuffer("out", (7,), "write", "i64")
+    state = DefiniteWrites(TensorABI("kernel", (output,)))
+    condition = Block(arg_types=[builtin.i1]).args[0]
+    before = state.snapshot()
+    state.store_image(output, WriteImage(Polynomial.constant(0), ()))
+    selected = state.snapshot()
+    state.merge_branches(selected, before, condition=condition, scopes=(7,))
+    guards = [row.guard for row in state.images(output)]
+    assert state.booleans.covers(guards, premise=state.booleans.condition(condition))
+    assert not state.booleans.covers(guards)
+    state.end_loop(7)
+    assert state.images(output) == [] and not state.complete(output)

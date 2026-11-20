@@ -12,6 +12,7 @@ from .diagnostics import ConversionError
 from .dynamic_abi import GridExtent
 from .partial_initialization import WriteImage
 from .shared_indexing import Linear
+from .source_boolean import BooleanCoverage
 from .tail_masks import TailExtent, maximum
 
 
@@ -25,6 +26,7 @@ class WholeWrite:
 class DefiniteWrites:
     def __init__(self, abi):
         self.abi = abi
+        self.booleans = BooleanCoverage()
         self.grid = abi.grid_bounds
         self.varying_axes = {i for i, g in enumerate(abi.grid) if isinstance(g, GridExtent)
                              and (next(s for s in abi.runtime_scalars if s.name == g.dimension).bounds[0] + g.divisor - 1) // g.divisor != self.grid[i]}
@@ -88,7 +90,17 @@ class DefiniteWrites:
             self.writes[buffer.name].append(WholeWrite(coverage))
 
     def store_image(self, buffer, image):
+        if image.guard == 0 or image.guard is None:
+            return
         if buffer.name in self.fresh and image not in self.writes[buffer.name]:
+            rows = self.writes[buffer.name]
+            for index, other in enumerate(rows):
+                if isinstance(other, WriteImage) and (other.origin, other.axes, other.scopes) == (
+                        image.origin, image.axes, image.scopes):
+                    guard = self.booleans.combine("or", other.guard, image.guard)
+                    if guard is not None:
+                        rows[index] = WriteImage(image.origin, image.axes, guard, image.scopes if guard != 1 else ())
+                    return
             if sum(isinstance(row, WriteImage) for row in self.writes[buffer.name]) >= 128:
                 return  # Optional facts cannot disable existing complete-write proofs.
             self.writes[buffer.name].append(image)
@@ -106,7 +118,7 @@ class DefiniteWrites:
     def restore(self, state):
         self.writes = {name: list(values) for name, values in state.items()}
 
-    def merge_branches(self, first, second):
+    def merge_branches(self, first, second, *, condition=None, scopes=()):
         merged = {}
         for name, boxes in first.items():
             a = self.completion(self.fresh[name], values=boxes)
@@ -117,6 +129,17 @@ class DefiniteWrites:
                 # A store on just one path gives no fact on the other path.
                 merged[name] = [box for box in boxes if box in second[name]]
         self.writes = merged
+        if condition is not None:
+            selected = self.booleans.condition(condition)
+            for name, buffer in self.fresh.items():
+                if self.complete(buffer):
+                    continue
+                for branch, gate in ((first[name], selected), (second[name], self.booleans.negate(selected))):
+                    for row in branch:
+                        if isinstance(row, WriteImage) and row not in merged[name]:
+                            guard = self.booleans.combine("and", row.guard, gate)
+                            self.store_image(buffer, WriteImage(row.origin, row.axes, guard,
+                                tuple(sorted({*row.scopes, *scopes})) if guard != 1 else ()))
 
     def finish(self, *, source_id=None):
         evidence = {}

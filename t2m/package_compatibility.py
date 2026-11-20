@@ -12,6 +12,10 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(proof.get("condition_coverage") == "actual-source-boolean-partition"
+           for row in trace.get("memory", {}).get("source_loops", [])
+           for proof in row.get("complete_scalar_result_proofs", {}).values()):
+        differences.append("actual scalar branch/store-mask alternatives may collectively prove a source write at each loop address; a bounded Boolean decision diagram preserves same-SSA observations and signed/unsigned comparison complements; original branches, masks, source order, reused values and tensor versions remain executable; read implications and complete-output geometry are separate proofs; no tracker storage, public ABI, receipt, ownership or effect-profile change")
     if any(row.get("initialization", {}).get("coverage") == "completed-source-store-image"
            for row in trace.get("memory", {}).get("source_gathers", [])):
         differences.append("active scalar reads from fresh tensor storage may use actual completed source-store images, including strided columns and planes; each read needs an in-image coordinate witness under its own source loop/mask conditions; partial facts intersect at branches and expire with their varying loops; complete result initialization, access bounds, ownership and source widths remain independent; no tracker storage, source-loop rewrite, public ABI, receipt or effect-profile change")

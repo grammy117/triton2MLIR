@@ -33,9 +33,11 @@ def scalar(value):
 class WriteImage:
     origin: Polynomial
     axes: tuple  # (actual trip count, element stride), including zero/unit axes.
+    guard: int = 1  # BooleanCoverage nodes; 1 is unconditional.
+    scopes: tuple = ()
 
     def depends_on(self, identity):
-        return any(atom[0] == "l" and atom[1] == identity
+        return identity in self.scopes or any(atom[0] == "l" and atom[1] == identity
                    for poly in (self.origin, *(v for pair in self.axes for v in pair)) for atom in atoms(poly))
 
 
@@ -207,7 +209,7 @@ def read_facts(source, mapping, facts, abi, mask):
     return proof
 
 
-def initialized_read(source, index, mask, prefix, images, mapping, facts, abi):
+def initialized_read(source, index, mask, prefix, images, mapping, facts, abi, *, booleans=None):
     """Admit only a source-proved active scalar member of an actual write image."""
     if prefix is not None or not isinstance(index.type, builtin.TensorType) or any(n != 1 for n in index.type.get_shape()):
         return None
@@ -219,10 +221,25 @@ def initialized_read(source, index, mask, prefix, images, mapping, facts, abi):
         proof = read_facts(source, mapping, facts, abi, mask)
         if proof.unreachable:
             return {"coverage": "inactive-source-read", "storage": "no-initialization-tracker"}
-        for image in images:
-            if proof.contains(image, query):
-                return {"coverage": "completed-source-store-image", "axes": len(image.axes),
-                        "scope": "active-scalar-read-only", "storage": "no-initialization-tracker"}
+        matching = [image for image in images if proof.contains(image, query)]
+        premise = 1
+        if booleans is not None:
+            if mask is not None:
+                premise = booleans.condition(mask)
+            child = source
+            while (parent := child.parent_op()) is not None:
+                if parent.name == "scf.if":
+                    selected = booleans.condition(mapping.get(parent.operands[0]))
+                    if child.parent_region() is not parent.regions[0]:
+                        selected = booleans.negate(selected)
+                    premise = booleans.combine("and", premise, selected)
+                child = parent
+        if matching and (booleans.covers([image.guard for image in matching], premise=premise)
+                         if booleans is not None else any(image.guard == 1 for image in matching)):
+            return {"coverage": "completed-source-store-image", "axes": max(len(image.axes) for image in matching),
+                    "scope": "active-scalar-read-only", "storage": "no-initialization-tracker",
+                    **({"condition_coverage": "actual-source-boolean-implication"}
+                       if any(image.guard != 1 for image in matching) else {})}
     except ConversionError:
         pass
     return None
