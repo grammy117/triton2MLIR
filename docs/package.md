@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[While-carried word ranges](while_word_ranges.md) retain original fixed-width
+state and modular updates; mathematical address arithmetic keeps independent
+source overflow/cast/divisor checks and executable active bounds. Provenance
+records enclosed values rather than a claimed induction invariant. Generic
+consumer metadata/readability proofs may create an actual private copy of a
+closed completed-loop value, without granting ownership of earlier storage.
+Public ABI, receipts, artifact rosters, mutation and effect profiles, and Merlin
+signatures are unchanged. Guarded and buffer witnesses remain separate.
+
 [Source while memory](while_tensor_memory.md) adds complete tensor versions to
 both actual source regions and the final false condition edge. Distinct numeric
 before/after interfaces, condition observations and zero-body semantics remain.

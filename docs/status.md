@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[While-carried word indices](while_word_ranges.md) now retain actual fixed-width
+state through tensor computation without claiming a mathematical induction
+proof. Dynamic prefix and wrapped/direct lookups, final counter observations
+and a complete two-call PyTorch model execute through native/Merlin host/serial
+paths. Independent bounds, source arithmetic and consumer lifetime checks stay
+active. General relational facts, ownership, effects and accelerator closure
+remain incomplete.
+
 [Source while memory](while_tensor_memory.md) now keeps complete tensor versions
 through both actual source regions and the final false condition edge. Tiled
 reuse, snapshots, distinct numeric interfaces and complete two-call model state

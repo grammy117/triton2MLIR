@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[While-carried word indices](while_word_ranges.md) now qualify fixed-width
+state, wrapped/direct lookups and actual final counter observations through
+standard tensor memory. Four reusable kernel libraries retain all three
+results; a complete dynamic two-call PyTorch model retains all eleven results.
+The focused selection passes 24, including ten actual serial images and five
+actual active-bounds aborts. A large i64 index cannot pass by truncating to
+i32. Source overflow/cast/divisor refusals remain. The consumer selection passes
+337 with two skips and structure checks pass. These are source/control/ownership
+compositions; the historical opcode inventory and general target claims are
+unchanged. Relational facts, general ownership/effects and accelerators remain.
+
 [Source while memory](while_tensor_memory.md) qualifies original conditions,
 body updates, reused tiles, snapshots, heterogeneous numeric state and final
 false-edge observations as standard tensor computation. Four kernel forms run

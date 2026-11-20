@@ -1,5 +1,14 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[While-carried word indices](docs/while_word_ranges.md) now use actual full
+storage-width enclosures while retaining original modular state and final
+counter values. Standard tensor memory handles dynamic prefix loops and
+wrapped/direct lookups; source arithmetic, active bounds and lifetime checks
+remain. A complete dynamic two-call model preserves every result. Continue
+relational while facts, richer arithmetic/casts, partial/nested initialization,
+resizing/permuted ownership, irregular parallel dependencies and broader effects
+and applicable targets. This does not close arbitrary-kernel coverage.
+
 [Source while memory](docs/while_tensor_memory.md) now preserves tensor state
 through original conditions and bodies, including zero trips and final false
 effects. Reused tiles, conditional updates, distinct numeric interfaces and

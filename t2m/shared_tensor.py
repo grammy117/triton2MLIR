@@ -1563,13 +1563,20 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             if opcode(op) == "tt.map_elementwise" and any(opcode(child) == "tt.load" for child in op.walk()):
                 raise ConversionError("mapped source memory requires guarded-buffer memory with source-words addresses",
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
-        source_range_reports = [{"kind": "source-loop-body-ranges" if control.name == "scf.for" else "source-branch-ranges",
-            "source_ids": _source_ids(control.location), "narrowed_values": count,
-            "control": "actual-signed-serial-for-body-reachability" if control.name == "scf.for" else "actual-scalar-if-region-condition",
-            "fact": "positive-upper-bound-and-nonnegative-product-factors" if control.name == "scf.for" else "fixed-width-comparison-constraints-in-selected-branch",
-            "definition_validation": "original-definition-context-before-narrower-use",
-            "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"}
-            for control, count in check_source_addresses(middle_module, abi)]
+        for control, count in check_source_addresses(middle_module, abi):
+            kind, premise, fact = {
+                "scf.for": ("source-loop-body-ranges", "actual-signed-serial-for-body-reachability",
+                            "positive-upper-bound-and-nonnegative-product-factors"),
+                "scf.if": ("source-branch-ranges", "actual-scalar-if-region-condition",
+                           "fixed-width-comparison-constraints-in-selected-branch"),
+                "scf.while": ("source-while-word-ranges", "actual-typed-before-after-result-interfaces",
+                              "full-source-word-enclosure; original-modular-state-not-mathematical-induction"),
+            }[control.name]
+            source_range_reports.append({"kind": kind, "source_ids": _source_ids(control.location),
+                **({"enclosed_values": count} if control.name == "scf.while" else {"narrowed_values": count}),
+                "control": premise, "fact": fact,
+                "definition_validation": "original-definition-context-before-narrower-use",
+                "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"})
     pointer_control_reports = []
     isolated_events = False
     checked_event_isolation = False

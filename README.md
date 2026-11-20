@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[While-carried word indices](docs/while_word_ranges.md) now retain actual i32/
+i64 modular state through tensor memory, including wrapped table lookups and
+final counter observations. Dynamic prefix loops and a complete two-call
+PyTorch model reach Merlin host and actual serial execution. Address overflow,
+divisor/cast checks, active bounds and native lifetime gates remain; general
+relational invariants, ownership and accelerator scope remain open.
+
 [Source while memory](docs/while_tensor_memory.md) now retains complete tensor
 state through both original regions, including final false-condition effects
 and zero body trips. Reused tiles, snapshots and distinct numeric interfaces

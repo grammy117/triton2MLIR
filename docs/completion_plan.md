@@ -1,5 +1,13 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[While-carried word indices](while_word_ranges.md) now close the concrete
+typed-word enclosure gap without inventing an induction/no-wrap premise.
+Original loops and all results survive complete model host/serial execution.
+Continue source-driven relational facts and arithmetic, general initialization,
+resizing/permuted ownership, irregular parallel dependencies, shared/async
+effects and target closure. More finite passing variants do not close those
+remaining semantic requirements.
+
 [Source while memory](while_tensor_memory.md) now preserves original condition
 effects and complete tensor versions through source/native/host/serial paths,
 including a complete two-call PyTorch model. Keep this generic memory-versioning

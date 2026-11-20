@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-while-word-ranges" for row in trace.get("transformations", [])):
+        differences.append("actual fixed-width while region arguments/results use their full signed word enclosure without an induction/no-wrap assumption; original numeric state and modular updates remain executable; dependent address arithmetic retains separate overflow/cast/divisor checks and active allocation bounds; no trip-count, initialization, ownership, public ABI or effect-profile change")
     if any(row.get("control") == "scf.while" for row in trace.get("memory", {}).get("source_loops", [])):
         differences.append("source while memory uses standard tensor versions through both original regions and the final false condition edge; before/after numeric state may have distinct arities/types; condition-region effects execute on zero body trips, and body-only stores grant no exit initialization; original bounds, source order, ownership and separate buffer-witness checks remain; public ABI and effect profiles are unchanged")
     if any(row.get("kind") == "native-isolated-checked-memory-events" for row in trace.get("transformations", [])):

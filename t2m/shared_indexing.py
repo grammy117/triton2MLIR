@@ -277,7 +277,14 @@ def check_source_addresses(module, abi):
                  zip(function.regions[0].block.args, abi.source_bindings, strict=True)
                  if kind == "runtime" and scalar.bounds is not None)
     from .source_scope_ranges import SourceScopes, definition_scope
+    from .source_while_ranges import while_word_interval
     facts, pending = {}, set()
+    while_words = {}
+
+    def while_bounds(value, loop):
+        result = while_word_interval(value, loop, name)
+        while_words.setdefault(loop, set()).add(value)
+        return result
 
     def bounds(value, scope=None):
         defined = definition_scope(value)
@@ -306,6 +313,12 @@ def check_source_addresses(module, abi):
 
         if not hasattr(op, "name"):
             parent = op.parent_op()
+            if parent is not None and parent.name == "scf.while":
+                low, high = while_bounds(value, parent)
+                if value in local:
+                    low, high = max(low, local[value][0]), min(high, local[value][1])
+                facts[key] = low, high
+                return low, high
             if parent is None or parent.name != "scf.for":
                 raise ConversionError("source memory index needs a loop/runtime range proof")
             require_signed_loop(parent)
@@ -344,7 +357,9 @@ def check_source_addresses(module, abi):
             facts[key] = result
             return result
         kind = name(op)
-        if kind == "scf.execute_region":
+        if kind == "scf.while":
+            low, high = while_bounds(value, op)
+        elif kind == "scf.execute_region":
             low, high = operand(region_yield(value))
         elif kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data
@@ -419,4 +434,4 @@ def check_source_addresses(module, abi):
     for op in module.walk():
         if name(op) == "tt.addptr":
             bounds(op.operands[1], op.parent)
-    return scopes.proofs
+    return [*scopes.proofs, *((loop, len(values)) for loop, values in while_words.items())]

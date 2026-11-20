@@ -1,5 +1,24 @@
 # Review handoff — updated 2026-11-20
 
+[While-carried word indices](while_word_ranges.md) now admit actual i32/i64
+ports by their complete word domain, retaining original modular updates and
+post-loop values. Other address arithmetic still needs its own source checks.
+The 24 focused checks cover four native/host/serial kernel forms, five actual
+active-index aborts, and a complete two-call model with all eleven results.
+Modulus 15 distinguishes original wraparound from widened induction; the i64
+`2**32 + 3` refusal distinguishes full-width active bounds from truncation.
+
+Merlin `9dbb83df744fb655936b2179ed84163087fde399` closes actual `tensor.dim`
+dependencies. `83dc7e3a002c9c596de105900c7f3fd1c6113a8e` permits an independent
+private seed from a closed completed serial loop value. Actual carried edges,
+fresh seeds and every operation are checked; unused calls, mutable reads/writes
+still refuse. The native destination/ownership/access selection passes 337 with
+two skips and repository structure passes. Earlier source-range, dynamic-prefix
+and complete-model lifetime failures remain recorded. Diagnostic probes stop
+before bufferization and publish no qualification. Continue relational range/
+arithmetic proofs, partial/nested initialization, resizing/permuted owners,
+parallel dependencies, shared/async effects and applicable accelerator closure.
+
 [Source while memory](while_tensor_memory.md) now preserves source conditions,
 both tensor-state regions and final false-edge effects. Real tiled i64/f32
 kernels retain reuse, masks, empty/zero trips and earlier snapshots. The actual
