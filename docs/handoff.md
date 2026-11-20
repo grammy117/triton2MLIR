@@ -25,6 +25,15 @@ match committed bytes. These pins are not a full dependency closure or
 accelerator/performance qualification. General while/alias and ownership,
 variable lower bounds/steps, shared/async and source/numeric composition remain.
 
+The next concrete probe is the
+[selected-row sum with runtime loop headers](empty_loop_memory.md#next-concrete-representation-boundary)
+under `.scratch/runtime-loop-headers1/`. Guarded source-word conversion passes
+four native cases, one initial host invocation, four unchanged-library replays
+and two actual serial images. Tensor and structured-address variants still
+refuse the constant-lower/constant-step requirement. Continue checked variable
+IV/final-update facts and readonly row-tile extraction; these finite prototype
+artifacts do not supply a new shipped capability or arbitrary-loop qualification.
+
 [Functional regions in tile memory](region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass

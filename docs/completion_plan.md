@@ -29,6 +29,15 @@ The reproduced pure-reduction composition also has separate functional-region
 qualification. General while/alias and ownership relations, variable source
 lower bounds/steps, shared/async and applicable target requirements remain.
 
+The next [runtime-header probe](empty_loop_memory.md#next-concrete-representation-boundary)
+distinguishes a representation gap from interface support. A selected-row sum
+with live lower/upper/stride operands already passes native, reusable Merlin
+host and actual serial execution under guarded source-word memory. Tensor and
+structured-address paths still need a checked source-width induction enclosure
+and readonly tile extraction for variable lower/step operands. Preserve the
+original SSA loop, useful row tiles and independent initialization/ownership
+gates; do not substitute worst-case bounds or infer complete writes from a count.
+
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.
 Prefix observations, nested/absent-else paths and a complete two-call model

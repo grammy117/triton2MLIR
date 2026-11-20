@@ -148,3 +148,38 @@ model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2` and unchanged Merlin
 producer sources and two selected companion sources match actual committed
 bytes. These matches remain separate from observed reopening revisions and
 are not a full dependency closure, accelerator or performance qualification.
+
+## Next concrete representation boundary
+
+`.scratch/runtime-loop-headers1/` retains a real selected-row sum:
+
+```python
+lane = tl.program_id(0) * B + tl.arange(0, B)
+acc = tl.full((B,), 0, tl.int64)
+for row in range(lower, upper, stride):
+    acc += tl.load(x + row * N + lane, lane < N, other=0)
+tl.store(out + lane, acc, lane < N)
+```
+
+Its input is `8x17xi64`, output is `17xi64`, `N=17`, `B=8`, and logical grid
+is three. Runtime i32 controls retain declared bounds `lower=0..3`, `upper=0..8`
+and `stride=1..3`. The tensor, buffer and structured-address guarded profiles
+all refuse at the existing constant-lower/constant-step domain requirement.
+The guarded source-word profile already preserves the original SSA loop and
+actual addresses: four native cases, one initial Merlin host invocation, four
+unchanged-library replays and two actual serial images pass. Cases include
+strided selection, reversed endpoint ordering and equal endpoints. Artifacts
+are `source.ttir`, `abi.json`, `capture/`, `merlin/`, `invoke-*` and `target-*`;
+logs are `probe-structured.log`, `probe.log` and `qualify.log` in that directory.
+The first probe's three `logical` policy spelling errors are harness errors,
+not compiler refusals; `probe-structured.log` contains the actual source gates.
+
+This establishes a finite existing-interface route, not a new shipped frontend
+capability or full runtime-loop coverage. Its memory checks and offset tensors
+remain an explicit granularity difference from tensor MLIR. Next prove reachable
+IVs and the final source-width induction update for bounded variable lower/step
+operands, then reuse those facts for readonly row-tile extraction while retaining
+the actual SSA bounds/step. Initialization, aliases and conflicting writes keep
+independent gates; a trip-count interval must not replace the original loop or
+supply write coverage. General pointer carriers and variable-step write images
+remain separate from that readonly conversion.
