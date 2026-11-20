@@ -3,8 +3,10 @@
 [Volatile reads](docs/volatile_reads.md) now have an explicit private-memory
 profile with actual standard LLVM effects and source-preserving normalization.
 Native i32/i64/f32/f64 and selected host/serial cases retain unused observations.
-Continue allocation/model intake and source/numeric/effect compositions before
-general external/shared/async participation and accelerator qualification.
+Original allocation intake and complete i64/f32 models now preserve all fourteen
+results per model through host replays and actual serial images. Continue
+atomic/barrier, source/numeric/storage/effect compositions, general external/
+shared/async participation and applicable accelerator qualification.
 
 Selected [atomic program phases](docs/atomic_program_phases.md) now retain
 original old values and synchronized observations through native, reusable

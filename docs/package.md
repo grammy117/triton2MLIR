@@ -8,6 +8,11 @@ source/effect inventories, descriptor SSA and actual volatile flags are checked
 independently. These localized LLVM memory leaves differ from pure tensor MLIR;
 public tensor/scalar ABI and receipt schemas are unchanged. Older readers reject
 the new evidence versions; no external/shared/cache/target permission follows.
+Complete volatile models retain original allocation-source capsules, executed
+binding v4, receipt v2 and signature v6. Distinct read IDs survive shared enclosing
+callsite locations. Every parent archive and all fourteen results remain bound;
+host/serial qualification pins the independent reader and LLVM binding. No new
+public tensor result schema or mutation/copyback contract is introduced.
 
 [Atomic program phases](atomic_program_phases.md) explicitly select
 `t2m.synchronous-program-barrier.v2` with the existing private atomic effect

@@ -3,7 +3,9 @@
 [Private volatile reads](volatile_reads.md) now preserve actual standard LLVM
 observations instead of dropping the source flag during pointer conversion.
 Unused loads, original loops and memory guards survive native/host/serial
-execution. Allocation/model and broader shared/effect compositions remain next.
+execution. Original allocation wrappers and complete i64/f32 models retain all
+fourteen results per model. Broader shared/effect/storage/numeric compositions
+and accelerator correctness/performance remain completion work.
 
 [Atomic program phases](atomic_program_phases.md) now retain selected i64/f32
 updates, returned old values and synchronized reads through native, reusable

@@ -74,8 +74,9 @@ identity bodies, selected effects and cleanup pipelines. These are selected
 private memory observations, not GPU cache, external publication or performance
 equivalence.
 
-Next qualify original allocation wrappers and complete dependent PyTorch models,
-then compose program phases and the remaining numeric/storage/effect profiles.
+Original allocation wrappers and complete dependent models now have the separate
+qualification below. Next compose program phases and the remaining numeric/
+storage/effect profiles.
 Shared/external state, asynchronous publication/progress and applicable
 accelerator correctness/performance remain completion work. Observing all fifty
 pinned TTIR names does not establish this semantic closure.
@@ -87,3 +88,49 @@ python -m pytest -q tests/test_volatile_memory.py \
 
 Use the existing source/native/Merlin/serial-target environments from the README;
 no Triton CPU driver or GPU backend is selected.
+
+## Original allocation source and complete models
+
+`scripts/capture_volatile_model.py --dtype i64|f32` supplies actual PyTorch
+models with learned bias/initial parameters, two dependent calls and an empty
+call:
+
+```python
+original, initial = x + self.bias, x + self.initial
+first, old1, seen1 = update(original, initial, x.shape[0], 2)
+second, old2, seen2 = update(original, first, x.shape[0], 3)
+empty, old0, seen0 = update(x[:0], initial[:0], 0, 1)
+return second, first, old1, seen1, old2, seen2, original, x, initial, empty, old0, seen0, self.bias, self.initial
+```
+
+Each source wrapper clones its input state. Original allocation capsules retain
+the pre-wrapper source separately from the bound graph; all four original
+volatile sites survive in each implementation. Identity anchors use distinct
+checked read IDs. An enclosing callsite location may occur on several reads and
+cannot identify an individual observation. Checked anchor removal requires the
+corresponding actual LLVM volatile leaf, even after helper/wrapper inlining.
+
+The complete models preserve all fourteen original results, earlier snapshots
+and every parent data/archive byte. Executed-call binding v4, receipt v2 and
+Merlin signature v6 retain the existing public interface and actual returned
+descriptors. Localized LLVM leaves and the explicit effect/stage profiles remain
+declared representation differences; no physical caller copyback is introduced.
+
+Two complete models retain 28 initial host results, 84 results across six
+unchanged-library invocations and 28 results across two actual Spike images as
+exact words. Six rehashed source/effect claims refuse in both readers; two
+original public-domain violations actually abort without outputs. The standalone
+selection separately retains six target results across two images and twenty
+source/payload/stage claims refused by both readers. These scopes overlap other
+selections and do not expand the historical opcode inventory.
+
+The final source/automatic-selection run passes 38 checks; an earlier overlapping
+word/atomic/source-protection selection passes 43. Six complete-model pytest
+checks pass, and four additional refusal/domain checks execute directly against
+those retained libraries. Merlin's source/derived-interface selection passes
+511. `out/volatile-observations/summary.json` reopens original packages, all
+results, unchanged library/input bytes and actual target qualification with
+current independent-reader fingerprints. It links the logs and failure evidence.
+
+General external/shared state, atomic/barrier and broader numeric/storage
+composition, applicable accelerators and measured performance remain open.

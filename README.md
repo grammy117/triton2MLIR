@@ -2,9 +2,10 @@
 
 [Private volatile reads](docs/volatile_reads.md) now preserve every actual
 observation, including unused values, through native, reusable Merlin host and
-selected serial Spike execution. Source guards and descriptor address proofs
-remain; original allocation/model and broader shared/effect compositions are
-the next gates.
+selected serial Spike execution. Original allocation wrappers and complete
+i64/f32 models retain all fourteen results per model, earlier snapshots and
+runtime shapes. Source guards and descriptor address checks remain; broader
+shared/effect compositions and accelerator qualification stay open.
 
 [Atomic program phases](docs/atomic_program_phases.md) now compose selected
 private atomic updates with synchronous program barriers through native,

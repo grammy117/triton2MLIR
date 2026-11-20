@@ -2,9 +2,10 @@
 
 [Volatile reads](volatile_reads.md) now retain actual private observations
 through native/host/serial execution, with independently checked source effects,
-descriptor recipes and normalization protection. Qualify original allocation
-wrappers and complete models next, then compose program phases and remaining
-numeric/storage/effect profiles. General external/shared/async scope remains.
+descriptor recipes and normalization protection. Original allocation wrappers
+and complete i64/f32 models now retain every result through host replays and
+actual serial images. Continue program phases and remaining numeric/storage/
+effect composition; general external/shared/async scope remains.
 
 [Atomic program phases](atomic_program_phases.md) now retain selected atomic
 old values and synchronized observations through direct/protected allocation
