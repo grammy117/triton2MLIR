@@ -25,7 +25,7 @@ from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
-from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, require_signed_loop
+from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, is_iteration_ordinal, require_signed_loop
 from .launch_domains import launch_domains
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
@@ -915,13 +915,21 @@ def _functionalize(module, abi, *, serial_memory=True):
         active = tuple(physical[axis] for axis in axes)
         return buffer, sizes, tuple(offsets), active, axes, mask
 
-    def bind_exit_induction(source, result, position, domain, identity, evidence):
-        if not is_exit_induction(source, position):
-            return
-        key = f"source-exit-IV-{identity}-{position}"
+    def bind_loop_result(source, result, position, domain, identity, evidence):
+        if is_exit_induction(source, position):
+            role, bounds, field = "exit-IV", exit_induction_bounds(domain), "actual_exit_induction_results"
+        elif is_iteration_ordinal(source, position):
+            role, bounds, field = "iteration-count", (domain.minimum_iterations, domain.maximum_iterations), "actual_iteration_ordinal_results"
+            width = getattr(getattr(result.type, "width", None), "data", 64)
+            if bounds[1] >= 1 << (width - 1):
+                return False
+        else:
+            return False
+        key = f"source-{role}-{identity}-{position}"
         states[key] = result
-        facts[result] = Linear(parameters=((key, *exit_induction_bounds(domain), 1),))
-        evidence.setdefault("actual_exit_induction_results", []).append(position)
+        facts[result] = Linear(parameters=((key, *bounds, 1),))
+        evidence.setdefault(field, []).append(position)
+        return True
 
     def translate(source_block, *, phase_body=False):
         nonlocal body, loop_counter
@@ -1089,9 +1097,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                                          "recurrence": "original-standard-value-region"})
                     cloned = append(op.clone(value_mapper=mapping), op)
                     if empty_domain is not None:
+                        bound = False
                         for position, result in enumerate(cloned.results):
-                            bind_exit_induction(op, result, position, empty_domain, loop_counter, source_loops[-1])
-                        if source_loops[-1].get("actual_exit_induction_results"):
+                            bound |= bind_loop_result(op, result, position, empty_domain, loop_counter, source_loops[-1])
+                        if bound:
                             loop_counter += 1
                     continue
                 arguments = op.body.block.args
@@ -1144,6 +1153,15 @@ def _functionalize(module, abi, *, serial_memory=True):
                 previous, body = body, nested
                 before_loop = initialization.snapshot()
                 loop_values[identity] = (nested.args[0], 0, 1) if domain.variable_header else (nested.args[0], lb, step)
+                ordinal_identity = None
+                for position in kept:
+                    argument = mapping[arguments[position + 1]]
+                    width = getattr(getattr(argument.type, "width", None), "data", 64)
+                    if is_iteration_ordinal(op, position) and iterations < 1 << (width - 1):
+                        ordinal_identity = -identity - 1
+                        facts[argument] = Linear(loops=((ordinal_identity, 0, iterations - 1, 1),))
+                        loop_values[ordinal_identity] = (argument, 0, 1)
+                        loop_evidence.setdefault("actual_iteration_ordinal_arguments", []).append(position)
                 translate(op.body.block)
                 complete, complete_proofs, partial = [], {}, []
                 if serial_memory and not parallel and not domain.variable_header:
@@ -1161,6 +1179,9 @@ def _functionalize(module, abi, *, serial_memory=True):
                         pass  # Missing algebraic equality supplies no new write credit.
                 del loop_values[identity]
                 initialization.end_loop(identity)
+                if ordinal_identity is not None:
+                    del loop_values[ordinal_identity]
+                    initialization.end_loop(ordinal_identity)
                 if not domain.exact:
                     changed = any(states[b.name] is not nested.args[len(kept_arguments) + i]
                                   for i, b in enumerate(writable))
@@ -1189,7 +1210,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     if i in final_facts:
                         facts[loop.results[position]] = final_facts[i]
                     else:
-                        bind_exit_induction(op, loop.results[position], i, domain, identity, loop_evidence)
+                        bind_loop_result(op, loop.results[position], i, domain, identity, loop_evidence)
                 states.update((b.name, v) for b, v in zip(writable, loop.results[len(kept):len(kept) + len(writable)], strict=True))
                 cursor = len(kept) + len(writable)
                 for i, rank in zip(pointer_slots, pointer_ranks, strict=True):

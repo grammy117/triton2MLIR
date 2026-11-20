@@ -1,5 +1,16 @@
 # Measured coverage and remaining boundaries
 
+[Actual iteration ordinals](iteration_ordinals.md) now retain constant and
+mixed step/iteration pointer streams, body/pure word state and final reads as
+tensor MLIR. The kernel selection passes 75; twenty complete-model checks cover
+three new variants and two original regressions. Twelve new kernel libraries
+and three new model libraries retain 54 initial, 234 replay and 108 exact-word
+serial results across thirty actual images, plus three model-domain aborts.
+The related source/control/memory regression selection passes 137. General
+runtime-stride/conditional/while/alias, dynamic-root, shared/async,
+source/numeric and accelerator closure remains open; no operation-name
+denominator changes.
+
 [Pure loop exit coordinates](pure_loop_exits.md) now retain source-proved
 actual exit results through numeric cloning, including preloaded tile reuse
 and i64 recurrences. Four reusable kernel libraries and the new dependent-call

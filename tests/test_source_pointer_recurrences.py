@@ -2,7 +2,7 @@
 
 import pytest
 
-from t2m.loop_domains import enclosed_loop, is_exit_induction
+from t2m.loop_domains import enclosed_loop, is_exit_induction, is_iteration_ordinal
 from t2m.shared_tensor import _source_ids, opcode, parse_shared
 from t2m.source_pointer_recurrences import raise_pointer_recurrences
 from t2m.structured_state import data_control_report
@@ -44,7 +44,7 @@ def test_actual_step_normalization_retains_numeric_state_memory_and_observed_exi
     module.verify()
 
 
-@pytest.mark.parametrize("increment", ["%other", "%two", "%iv"])
+@pytest.mark.parametrize("increment", ["%other", "%iv"])
 def test_equal_declared_ranges_or_unrelated_increments_supply_no_step_equality(increment):
     module = source(increment=increment)
     loop = next(op for op in module.walk() if op.name == "scf.for")
@@ -80,3 +80,26 @@ def test_invariant_pointer_keeps_its_actual_initial_value():
     assert report[0]["streams"][0]["step_coefficient"] == 0
     last = next(op for op in module.ops.first.regions[0].block.ops if opcode(op) == "tt.load")
     assert last.operands[0] is module.ops.first.regions[0].block.args[0]
+
+
+@pytest.mark.parametrize("increment,expected", [("%two", (0, 2)), ("%mixed", (2, 2))])
+def test_constant_and_mixed_streams_keep_a_real_unit_increment_ordinal(increment, expected):
+    module = source(increment=increment.replace("%mixed", "%two"))
+    loop = next(op for op in module.walk() if op.name == "scf.for")
+    if increment == "%mixed":
+        from xdsl.dialects import arith
+        update = loop.body.block.last_op.operands[0].owner
+        two = update.operands[1]
+        delta = next(op for op in loop.parent.ops if op.name == "arith.muli").result
+        mixed = arith.AddiOp(delta, two)
+        loop.parent.insert_op_before(mixed, loop)
+        update.operands = [update.operands[0], mixed.result]
+    report = raise_pointer_recurrences(module, _source_ids,
+        {loop: enclosed_loop(((0, 3), (0, 8), (1, 3)), width=32)})
+    stream = report[0]["streams"][0]
+    assert report[0]["kind"] == "source-ordinal-pointer-recurrences"
+    assert (stream["step_coefficient"], stream["iteration_increment"]) == expected
+    loop = next(op for op in module.walk() if op.name == "scf.for")
+    assert is_iteration_ordinal(loop, len(loop.results)-1)
+    assert data_control_report(module, _source_ids)
+    module.verify()

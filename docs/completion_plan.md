@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Actual iteration ordinals](iteration_ordinals.md) close the reproduced
+constant-per-execution pointer refusal and compose constant/mixed streams with
+body memory, pure word state, complete models and actual serial execution.
+Keep all source controls and observations. Continue unrelated invariant runtime
+strides, conditional/while pointer state, alias ownership, dynamic roots,
+variable-step complete writes, shared/async and applicable target closure.
+
 [Pure loop exit coordinates](pure_loop_exits.md) close the reproduced
 final-pointer-only cloning refusal while retaining original numeric loops,
 preloaded tile reuse and every final observation. New and original complete

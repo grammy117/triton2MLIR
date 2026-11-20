@@ -78,3 +78,28 @@ def final_pointer_mix(x, out, last, lower, upper, stride, N: tl.constexpr, R: tl
     final_b = tl.load(second, lane < N, other=0)
     tl.store(out + lane, state ^ final_a, lane < N)
     tl.store(last + lane, final_a - final_b * 3, lane < N)
+
+
+@triton.jit
+def ordinal_pointer_mix(x, out, last, lower, upper, stride, N: tl.constexpr, R: tl.constexpr,
+                        B: tl.constexpr, TRANSPOSE: tl.constexpr, MODE: tl.constexpr):
+    lane = tl.program_id(0) * B + tl.arange(0, B)
+    row_stride = 1 if TRANSPOSE else N
+    col_stride = R if TRANSPOSE else 1
+    first = x + lower * row_stride + lane * col_stride
+    second = x + (R - 1 - lower) * row_stride + lane * col_stride
+    delta = (stride + 1) * row_stride if MODE == "mixed" else row_stride
+    state = tl.load(x + lane * col_stride, lane < N, other=0)
+    for row in range(lower, upper, stride):
+        if MODE == "pure":
+            state = (state ^ (row.to(tl.int64) + 2)) * 3
+        else:
+            a = tl.load(first, lane < N, other=0)
+            b = tl.load(second, lane < N, other=0)
+            state += a ^ (b * 3)
+        first += delta
+        second -= delta
+    final_a = tl.load(first, lane < N, other=0)
+    final_b = tl.load(second, lane < N, other=0)
+    tl.store(out + lane, state ^ final_a, lane < N)
+    tl.store(last + lane, final_a - final_b * 3, lane < N)

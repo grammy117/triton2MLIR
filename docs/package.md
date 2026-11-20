@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Actual iteration ordinals](iteration_ordinals.md) retain executable zero-plus-one
+source loop state and affine step/constant pointer recurrences. Body facts use
+the actual scalar and expire with their loop; returned counts retain actual
+execution and zero trips. Source widths, bounds, initialization, ownership and
+effects remain separate proofs. Generated compatibility names these adaptations;
+public tensor/scalar ABI, receipts and artifact rosters are unchanged.
+
 [Pure loop exit coordinates](pure_loop_exits.md) bind checked actual result
 SSA after numeric cloning, using the same initial/yield proof as memory loops.
 Numeric state, source headers, zero-trip initial values, preloaded tiles and

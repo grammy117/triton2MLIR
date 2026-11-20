@@ -133,3 +133,28 @@ def is_exit_induction(operation, position):
     return (getattr(update, "name", None) == "arith.addi"
             and (tuple(update.operands) == (operation.body.block.args[0], operation.step)
                  or tuple(update.operands) == (operation.step, operation.body.block.args[0])))
+
+
+def is_iteration_ordinal(operation, position):
+    """Recognize an actual zero-initialized, unit-increment scalar carrier."""
+    from xdsl.dialects.builtin import IndexType, IntegerAttr, IntegerType
+
+    initial = operation.iter_args[position]
+    if not isinstance(initial.type, (IntegerType, IndexType)):
+        return False
+
+    def constant(value, number):
+        op = value.owner
+        attribute = getattr(op, "properties", {}).get("value")
+        return (getattr(op, "name", None) == "arith.constant" and isinstance(attribute, IntegerAttr)
+                and attribute.value.data == number)
+
+    if not constant(initial, 0):
+        return False
+    value = operation.body.block.last_op.operands[position]
+    update = value.owner
+    if getattr(update, "name", None) != "arith.addi":
+        return False
+    argument = operation.body.block.args[position + 1]
+    a, b = update.operands
+    return (a is argument and constant(b, 1)) or (b is argument and constant(a, 1))

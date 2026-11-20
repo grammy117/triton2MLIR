@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Actual iteration ordinals](docs/iteration_ordinals.md) now preserve pointer
+increments combining actual-loop-step and constant-per-execution terms. Twelve
+kernel libraries and three complete models pass host replays and thirty actual
+serial images, retaining tiling, numeric state and final observations. Continue
+unrelated runtime strides, conditional/while/alias ownership, dynamic roots,
+shared/async and applicable source/numeric/target qualification.
+
 [Pure loop exit coordinates](docs/pure_loop_exits.md) now retain actual exit
 SSA through numeric region cloning. Preloaded tile reuse, word state and final
 pointer observations survive native/host execution and ten actual serial

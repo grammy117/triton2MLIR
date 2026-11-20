@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Actual iteration ordinals](docs/iteration_ordinals.md) now retain constant
+and mixed step/iteration pointer streams as tensor computation. Twelve kernel
+libraries and three dependent-call PyTorch models preserve all results through
+host replays and thirty actual serial images. Original loops, tile reuse, word
+state and final reads remain; general memory/effect/source/target closure is open.
+
 [Pure loop exit coordinates](docs/pure_loop_exits.md) now preserve final pointer
 reads after numeric-only loops, including preloaded tile reuse, i64 recurrences
 and zero trips. Four reusable kernel libraries and a complete two-call model

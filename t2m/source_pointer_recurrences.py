@@ -1,10 +1,11 @@
-"""Recover step-coupled pointer streams before native structured conversion.
+"""Recover affine pointer streams before native structured conversion.
 
 Meta/shared 17f0c234 and historical Microsoft 050b93ae carry pointer offsets
 through SCF edges in PtrAnalysis::rewriteForOp. Some installed versions cannot
 recover final pointer results. For an additive stream proved to advance by the
-actual loop step times a constant, use the actual IV and an actual exit-IV
-carrier instead. Numeric state, memory events and the original loop remain.
+actual loop step times a constant plus a constant per iteration, use the actual
+IV and an executable iteration ordinal. Numeric state, memory events and the
+original loop remain; count enclosures never replace an executed recurrence.
 """
 
 from xdsl.dialects import arith, builtin, scf
@@ -54,18 +55,19 @@ def _step_form(value, step, opcode, budget):
 
 
 def _increment(value, argument, step, opcode):
-    coefficient = 0
+    coefficient, per_iteration = 0, 0
     for _ in range(32):
         if value is argument:
-            return coefficient
+            return coefficient, per_iteration
         op = value.owner
         if (not hasattr(op, "name") or opcode(op) != "tt.addptr"
                 or value.type != argument.type or op.operands[0].type != argument.type):
             return None
         form = _step_form(op.operands[1], step, opcode, [256])
-        if form is None or form[1] != 0:
+        if form is None:
             return None
         coefficient += form[0]
+        per_iteration += form[1]
         value = op.operands[0]
     return None
 
@@ -76,7 +78,7 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
     reports = []
     for loop in reversed([op for op in module.walk() if isinstance(op, scf.ForOp)]):
         domain = loop_domains.get(loop)
-        if (domain is None or not domain.variable_header or domain.maximum_iterations == 0
+        if (domain is None or domain.exact or domain.maximum_iterations == 0
                 or not isinstance(loop.lb.type, builtin.IntegerType) or loop.lb.type.width.data > 64):
             continue
         source = loop.body.block
@@ -87,18 +89,28 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
                         for i in pointer_slots}
         if any(value is None for value in coefficients.values()):
             continue
+        ordinal = any(increment for _coefficient, increment in coefficients.values())
+        if ordinal and domain.maximum_iterations >= 1 << 63:
+            continue
         # The mathematical difference is newly emitted as i64. Require its
         # complete enclosure and each scaled difference to fit that type.
         from .loop_domains import exit_induction_bounds
         exit_low, exit_high = exit_induction_bounds(domain)
         delta_low, delta_high = exit_low - domain.lower_interval[1], exit_high - domain.lower_interval[0]
-        if any(not -(1 << 63) <= coefficient < 1 << 63 for coefficient in coefficients.values()):
+        if any(not -(1 << 63) <= value < 1 << 63 for pair in coefficients.values() for value in pair):
             continue
-        if any(not -(1 << 63) <= value < 1 << 63 for coefficient in (1, *coefficients.values())
-               for value in (delta_low * coefficient, delta_high * coefficient)):
+        spans = []
+        for coefficient, increment in coefficients.values():
+            low, high = sorted((delta_low * coefficient, delta_high * coefficient))
+            end = domain.maximum_iterations * increment
+            spans.extend((low, high, end, low + min(0, end), high + max(0, end)))
+            if coefficient:
+                spans.extend((delta_low, delta_high))
+        if any(not -(1 << 63) <= value < 1 << 63 for value in spans):
             continue
         kept = [i for i in range(len(loop.iter_args)) if i not in pointer_slots]
-        body = Block(arg_types=[source.args[0].type, *[source.args[i + 1].type for i in kept], loop.lb.type])
+        body = Block(arg_types=[source.args[0].type, *[source.args[i + 1].type for i in kept], loop.lb.type,
+                               *([builtin.i64] if ordinal else [])])
         mapping = {source.args[0]: body.args[0]}
         mapping.update((source.args[i + 1], body.args[j + 1]) for j, i in enumerate(kept))
 
@@ -107,15 +119,23 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
             operations.append(op)
             return op.results[0]
 
-        def pointer_at(operations, initial, current, coefficient, *, lower=loop.lb, emit=emit):
-            if coefficient == 0:
+        def pointer_at(operations, initial, current, terms, ordinal_value, *, lower=loop.lb, emit=emit):
+            coefficient, increment = terms
+            if coefficient == increment == 0:
                 return initial
             def wide(operand):
                 return operand if operand.type == builtin.i64 else emit(operations, arith.ExtSIOp(operand, builtin.i64))
-            difference = emit(operations, arith.SubiOp(wide(current), wide(lower)))
-            if coefficient != 1:
-                factor = emit(operations, arith.ConstantOp.from_int_and_width(coefficient, 64))
-                difference = emit(operations, arith.MuliOp(difference, factor))
+            def scale(operand, amount):
+                if amount == 1:
+                    return operand
+                factor = emit(operations, arith.ConstantOp.from_int_and_width(amount, 64))
+                return emit(operations, arith.MuliOp(operand, factor))
+            difference = None
+            if coefficient:
+                difference = scale(emit(operations, arith.SubiOp(wide(current), wide(lower))), coefficient)
+            if increment:
+                term = scale(ordinal_value, increment)
+                difference = term if difference is None else emit(operations, arith.AddiOp(difference, term))
             if isinstance(initial.type, builtin.TensorType):
                 type_ = builtin.TensorType(builtin.i64, initial.type.get_shape())
                 difference = emit(operations, builtin.UnregisteredOp.with_name("tt.splat").create(
@@ -125,7 +145,8 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
 
         prefix = []
         for i in pointer_slots:
-            mapping[source.args[i + 1]] = pointer_at(prefix, loop.iter_args[i], body.args[0], coefficients[i])
+            mapping[source.args[i + 1]] = pointer_at(prefix, loop.iter_args[i], body.args[0], coefficients[i],
+                                                   body.args[-1] if ordinal else None)
         body.add_ops(prefix)
         for operation in source.ops:
             if operation is not source.last_op:
@@ -133,22 +154,34 @@ def raise_pointer_recurrences(module, source_ids, loop_domains):
         next_iv = arith.AddiOp(body.args[0], loop.step)
         next_iv.location = loop.location
         body.add_op(next_iv)
+        extra_initial, extra_yield = [], []
+        before = []
+        if ordinal:
+            extra_initial.append(emit(before, arith.ConstantOp.from_int_and_width(0, 64)))
+            one = arith.ConstantOp.from_int_and_width(1, 64)
+            next_ordinal = arith.AddiOp(body.args[-1], one.result)
+            one.location = next_ordinal.location = loop.location
+            body.add_ops([one, next_ordinal])
+            extra_yield.append(next_ordinal.result)
         yielded = source.last_op.operands
-        end = scf.YieldOp(*[mapping.get(yielded[i], yielded[i]) for i in kept], next_iv.result)
+        end = scf.YieldOp(*[mapping.get(yielded[i], yielded[i]) for i in kept], next_iv.result, *extra_yield)
         end.location = source.last_op.location
         body.add_op(end)
-        replacement = scf.ForOp(loop.lb, loop.ub, loop.step, [*[loop.iter_args[i] for i in kept], loop.lb], Region(body))
+        replacement = scf.ForOp(loop.lb, loop.ub, loop.step, [*[loop.iter_args[i] for i in kept], loop.lb, *extra_initial], Region(body))
         replacement.location = loop.location
         replacement.attributes.update(loop.attributes)
         after, results = [], {}
         results.update((i, replacement.results[j]) for j, i in enumerate(kept))
         for i in pointer_slots:
-            results[i] = pointer_at(after, loop.iter_args[i], replacement.results[-1], coefficients[i])
-        Rewriter.replace_op(loop, [replacement, *after], [results[i] for i in range(len(loop.results))])
-        reports.append({"kind": "source-step-coupled-pointer-recurrences", "source_ids": source_ids(loop.location),
-            "streams": [{"carried_argument": i, "step_coefficient": coefficients[i],
+            results[i] = pointer_at(after, loop.iter_args[i], replacement.results[len(kept)], coefficients[i],
+                                   replacement.results[-1] if ordinal else None)
+        Rewriter.replace_op(loop, [*before, replacement, *after], [results[i] for i in range(len(loop.results))])
+        reports.append({"kind": "source-ordinal-pointer-recurrences" if ordinal else "source-step-coupled-pointer-recurrences", "source_ids": source_ids(loop.location),
+            "streams": [{"carried_argument": i, "step_coefficient": coefficients[i][0],
+                         **({"iteration_increment": coefficients[i][1]} if ordinal else {}),
                          "update_source_ids": source_ids(getattr(yielded[i].owner, "location", loop.location))} for i in pointer_slots],
-            "control": "original-lower-upper-step-SSA; actual-IV-plus-step-exit-carrier",
+            "control": ("original-lower-upper-step-SSA; actual-zero-plus-one-iteration-carrier" if ordinal else
+                        "original-lower-upper-step-SSA; actual-IV-plus-step-exit-carrier"),
             "zero_trips": "original-initial-pointers-and-complete-numeric-tuple",
             "scope": "source-width-checked-additive-streams; no-ownership-effect-or-complete-write-grant"})
     return reports

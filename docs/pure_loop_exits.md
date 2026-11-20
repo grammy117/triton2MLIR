@@ -145,7 +145,7 @@ python -m pytest -q tests/test_value_exit_coordinates.py \
   --basetemp=.scratch/pytest-pure-loop-exits
 ```
 
-## Next reproduced boundary
+## Historical constant-increment boundary
 
 `.scratch/runtime-pointer-independent-step1/` changes the original body-load
 kernel's pointer increment from `stride * row_stride` to `row_stride`. The
@@ -158,3 +158,7 @@ for this different actual SSA expression. Continue with a proved actual
 iteration ordinal or equivalent exact recurrence representation; never replace
 it with a maximum trip count or discard the pointer/state observations. This
 probe has no Merlin host or serial qualification yet.
+[Actual iteration ordinals](iteration_ordinals.md) now close this source
+normalization boundary and independently qualify richer memory/pure/mixed
+streams through complete model host/serial execution. The old prototype's
+original finite checks remain separate evidence.

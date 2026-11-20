@@ -1,5 +1,16 @@
 # Review handoff — updated 2026-11-20
 
+[Actual iteration ordinals](iteration_ordinals.md) now retain pointer
+increments of the form `a * actual_step + b`, including actual final positions.
+Twelve reusable kernel libraries and three new dependent-call PyTorch models
+qualify through host replays and thirty actual serial images. All ten results
+per model survive. `out/ordinal-pointer-streams/summary.json` reopens 54 initial,
+234 replay and 108 exact-word serial results, plus three invalid-step aborts.
+Kernel checks pass 75, model checks twenty (including two original models), and
+related source/control/memory regressions 137. No companion source edit is needed.
+General runtime-stride/conditional/while/alias, dynamic-root, shared/async and
+applicable source/numeric/target closure remains open.
+
 [Pure loop exit coordinates](pure_loop_exits.md) now close the saved
 final-pointer-only refusal by binding actual cloned result SSA through the
 existing checked initial/yield relation. Original loops, preloaded tile reuse,

@@ -18,31 +18,33 @@ TOOLS = all(os.environ.get(name) for name in ("TRITON_SHARED_OPT", "T2M_MODEL2ML
 pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/model/Merlin tools required")
 
 
-@pytest.fixture(scope="module", params=[False, True], ids=["body-loads", "final-only"])
+@pytest.fixture(scope="module", params=["body-loads", "final-only", "ordinal-memory", "ordinal-pure", "ordinal-mixed"])
 def selected(tmp_path_factory, request):
     from test_runtime_pointer_steps import capture
 
-    final_only = request.param
-    root = tmp_path_factory.mktemp("pointer-final-model" if final_only else "pointer-step-model")
+    final_only = request.param == "final-only"
+    ordinal_mode = request.param.removeprefix("ordinal-") if request.param.startswith("ordinal-") else None
+    root = tmp_path_factory.mktemp("pointer-" + request.param + "-model")
     parent = root / "capture"
     script = Path(__file__).resolve().parents[1] / "scripts/capture_pointer_step_model.py"
     done = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], str(script), "--out", str(parent),
-                          *(["--final-only"] if final_only else [])],
+                          *(["--final-only"] if final_only else []),
+                          *(["--ordinal-mode", ordinal_mode] if ordinal_mode else [])],
         capture_output=True, text=True, timeout=60, check=False,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(root)))
     assert done.returncode == 0, done.stderr
-    result = capture(root, dtype="i64", final_only=final_only)
+    result = capture(root, dtype="i64", final_only=final_only, ordinal_mode=ordinal_mode, rows=32 if ordinal_mode else 16)
     bindings = [KernelBinding("t2m_demo::pointer_step", result, results=("out", "last"),
         runtime_operands={name: name for name in ("lower", "upper", "stride")})]
     package = write_model_bundle(parent, bindings, root / "package", work=root / "qualification",
         python=os.environ["T2M_NATIVE_PYTHON"], merlin_root=os.environ["T2M_MERLIN_ROOT"],
         merlin_python=os.environ["T2M_MERLIN_PYTHON"], merlin_clang=os.environ["T2M_MERLIN_CLANG"],
         merlin_host=True, result_mode="execution-owned")
-    return root, parent, package, final_only
+    return root, parent, package, final_only, ordinal_mode
 
 
 def test_complete_parent_results_and_original_archives_survive(selected):
-    _root, parent, package, _final_only = selected
+    _root, parent, package, _final_only, _ordinal_mode = selected
     receipt = verify_bundle(package)
     for source, destination in receipt["parent_artifact_bindings"].items():
         assert (parent / source).read_bytes() == (package / destination).read_bytes()
@@ -54,12 +56,13 @@ def test_complete_parent_results_and_original_archives_survive(selected):
                 expected[key].shape, expected[key].dtype, expected[key].tobytes())
 
 
-def invocation(root, package, index, *, final_only=False):
+def invocation(root, package, index, *, final_only=False, ordinal_mode=None):
     from test_runtime_pointer_steps import arguments
 
-    arrays, (first, earlier) = arguments(False, "i64", index, final_only=final_only)
+    arrays, (first, earlier) = arguments(False, "i64", index, final_only=final_only, ordinal_mode=ordinal_mode)
     x, lower, upper, stride = arrays
-    weight = np.arange(16*17, dtype=np.int64).reshape(16, 17) * (13 + index) + (1 << 54)
+    root_rows = x.shape[0]
+    weight = np.arange(root_rows*17, dtype=np.int64).reshape(root_rows, 17) * (13 + index) + (1 << 54)
     shifted = first + weight
     lo, hi, step = int(lower), int(upper), int(stride)
     rows = np.asarray(list(range(lo, hi, step)), dtype=np.int64)
@@ -70,7 +73,19 @@ def invocation(root, package, index, *, final_only=False):
         for row in rows:
             state = (state ^ np.int64(row + 2)) * np.int64(3)
         second = state ^ shifted[exit_row]
-    final = shifted[exit_row] - shifted[15-exit_row] * np.int64(3)
+    if ordinal_mode:
+        advance = step + 1 if ordinal_mode == "mixed" else 1
+        positions = lo + np.arange(len(rows)) * advance
+        exit_row = lo + len(rows) * advance
+        state = shifted[0].copy()
+        if ordinal_mode == "pure":
+            for row in rows:
+                state = (state ^ np.int64(row + 2)) * np.int64(3)
+        else:
+            for row in positions:
+                state = state + (shifted[row] ^ (shifted[root_rows-1-row] * np.int64(3)))
+        second = state ^ shifted[exit_row]
+    final = shifted[exit_row] - shifted[root_rows-1-exit_row] * np.int64(3)
     expected = (second, first, earlier, final, x, shifted, weight, lower, upper, stride)
     manifest = json.loads((package / "weights.safetensors.manifest.json").read_text())
     values = dict(zip(("x", "lower", "upper", "stride"), arrays, strict=True), weight=weight)
@@ -81,10 +96,10 @@ def invocation(root, package, index, *, final_only=False):
 
 
 def test_one_library_preserves_both_calls_and_changed_runtime_pointer_controls(selected):
-    root, _parent, package, final_only = selected
+    root, _parent, package, final_only, ordinal_mode = selected
     library = _record(package / "consumer/host/model.so")
     for index in (0, 1, 2):
-        inputs, _reference, expected = invocation(root, package, index, final_only=final_only)
+        inputs, _reference, expected = invocation(root, package, index, final_only=final_only, ordinal_mode=ordinal_mode)
         actual, report = invoke_merlin_host(package / "consumer", inputs, root / f"invoke-{index}",
             merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"])
         assert report["functional_inputs_preserved"]
@@ -94,8 +109,8 @@ def test_one_library_preserves_both_calls_and_changed_runtime_pointer_controls(s
 
 
 def test_an_invalid_live_step_aborts_before_publishing_any_model_results(selected):
-    root, _parent, package, final_only = selected
-    inputs, _reference, _expected = invocation(root, package, 1, final_only=final_only)
+    root, _parent, package, final_only, ordinal_mode = selected
+    inputs, _reference, _expected = invocation(root, package, 1, final_only=final_only, ordinal_mode=ordinal_mode)
     manifest = json.loads((package / "weights.safetensors.manifest.json").read_text())
     with np.load(inputs, allow_pickle=False) as archive:
         values = {key: archive[key] for key in archive.files}
@@ -117,9 +132,9 @@ def test_actual_serial_images_preserve_all_ten_results_and_final_pointer_values(
     if not TARGET_TOOLS:
         pytest.skip("existing serial target tools required")
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
-    root, _parent, package, final_only = selected
+    root, _parent, package, final_only, ordinal_mode = selected
     for index in (1, 2):
-        inputs, reference, _expected = invocation(root, package, index, final_only=final_only)
+        inputs, reference, _expected = invocation(root, package, index, final_only=final_only, ordinal_mode=ordinal_mode)
         out = root / f"target-{index}"
         report = Q.qualify(package, out, inputs=inputs, reference=reference, comparison="words", result_mode="execution-owned",
             merlin_root=os.environ["T2M_MERLIN_ROOT"], python=os.environ["T2M_MERLIN_PYTHON"])

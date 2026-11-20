@@ -12,12 +12,13 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out, *, final_only=False):
+def capture(out, *, final_only=False, ordinal_mode=None):
     source = Path(__file__).resolve().parents[1] / "t2m/examples/runtime_header_kernels.py"
     loader = importlib.util.spec_from_file_location("pointer_step_source", source)
     kernels = importlib.util.module_from_spec(loader)
     loader.loader.exec_module(kernels)
-    kernel = kernels.final_pointer_mix if final_only else kernels.bidirectional_sum
+    kernel = kernels.ordinal_pointer_mix if ordinal_mode else kernels.final_pointer_mix if final_only else kernels.bidirectional_sum
+    rows = 32 if ordinal_mode else 16
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
     name = "t2m_demo::pointer_step"
@@ -29,8 +30,8 @@ def capture(out, *, final_only=False):
         if not (0 <= lo <= 3 and 0 <= hi <= 8 and 1 <= step <= 3):
             raise ValueError("pointer-step controls outside the source contract")
         result, last = torch.empty((17,), dtype=x.dtype, device=x.device), torch.empty((17,), dtype=x.dtype, device=x.device)
-        options = {"MIX": True} if final_only else {}
-        wrap_triton(kernel)[(3,)](x, result, last, lo, hi, step, N=17, R=16, B=8, TRANSPOSE=False, **options)
+        options = {"MODE": ordinal_mode} if ordinal_mode else {"MIX": True} if final_only else {}
+        wrap_triton(kernel)[(3,)](x, result, last, lo, hi, step, N=17, R=rows, B=8, TRANSPOSE=False, **options)
         return result, last
 
     @transform.register_fake
@@ -44,20 +45,30 @@ def capture(out, *, final_only=False):
             raise ValueError("pointer-step controls outside the source contract")
         acc, final_row = torch.zeros((17,), dtype=x.dtype), lo
         state = x[0].clone()
+        pointer_row = lo
+        advance = step + 1 if ordinal_mode == "mixed" else 1
         for row in range(lo, hi, step):
-            if final_only:
+            if ordinal_mode:
+                if ordinal_mode == "pure":
+                    state = (state ^ (row + 2)) * 3
+                else:
+                    state = state + (x[pointer_row] ^ (x[rows-1-pointer_row] * 3))
+                pointer_row += advance
+            elif final_only:
                 state = (state ^ (row + 2)) * 3
             else:
                 acc = acc + (x[row] ^ (x[15-row] * 3))
             final_row = row + step
         if final_only:
             acc = state ^ x[final_row]
-        return acc, x[final_row] - x[15-final_row] * 3
+        if ordinal_mode:
+            final_row, acc = pointer_row, state ^ x[pointer_row]
+        return acc, x[final_row] - x[rows-1-final_row] * 3
 
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.weight = torch.nn.Parameter(torch.arange(16*17, dtype=torch.int64).reshape(16, 17) * 13 + (1 << 54), requires_grad=False)
+            self.weight = torch.nn.Parameter(torch.arange(rows*17, dtype=torch.int64).reshape(rows, 17) * 13 + (1 << 54), requires_grad=False)
 
         def forward(self, x, lower, upper, stride):
             first, earlier = transform(x, lower, upper, stride)
@@ -69,7 +80,7 @@ def capture(out, *, final_only=False):
     try:
         KERNEL_REGISTRY[name] = KernelSpec(name)
         model = Model().eval()
-        x = torch.arange(16*17, dtype=torch.int64).reshape(16, 17) * 37 + (1 << 55)
+        x = torch.arange(rows*17, dtype=torch.int64).reshape(rows, 17) * 37 + (1 << 55)
         x[1::2] *= -1
         inputs = (x, torch.tensor(1, dtype=torch.int64), torch.tensor(8, dtype=torch.int64), torch.tensor(3, dtype=torch.int64))
         converted = m2m.convert(model, inputs, backend="fx_importer", capture_trace=True,
@@ -90,6 +101,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--final-only", action="store_true")
+    parser.add_argument("--ordinal-mode", choices=("memory", "pure", "mixed"))
     args = parser.parse_args()
     torch.set_num_threads(1)
-    print(capture(args.out, final_only=args.final_only))
+    print(capture(args.out, final_only=args.final_only, ordinal_mode=args.ordinal_mode))

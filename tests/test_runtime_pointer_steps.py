@@ -16,12 +16,19 @@ pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/native tools 
 CASES = ((0, 8, 1), (1, 8, 3), (3, 1, 2), (0, 0, 1), (2, 7, 2), (3, 8, 1))
 
 
-def capture(root, transpose=False, dtype="i32", profile="tensor", policy="structured", *, bounds=None, rows=16, final_only=False, mix=True):
-    from t2m.examples.runtime_header_kernels import bidirectional_sum, final_pointer_mix
+def capture(root, transpose=False, dtype="i32", profile="tensor", policy="structured", *, bounds=None, rows=16,
+            final_only=False, mix=True, ordinal_mode=None):
+    from t2m.examples.runtime_header_kernels import (
+        bidirectional_sum,
+        final_pointer_mix,
+        ordinal_pointer_mix,
+    )
 
-    kernel = final_pointer_mix if final_only else bidirectional_sum
-    constants = {"N": 17, "R": 16, "B": 8, "TRANSPOSE": transpose}
-    if final_only:
+    kernel = ordinal_pointer_mix if ordinal_mode else final_pointer_mix if final_only else bidirectional_sum
+    constants = {"N": 17, "R": 32 if ordinal_mode else 16, "B": 8, "TRANSPOSE": transpose}
+    if ordinal_mode:
+        constants["MODE"] = ordinal_mode
+    elif final_only:
         constants["MIX"] = mix
     source = root / "source.ttir"
     source.write_text(capture_ttir(kernel,
@@ -36,9 +43,10 @@ def capture(root, transpose=False, dtype="i32", profile="tensor", policy="struct
         memory_profile=profile, address_policy=policy)
 
 
-def arguments(transpose, dtype, index, *, final_only=False, mix=True):
+def arguments(transpose, dtype, index, *, final_only=False, mix=True, ordinal_mode=None):
     lower, upper, stride = CASES[index]
-    x = np.arange(16 * 17, dtype=np.int64).reshape(16, 17) * (37 + index) + (1 << 55)
+    root_rows = 32 if ordinal_mode else 16
+    x = np.arange(root_rows * 17, dtype=np.int64).reshape(root_rows, 17) * (37 + index) + (1 << 55)
     x[1::2] *= -1
     x.flat[index], x.flat[-1] = -(1 << 63), (1 << 63)-1
     rows = np.asarray(list(range(lower, upper, stride)), dtype=np.int64)
@@ -51,6 +59,18 @@ def arguments(transpose, dtype, index, *, final_only=False, mix=True):
             for row in rows:
                 state = (state ^ np.int64(row + 2)) * np.int64(3)
         expected[0] = state ^ x[exit_row]
+    if ordinal_mode:
+        advance = stride + 1 if ordinal_mode == "mixed" else 1
+        positions = lower + np.arange(len(rows)) * advance
+        exit_row = lower + len(rows) * advance
+        state = x[0].copy()
+        if ordinal_mode == "pure":
+            for row in rows:
+                state = (state ^ np.int64(row + 2)) * np.int64(3)
+        else:
+            for row in positions:
+                state = state + (x[row] ^ (x[root_rows-1-row] * np.int64(3)))
+        expected = [state ^ x[exit_row], x[exit_row] - x[root_rows-1-exit_row] * np.int64(3)]
     integer = np.int32 if dtype == "i32" else np.int64
     return [x.T.copy() if transpose else x, *[np.asarray(value, integer) for value in (lower, upper, stride)]], expected
 

@@ -12,9 +12,12 @@ from t2m.scalar_abi import RuntimeScalar
 from t2m.shared_tensor import TensorABI, TensorBuffer, _functionalize, parse_shared
 
 
-def projected_exit(width=32, *, initial="%lo", update="%next", slot=0, bounds=(1, 3), unsigned=False, double=False):
-    second = f'''%end2 = scf.for %iv2 = %other to %hi step %step iter_args(%exit2 = %other) -> (i{width}) : i{width} {{
-        %next2 = arith.addi %iv2, %step : i{width}
+def projected_exit(width=32, *, initial="%lo", update="%next", slot=0, bounds=(1, 3), unsigned=False,
+                   double=False, lower=(0, 3), upper=(0, 8), capacity=32, second_ordinal=False):
+    second_initial = "%zero" if second_ordinal else "%other"
+    second_update = "%exit2, %one" if second_ordinal else "%iv2, %step"
+    second = f'''%end2 = scf.for %iv2 = %other to %hi step %step iter_args(%exit2 = {second_initial}) -> (i{width}) : i{width} {{
+        %next2 = arith.addi {second_update} : i{width}
         scf.yield %next2 : i{width}
       }}
       %chosen = arith.addi %result#{slot}, %end2 : i{width}''' if double else ""
@@ -22,10 +25,15 @@ def projected_exit(width=32, *, initial="%lo", update="%next", slot=0, bounds=(1
     module = parse_shared(f'''builtin.module {{
       "tt.func"() <{{sym_name="kernel", function_type=(!tt.ptr<i64>, !tt.ptr<i64>, i{width}, i{width}, i{width}, i{width}) -> ()}}> ({{
       ^bb0(%x: !tt.ptr<i64>, %out: !tt.ptr<i64>, %lo: i{width}, %hi: i{width}, %step: i{width}, %other: i{width}):
+        %zero = arith.constant 0 : i{width}
+        %one = arith.constant 1 : i{width}
         %result:2 = scf.for %iv = %lo to %hi step %step
             iter_args(%exit = {initial}, %decoy = %other) -> (i{width}, i{width}) : i{width} {{
           %next = arith.addi %iv, %step : i{width}
           %wrong = arith.addi %iv, %other : i{width}
+          %ordinal = arith.addi %exit, %one : i{width}
+          %wrong_ordinal = arith.addi %decoy, %one : i{width}
+          %step_ordinal = arith.addi %exit, %step : i{width}
           scf.yield {update}, %wrong : i{width}, i{width}
         }}
         {second}
@@ -46,9 +54,9 @@ def projected_exit(width=32, *, initial="%lo", update="%next", slot=0, bounds=(1
     loop.attributes["prov.exit_induction"] = StringAttr("claimed")
     if unsigned:
         loop.attributes["unsignedCmp"] = UnitAttr()
-    abi = TensorABI("kernel", (TensorBuffer("x", (32,), "read", "i64"), TensorBuffer("out", (1,), "write", "i64")),
+    abi = TensorABI("kernel", (TensorBuffer("x", (capacity,), "read", "i64"), TensorBuffer("out", (1,), "write", "i64")),
         runtime_scalars=tuple(RuntimeScalar(name, f"i{width}", index, bounds=interval)
-            for name, index, interval in (("lo", 2, (0, 3)), ("hi", 3, (0, 8)), ("step", 4, bounds), ("other", 5, (1, 3)))))
+            for name, index, interval in (("lo", 2, lower), ("hi", 3, upper), ("step", 4, bounds), ("other", 5, (1, 3)))))
     return _functionalize(module, abi)
 
 
