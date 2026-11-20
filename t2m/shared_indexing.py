@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from xdsl.dialects import builtin
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
@@ -431,9 +432,57 @@ def check_source_addresses(module, abi, *, loop_domains=None):
         return low, high
 
     scopes = SourceScopes(bounds, name)
+    domains = {}
+
+    def source_domain(operation):
+        if operation not in domains:
+            require_signed_loop(operation)
+            width = getattr(getattr(operation.lb.type, "width", None), "data", 64)
+            domains[operation] = bounded_loop([bounds(v, operation.parent) for v in operation.operands[:3]],
+                width=width, allow_empty=True)
+        return domains[operation]
+
+    def inactive(block):
+        for _ in range(64):
+            owner = block.parent_op() if block is not None else None
+            if owner is None:
+                return False
+            if owner.name == "scf.for":
+                try:
+                    if source_domain(owner).maximum_iterations == 0:
+                        return True
+                except ConversionError:
+                    pass
+            block = owner.parent
+        return False
+
+    def audit_live_ins(value):
+        # Inactive address uses cannot hide arithmetic that was computed in an
+        # enclosing live scope. Keep original-definition width/divisor checks.
+        pending_values, seen = [value], set()
+        while pending_values:
+            current = pending_values.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            if len(seen) > 4096:
+                raise ConversionError("inactive source address dependency budget exhausted")
+            type_ = current.type.element_type if isinstance(current.type, TensorType) else current.type
+            if not isinstance(type_, (builtin.IntegerType, builtin.IndexType)):
+                continue
+            defined = definition_scope(current)
+            owner = current.owner
+            if not inactive(defined) and type_ != builtin.i1:
+                bounds(current, defined)
+            elif hasattr(owner, "operands"):
+                pending_values.extend(owner.operands)
+
     for op in module.walk():
         if name(op) == "tt.addptr":
-            bounds(op.operands[1], op.parent)
+            if inactive(op.parent):
+                audit_live_ins(op.operands[1])
+            else:
+                bounds(op.operands[1], op.parent)
     if loop_domains is not None:
         # Optional transformation witnesses reuse the original definition/scope
         # checks. Failure grants no rewrite and changes no existing admission.
@@ -441,9 +490,7 @@ def check_source_addresses(module, abi, *, loop_domains=None):
             if op.name != "scf.for":
                 continue
             try:
-                require_signed_loop(op)
-                width = getattr(getattr(op.lb.type, "width", None), "data", 64)
-                loop_domains[op] = bounded_loop([bounds(v, op.parent) for v in op.operands[:3]], width=width)
+                loop_domains[op] = source_domain(op)
             except ConversionError:
                 continue
     return [*scopes.proofs, *((loop, len(values)) for loop, values in while_words.items())]

@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Wholly nonexecuting source loops](docs/empty_loop_memory.md) now retain
+complete original initial tuples and incoming tensor versions without body
+read/write credit. Four kernel libraries and a dependent two-call PyTorch model
+pass native/host checks and ten actual serial images, retaining all seven model
+results. Signed shape-derived controls such as `2 - n` now cross model2MLIR as
+checked i64 SSA. General memory/effect/source and accelerator closure remains open.
+
 [Functional regions in tile memory](docs/region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass

@@ -111,8 +111,9 @@ not execution qualification. Logs are `.scratch/region-tiles-proof1.log`,
 Targeted Ruff and `git diff --check` pass. The related memory/control/reduction/scan/map/tensor-region selection passes 212
 checks in `.scratch/region-tiles-regression1.log`. Reopening qualification is recorded below.
 
-The wholly nonexecuting declared trip domain remains an actual source refusal
-under [the earlier loop contract](loop_tiles.md#historical-source-boundary-probes).
+The wholly nonexecuting declared trip domain now has separate
+[empty-edge qualification](empty_loop_memory.md); the original failed probes
+remain retained under [the earlier loop contract](loop_tiles.md#historical-source-boundary-probes).
 General while-carried partial tiles, source memory inside region combiners,
 shared/async participation, numeric/source-version closure and applicable target
 correctness/performance remain full-goal work. This finite i64 qualification

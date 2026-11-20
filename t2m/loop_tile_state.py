@@ -31,7 +31,7 @@ class LoopTilePlan:
         from .shared_tensor import opcode
 
         stores = [op for op in self.group.events if opcode(op) == "tt.store"]
-        reads, loops, values = [], [], list(self.group.value_regions)
+        reads, loops, inactive_loops, values = [], [], [], list(self.group.value_regions)
 
         def inventory(nodes):
             for op, kind, children in nodes:
@@ -39,9 +39,11 @@ class LoopTilePlan:
                     stores.append(op)
                 elif kind == "load":
                     reads.append(op)
-                elif kind in ("for", "if"):
-                    if kind == "for":
+                elif kind in ("for", "if", "empty-for"):
+                    if kind in ("for", "empty-for"):
                         loops.append(op)
+                    if kind == "empty-for":
+                        inactive_loops.append(op)
                     for child in children:
                         inventory(child)
                 elif op.regions:
@@ -52,8 +54,11 @@ class LoopTilePlan:
             "source_ids": list(dict.fromkeys(sid for op in stores for sid in source_ids(op.location))),
             "observed_read_ids": list(dict.fromkeys(sid for op in reads for sid in source_ids(op.location))),
             "loop_source_ids": list(dict.fromkeys(sid for op in loops for sid in source_ids(op.location))),
+            "inactive_loop_source_ids": list(dict.fromkeys(sid for op in inactive_loops for sid in source_ids(op.location))),
             "retained_value_region_source_ids": list(dict.fromkeys(values)),
-            "recurrence": "original-loop-bounds-and-numeric-state; additional-functional-tile-carrier",
+            "recurrence": ("original-loop-bounds-and-numeric-state; additional-functional-tile-carrier"
+                           if len(loops) > len(inactive_loops) else
+                           "original-numeric-state; inactive-loops-retain-complete-initial-tuples"),
             "initialization": "actual-source-ordered-writes; zero-trip-keeps-entry-coverage",
             "coverage": "complete-retained-source-mask-before-final-store; independent-geometry-required",
             "memory": "same-typed-invariant-source-pointer; fresh-disjoint-functional-root",
@@ -119,7 +124,7 @@ class LoopTilePlan:
             block.add_op(final)
         else:
             block.insert_op_before(final, anchor)
-        report["replacement_control"] = replacements[self.nodes[0][0]]
+        report["replacement_control"] = replacements.get(self.nodes[0][0], self.nodes[0][0])
         return report
 
 
@@ -139,7 +144,7 @@ def plan_loop_state(group, root, first, *, pointer, ordinary, pure, loop_domains
         return None
     proof, candidates = initial.booleans, [None, *initial.candidates]
     masks = builtin.TensorType(builtin.i1, group.type.get_shape())
-    visited, memory, actual_loops = 0, 0, 0
+    visited, memory, actual_loops, assumptions = 0, 0, 0, 1
     temporary = []
 
     def fail():
@@ -158,6 +163,7 @@ def plan_loop_state(group, root, first, *, pointer, ordinary, pure, loop_domains
         return result
 
     def equal(a, b, premise):
+        premise = combine("and", premise, assumptions)
         return (proof.covers([a], premise=combine("and", premise, b))
                 and proof.covers([b], premise=combine("and", premise, a)))
 
@@ -175,7 +181,7 @@ def plan_loop_state(group, root, first, *, pointer, ordinary, pure, loop_domains
         return value
 
     def scan(operations, total, premise, depth):
-        nonlocal visited, memory, actual_loops
+        nonlocal visited, memory, actual_loops, assumptions
         if depth > 32:
             fail()
         nodes = []
@@ -202,6 +208,15 @@ def plan_loop_state(group, root, first, *, pointer, ordinary, pure, loop_domains
                 condition = arith.CmpiOp(uncast(op.lb), uncast(op.ub), "slt")
                 temporary.append(condition)
                 tripped = boolean(condition.result)
+                if domain.maximum_iterations == 0:
+                    # This relation is valid only in the actual source scope.
+                    # Preserve the original native loop and all outside reads;
+                    # the tensor memory witness checks reads before omitting it.
+                    implication = combine("or", proof.negate(premise), proof.negate(tripped))
+                    assumptions = combine("and", assumptions, implication)
+                    nodes.append((op, "empty-for", []))
+                    actual_loops += 1
+                    continue
                 body_premise = combine("and", premise, tripped)
                 child, coverage = scan(op.body.block.ops, total, body_premise, depth + 1)
                 cover = choose(coverage, body_premise)
@@ -242,7 +257,7 @@ def plan_loop_state(group, root, first, *, pointer, ordinary, pure, loop_domains
                         if op.results[0].type != group.type:
                             fail()
                         active = boolean(op.operands[1]) if len(op.operands) == 3 else 1
-                        if not proof.covers([total], premise=combine("and", premise, active)):
+                        if not proof.covers([total], premise=combine("and", assumptions, combine("and", premise, active))):
                             fail()
                         kind = "load"
             else:

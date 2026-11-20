@@ -136,7 +136,9 @@ compositions in [the region contract](region_tile_memory.md). General scalar/tup
 next extension must admit its actual pure region without hiding source-memory
 or effectful combiners. The original failed probes remain recorded in `empty.log` and `reduction.log`;
 new region qualification does not relabel those failures. The wholly nonexecuting
-declared loop domain remains a current refusal.
+declared loop domain now has separate [empty-edge qualification](empty_loop_memory.md),
+including complete original initial tuples and guarded native continuations.
+Its original failed probes remain failed historical evidence.
 
 `out/loop-tiles/summary.json` reopens five kernel libraries and one complete
 model library: 17 initial, 81 unchanged-library replay and 34 exact-word target

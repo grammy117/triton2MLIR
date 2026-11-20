@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Wholly nonexecuting source loops](empty_loop_memory.md) add a checked source
+edge without changing public ABI, receipts, artifact rosters or numeric/effect
+profiles. Every original initial carrier and incoming tensor version remains;
+inactive bodies grant no read/write credit. Earlier live accesses are validated
+before omission, and emitted native continuations retain executable scalar
+premises. Generated compatibility names this representation. The companion
+model2MLIR now retains signed shape-derived controls such as `2 - n` as checked
+i64 SSA; actual tensor sizes keep their existing nonnegative index contract.
+
 [Functional regions in tile memory](region_tile_memory.md) add recursive
 numeric/effect admission without changing pass order, public ABI, result modes,
 receipts or artifact rosters. Every actual descendant and capture remains checked;

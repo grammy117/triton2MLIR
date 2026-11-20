@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Wholly nonexecuting source loops](empty_loop_memory.md) now retain
+complete original initial tuples and incoming tensor versions without body
+read/write credit. Four kernel libraries and a dependent two-call PyTorch model
+pass native/host checks and ten actual serial images, retaining all seven model
+results. Signed shape-derived controls such as `2 - n` now cross model2MLIR as
+checked i64 SSA. General memory/effect/source and accelerator closure remains open.
+
 [Functional regions in tile memory](region_tile_memory.md) now retain reductions,
 coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
 dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
@@ -15,11 +22,12 @@ twelve actual serial images, retaining all seven model results. The related regr
 selection passes 221 checks. General memory/effect/source and accelerator closure
 remains open.
 
-The wholly nonexecuting declared trip domain remains the next reproduced
-loop-state gate. Its actual source/refusal is retained in [the loop contract](loop_tiles.md#historical-source-boundary-probes).
-The reproduced pure-reduction composition now has separate functional-region
-qualification. General while/alias, shared/async and applicable target requirements
-remain independent.
+The wholly nonexecuting declared trip domain now has independent
+[empty-edge qualification](empty_loop_memory.md). Its original failed probes
+remain retained in [the loop contract](loop_tiles.md#historical-source-boundary-probes).
+The reproduced pure-reduction composition also has separate functional-region
+qualification. General while/alias and ownership relations, variable source
+lower bounds/steps, shared/async and applicable target requirements remain.
 
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.

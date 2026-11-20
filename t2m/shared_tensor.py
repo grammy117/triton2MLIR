@@ -966,6 +966,30 @@ def _functionalize(module, abi, *, serial_memory=True):
                     "initialization": "before-region-facts-only; after-body-may-not-execute",
                     "before_state_arity": len(source_before.args), "after_state_arity": len(source_after.args)})
             elif name == "scf.for":
+                empty_domain = None
+                try:
+                    require_signed_loop(op)
+                    from .shared_indexing import scalar_bounds
+                    empty_domain = bounded_loop([scalar_bounds(mapping[v], facts, grid) for v in op.operands[:3]],
+                        width=getattr(getattr(op.body.block.args[0].type, "width", None), "data", 64), allow_empty=True)
+                except (ConversionError, KeyError):
+                    pass
+                if empty_domain is not None and empty_domain.maximum_iterations == 0:
+                    for result, initial in zip(op.results, op.iter_args, strict=True):
+                        found = False
+                        for table in (mapping, buffers, descriptors, gather_descriptors):
+                            if initial in table:
+                                table[result] = table[initial]
+                                found = True
+                        if not found and result.uses:
+                            raise ConversionError("empty source loop initial value has no qualified representation", opcode=name)
+                    source_loops.append({"source_ids": _source_ids(op.location), "control": "scf.for",
+                        "lower": empty_domain.lower, "upper_interval": empty_domain.upper, "step": empty_domain.step,
+                        "minimum_iterations": 0, "maximum_iterations": 0,
+                        "memory_effects": "none; body-never-executed-within-guarded-entry-domain",
+                        "initialization": "unchanged-entry-facts; no-body-write-credit",
+                        "recurrence": "complete-original-initial-tuple"})
+                    continue
                 if value_only_region(op):
                     source_loops.append({"source_ids": _source_ids(op.location),
                                          "bounds": "source-SSA; runtime-or-static",
@@ -1825,6 +1849,15 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             from .atomic_word_views import expand as expand_word_atomics
             transformations.extend(expand_word_atomics(lowered, admission, _source_ids))
         witness_text = text(witness) if witness is not None else None
+        if witness is not None and any(domain.maximum_iterations == 0 for domain in source_loop_domains.values()):
+            # The tensor witness has already checked every surviving source
+            # read. Keep its scalar-domain premises executable in the separate
+            # native memory continuation before allowing later simplification.
+            from .scalar_abi import guard_source_arguments
+            source_function = next(op for op in lowered.ops if opcode(op) == "tt.func")
+            guarded = guard_source_arguments(source_function, abi)
+            transformations.append({"kind": "native-empty-loop-domain-guards", "source_arguments": guarded,
+                "scope": "actual-native-memory-input; after-independent-source-read-validation"})
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(lowered)
         memory_input = stream.getvalue() + "\n"

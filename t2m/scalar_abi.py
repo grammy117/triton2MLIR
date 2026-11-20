@@ -55,3 +55,31 @@ def guard_scalar(scalar, value, block, location):
         op.location = location
         op.attributes.update({"prov.family": builtin.StringAttr("abi"), "prov.op": builtin.StringAttr("runtime_scalar_bounds")})
     block.add_ops(operations)
+
+
+def guard_source_arguments(function, abi):
+    """Reify checked source domains in a native continuation, not just its caller."""
+    from xdsl.dialects import arith, cf
+    from xdsl.ir import Block
+
+    entry, guards, recorded = function.regions[0].block, Block(), []
+    for index, (argument, (kind, declared)) in enumerate(zip(
+            entry.args[:len(abi.source_bindings)], abi.source_bindings, strict=True)):
+        if kind == "runtime" and declared.bounds is not None:
+            guard_scalar(declared, argument, guards, function.location)
+            recorded.append({"source_arg": index, "bounds": declared.bounds, "type": str(argument.type)})
+        elif kind == "constant":
+            constant = arith.ConstantOp.from_int_and_width(declared, argument.type)
+            equal = arith.CmpiOp(argument, constant.result, "eq")
+            check = cf.AssertOp(equal.result, "Triton source scalar differs from its ABI constant")
+            for op in (constant, equal, check):
+                op.location = function.location
+                op.attributes.update({"prov.family": builtin.StringAttr("abi"),
+                                      "prov.op": builtin.StringAttr("source_scalar_constant")})
+            guards.add_ops([constant, equal, check])
+            recorded.append({"source_arg": index, "constant": declared, "type": str(argument.type)})
+    operations = list(guards.ops)
+    for operation in operations:
+        operation.detach()
+    entry.insert_ops_before(operations, entry.first_op)
+    return recorded

@@ -29,16 +29,18 @@ class LoopDomain:
 
     @property
     def induction_bounds(self):
+        if self.maximum_iterations == 0:
+            raise ConversionError("empty source loop has no reachable induction value")
         return self.lower, self.lower + (self.maximum_iterations - 1) * self.step
 
 
-def bounded_loop(limits, *, width=64):
+def bounded_loop(limits, *, width=64, allow_empty=False):
     lower, upper, step = limits
     if lower[0] != lower[1] or step[0] != step[1] or step[0] <= 0:
         raise ConversionError("memory loop requires constant lower/positive step and a proved upper interval")
     lb, stride = lower[0], step[0]
     counts = tuple(max(0, (ub - lb + stride - 1) // stride) for ub in upper)
-    if counts[1] == 0:
+    if counts[1] == 0 and not allow_empty:
         raise ConversionError("memory loop has no proved reachable iteration; needs empty-region elimination")
     # Check the actual IV update after the last reachable body execution as
     # well as its body interval, before upstream promotes source indices.

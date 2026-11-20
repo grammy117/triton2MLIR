@@ -34,6 +34,15 @@ def test_unknown_or_overflowing_loop_premises_refuse(limits, diagnostic):
         bounded_loop(limits, width=32)
 
 
+@pytest.mark.parametrize("lower,upper,step", [(0, (-7, 0), 1), (7, (-1, 7), 3), (-2, (-5, -2), 2)])
+def test_empty_domains_return_no_induction_fact_and_preserve_the_initial_edge(lower, upper, step):
+    domain = bounded_loop([(lower, lower), upper, (step, step)], width=32, allow_empty=True)
+    assert domain.minimum_iterations == domain.maximum_iterations == 0
+    assert all(not range(lower, end, step) for end in range(upper[0], upper[1] + 1))
+    with pytest.raises(ConversionError, match="no reachable induction value"):
+        _ = domain.induction_bounds
+
+
 @pytest.mark.parametrize("field", ["properties", "attributes"])
 def test_unsigned_comparison_cannot_reuse_a_signed_domain(field):
     from types import SimpleNamespace
