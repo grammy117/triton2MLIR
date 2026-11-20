@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Runtime pointer streams](runtime_pointer_steps.md) now close the reproduced
+variable-header/final-pointer refusal for source-proved step-coupled additive
+streams. Original tile traversal, numeric state and complete model results
+qualify through host and serial execution. Continue conditional/non-step-coupled
+streams, while/alias ownership, variable-step write images and dynamic-root
+projection, alongside shared/async, numeric/source and applicable target closure.
+
 [Variable source loop headers](runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
 tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass

@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Runtime pointer streams](runtime_pointer_steps.md) add a checked source
+normalization without changing public ABI, receipts or artifact rosters.
+Actual step-coupled pointer updates use source-IV coordinates and an executable
+exit-IV carrier; zero trips retain the complete original initial state and all
+final observations remain. Original and emitted arithmetic are independently
+width-checked. Generated compatibility names the normalization; bounds,
+initialization, ownership, numeric and effect profiles retain their own gates.
+
 [Variable source loop headers](runtime_headers.md) and readonly rank-reduced
 slices extend source analysis without changing public ABI, receipts or artifact
 rosters. Actual lower/upper/step SSA and numeric carriers remain. Checked

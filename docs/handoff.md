@@ -1,5 +1,22 @@
 # Review handoff — updated 2026-11-20
 
+[Runtime pointer streams](runtime_pointer_steps.md) now preserve actual
+source-step coupling, forward/reverse row/column traversal and final pointer
+observations through tensor MLIR. Four reusable kernel libraries and a complete
+dependent two-call PyTorch model retain all results through host replays and ten
+actual serial images. All ten model results survive; an invalid live step
+actually aborts without output. The focused selections pass 59 source proofs,
+27 kernel checks, four negative checks (three overlapping) and four model checks;
+the related regression selection passes 159. New-file Ruff and diff checks pass.
+Logs and historical failed source/harness probes remain in the linked contract.
+`out/runtime-pointer-steps/summary.json` reopens 18 initial, 78 replay and 36
+exact-word serial results across ten images, plus the model abort. Its kernel
+packages come from the subsequent eight-check compatibility/host/target run;
+the reopening log is `.scratch/runtime-pointer-report4.log`.
+No companion source change is required. Continue conditional/non-step-coupled
+pointer state, while/alias ownership, dynamic roots, variable-step store images,
+shared/async and applicable numeric/source/target closure; the full goal is open.
+
 [Variable source loop headers](runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
 tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass

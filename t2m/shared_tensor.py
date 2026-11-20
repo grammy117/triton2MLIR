@@ -25,7 +25,7 @@ from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
 from .ir import context, text
 from .initialization import DefiniteWrites
-from .loop_domains import enclosed_loop, require_signed_loop
+from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, require_signed_loop
 from .launch_domains import launch_domains
 from .scalar_abi import RuntimeScalar, guard_scalar
 from .shape_lowering import bind_dimensions, emit as shape_emit, launch_sizes, product as shape_product, program_id
@@ -1175,6 +1175,11 @@ def _functionalize(module, abi, *, serial_memory=True):
                     mapping[op.results[i]] = loop.results[position]
                     if i in final_facts:
                         facts[loop.results[position]] = final_facts[i]
+                    elif is_exit_induction(op, i):
+                        key = f"source-exit-IV-{identity}-{i}"
+                        states[key] = loop.results[position]
+                        facts[loop.results[position]] = Linear(parameters=((key, *exit_induction_bounds(domain), 1),))
+                        loop_evidence.setdefault("actual_exit_induction_results", []).append(i)
                 states.update((b.name, v) for b, v in zip(writable, loop.results[len(kept):len(kept) + len(writable)], strict=True))
                 cursor = len(kept) + len(writable)
                 for i, rank in zip(pointer_slots, pointer_ranks, strict=True):
@@ -1741,6 +1746,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .tile_partitions import expand_tile_partitions
     tile_partition_reports = expand_tile_partitions(middle_module, abi, _source_ids,
         loop_domains=source_loop_domains) if not source_words else []
+    from .source_pointer_recurrences import raise_pointer_recurrences
+    pointer_recurrence_reports = raise_pointer_recurrences(middle_module, _source_ids, source_loop_domains) if not source_words else []
+    if pointer_recurrence_reports:
+        # Recheck newly emitted arithmetic and actual exit-state edges. The
+        # original source has already passed its independent width audit.
+        check_source_addresses(middle_module, abi)
     pointer_control_reports = []
     isolated_events = False
     checked_event_isolation = False
@@ -1782,7 +1793,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     cast_reports += expand_float_casts(middle_module, _source_ids)
     from .external_math import expand_missing
     external_reports = expand_missing(middle_module, _source_ids)
-    if storage_transport or pointer_address_reports or tile_partition_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports or scalar_tile_reports:
+    if storage_transport or pointer_address_reports or tile_partition_reports or pointer_recurrence_reports or reduction_reports or scan_reports or pointer_control_reports or gather_reports or map_reports or histogram_reports or product_reports or fp8_reports or cast_reports or scaled_reports or external_reports or scalar_builtin_reports or scalar_tile_reports:
         stream = StringIO()
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
@@ -1868,6 +1879,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     transformations.extend(barrier_reports)
     transformations.extend(literal_reports)
     transformations.extend(pointer_address_reports)
+    transformations.extend(pointer_recurrence_reports)
     transformations.extend(assembly_reports)
     from .arith_compat import normalize_truncation_defaults
     transformations.extend(normalize_truncation_defaults(lowered, _source_ids))

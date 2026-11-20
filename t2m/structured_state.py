@@ -4,13 +4,12 @@ Meta 17f0c234's TritonToStructuredPass.cpp boxes integer tensor loop state,
 then relies on canonicalization to remove boxes unrelated to pointers. The
 installed 0c27923 binary boxes i64 data although its structured-state verifier
 accepts only i32. Reuse its supported skip-prepass option when the control
-interfaces are numeric and their state has no pointer/mask dependencies.
+interfaces are numeric and their boxed tensor state has no pointer/mask dependencies.
 Independent ordinary memory in those regions stays visible. No region is rewritten,
 outlined or hidden from pointer conversion or later memory/ownership checks.
 """
 
 from xdsl.dialects import builtin
-
 
 NUMERIC_TT = {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans",
     "tt.reshape", "tt.cat", "tt.join", "tt.split", "tt.dot", "tt.reduce",
@@ -33,8 +32,9 @@ def data_control_report(module, source_ids):
     A numeric recurrence may be stored as data or observed by diagnostics.
     Its transitive results may not reach pointer arithmetic, load/store masks,
     calls or unknown operations. Original ordinary accesses may occur inside
-    a region when independent of every carried/result state. In particular,
-    a scalar integer address cast is not numeric data here.
+    a region when independent of every boxed tensor state. Scalar integer
+    state needs no tensor structured-state boxing; its source-width and
+    address checks remain independent.
     """
     from .shared_tensor import opcode
 
@@ -61,12 +61,15 @@ def data_control_report(module, source_ids):
     if any(not numeric_op(op) or any(not supported(nested) for nested in op.walk()) for op in controls):
         return None
 
-    pending = [value for op in controls for value in op.results]
+    def boxed(value):
+        return isinstance(value.type, builtin.TensorType) and isinstance(value.type.element_type, builtin.IntegerType)
+
+    pending = [value for op in controls for value in op.results if boxed(value)]
     for op in controls:
         for region in op.regions:
             for block in region.blocks:
                 # The for induction variable is not boxed carried state.
-                pending.extend(block.args[1:] if opcode(op) == "scf.for" else block.args)
+                pending.extend(value for value in (block.args[1:] if opcode(op) == "scf.for" else block.args) if boxed(value))
     visited = set()
     while pending:
         value = pending.pop()
@@ -81,11 +84,13 @@ def data_control_report(module, source_ids):
             if not numeric_op(op) or any(not supported(nested) for nested in op.walk()):
                 return None
             pending.extend(op.results)
-            if name in {"scf.yield", "scf.condition"}:
+            if name == "scf.yield" and opcode(op.parent_op()) in {"scf.for", "scf.if"}:
+                pending.append(op.parent_op().results[use.index])
+            elif name in {"scf.yield", "scf.condition"}:
                 pending.extend(op.parent_op().results)
 
     return {"kind": "numeric-control-without-pointer-state",
-        "analysis": "numeric-control-interfaces; ordinary-memory-retained; transitive-state-uses-data-only",
+        "analysis": "numeric-control-interfaces; ordinary-memory-retained; transitive-boxed-tensor-state-uses-data-only",
         "source_ids": list(dict.fromkeys(sid for op in controls for sid in source_ids(op.location))),
         "upstream_option": "skip-prepass=true",
         "scope": "pointer conversion, source-width and memory/ownership checks remain active"}

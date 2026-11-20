@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Runtime pointer streams](docs/runtime_pointer_steps.md) now retain actual
+source-step coupling and final pointer observations as tensor computation.
+Four kernel libraries and a complete two-call PyTorch model pass host replays
+and ten actual serial images, preserving all ten model results. Continue
+conditional/non-step-coupled pointers, while/alias ownership, variable-step
+store images, dynamic roots, shared/async and applicable accelerator qualification.
+
 [Variable source loop headers](docs/runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
 tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass

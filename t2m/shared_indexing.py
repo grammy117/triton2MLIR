@@ -6,7 +6,7 @@ from xdsl.dialects import builtin
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
-from .loop_domains import enclosed_loop, require_signed_loop
+from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, require_signed_loop
 from .dynamic_abi import GridExtent
 
 
@@ -363,6 +363,11 @@ def check_source_addresses(module, abi, *, loop_domains=None):
         kind = name(op)
         if kind == "scf.while":
             low, high = while_bounds(value, op)
+        elif kind == "scf.for" and is_exit_induction(op, value.index):
+            require_signed_loop(op)
+            limits = [bounds(v, op.parent) for v in op.operands[:3]]
+            domain = enclosed_loop(limits, width=getattr(getattr(op.lb.type, "width", None), "data", 64), allow_empty=True)
+            low, high = exit_induction_bounds(domain)
         elif kind == "scf.execute_region":
             low, high = operand(region_yield(value))
         elif kind in ("tt.get_program_id", "tt.get_num_programs"):

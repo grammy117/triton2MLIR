@@ -3,7 +3,7 @@
 import pytest
 
 from t2m.diagnostics import ConversionError
-from t2m.loop_domains import bounded_loop, enclosed_loop, require_signed_loop
+from t2m.loop_domains import bounded_loop, enclosed_loop, exit_induction_bounds, require_signed_loop
 
 
 @pytest.mark.parametrize("lower,upper,step", [
@@ -69,6 +69,7 @@ def test_interval_header_encloses_every_actual_iv_count_and_final_update(lower, 
         counts.append(len(values))
         assert domain.minimum_iterations <= len(values) <= domain.maximum_iterations
         assert -128 <= lb + len(values) * stride <= 127
+        assert exit_induction_bounds(domain)[0] <= lb + len(values) * stride <= exit_induction_bounds(domain)[1]
         if values:
             low, high = domain.induction_bounds
             assert all(low <= value <= high for value in values)

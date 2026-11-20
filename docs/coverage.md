@@ -1,5 +1,17 @@
 # Measured coverage and remaining boundaries
 
+[Runtime pointer streams](runtime_pointer_steps.md) now retain forward/reverse
+source traversal, actual runtime lower/upper/step and final pointer observations
+as tensor MLIR. Four reusable kernel libraries preserve both outputs across
+six changed invocations each and eight actual serial images. A complete
+dependent two-call PyTorch model additionally preserves all ten results through
+three host replays and two serial images, plus an invalid-step abort. The
+focused selections pass 59 source proofs, 27 kernel checks, four negative checks
+(three overlapping) and four model checks; related regressions pass 159.
+General conditional/non-step-coupled pointers, while/alias ownership, dynamic
+roots, shared/async, numeric/source and accelerator scope remain open. This
+does not change the historical operation-name denominator.
+
 [Variable source loop headers](runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
 tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass

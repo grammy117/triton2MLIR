@@ -42,7 +42,7 @@ STAGES = {
                         "--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
                         "--math-expand-ops=ops=rsqrt",
                         "--remove-dead-values", "--canonicalize"),
-                       "proved numeric control state without pointer recurrence; structured memory conversion retained"),
+                       "proved numeric control interfaces without boxed tensor address dependencies; structured memory conversion retained"),
     "source-word-tensor": Stage(("--triton-to-unstructured=offset-bit-width=64",
                         "--triton-arith-to-linalg=pids-to-func-args=false tt-to-func-func=false",
                         "--math-expand-ops=ops=rsqrt",

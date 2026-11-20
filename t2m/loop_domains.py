@@ -111,3 +111,25 @@ def enclosed_loop(limits, *, width=64, allow_empty=False):
     if final > maximum:
         raise ConversionError("source memory loop induction update may overflow")
     return IntervalLoopDomain(lower, upper, step, *counts)
+
+
+def exit_induction_bounds(domain):
+    """Enclose the actual exit IV, including its unchanged zero-trip value."""
+    if not domain.variable_header:
+        return (domain.lower + domain.minimum_iterations * domain.step,
+                domain.lower + domain.maximum_iterations * domain.step)
+    lower, upper, step = domain.lower_interval, domain.upper, domain.step_interval
+    high = lower[1] if domain.maximum_iterations == 0 else max(lower[1], min(
+        lower[1] + domain.maximum_iterations * step[1], upper[1] - 1 + step[1]))
+    return lower[0], high
+
+
+def is_exit_induction(operation, position):
+    """Recognize executable SCF edges, without trusting a source annotation."""
+    if operation.iter_args[position] is not operation.lb:
+        return False
+    value = operation.body.block.last_op.operands[position]
+    update = value.owner
+    return (getattr(update, "name", None) == "arith.addi"
+            and (tuple(update.operands) == (operation.body.block.args[0], operation.step)
+                 or tuple(update.operands) == (operation.step, operation.body.block.args[0])))

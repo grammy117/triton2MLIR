@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Runtime pointer streams](docs/runtime_pointer_steps.md) now reach tensor MLIR
+with original runtime headers, forward/reverse tile traversal and actual final
+pointer reads. Four reusable kernel libraries and a dependent two-call PyTorch
+model preserve all results through host replays and ten actual serial images.
+General pointer/alias, shared/async, numeric/source and accelerator closure remains open.
+
 [Variable source loop headers](docs/runtime_headers.md) now retain actual
 lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
 tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass
