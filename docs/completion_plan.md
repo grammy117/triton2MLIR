@@ -1,5 +1,12 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Partial source initialization](partial_initialization.md) now proves active
+scalar membership in actual completed source-store images. Row/column/plane
+observations and reread recurrences preserve the original algorithm through a
+complete two-call model and actual serial execution. Continue vector-lane and
+masked/conditional partitions, general while/ownership relations, irregular
+parallel dependencies, shared/async effects and applicable target closure.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) now closes the
 reproduced nested/permuted fresh-output refusal, complete branch joins and
 static-empty tensor-port gap. Model2MLIR runtime parameter slices compose with

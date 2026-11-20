@@ -10,6 +10,7 @@ from math import prod
 
 from .diagnostics import ConversionError
 from .dynamic_abi import GridExtent
+from .partial_initialization import WriteImage
 from .shared_indexing import Linear
 from .tail_masks import TailExtent, maximum
 
@@ -35,7 +36,10 @@ class DefiniteWrites:
             return
         if self.complete(buffer):
             return
-        for written, extent in self.writes[buffer.name]:
+        for row in self.writes[buffer.name]:
+            if isinstance(row, WriteImage):
+                continue
+            written, extent = row
             differences = [read + start.scale(-1) for read, start in zip(offsets, written, strict=True)]
             if all((delta.constant == 0 and not delta.dynamic and size == bound) or
                    (not isinstance(bound, TailExtent) and delta.bounds(self.grid)[0] >= 0
@@ -60,7 +64,10 @@ class DefiniteWrites:
         if len(buffer.shape) != 1 or not isinstance(buffer.shape[0], int) or prod(self.grid) != 1 or self.varying_axes:
             return None
         intervals = []
-        for offsets, sizes in values:
+        for row in values:
+            if isinstance(row, WriteImage):
+                continue
+            offsets, sizes = row
             if len(offsets) != 1 or offsets[0].dynamic or len(sizes) != 1 or not isinstance(sizes[0], int):
                 continue
             left, right = offsets[0].constant, offsets[0].constant + sizes[0]
@@ -79,6 +86,19 @@ class DefiniteWrites:
     def store_whole(self, buffer, *, coverage="serial-contiguous-source-loop"):
         if buffer.name in self.fresh:
             self.writes[buffer.name].append(WholeWrite(coverage))
+
+    def store_image(self, buffer, image):
+        if buffer.name in self.fresh and image not in self.writes[buffer.name]:
+            if sum(isinstance(row, WriteImage) for row in self.writes[buffer.name]) >= 128:
+                return  # Optional facts cannot disable existing complete-write proofs.
+            self.writes[buffer.name].append(image)
+
+    def images(self, buffer):
+        return [row for row in self.writes.get(buffer.name, ()) if isinstance(row, WriteImage)]
+
+    def end_loop(self, identity):
+        self.writes = {name: [row for row in rows if not isinstance(row, WriteImage) or not row.depends_on(identity)]
+                       for name, rows in self.writes.items()}
 
     def snapshot(self):
         return {name: list(values) for name, values in self.writes.items()}
@@ -109,7 +129,10 @@ class DefiniteWrites:
             if any(isinstance(n, Linear) and n.bounds(self.grid) == (0, 0) for n in shape):
                 evidence[name] = {"initial_value_required": False, "coverage": "zero-element-result", "reads": "separately-checked"}
                 continue
-            for offsets, sizes in self.writes[name]:
+            for row in self.writes[name]:
+                if isinstance(row, WriteImage):
+                    continue
+                offsets, sizes = row
                 if any(off.loops for off in offsets):
                     continue  # Union coverage over changing loop slices is a later rule.
                 if any(isinstance(size, TailExtent) for size in sizes):

@@ -523,6 +523,18 @@ def _functionalize(module, abi, *, serial_memory=True):
             states[buffer.name] = empty.tensor
     initial = [states[b.name] for b in writable]
     initialization = DefiniteWrites(abi)
+
+    def check_partial_read(source, buffer, evidence):
+        def check(index, mask, prefix):
+            from .partial_initialization import initialized_read
+
+            proof = initialized_read(source, index, mask, prefix, initialization.images(buffer), mapping, facts, abi)
+            if proof is None:
+                return False
+            evidence.update(proof)
+            return True
+
+        return check
     shared = {b.name: arg for b, arg in zip(writable, body.args[1:], strict=True)} if parallel else {}
     states.update(shared)
     writes, reads, source_loops, source_conditionals, source_gathers, source_scatters = {}, [], [], [], [], []
@@ -1005,14 +1017,20 @@ def _functionalize(module, abi, *, serial_memory=True):
                 before_loop = initialization.snapshot()
                 loop_values[identity] = (nested.args[0], lb, step)
                 translate(op.body.block)
-                complete, complete_proofs = [], {}
+                complete, complete_proofs, partial = [], {}, []
                 if serial_memory and not parallel:
-                    from .loop_write_coverage import complete_loop_writes
+                    from .loop_write_coverage import complete_loop_writes, scalar_stores
+                    from .partial_initialization import store_image
                     try:
                         complete = complete_loop_writes(op, abi, buffers, mapping, facts, opcode, evidence=complete_proofs)
+                        for buffer, domains, index in scalar_stores(op, abi, buffers, mapping, facts, opcode, outer_bounds=True):
+                            image = store_image(domains, index, grid)
+                            if image is not None:
+                                partial.append((buffer, image))
                     except ConversionError:
                         pass  # Missing algebraic equality supplies no new write credit.
                 del loop_values[identity]
+                initialization.end_loop(identity)
                 if not domain.exact:
                     changed = any(states[b.name] is not nested.args[len(kept_arguments) + i]
                                   for i, b in enumerate(writable))
@@ -1025,6 +1043,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                         loop_evidence["initialization"] = "post-body-facts; positive-trip-count-proved"
                 for buffer in complete:
                     initialization.store_whole(buffer, coverage=complete_proofs[buffer.name]["coverage"])
+                for buffer, image in partial:
+                    initialization.store_image(buffer, image)
+                if partial:
+                    loop_evidence["completed_scalar_store_images"] = len(partial)
                 if complete:
                     loop_evidence["complete_scalar_results"] = [buffer.name for buffer in complete]
                     loop_evidence["complete_scalar_result_proofs"] = complete_proofs
@@ -1114,24 +1136,30 @@ def _functionalize(module, abi, *, serial_memory=True):
                 if pointer.operands[0] not in buffers:
                     raise ConversionError("structured gather base must be a declared logical allocation", opcode=name)
                 buffer = buffers[pointer.operands[0]]
+                partial_proof = {}
                 mapping[op.results[0]] = structured_gather(op, pointer, buffer, states[buffer.name], mapping, append,
                     maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape),
-                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer))
+                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer),
+                    initialization_check=check_partial_read(op, buffer, partial_proof) if serial_memory and not parallel else None)
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "rectangular-prefix-branch-no-inactive-extraction",
-                                       "representation": "upstream-structured-gather-descriptor"})
+                                       "representation": "upstream-structured-gather-descriptor",
+                                       **({"initialization": partial_proof} if partial_proof else {})})
             elif name == "tts.gather" and op.operands[0] in buffers and (buffers[op.operands[0]].effect == "read"
-                    or serial_memory and not parallel and initialization.complete(buffers[op.operands[0]])):
+                    or serial_memory and not parallel):
                 buffer = buffers[op.operands[0]]
+                partial_proof = {}
                 mapping[op.results[0]] = gather(op, buffer, states[buffer.name], mapping, append,
                     maximum_shape=tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape),
-                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer))
+                    serial_initialized=serial_memory and not parallel and initialization.complete(buffer),
+                    initialization_check=check_partial_read(op, buffer, partial_proof) if serial_memory and not parallel else None)
                 source_gathers.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
                                        "bounds": "runtime-assert-before-active-extract",
                                        "mask": "per-lane-branch-no-inactive-extraction",
                                        "repeated_indices": "immutable-reads; no-ownership-conflict" if buffer.effect == "read" else
-                                           "initialized-serial-tensor-version; no-other-logical-program"})
+                                           "initialized-serial-tensor-version; no-other-logical-program",
+                                       **({"initialization": partial_proof} if partial_proof else {})})
             elif name == "tts.scatter" and op.operands[0] in buffers and serial_memory and not parallel and isinstance(
                     mapping[op.operands[1]].type, TensorType) and all(size == 1 for size in mapping[op.operands[1]].type.get_shape()) and not all(
                     size == 1 for size in buffers[op.operands[0]].shape):
@@ -1139,6 +1167,14 @@ def _functionalize(module, abi, *, serial_memory=True):
                 buffer = buffers[op.operands[0]]
                 states[buffer.name], index = scatter(op, buffer, states[buffer.name], mapping, append,
                     tuple(abi.dimension(n).bounds(grid)[1] if isinstance(n, str) else n for n in buffer.shape))
+                if len(op.operands) == 3:
+                    from .partial_initialization import WriteImage
+                    from .symbolic_layout import expression
+
+                    try:
+                        initialization.store_image(buffer, WriteImage(expression(index, facts, grid), ()))
+                    except ConversionError:
+                        pass
                 if len(op.operands) == 3 and len(buffer.shape) == 1:
                     try:
                         coordinate = linear(index, facts, grid)

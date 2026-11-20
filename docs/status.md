@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Partial source initialization](partial_initialization.md) now retains scalar
+observations of completed rows, strided columns and planes before whole-output
+coverage. Source-point writes and subsequent reread recurrences remain actual
+tensor computation; masks, zero trips, scope and complete-output checks remain.
+A complete two-call model retains all nine results through host/replays and
+actual serial images. General vector/masked/conditional initialization,
+while/ownership relations, effects and accelerator closure remain incomplete.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) now admits fresh
 results from nested/permuted source traversals and joins independently complete
 branch arms. Static empty ports preserve exact types and active-access guards.

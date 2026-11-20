@@ -103,24 +103,21 @@ def rectangular_bijection(domains, index, *, grid):
     return {"memory_digit_order": order, "unit_loops": unit}
 
 
-def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence=None):
-    """Prove actual unconditional stores cover the complete result allocation."""
-    complete, pending = {}, [(loop, ())]
+def scalar_stores(loop, abi, buffers, mapping, facts, opcode, *, outer_bounds=False):
+    """Actual unconditional scalar stores under rectangular zero-based loops."""
+    pending = [(loop, ())]
     while pending:
         current, ancestors = pending.pop()
         try:
             require_signed_loop(current)
             lower, upper, step = (expression(mapping[value], facts, abi.grid_bounds) for value in current.operands[:3])
-            if lower != ZERO or step != ONE or upper.bounds(abi.grid_bounds)[0] < 0 or any(
+            if lower != ZERO or step != ONE or upper.bounds(abi.grid_bounds)[0] < 0 or not outer_bounds and any(
                     atom[0] == "l" for atoms, _ in upper.terms for atom in atoms):
                 continue
             induction = expression(mapping[current.body.block.args[0]], facts, abi.grid_bounds)
         except ConversionError:
             continue
         domains = (*ancestors, (induction, upper))
-        count = ONE
-        for _iv, bound in domains:
-            count *= bound
         for op in current.body.block.ops:
             if opcode(op) == "scf.for":
                 pending.append((op, domains))
@@ -129,26 +126,37 @@ def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence
             if opcode(op) != "tts.scatter" or len(op.operands) != 3 or op.operands[0] not in buffers:
                 continue
             buffer = buffers[op.operands[0]]
-            if buffer.effect != "write" or buffer.name in complete:
+            if buffer.effect != "write":
                 continue
             index = mapping[op.operands[1]]
             if not isinstance(index.owner, tensor.FromElementsOp) or len(index.owner.operands) != 1:
                 continue
             try:
                 actual = expression(index.owner.operands[0], facts, abi.grid_bounds)
-                expected = ONE
-                for dimension in buffer.shape:
-                    value = abi.dimension(dimension)
-                    expected *= Polynomial.affine(value) if isinstance(value, Linear) else Polynomial.constant(value)
-                if count != expected:
-                    continue
-                proof = rectangular_bijection(domains, actual, grid=abi.grid_bounds)
             except ConversionError:
                 continue
-            if proof is not None:
-                complete[buffer.name] = buffer
-                if evidence is not None:
-                    evidence[buffer.name] = {"coverage": "serial-contiguous-source-loop" if len(domains) == 1 else
-                        "serial-rectangular-source-loop-nest", "nest_depth": len(domains),
-                        "extent_equality": "actual-loop-upper-product-equals-result-element-count", **proof}
+            yield buffer, domains, actual
+
+
+def complete_loop_writes(loop, abi, buffers, mapping, facts, opcode, *, evidence=None):
+    """Prove actual unconditional stores cover the complete result allocation."""
+    complete = {}
+    for buffer, domains, actual in scalar_stores(loop, abi, buffers, mapping, facts, opcode):
+        if buffer.name in complete:
+            continue
+        count, expected = ONE, ONE
+        for _iv, bound in domains:
+            count *= bound
+        for dimension in buffer.shape:
+            value = abi.dimension(dimension)
+            expected *= Polynomial.affine(value) if isinstance(value, Linear) else Polynomial.constant(value)
+        if count != expected:
+            continue
+        proof = rectangular_bijection(domains, actual, grid=abi.grid_bounds)
+        if proof is not None:
+            complete[buffer.name] = buffer
+            if evidence is not None:
+                evidence[buffer.name] = {"coverage": "serial-contiguous-source-loop" if len(domains) == 1 else
+                    "serial-rectangular-source-loop-nest", "nest_depth": len(domains),
+                    "extent_equality": "actual-loop-upper-product-equals-result-element-count", **proof}
     return list(complete.values())

@@ -1,5 +1,12 @@
 # Review handoff — updated 2026-11-20
 
+[Partial source initialization](partial_initialization.md) now closes completed
+row reads and preserves strided column/plane observations, point updates and
+reread recurrences through standard tensor MLIR. All nine complete-model results
+qualify through host/replays and actual serial images. The 59-check source/model
+selection and eleven math/state checks pass with overlap. General vector/masked/
+conditional initialization, ownership/effects and accelerator closure remain open.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) now retains fresh
 results from nested/permuted traversals and complete branch arms. The original
 two-call PyTorch model, runtime parameter slices and all seven results qualify

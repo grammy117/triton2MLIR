@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Partial source initialization](partial_initialization.md) passes the 59-check
+source/kernel/model selection and eleven focused math/state checks, with overlap.
+Actual rows, strided columns, planes, point updates and reread recurrences retain
+source loops and all results through native/Merlin host/serial execution.
+The complete two-call PyTorch model retains all nine results. Partial membership
+grants no complete-output, bounds or parallel ownership permission; broader
+source/effect/target coverage and the arbitrary-kernel endpoint remain open.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) passes the 51
 focused source/model checks. Nested/permuted traversal, unit/empty axes and
 complete branch joins retain source reuse and exact results through native,

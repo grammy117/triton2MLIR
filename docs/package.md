@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Partial source initialization](partial_initialization.md) adds source-image
+membership evidence for individual active scalar reads without changing the
+public ABI, result modes, receipts, artifact rosters or effect profiles. Actual
+source loops, strides, fills, guards and tensor versions remain. Provenance
+records local witness kinds and supplies no initialization, bounds, ownership,
+physical-alias or target permission. Whole-result coverage remains separate;
+guarded and buffer witnesses retain their independent contracts.
+
 [Rectangular source-loop coverage](nested_output_coverage.md) adds post-loop
 initialization proofs without changing executable traversal, public arguments,
 receipts or artifact rosters. Static zero tensor extents extend the accepted

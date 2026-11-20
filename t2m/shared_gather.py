@@ -44,12 +44,12 @@ from xdsl.ir.affine import AffineMap
 from .diagnostics import ConversionError
 
 
-def gather(source, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False):
+def gather(source, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False, initialization_check=None):
     """Immutable reads, or source-proved initialized serial tensor versions."""
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
 
-    if buffer.effect != "read" and not serial_initialized:
+    if buffer.effect != "read" and not serial_initialized and initialization_check is None:
         refuse("irregular reads from writable buffers need an initialization/ownership proof")
     segments = source.properties.get("operandSegmentSizes")
     if not isinstance(segments, DenseArrayBase):
@@ -61,10 +61,11 @@ def gather(source, buffer, base, mapping, append, *, maximum_shape=None, serial_
     mask = mapping[source.operands[2]] if segments[2] else None
     other = mapping[source.operands[-1]] if segments[3] else None
     return _gather(source, buffer, base, index, mask, other, append,
-                   maximum_shape=maximum_shape, serial_initialized=serial_initialized)
+                   maximum_shape=maximum_shape, serial_initialized=serial_initialized, initialization_check=initialization_check)
 
 
-def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False):
+def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum_shape=None, serial_initialized=False,
+                      initialization_check=None):
     """Keep the upstream rank-one gather descriptor and exact prefix predicate."""
     def array(op, key):
         value = op.properties.get(key)
@@ -88,15 +89,14 @@ def structured_gather(source, pointer, buffer, base, mapping, append, *, maximum
     if prefix == sizes[0]:
         prefix = None
     return _gather(source, buffer, base, mapping[pointer.operands[1]], None, other, append, prefix=prefix,
-                   maximum_shape=maximum_shape, serial_initialized=serial_initialized)
+                   maximum_shape=maximum_shape, serial_initialized=serial_initialized, initialization_check=initialization_check)
 
 
-def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, maximum_shape=None, serial_initialized=False):
+def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, maximum_shape=None, serial_initialized=False,
+            initialization_check=None):
     def refuse(message):
         raise ConversionError(message, opcode="tts.gather")
 
-    if buffer.effect != "read" and not serial_initialized:
-        refuse("irregular reads from writable buffers need an initialization/ownership proof")
     type_ = source.results[0].type
     if not isinstance(type_, TensorType) or not isinstance(index.type, TensorType):
         refuse("irregular gather needs ranked tensor indices and results")
@@ -119,6 +119,9 @@ def _gather(source, buffer, base, index, mask, other, append, *, prefix=None, ma
         refuse("gather fill must be the declared scalar element type")
     if prefix is not None and (len(shape) != 1 or other is None):
         refuse("prefix-masked gather needs a rank-one tensor and explicit defined fill")
+    if buffer.effect != "read" and not serial_initialized and (
+            initialization_check is None or not initialization_check(index, mask, prefix)):
+        refuse("active gather from fresh storage has no source-proved initialized region")
     # Match upstream's collapsed immutable base tensor. Dense ABI storage is a
     # view: do not decode every source flat offset into row/column coordinates.
     if len(base.type.get_shape()) > 1:

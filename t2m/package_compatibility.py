@@ -12,6 +12,9 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("initialization", {}).get("coverage") == "completed-source-store-image"
+           for row in trace.get("memory", {}).get("source_gathers", [])):
+        differences.append("active scalar reads from fresh tensor storage may use actual completed source-store images, including strided columns and planes; each read needs an in-image coordinate witness under its own source loop/mask conditions; partial facts intersect at branches and expire with their varying loops; complete result initialization, access bounds, ownership and source widths remain independent; no tracker storage, source-loop rewrite, public ABI, receipt or effect-profile change")
     if any(0 in row.get("shape", []) for row in trace.get("spec", {}).get("buffers", [])):
         differences.append("static tensor dimensions may be zero with their exact rank/type and no runtime size binding; older readers requiring positive static extents refuse these packages; logical grid bounds remain positive and empty storage grants no active access, ownership or effect permission; artifact schemas and field meanings are unchanged")
     if any(proof.get("coverage") == "serial-rectangular-source-loop-nest"

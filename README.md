@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Partial source initialization](docs/partial_initialization.md) now admits
+scalar reads from completed rows, strided columns and planes before the whole
+output is written. Original write/reread loops, point updates, fills and reuse
+remain tensor computation. A complete two-call model retains all nine results
+through Merlin host/replays and actual serial execution. General vector/masked/
+conditional initialization, ownership/effect and accelerator closure remain open.
+
 [Rectangular source loop nests](docs/nested_output_coverage.md) now initialize
 fresh tensor results while retaining permuted traversal and outer-loop reuse.
 Two dependent calls, runtime parameter slices and all seven PyTorch model results

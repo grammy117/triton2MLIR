@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Partial source initialization](docs/partial_initialization.md) now closes the
+reproduced completed-row read refusal, plus strided column/plane, immediate
+read-after-write and reread-loop forms. Each active scalar read needs a source
+image membership witness; complete output and parallel ownership remain separate.
+All nine results of the two-call model qualify through host and serial execution.
+Continue vector/masked/conditional partitions, while/ownership relations,
+irregular parallel dependencies, shared/async effects and applicable targets.
+
 [Rectangular source-loop coverage](docs/nested_output_coverage.md) now extends
 fresh-output initialization through nested/permuted traversals, unit/empty axes
 and independently complete branch arms. A complete two-call model retains
