@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Source while memory](docs/while_tensor_memory.md) now retains complete tensor
+state through both original regions, including final false-condition effects
+and zero body trips. Reused tiles, snapshots and distinct numeric interfaces
+remain executable. A complete two-call PyTorch model preserves all fourteen
+results through Merlin host replays and actual serial execution; broader
+loop-carried address/ownership and accelerator closure remain open.
+
 [Branch-local source ranges](docs/branch_source_ranges.md) now retain safe
 conditional indexing without narrowing the valid entry domain. Signed/unsigned
 word comparisons and actual boolean implications stay local to their selected

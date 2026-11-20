@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Source while memory](while_tensor_memory.md) now keeps complete tensor versions
+through both actual source regions and the final false condition edge. Tiled
+reuse, snapshots, distinct numeric interfaces and complete two-call model state
+survive native/Merlin host/serial execution. Original initialization and unknown
+attribute refusals remain. General loop-carried address/range, ownership,
+shared/async effects and accelerator closure stay incomplete.
+
 [Branch-local source ranges](branch_source_ranges.md) now qualify actual
 conditional indexing and complete state observations through standard tensor
 MLIR. Four Merlin libraries retain 48 replay results; six serial images retain

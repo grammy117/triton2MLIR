@@ -900,6 +900,57 @@ def _functionalize(module, abi, *, serial_memory=True):
                                                           *[storage_types[b.name] for b in writable]], *regions), op)
                 mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
                 states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
+            elif name == "scf.while":
+                if value_only_region(op):
+                    append(op.clone(value_mapper=mapping), op)
+                    continue
+                if any(not key.startswith("prov.") for key in op.attributes):
+                    raise ConversionError("tensor while memory needs defined loop-attribute transport", opcode=name)
+                if len(op.regions) != 2 or any(len(region.blocks) != 1 for region in op.regions):
+                    raise ConversionError("tensor while memory needs two single-block source regions", opcode=name)
+                source_before, source_after = (region.block for region in op.regions)
+                condition, yielded = source_before.last_op, source_after.last_op
+                if condition is None or opcode(condition) != "scf.condition" or yielded is None or opcode(yielded) != "scf.yield":
+                    raise ConversionError("tensor while memory needs original condition/yield terminators", opcode=name)
+                values = [*op.operands, *op.results, *source_before.args, *source_after.args]
+                if any(isinstance(v.type, builtin.UnregisteredAttr) or isinstance(v.type, TensorType)
+                       and isinstance(v.type.element_type, builtin.UnregisteredAttr) for v in values):
+                    raise ConversionError("while pointer state needs logical descriptor normalization", opcode=name)
+                # SCF permits distinct before/after state arities and types.
+                # Memory versions follow the actual condition edge, including
+                # the final false edge, rather than merely the body backedge.
+                memory_types = [storage_types[b.name] for b in writable]
+                initial_memory = [states[b.name] for b in writable]
+                before = Block(arg_types=[*[v.type for v in source_before.args], *memory_types])
+                after = Block(arg_types=[*[v.type for v in source_after.args], *memory_types])
+                previous, body = body, before
+                mapping.update(zip(source_before.args, before.args[:len(source_before.args)], strict=True))
+                states.update((b.name, value) for b, value in zip(writable, before.args[len(source_before.args):], strict=True))
+                translate(source_before, phase_body=True)
+                before_facts = initialization.snapshot()
+                append(scf.ConditionOp(mapping[condition.operands[0]],
+                    *[mapping[value] for value in condition.operands[1:]], *[states[b.name] for b in writable]), condition)
+                body = after
+                mapping.update(zip(source_after.args, after.args[:len(source_after.args)], strict=True))
+                states.update((b.name, value) for b, value in zip(writable, after.args[len(source_after.args):], strict=True))
+                translate(source_after, phase_body=True)
+                append(scf.YieldOp(*[mapping[value] for value in yielded.operands],
+                    *[states[b.name] for b in writable]), yielded)
+                body = previous
+                loop = scf.WhileOp([*[mapping[value] for value in op.operands], *initial_memory],
+                    [*[value.type for value in op.results], *memory_types], Region(before), Region(after))
+                loop.attributes.update(op.attributes)
+                append(loop, op)
+                mapping.update(zip(op.results, loop.results[:len(op.results)], strict=True))
+                states.update((b.name, value) for b, value in zip(writable, loop.results[len(op.results):], strict=True))
+                # The before region executes even on a zero-trip body. Body-only
+                # writes cannot establish initialization on its false edge.
+                initialization.restore(before_facts)
+                source_loops.append({"source_ids": _source_ids(op.location), "control": "scf.while",
+                    "bounds": "original-source-condition; no-trip-count-substitution",
+                    "memory_effects": "functional-before-and-after-tensor-versions",
+                    "initialization": "before-region-facts-only; after-body-may-not-execute",
+                    "before_state_arity": len(source_before.args), "after_state_arity": len(source_after.args)})
             elif name == "scf.for":
                 if value_only_region(op):
                     source_loops.append({"source_ids": _source_ids(op.location),
@@ -1001,6 +1052,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                         final.append(Coordinate(form, value))
                     descriptors[op.results[i]] = buffer, sizes, tuple(final), strides
                     cursor += rank
+            elif name == "scf.condition":
+                if not phase_body:
+                    raise ConversionError("tensor condition needs its actual enclosing while region", opcode=name)
+                continue  # The enclosing while explicitly forwards complete memory versions.
             elif name == "scf.yield":
                 if phase_body:
                     continue  # The enclosing phase explicitly yields complete memory versions.

@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Source while memory](docs/while_tensor_memory.md) now preserves tensor state
+through original conditions and bodies, including zero trips and final false
+effects. Reused tiles, conditional updates, distinct numeric interfaces and
+all fourteen results of a complete two-call model survive host/serial execution.
+Continue loop-carried address/range proofs, partial/nested initialization,
+resizing/permuted ownership, irregular parallel dependencies and broader effects
+and targets; this does not close arbitrary-kernel coverage.
+
 [Branch-local source ranges](docs/branch_source_ranges.md) now qualify selected
 signed/unsigned conditions, true conjunctions and false disjunctions through
 tensor MLIR and native/host/serial execution. Original-definition checks and

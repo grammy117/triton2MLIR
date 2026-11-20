@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Source while memory](while_tensor_memory.md) adds complete tensor versions to
+both actual source regions and the final false condition edge. Distinct numeric
+before/after interfaces, condition observations and zero-body semantics remain.
+Unknown loop attributes refuse the tensor state rewrite rather than disappear.
+Existing functional mutation transports complete model state; public ABI,
+receipts, artifact rosters, signatures and effect profiles do not change.
+Provenance describes the transformation and grants no initialization, ownership,
+effect or target permission. Guarded and buffer witnesses remain separate.
+
 [Branch-local source ranges](branch_source_ranges.md) keep existing public
 tensor/scalar types, receipts, artifact rosters and Merlin signatures. Actual
 scalar conditions refine selected source regions only after definition checks.

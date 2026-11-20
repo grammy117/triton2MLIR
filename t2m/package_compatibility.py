@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("control") == "scf.while" for row in trace.get("memory", {}).get("source_loops", [])):
+        differences.append("source while memory uses standard tensor versions through both original regions and the final false condition edge; before/after numeric state may have distinct arities/types; condition-region effects execute on zero body trips, and body-only stores grant no exit initialization; original bounds, source order, ownership and separate buffer-witness checks remain; public ABI and effect profiles are unchanged")
     if any(row.get("kind") == "native-isolated-checked-memory-events" for row in trace.get("transformations", [])):
         differences.append("source-width-checked structured memory reuses the native isolated base/offset event converter at original control positions; parent arithmetic converts separately without repeating pointer conversion; resulting tensor state retains active bounds, initialization and ownership checks, while the unguarded buffer continuation keeps its independent static witness requirements; public ABI and effect profiles are unchanged")
     if any(row.get("kind") == "source-branch-ranges" for row in trace.get("transformations", [])):

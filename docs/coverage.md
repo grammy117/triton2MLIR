@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Source while memory](while_tensor_memory.md) qualifies original conditions,
+body updates, reused tiles, snapshots, heterogeneous numeric state and final
+false-edge observations as standard tensor computation. Four kernel forms run
+through native/reusable Merlin host and eight actual serial images. A complete
+two-call model retains all fourteen results through host replays and two actual
+serial images. Consumer destination/deallocation checks pass 165; broader
+ownership passes 163 with two skips, and structure checks pass. These extend
+control/memory composition; general ownership, source ranges, effects and
+accelerator coverage remain incomplete and the opcode denominator is unchanged.
+
 [Branch-local source ranges](branch_source_ranges.md) add selected signed/
 unsigned comparisons and boolean implications without changing source entry
 domains. Six source forms retain 48 direct native results; four reusable Merlin

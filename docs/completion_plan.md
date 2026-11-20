@@ -1,5 +1,13 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Source while memory](while_tensor_memory.md) now preserves original condition
+effects and complete tensor versions through source/native/host/serial paths,
+including a complete two-call PyTorch model. Keep this generic memory-versioning
+contract distinct from the still-required while-carried address/range and
+resizing/permuted ownership proofs. General partial initialization, irregular
+parallel dependencies, shared/async effects, source/numeric compositions and
+applicable accelerator execution remain full-goal work.
+
 [Branch-local source ranges](branch_source_ranges.md) now retain actual
 fixed-width comparison constraints and necessary boolean implications through
 native/host/serial execution, including full signed i32 controls. Source width,

@@ -1,5 +1,24 @@
 # Review handoff — updated 2026-11-20
 
+[Source while memory](while_tensor_memory.md) now preserves source conditions,
+both tensor-state regions and final false-edge effects. Real tiled i64/f32
+kernels retain reuse, masks, empty/zero trips and earlier snapshots. The actual
+condition-memory kernel retains its counter update and final observation.
+A complete two-call PyTorch model retains every one of its fourteen results,
+learned counter words, original parent archives and intermediate snapshots
+through host replays and two actual serial images.
+
+Merlin `b6d664a9ec5462f21e22ee0c51b9858eee315354` adds typed initial-condition
+peeling and late completed-value copies. Unknown semantic loop attributes keep
+their original control; normalization grants no ownership or effect permission.
+The native destination/deallocation selection passes 165; broader ownership
+passes 163 with two skips and repository structure passes. The earlier printer
+assertion failure and test-driver import failure remain in their original logs;
+neither indicates missing source effects or qualifies as a successful target run.
+Next extend while-carried source ranges, partial/nested fresh initialization,
+resizing/permuted owners and broader parallel/effect/target composition. The
+full goal remains incomplete; public ABI, receipts and signatures are unchanged.
+
 [Branch-local source ranges](branch_source_ranges.md) at `60f3bad` now retain
 actual scalar signed/unsigned comparison constraints and necessary boolean
 implications. Original definitions still precede narrower use facts. Source
