@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Volatile program phases](docs/volatile_program_phases.md) now compose private
+observations with synchronous barriers through original allocation sources and
+complete i64/f32 models. All nine results, runtime shapes and earlier snapshots
+survive host replays and actual serial images. Continue mixed effect/numeric/
+storage composition, shared/async participation and applicable accelerators.
+
 [Volatile reads](docs/volatile_reads.md) now have an explicit private-memory
 profile with actual standard LLVM effects and source-preserving normalization.
 Native i32/i64/f32/f64 and selected host/serial cases retain unused observations.

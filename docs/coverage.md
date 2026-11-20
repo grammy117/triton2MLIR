@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Volatile program phases](volatile_program_phases.md) now qualify selected
+private observations through protected allocation and complete i64/f32 models.
+All 18 initial, 54 replay and 18 actual model target results retain exact words;
+22 rehashed claims refuse in both readers and two source domains abort. Separate
+standalone images retain four results and source conflict guards. Mixed atomic,
+shared/async and broader numeric/storage/target closure remain open. The
+historical fifty-name inventory is unchanged.
+
 [Private volatile reads](volatile_reads.md) add actual effect coverage to
 `tt.load`: all four source observations, including an unused one, survive
 normalization and LLVM legalization. Native i32/i64/f32/f64 and selected i64/f32

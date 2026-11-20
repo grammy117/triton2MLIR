@@ -1,5 +1,16 @@
 # Review handoff — updated 2026-11-19
 
+[Volatile program phases](volatile_program_phases.md) now preserve actual
+private observations through original allocation source and complete i64/f32
+models. All 18 initial, 54 replay and 18 actual serial model results retain exact
+words; 22 changed source/effect/phase claims refuse in both readers and two
+original shape domains abort. The source/ordinary/atomic selection passes 54,
+new complete models ten, ordinary model regressions two and independent Merlin
+selection 459, with overlap. `out/volatile-program-phases/summary.json` reopens
+the four selected new images and full evidence. Continue mixed atomic and broader
+numeric/storage/effect composition, general shared/async participation and
+applicable accelerator qualification. Full arbitrary-kernel coverage stays open.
+
 [Program barriers](program_barriers.md) now retain source-verified CTA phases
 through ordinary shared conversion. A real runtime-loop mutable tile transpose
 qualifies in tensor and guarded forms through native, reusable Merlin host and

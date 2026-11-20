@@ -64,7 +64,7 @@ def reference(x, bias):
         result = np.empty_like(state)
         for origin in range(0, len(state), 4):
             size = min(4, len(state) - origin)
-            tile = np.full((4, 4), -3, dtype=np.int64)
+            tile = np.full((4, 4), -3, dtype=state.dtype)
             tile[:size] = state[origin : origin + size]
             result[origin : origin + size] = tile.T[:size]
         return result
@@ -72,7 +72,7 @@ def reference(x, bias):
     original = x + bias
     first = original + 3
     second = first + 6
-    empty = np.empty((0, 4), dtype=np.int64)
+    empty = np.empty((0, 4), dtype=x.dtype)
     return [second, first, observe(first), observe(second), original, x, empty, empty.copy(), bias]
 
 
@@ -115,7 +115,11 @@ def test_rehashed_phase_claims_and_payload_refuse_both_readers(selected):
     original = {path: path.read_bytes() for path in paths}
     outcomes = []
     try:
-        for damage in ("missing", "mask", "prefix", "live", "scope", "lost-store", "phase-order"):
+        damages = ["missing", "mask", "prefix", "live", "scope", "lost-store", "phase-order"]
+        protection = json.loads(original[paths[3]])
+        if protection["barrier_conversions"][0]["contract"]["schema"] == "t2m.synchronous-program-barrier.v3":
+            damages += ["volatile-selection", "volatile-primitive", "volatile-flag", "bound-volatile-profile"]
+        for damage in damages:
             report = json.loads(original[paths[3]])
             changed = {"allocation-protection.json"}
             if damage == "missing":
@@ -128,7 +132,12 @@ def test_rehashed_phase_claims_and_payload_refuse_both_readers(selected):
                 report["barrier_conversions"][0]["live_value_types"] = ["i64"]
             elif damage == "scope":
                 report["barrier_conversions"][0]["contract"]["participants"] = "all-programs"
-            else:
+            elif damage == "volatile-selection":
+                report["barrier_conversions"][0]["contract"].pop("volatile_effects")
+            elif damage == "volatile-primitive":
+                row = next(row for row in report["source_graph"]["operations"] if "volatile_read" in row)
+                row["volatile_read"]["observation"] = "stable-tensor-read"
+            elif damage != "bound-volatile-profile":
                 module = parse_shared(original[paths[4]].decode())
                 phases = [op for op in module.walk() if op.name == "scf.execute_region"]
                 if damage == "lost-store":
@@ -140,6 +149,10 @@ def test_rehashed_phase_claims_and_payload_refuse_both_readers(selected):
                     block = store.parent_block()
                     block.insert_op_before(replacement, store)
                     block.erase_op(store)
+                elif damage == "volatile-flag":
+                    from xdsl.dialects import builtin
+                    read = next(op for op in module.walk() if opcode(op) == "tt.load")
+                    read.properties["isVolatile"] = builtin.IntegerAttr(False, builtin.i1)
                 else:
                     block = phases[0].parent_block()
                     block.detach_op(phases[1])
@@ -154,6 +167,8 @@ def test_rehashed_phase_claims_and_payload_refuse_both_readers(selected):
                 changed.update(("allocation-protected.ttir", "allocation-source-stage.json"))
             paths[3].write_text(json.dumps(report))
             provenance = json.loads(original[paths[2]])
+            if damage == "bound-volatile-profile":
+                provenance["memory"]["effect_profile"] = "ordinary"
             for name in changed:
                 provenance["source_argument_binding"]["source_capsule"]["artifacts"][name] = record(
                     (package / "kernels/0" / name).read_bytes())
@@ -163,9 +178,9 @@ def test_rehashed_phase_claims_and_payload_refuse_both_readers(selected):
             bindings["kernels"][key] = deepcopy(provenance)
             paths[1].write_text(json.dumps(bindings))
             rehash(package)
-            with pytest.raises(ValueError, match="barrier") as producer:
+            with pytest.raises(ValueError, match="barrier|volatile") as producer:
                 verify_bundle(package)
-            with pytest.raises(ValueError, match="barrier") as consumer:
+            with pytest.raises(ValueError, match="barrier|volatile") as consumer:
                 check_merlin_interface(package, root / ("refused-" + damage), merlin_root=os.environ["T2M_MERLIN_ROOT"],
                     python=os.environ["T2M_MERLIN_PYTHON"], result_mode="execution-owned")
             outcomes.append({"damage": damage, "producer": str(producer.value), "consumer": str(consumer.value)})

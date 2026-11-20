@@ -12,19 +12,21 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out):
+def capture(out, *, dtype="i64", volatile=False):
     out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=False)
-    source = Path(__file__).resolve().parents[1] / "t2m/examples/barrier_kernels.py"
+    source = Path(__file__).resolve().parents[1] / "t2m/examples" / (
+        "volatile_barrier_kernels.py" if volatile else "barrier_kernels.py")
     spec = importlib.util.spec_from_file_location("program_barrier_model_kernel", source)
     kernels = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(kernels)
+    kernel = kernels.volatile_exchange if volatile else kernels.exchange_tile
     name = "t2m_demo::program_exchange"
 
     @triton_op(name, mutates_args={})
     def exchange(x: torch.Tensor, n: int, steps: int) -> tuple[torch.Tensor, torch.Tensor]:
         state, observed = x.clone(), torch.empty_like(x)
-        wrap_triton(kernels.exchange_tile)[((n + 3) // 4,)](
+        wrap_triton(kernel)[((n + 3) // 4,)](
             state, observed, n, steps, B=4, CROSS=False
         )
         return state, observed
@@ -42,10 +44,12 @@ def capture(out):
                 observed[origin : origin + size] = tile.T[:size]
         return state, observed
 
+    dt = torch.int64 if dtype == "i64" else torch.float32
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self.bias = torch.nn.Parameter(torch.tensor([1, -2, 3, -4], dtype=torch.int64), requires_grad=False)
+            self.bias = torch.nn.Parameter(torch.tensor([1, -2, 3, -4], dtype=dt), requires_grad=False)
 
         def forward(self, x):
             original = x + self.bias
@@ -59,7 +63,7 @@ def capture(out):
         KERNEL_REGISTRY[name] = KernelSpec(name)
         torch.set_num_threads(1)
         model = Model().eval()
-        inputs = (torch.arange(28, dtype=torch.int64).reshape(7, 4) - 6,)
+        inputs = (torch.arange(28, dtype=dt).reshape(7, 4) - 6,)
         program = torch.export.export(model, inputs,
             dynamic_shapes=({0: torch.export.Dim("rows", min=2, max=19)},))
         result = m2m.convert(program, inputs, backend="fx_importer", capture_trace=True,
@@ -79,5 +83,7 @@ def capture(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--dtype", choices=("i64", "f32"), default="i64")
+    parser.add_argument("--volatile", action="store_true", help="retain actual volatile reads across program phases")
     args = parser.parse_args()
-    print(capture(args.out))
+    print(capture(args.out, dtype=args.dtype, volatile=args.volatile))

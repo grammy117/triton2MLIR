@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Volatile program phases](volatile_program_phases.md) now retain original
+private observations and cross-lane visibility through complete i64/f32 models.
+All nine results and parameter/snapshot words survive reusable host and actual
+serial target execution. Source effects, phase order and conflict guards remain
+independently checked. Mixed atomic/shared/async and broader target scope remain.
+
 [Private volatile reads](volatile_reads.md) now preserve actual standard LLVM
 observations instead of dropping the source flag during pointer conversion.
 Unused loads, original loops and memory guards survive native/host/serial

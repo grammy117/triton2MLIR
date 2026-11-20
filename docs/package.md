@@ -7,6 +7,10 @@ primitive flags, phase scope/order and matching bound volatile memory evidence.
 Standard memory guards and localized LLVM leaves remain explicit granularity
 differences. Public tensor/scalar ABI, receipt schemas and original-source
 capsules are unchanged; earlier barrier readers refuse v3.
+Complete volatile-phase models retain executed binding v4, receipt v2 and
+signature v6, every original parent archive and all nine results. Host replays
+and actual serial images retain changed runtime rows, parameters and snapshots.
+No new public mutation, copyback, shared-state or target contract follows.
 
 [Private volatile reads](volatile_reads.md) explicitly select admission v5,
 source-word stages v3 and `private-invocation-volatile-loads-v1`. Defined

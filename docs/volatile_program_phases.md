@@ -87,3 +87,43 @@ Spike images. Sixteen source/effect claims refuse in both readers; a real
 cross-program conflict still aborts without outputs. The overlapping ordinary/
 atomic/program-phase frontend selection passes 54 checks, with one additional
 original-location identity check. Merlin's independent selection passes 459.
+
+## Complete dependent models
+
+`scripts/capture_barrier_model.py --volatile --dtype i64|f32` captures actual
+PyTorch/Triton models with learned bias, dependent state and an empty call:
+
+```python
+original = x + self.bias
+first, a = exchange(original, x.shape[0], 2)
+second, b = exchange(first, x.shape[0], 3)
+empty, z = exchange(x[:0], 0, 4)
+return second, first, a, b, original, x, empty, z, self.bias
+```
+
+The original wrapper clones each incoming state and returns both the updated
+base and transpose observations. Original CPU implementations supply every
+reference before compilation. Captured rows retain the actual `[2, 19]` source
+domain. Existing executed-call binding v4, receipt v2 and Merlin signature v6
+retain all nine results, earlier snapshots and every parent archive byte.
+Borrowed public inputs remain readonly; this introduces no caller copyback.
+
+Both complete models qualify with 18 initial host results, 54 results across
+six unchanged-library invocations and 18 results across two actual serial Spike
+images, all as exact words. Twenty-two rehashed source/effect/phase claims refuse
+in both readers, including removed flags, changed primitive claims and bound
+effect mismatches. Two original public-domain violations actually abort without
+outputs. Complete model tests pass all ten checks; two earlier ordinary model
+configurations additionally pass their complete-result regressions with default
+script options. These counts overlap other selections and change no historical
+opcode inventory or accelerator/performance claim.
+
+`out/volatile-program-phases/summary.json` reopens the source packages, complete
+models, original archives, every host/replay/target result, actual aborts and
+current independent source readers. It records the four selected new target
+images separately from earlier ordinary/atomic regressions.
+
+```bash
+python -m pytest -q tests/test_volatile_barrier_models.py \
+  --basetemp=.scratch/pytest-volatile-phase-models
+```

@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Volatile program phases](volatile_program_phases.md) now retain unused and
+cross-lane observations through protected source, reusable host and complete
+i64/f32 models on serial targets. Original phases, all nine results, snapshots
+and source/conflict guards remain. Continue mixed atomic, numeric/storage/effect
+composition and general external/shared/async participation.
+
 [Volatile reads](volatile_reads.md) now retain actual private observations
 through native/host/serial execution, with independently checked source effects,
 descriptor recipes and normalization protection. Original allocation wrappers
