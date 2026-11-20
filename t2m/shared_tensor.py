@@ -1508,14 +1508,17 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             if opcode(op) == "tt.map_elementwise" and any(opcode(child) == "tt.load" for child in op.walk()):
                 raise ConversionError("mapped source memory requires guarded-buffer memory with source-words addresses",
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
-        source_range_reports = [{"kind": "source-loop-body-ranges", "source_ids": _source_ids(loop.location),
-            "narrowed_values": count, "control": "actual-signed-serial-for-body-reachability",
-            "fact": "positive-upper-bound-and-nonnegative-product-factors",
+        source_range_reports = [{"kind": "source-loop-body-ranges" if control.name == "scf.for" else "source-branch-ranges",
+            "source_ids": _source_ids(control.location), "narrowed_values": count,
+            "control": "actual-signed-serial-for-body-reachability" if control.name == "scf.for" else "actual-scalar-if-region-condition",
+            "fact": "positive-upper-bound-and-nonnegative-product-factors" if control.name == "scf.for" else "fixed-width-comparison-constraints-in-selected-branch",
             "definition_validation": "original-definition-context-before-narrower-use",
             "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"}
-            for loop, count in check_source_addresses(middle_module, abi)]
+            for control, count in check_source_addresses(middle_module, abi)]
     pointer_control_reports = []
     isolated_events = False
+    checked_event_isolation = False
+    residual_pointer_stage = None
     if source_words:
         from .pointer_control import normalize_pointer_control
         from .word_events import MEMORY_EVENTS, needs_isolation
@@ -1558,10 +1561,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         Printer(stream=stream, print_generic_format=True, print_debuginfo=True).print_op(middle_module)
         middle_source = work / "expanded-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
-    word_input = middle_source.read_text() if source_words else None
+    word_input = middle_source.read_text() if source_words or isolated_events else None
     from .structured_state import data_control_report
     data_control = data_control_report(middle_module, _source_ids) if not source_words else None
-    if isolated_events:
+
+    def lower_isolated_events(directory):
         from .word_events import convert_events, print_ir
         from .word_evidence import record as word_record
         events = convert_events(middle_module, work / "word-events", optimizer, _source_ids, byte_order=byte_order)
@@ -1571,17 +1575,36 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         compute_input = print_ir(middle_module)
         compute_source = work / "word-compute.mlir"
         compute_source.write_text(compute_input)
-        compute_stage = lower_with_shared(compute_source, work / "tensor-ir", optimizer=optimizer,
+        compute_stage = lower_with_shared(compute_source, directory, optimizer=optimizer,
             stage="source-word-volatile-compute" if volatile else "source-word-compute")
         stage = {"schema": "t2m.source-word-stages.v4" if volatile and atomics else "t2m.source-word-stages.v3" if volatile else "t2m.source-word-stages.v2", "stage_completed": True,
             **({"compute_effects": "private-invocation-atomic-volatile-v1" if atomics else "private-invocation-volatile-loads-v1"} if volatile else {}),
             "reconstruction": "same-region-same-event-order", "input": word_record(word_input),
-            "output": word_record((work / "tensor-ir/lowered.mlir").read_bytes()),
+            "output": word_record((directory / "lowered.mlir").read_bytes()),
             "events": events, "compute": {"input": compute_input, "native_stage": compute_stage}}
+        return stage, events, compute_stage
+
+    tensor_stage = work / "tensor-ir"
+    if isolated_events:
+        stage, events, compute_stage = lower_isolated_events(tensor_stage)
     else:
-        stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
+        stage = lower_with_shared(middle_source, tensor_stage, optimizer=optimizer,
             stage="source-word-tensor" if source_words else "tensor-ir-data-control" if data_control else "tensor-ir")
-    lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
+    lowered = parse_shared((tensor_stage / "lowered.mlir").read_text())
+    if not source_words and any(opcode(op) in ("tt.load", "tt.store") for op in lowered.walk()):
+        # Keep the structured path whenever it actually converts the source.
+        # Older native pointer passes refuse region-local addptr even when no
+        # pointer escapes the branch. Reuse the established event converter on
+        # the original source-width-checked computation, at each original event.
+        from .pointer_control import normalize_pointer_control
+        from .word_events import print_ir
+        residual_pointer_stage = stage
+        pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=True)
+        word_input = print_ir(middle_module)
+        tensor_stage = work / "checked-events-tensor"
+        stage, events, compute_stage = lower_isolated_events(tensor_stage)
+        isolated_events = checked_event_isolation = True
+        lowered = parse_shared((tensor_stage / "lowered.mlir").read_text())
     if volatile:
         from .volatile_memory import checked_anchors
         checked_anchors(lowered)
@@ -1597,6 +1620,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
     transformations.extend(source_range_reports)
+    if residual_pointer_stage is not None:
+        transformations.append({"kind": "native-structured-memory-residual",
+            "native_stage": residual_pointer_stage,
+            "selection": "actual-remaining-source-loads-or-stores-after-structured-conversion",
+            "continuation": "original-source-width-checked-computation; isolated-native-memory-events"})
     if native_source_print is not None:
         transformations.append({"kind": "native-verified-source-serialization", **native_source_print,
             "source_graph": "original", "scope": "complete-source-serialization; no-normalization-or-source-equivalence-grant"})
@@ -1635,7 +1663,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         transformations.append({"kind": "source-external-standard-math", "contracts": external_contracts,
                                "implementation": "upstream-conversions-with-two-typed-table-completions"})
     if isolated_events:
-        transformations.append({"kind": "native-isolated-source-memory-events", "events": events["bindings"],
+        transformations.append({"kind": "native-isolated-checked-memory-events" if checked_event_isolation else "native-isolated-source-memory-events", "events": events["bindings"],
             "control_flow": "same-region-same-event-order", "upstream_pointer_pass": "once-per-isolated-template",
             "parent_conversion": "arithmetic-only; no pointer pass on already-converted events"})
     if pointer_report:
@@ -1669,7 +1697,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     auxiliary = dict(cfg_artifacts)
     if source_words:
         auxiliary.update({"word-input.mlir": word_input,
-            "word-tensor.mlir": (work / "tensor-ir/lowered.mlir").read_text(),
+            "word-tensor.mlir": (tensor_stage / "lowered.mlir").read_text(),
             "word-stage.json": json.dumps(stage, indent=2, sort_keys=True) + "\n"})
         admission.update(address_policy="source-words-offset64",
             word_input_sha256=hashlib.sha256(auxiliary["word-input.mlir"].encode()).hexdigest(),

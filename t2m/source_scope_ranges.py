@@ -1,4 +1,4 @@
-"""Definition-scoped source facts from actual signed serial loop reachability.
+"""Definition-scoped source facts from actual branch and loop reachability.
 
 LLVM a47bddcc IntegerRangeAnalysis.cpp keeps facts at program points and bounds
 induction variables through the actual loop interface. Reuse that boundary:
@@ -9,6 +9,7 @@ or an assumption about sampled sizes, GPU threads or backend integer promotion.
 
 from .diagnostics import ConversionError
 from .loop_domains import bounded_loop, require_signed_loop
+from .source_predicates import branch_constraints, signed_comparison_enclosure
 
 
 class SourceScopes:
@@ -23,6 +24,39 @@ class SourceScopes:
         owner = block.parent_op()
         parent = owner.parent if owner is not None else None
         facts = dict(self.facts(parent))
+        if owner is not None and owner.name == "scf.if":
+            selected = block.parent is owner.regions[0]
+            narrowed = set()
+
+            def refine(value, interval):
+                baseline = self.bounds(value, parent)
+                low, high = facts.get(value, baseline)
+                result = max(low, interval[0]), min(high, interval[1])
+                if result[0] > result[1]:
+                    return
+                facts[value] = result
+                if result != baseline:
+                    narrowed.add(value)
+                operation = value.owner
+                kind = self.opcode(operation) if hasattr(operation, "name") else None
+                if kind in ("arith.extsi", "arith.extui", "arith.trunci", "arith.index_cast") or (
+                        kind == "arith.bitcast" and value.type == operation.operands[0].type):
+                    # The original-definition audit proves this cast preserves
+                    # its mathematical value before any branch fact is used.
+                    refine(operation.operands[0], result)
+
+            for value, predicate, word, width in branch_constraints(owner.operands[0], selected):
+                try:
+                    baseline = self.bounds(value, parent)
+                    interval = signed_comparison_enclosure(baseline, predicate, word, width)
+                    if interval is not None:
+                        refine(value, interval)
+                except ConversionError:
+                    # Optional facts cannot hide an unproved earlier definition.
+                    # A dependent address still fails its ordinary audit.
+                    continue
+            if narrowed:
+                self.proofs.append((owner, len(narrowed)))
         if owner is not None and owner.name == "scf.for" and block is owner.body.block:
             try:
                 require_signed_loop(owner)

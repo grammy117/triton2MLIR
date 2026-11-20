@@ -12,6 +12,10 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "native-isolated-checked-memory-events" for row in trace.get("transformations", [])):
+        differences.append("source-width-checked structured memory reuses the native isolated base/offset event converter at original control positions; parent arithmetic converts separately without repeating pointer conversion; resulting tensor state retains active bounds, initialization and ownership checks, while the unguarded buffer continuation keeps its independent static witness requirements; public ABI and effect profiles are unchanged")
+    if any(row.get("kind") == "source-branch-ranges" for row in trace.get("transformations", [])):
+        differences.append("source address widths use original-definition checks before actual scalar branch constraints; signed/unsigned comparisons preserve fixed-width words, selected-region scope and conservative disconnected ranges; valid zero entry scalars, source control and operations remain; provenance grants no source rewrite, ownership, effect, numeric policy or public ABI change")
     if any(row.get("kind") == "source-loop-body-ranges" for row in trace.get("transformations", [])):
         differences.append("source address widths use definition-scoped intervals before narrower loop-body facts; actual signed serial reachability proves positive upper bounds and nonnegative product factors only inside their original regions; division/remainder checks retain source widths and poison refusals, while zero remains in valid entry domains; provenance describes the analysis and grants no source rewrite, ownership, numeric policy or public ABI change")
     if any(row.get("address") == "checked-scalar-flat-index" for row in trace.get("memory", {}).get("source_scatters", [])):
