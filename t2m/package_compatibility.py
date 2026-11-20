@@ -12,6 +12,8 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if trace.get("memory", {}).get("effect_profile") == "private-invocation-volatile-loads-v1":
+        differences.append("explicit private-invocation volatile-read profile retains every active source load, including unused observations, as standard LLVM volatile loads in exactly-once SCF leaves over real memref descriptor bases/offsets/strides; tiles, loops and logical grid remain portable; compiler-only defined identity anchors are removed after effects are restored; admission v5 and source-word stages v3 reject older readers and bind nondestructive normalization; physical GPU cache policies, external participants, arbitrary alias/synchronization and low-level address escape are not admitted; the public tensor/scalar ABI and receipt schema remain unchanged")
     if any(item.get("kind") in {"synchronous-program-memory-phase", "protected-allocation-program-memory-phases"}
            for item in trace.get("transformations", [])):
         differences.append("pinned pre-layout single-CTA barriers become standard exactly-once SCF memory phases at original structured control positions; tensor phases yield complete updated memory versions and standard-memory phases retain actual synchronous accesses; original address-space masks and source IDs remain provenance, while disjoint-program or executable conflict/initialization checks remain authoritative; this supplies no inter-CTA, asynchronous, external-state, unselected atomic-composition or physical-placement permission and changes no public tensor/scalar ABI or receipt schema")

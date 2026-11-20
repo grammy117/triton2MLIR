@@ -22,7 +22,7 @@ def candidates(options):
 
     if options["address_policy"] not in ("structured", "source-words"):
         raise ValueError("automatic memory selection requires a known address policy")
-    if options["effect_profile"] not in ("ordinary", "atomics", "typed-atomics"):
+    if options["effect_profile"] not in ("ordinary", "atomics", "typed-atomics", "volatile"):
         raise ValueError("automatic memory selection requires a known effect profile")
     if options["byte_order"] not in (None, "little", "big"):
         raise ValueError(

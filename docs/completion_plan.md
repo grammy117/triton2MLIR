@@ -1,5 +1,11 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Volatile reads](volatile_reads.md) now retain actual private observations
+through native/host/serial execution, with independently checked source effects,
+descriptor recipes and normalization protection. Qualify original allocation
+wrappers and complete models next, then compose program phases and remaining
+numeric/storage/effect profiles. General external/shared/async scope remains.
+
 [Atomic program phases](atomic_program_phases.md) now retain selected atomic
 old values and synchronized observations through direct/protected allocation
 conversion, reusable Merlin host and complete dependent i64/f32 models on actual

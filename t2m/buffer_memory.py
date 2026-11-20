@@ -22,7 +22,7 @@ from .standard_memref import memref_dialect
 from .standard_ops import ForallOp, InParallelOp
 
 
-def parse_memory(source):
+def parse_memory(source, *, volatile_anchors=False):
     ctx = context()
     for dialect in (memref_dialect(), cf.Cf, math_dialect.Math):
         ctx.load_dialect(dialect)
@@ -31,6 +31,11 @@ def parse_memory(source):
     ctx.allow_unregistered = True
     parser = SharedParser(ctx, source)
     module = parser.parse_module()
+    if volatile_anchors:
+        from .volatile_memory import checked_anchors
+        _helpers, allowed_calls = checked_anchors(module)
+    else:
+        allowed_calls = ()
     from .float_literals import materialize
     materialize(module, parser.literal_words(module))
     from .arith_compat import normalize_truncation_defaults
@@ -43,7 +48,7 @@ def parse_memory(source):
         if op.name == "builtin.unregistered" or op.name.split(".")[0] not in {
                 "builtin", "func", "arith", "math", "tensor", "linalg", "scf", "cf", "memref", "bufferization"}:
             raise ConversionError("memory continuation retains an unresolved operation", opcode=opcode(op))
-        if op.name == "func.call":
+        if op.name == "func.call" and op not in allowed_calls:
             raise ConversionError("memory continuation requires complete helper inlining", opcode=op.name)
     module.verify()
     return module

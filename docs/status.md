@@ -1,5 +1,10 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Private volatile reads](volatile_reads.md) now preserve actual standard LLVM
+observations instead of dropping the source flag during pointer conversion.
+Unused loads, original loops and memory guards survive native/host/serial
+execution. Allocation/model and broader shared/effect compositions remain next.
+
 [Atomic program phases](atomic_program_phases.md) now retain selected i64/f32
 updates, returned old values and synchronized reads through native, reusable
 Merlin host and complete i64/f32 models on serial Spike. All thirteen results

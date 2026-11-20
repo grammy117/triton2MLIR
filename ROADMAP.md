@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Volatile reads](docs/volatile_reads.md) now have an explicit private-memory
+profile with actual standard LLVM effects and source-preserving normalization.
+Native i32/i64/f32/f64 and selected host/serial cases retain unused observations.
+Continue allocation/model intake and source/numeric/effect compositions before
+general external/shared/async participation and accelerator qualification.
+
 Selected [atomic program phases](docs/atomic_program_phases.md) now retain
 original old values and synchronized observations through native, reusable
 Merlin host and complete i64/f32 models on serial Spike. Independent source and

@@ -1,5 +1,12 @@
 # Measured coverage and remaining boundaries
 
+[Private volatile reads](volatile_reads.md) add actual effect coverage to
+`tt.load`: all four source observations, including an unused one, survive
+normalization and LLVM legalization. Native i32/i64/f32/f64 and selected i64/f32
+Merlin host/serial cases qualify. Original allocation/model, barrier/atomic,
+external/shared and broader storage/numeric compositions remain open. The
+historical fifty-name inventory is unchanged.
+
 [Atomic program phases](atomic_program_phases.md) now compose selected i64/f32
 atomic updates, returned old values and ordinary synchronized observations
 through direct/protected allocation conversion and reusable Merlin host

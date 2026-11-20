@@ -36,7 +36,7 @@ def needs_literal_protection(source, work, *, optimizer, source_entry, effect_pr
     module, literals = parse_shared_source(generic.read_text())
     _preflight(module, source_entry=source_entry, atomics=effect_profile in ("atomics", "typed-atomics"),
         typed_atomics=effect_profile == "typed-atomics", f32_atomic_add=f32_atomic_add,
-        allow_composite_dots=True, literal_words=literals)
+        allow_composite_dots=True, literal_words=literals, volatile=effect_profile == "volatile")
     from .fp8_casts import validate_fp8_casts
     from .shared_tensor import _source_ids
     validate_fp8_casts(module, _source_ids)
@@ -78,6 +78,7 @@ def protect(
         allow_composite_dots=True,
         assembly_provider=assembly_provider,
         literal_words=literals,
+        volatile=effect_profile == "volatile",
     )
     validate_fp8_casts(module, _source_ids, overflow=fp8_overflow)
     graph = inventory(module, records, literal_words=literals)

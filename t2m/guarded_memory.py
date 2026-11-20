@@ -117,7 +117,7 @@ def check_tensor_allocation(op):
         raise ValueError("guarded tensor allocation requires a static dense copy-free default-space allocation")
 
 
-def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None, byte_order=None):
+def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f32_atomic_add=None, byte_order=None, volatile_anchors=()):
     from .shared_tensor import _array, _pointer_type, opcode
     function = next(iter(module.ops))
     entry = function.regions[0].block
@@ -186,7 +186,7 @@ def instrument(module, abi, source_ids, *, atomics=False, typed_atomics=False, f
             continue
         if name == "tt.bitcast" and (len(op.results) != 1 or op.results[0] not in word_views):
             refuse(op, "guarded memory requires a checked logical atomic pointer view")
-        if name not in supported | controls and name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "cf"):
+        if name not in supported | controls and op not in volatile_anchors and name.split(".")[0] not in ("arith", "math", "tensor", "linalg", "cf"):
             refuse(op, "guarded memory has an unqualified operation/effect")
         if name.startswith("cf.") and name != "cf.assert":
             refuse(op, "guarded memory requires structured source control flow")

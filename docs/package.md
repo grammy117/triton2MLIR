@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Private volatile reads](volatile_reads.md) explicitly select admission v5,
+source-word stages v3 and `private-invocation-volatile-loads-v1`. Defined
+compiler-only identity calls preserve observations before standard LLVM volatile
+leaves are restored, then disappear from exported MLIR. Exact stage pipelines,
+source/effect inventories, descriptor SSA and actual volatile flags are checked
+independently. These localized LLVM memory leaves differ from pure tensor MLIR;
+public tensor/scalar ABI and receipt schemas are unchanged. Older readers reject
+the new evidence versions; no external/shared/cache/target permission follows.
+
 [Atomic program phases](atomic_program_phases.md) explicitly select
 `t2m.synchronous-program-barrier.v2` with the existing private atomic effect
 profile and f32 policy. Original and protected atomic fields are independently

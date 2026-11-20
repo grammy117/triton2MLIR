@@ -37,7 +37,9 @@ def check_word_stage(stage, source, output):
         check_native(stage, "source-word-tensor", POINTER_FLAGS + COMPUTE_FLAGS, source, output,
                      alternative_flags=(POINTER_FLAGS + RSQRT_COMPUTE_FLAGS,))
         return
-    if (stage.get("schema") != "t2m.source-word-stages.v2" or stage.get("stage_completed") is not True
+    volatile = stage.get("schema") == "t2m.source-word-stages.v3"
+    if (stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3") or stage.get("stage_completed") is not True
+            or volatile and stage.get("compute_effects") != "private-invocation-volatile-loads-v1"
             or stage.get("input") != record(source) or stage.get("output") != record(output)
             or stage.get("reconstruction") != "same-region-same-event-order"
             or not isinstance(stage.get("events"), dict) or not isinstance(stage.get("compute"), dict)):
@@ -55,8 +57,9 @@ def check_word_stage(stage, source, output):
             or byte_views and (events["byte_order"] not in ("little", "big")
                 or any(not isinstance(view, dict) or view.get("byte_order") != events["byte_order"] for view in byte_views))):
         raise ValueError("source-word byte templates lack one explicit consistent byte order")
-    check_native(compute["native_stage"], "source-word-compute", COMPUTE_FLAGS, compute["input"], output,
-                 alternative_flags=(RSQRT_COMPUTE_FLAGS,))
+    check_native(compute["native_stage"], "source-word-volatile-compute" if volatile else "source-word-compute",
+                 RSQRT_COMPUTE_FLAGS[:2] if volatile else COMPUTE_FLAGS, compute["input"], output,
+                 alternative_flags=() if volatile else (RSQRT_COMPUTE_FLAGS,))
     event_tool = events["native_stage"].get("optimizer", {}).get("sha256")
     if not isinstance(event_tool, str) or len(event_tool) != 64 or event_tool != compute["native_stage"].get("optimizer", {}).get("sha256"):
         raise ValueError("source-word event and computation stages used different optimizers")
@@ -64,16 +67,29 @@ def check_word_stage(stage, source, output):
 
 def replay_events(stage, source):
     """Reconstruct every typed event disposition from the retained parent IR."""
-    if stage.get("schema") != "t2m.source-word-stages.v2":
+    if stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3"):
         return
     from .shared_tensor import _source_ids, parse_shared
     from .word_events import print_ir, substitute, templates
     module = parse_shared(source.decode() if isinstance(source, bytes) else source)
+    volatile_contracts = {}
+    if stage["schema"] == "t2m.source-word-stages.v3":
+        from .volatile_memory import contract
+        from .shared_tensor import opcode
+        from xdsl.dialects import builtin
+        for op in module.walk():
+            flag = op.properties.get("isVolatile")
+            if opcode(op) == "tt.load" and isinstance(flag, builtin.IntegerAttr) and flag.value.data:
+                sid = _source_ids(op.location)[0]
+                volatile_contracts[sid] = contract(op, sid)
     events = stage["events"]
     isolated, bindings, calls = templates(module, _source_ids, byte_order=events.get("byte_order"))
     if print_ir(isolated) != events["input"] or bindings != events["bindings"]:
         raise ValueError("source-word event templates differ from the complete typed source event inventory")
     substitute(module, parse_shared(events["output"]), bindings, calls)
+    if stage["schema"] == "t2m.source-word-stages.v3":
+        from .volatile_memory import protect_events
+        protect_events(module, volatile_contracts, _source_ids)
     if not same_computation(module, stage["compute"]["input"]):
         raise ValueError("source-word event reconstruction differs from the actual computation input")
 

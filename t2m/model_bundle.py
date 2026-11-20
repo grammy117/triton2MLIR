@@ -400,6 +400,8 @@ def verify_model_bundle(out):
         if profile not in PROFILE_FILES or any(directory + "/" + name not in receipt["artifacts"] for name in PROFILE_FILES[profile]):
             raise ValueError("kernel memory profile evidence is outside the bound inventory")
         validate_memory_evidence(provenance, {name: (out / directory / name).read_bytes() for name in PROFILE_FILES[profile]})
+        from .volatile_memory import validate_payload
+        validate_payload(parse_shared((out / directory / "model.mlir").read_text()), provenance.get("memory", {}).get("volatile_adaptations", []))
         capsule = source_members(provenance)
         if any(directory + "/" + name not in receipt["artifacts"] for name in capsule):
             raise ValueError("kernel source capsule is outside the bound artifact inventory")

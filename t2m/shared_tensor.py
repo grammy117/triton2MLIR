@@ -294,7 +294,7 @@ def _source_ids(location):
     return []
 
 
-def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None, literal_words=None):
+def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", atomics=False, typed_atomics=False, f32_atomic_add=None, allow_composite_dots=False, assembly_provider=None, literal_words=None, volatile=False):
     """Audit source operations independently of an eventual bound call ABI.
 
     A source-only audit requires an explicit entry and grants no signature
@@ -369,9 +369,15 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
             raise ConversionError("operation needs a separately qualified effect or numeric profile",
                                   source_id=source_id, opcode=name)
         if name == "tt.load":
-            volatile = op.properties.get("isVolatile", op.attributes.get("isVolatile"))
-            if volatile is not None and (not isinstance(volatile, IntegerAttr) or volatile.value.data):
-                raise ConversionError("volatile observations cannot become stable tensor reads", source_id=source_id, opcode=name)
+            volatile_flag = op.properties.get("isVolatile", op.attributes.get("isVolatile"))
+            if volatile_flag is not None and not isinstance(volatile_flag, IntegerAttr):
+                raise ConversionError("volatile source flag must be a typed boolean", source_id=source_id, opcode=name)
+            if volatile_flag is not None and volatile_flag.value.data:
+                if volatile:
+                    from .volatile_memory import contract
+                    records[-1]["volatile_read"] = contract(op, source_id)
+                else:
+                    raise ConversionError("volatile observations cannot become stable tensor reads", source_id=source_id, opcode=name)
         if name == "arith.constant":
             value = op.properties.get("value")
             if isinstance(value, builtin.FloatAttr) and host_math.isnan(value.value.data) and op not in (literal_words or {}):
@@ -1252,10 +1258,13 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     source_words = address_policy == "source-words"
     if byte_order is not None and (byte_order not in ("little", "big") or memory_profile != "guarded-buffer" or not source_words):
         raise ValueError("byte-buffer views require explicit little/big byte order and guarded source-word memory")
-    if effect_profile not in ("ordinary", "atomics", "typed-atomics"):
-        raise ValueError("effect profile must be explicitly ordinary, atomics or typed-atomics")
+    if effect_profile not in ("ordinary", "atomics", "typed-atomics", "volatile"):
+        raise ValueError("effect profile must be explicitly ordinary, atomics, typed-atomics or volatile")
     atomics = effect_profile in ("atomics", "typed-atomics")
     typed_atomics = effect_profile == "typed-atomics"
+    volatile = effect_profile == "volatile"
+    if volatile and (memory_profile != "guarded-buffer" or address_policy != "source-words" or byte_order is not None):
+        raise ConversionError("volatile reads require guarded source-word memory without a byte-storage reinterpretation")
     if f32_atomic_add not in (None, "ieee", "ftz"):
         raise ValueError("f32 atomic addition policy must be explicitly ieee or ftz")
     if f32_atomic_add is not None and not typed_atomics:
@@ -1290,6 +1299,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .cfg_intake import required as requires_cfg
     has_cfg = requires_cfg(parsed)
     has_barriers = any(opcode(op) == "ttg.barrier" for op in parsed.walk())
+    if volatile and has_barriers:
+        raise ConversionError("volatile program-barrier composition needs its source phase contract", opcode="ttg.barrier")
     protect_source = protect_source or original_precision or has_cfg or bool(literal_words) or has_barriers
     from .descriptor_arguments import bind_entry as bind_descriptor_entry
     descriptor_binding = bind_descriptor_entry(pointer_report.get("descriptor_argument_expansion") if pointer_report else None, abi)
@@ -1301,7 +1312,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     records = _preflight(parsed, None if deferred_descriptor_abi or has_cfg else abi,
         source_entry=abi.entry if deferred_descriptor_abi or has_cfg else None,
         id_prefix="normalized.ttir.op." if original_inventory else "ttir.op.", atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add,
-        allow_composite_dots=protect_source, assembly_provider=assembly_provider, literal_words=literal_words)
+        allow_composite_dots=protect_source, assembly_provider=assembly_provider, literal_words=literal_words, volatile=volatile)
     validate_fp8_casts(parsed, _source_ids, overflow=fp8_overflow)
     intent_by_source = {}
     for op in parsed.walk():
@@ -1362,7 +1373,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         if deferred_descriptor_abi and descriptor_binding is None:
             raise ConversionError("original descriptor arguments lack an actual normalized field binding")
         records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
-            typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+            typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider, volatile=volatile)
         intent_by_source = {}
         for operation in normalized.walk():
             intent = {key: value for key, value in operation.attributes.items()
@@ -1392,7 +1403,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             original_inventory = protected_inventory
             normalized = parse_shared(middle_source.read_text())
             records = _preflight(normalized, abi, id_prefix="normalized.ttir.op.", atomics=atomics,
-                typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider)
+                typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, assembly_provider=assembly_provider, volatile=volatile)
             intent_by_source = {}
             for operation in normalized.walk():
                 intent = {key: value for key, value in operation.attributes.items()
@@ -1439,7 +1450,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if source_words:
         from .pointer_control import normalize_pointer_control
         from .word_events import MEMORY_EVENTS, needs_isolation
-        isolated_events = needs_isolation(middle_module) or (byte_order is not None and any(
+        isolated_events = volatile or needs_isolation(middle_module) or (byte_order is not None and any(
             opcode(op) in MEMORY_EVENTS for op in middle_module.walk()))
         pointer_control_reports = normalize_pointer_control(middle_module, _source_ids, isolate_memory=isolated_events, typed_atomics=typed_atomics, byte_order=byte_order,
             byte_atomics=typed_atomics and byte_order is not None)
@@ -1485,11 +1496,16 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         from .word_events import convert_events, print_ir
         from .word_evidence import record as word_record
         events = convert_events(middle_module, work / "word-events", optimizer, _source_ids, byte_order=byte_order)
+        if volatile:
+            from .volatile_memory import protect_events
+            protect_events(middle_module, {row["id"]: row["volatile_read"] for row in records if "volatile_read" in row}, _source_ids)
         compute_input = print_ir(middle_module)
         compute_source = work / "word-compute.mlir"
         compute_source.write_text(compute_input)
-        compute_stage = lower_with_shared(compute_source, work / "tensor-ir", optimizer=optimizer, stage="source-word-compute")
-        stage = {"schema": "t2m.source-word-stages.v2", "stage_completed": True,
+        compute_stage = lower_with_shared(compute_source, work / "tensor-ir", optimizer=optimizer,
+            stage="source-word-volatile-compute" if volatile else "source-word-compute")
+        stage = {"schema": "t2m.source-word-stages.v3" if volatile else "t2m.source-word-stages.v2", "stage_completed": True,
+            **({"compute_effects": "private-invocation-volatile-loads-v1"} if volatile else {}),
             "reconstruction": "same-region-same-event-order", "input": word_record(word_input),
             "output": word_record((work / "tensor-ir/lowered.mlir").read_bytes()),
             "events": events, "compute": {"input": compute_input, "native_stage": compute_stage}}
@@ -1497,7 +1513,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         stage = lower_with_shared(middle_source, work / "tensor-ir", optimizer=optimizer,
             stage="source-word-tensor" if source_words else "tensor-ir-data-control" if data_control else "tensor-ir")
     lowered = parse_shared((work / "tensor-ir/lowered.mlir").read_text())
-    if len(list(lowered.ops)) != 1 or opcode(next(iter(lowered.ops))) != "tt.func":
+    if volatile:
+        from .volatile_memory import checked_anchors
+        checked_anchors(lowered)
+    if (not volatile and len(list(lowered.ops)) != 1) or opcode(next(iter(lowered.ops))) != "tt.func":
         raise ConversionError("upstream left helper functions; complete inlining is required for tensorization")
     from .source_prints import contract as print_contract
     print_reports = []
@@ -1557,7 +1576,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     admission = None
     if memory_profile == "guarded-buffer":
         from .guarded_memory import instrument
-        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, byte_order=byte_order)
+        admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, byte_order=byte_order,
+            volatile_anchors=checked_anchors(lowered)[1] if volatile else ())
+        if volatile:
+            admission.update(schema="t2m.memory-admission.v5", effect_profile="private-invocation-volatile-loads-v1")
         result = witness = None
     else:
         if any(opcode(op) in ("tts.gather", "tts.scatter") and not isinstance(op.operands[1].type, TensorType)
@@ -1595,9 +1617,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         memory_input = stream.getvalue() + "\n"
         (work / "memory-input.mlir").write_text(memory_input)
         memory_stage = lower_with_shared(work / "memory-input.mlir", work / "memory-ir", optimizer=optimizer,
-            stage="memory-effects" if admission is not None else "memory-ir")
+            stage="memory-volatile-effects" if volatile else "memory-effects" if admission is not None else "memory-ir")
         memory_source = (work / "memory-ir/lowered.mlir").read_text()
-        memory_module = parse_memory(memory_source)
+        memory_module = parse_memory(memory_source, volatile_anchors=volatile)
         if atomics:
             from .atomic_memory import adapt_payload
             admission["atomic_adaptations"] = adapt_payload(memory_module, abi, admission, _source_ids)
@@ -1609,6 +1631,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                 transformations.append({"kind": "source-gather-observations-to-memory-loads",
                     "adaptations": admission["read_adaptations"],
                     "boundary": "before-memory-CSE; original-source-read-effects-retained"})
+        if volatile:
+            from .volatile_memory import adapt_payload
+            admission["volatile_adaptations"] = adapt_payload(memory_module, abi, records, _source_ids)
+            from .volatile_memory import remove_anchors
+            remove_anchors(memory_module)
+            transformations.append({"kind": "native-volatile-memory-payload", "events": admission["volatile_adaptations"]})
         result = functionalize_memory(memory_module, abi, guards=admission)
         auxiliary.update({"memory-input.mlir": memory_input,
                      "memory-stage.mlir": memory_source,
@@ -1796,7 +1824,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             index_overflow="original-integer-word-arithmetic; signed-i64-pointer-offset-accumulation",
             word_stage_sha256=hashlib.sha256(auxiliary["word-stage.json"].encode()).hexdigest())
         if isolated_events:
-            trace["memory"]["word_conversion"] = "native-isolated-events-v2"
+            trace["memory"]["word_conversion"] = "native-isolated-volatile-events-v3" if volatile else "native-isolated-events-v2"
         trace["abi_difference"] += "; source-word address policy uses indirect offset tensors instead of recovered structured slices"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     if atomics:
@@ -1812,5 +1840,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         if "byte_order" in admission:
             trace["memory"]["byte_order"] = admission["byte_order"]
         trace["abi_difference"] += "; private-invocation atomic payload; atomic collisions permitted; ordinary races still guarded"
+        trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
+    if volatile:
+        from .volatile_memory import EFFECT_PROFILE
+        next(iter(result.ops)).attributes["prov.effect_profile"] = StringAttr(EFFECT_PROFILE)
+        trace["memory"].update(effect_profile=EFFECT_PROFILE, volatile_adaptations=admission["volatile_adaptations"])
+        trace["abi_difference"] += "; private volatile reads retain standard LLVM memory leaves and descriptor-derived addresses"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)

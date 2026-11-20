@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Private volatile reads](docs/volatile_reads.md) now preserve every actual
+observation, including unused values, through native, reusable Merlin host and
+selected serial Spike execution. Source guards and descriptor address proofs
+remain; original allocation/model and broader shared/effect compositions are
+the next gates.
+
 [Atomic program phases](docs/atomic_program_phases.md) now compose selected
 private atomic updates with synchronous program barriers through native,
 reusable Merlin host and complete i64/f32 model execution on serial Spike.

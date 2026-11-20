@@ -52,6 +52,8 @@ def write_shared_bundle(result, out, inputs, references, *, work, python=None, r
     if hashlib.sha256(source.encode()).hexdigest() != result.trace["source_sha256"]:
         raise ValueError("source changed after conversion")
     profile = validate_memory_evidence(result.trace, result.auxiliary_artifacts)
+    from .volatile_memory import validate_payload
+    validate_payload(result.module, result.trace.get("memory", {}).get("volatile_adaptations", []))
     validate_source_capsule(result.trace, result.auxiliary_artifacts, result.source_ttir)
     arrays, references = validate_inputs(result.spec,inputs), tuple(np.asarray(a) for a in references)
     if len(references) != len(result.spec.outputs):
@@ -126,6 +128,9 @@ def verify_shared_bundle(out):
         raise ValueError("provenance differs from the packaged ABI")
     if trace["mlir_sha256"] != _record(out / "model.mlir")["sha256"] or trace["source_sha256"] != _record(out / "source.ttir")["sha256"]:
         raise ValueError("provenance does not bind exact IR/source bytes")
+    from .shared_tensor import parse_shared
+    from .volatile_memory import validate_payload
+    validate_payload(parse_shared((out / "model.mlir").read_text()), trace.get("memory", {}).get("volatile_adaptations", []))
     execution = json.loads((out / "execution.json").read_text())
     if execution["input_sha256"] != trace["mlir_sha256"] or execution.get("reference_comparison") != "passed":
         raise ValueError("native numerical validation does not bind the packaged IR")

@@ -36,6 +36,8 @@ def context():
     ctx.load_dialect(Dialect("tensor", [*tensor.Tensor.operations, ParallelInsertSliceOp], list(tensor.Tensor.attributes)))
     from .standard_vector import vector_dialect
     ctx.load_dialect(vector_dialect())
+    from .standard_llvm import llvm_memory_dialect
+    ctx.load_dialect(llvm_memory_dialect())
     return ctx
 
 
