@@ -19,6 +19,17 @@ before bufferization and publish no qualification. Continue relational range/
 arithmetic proofs, partial/nested initialization, resizing/permuted owners,
 parallel dependencies, shared/async effects and applicable accelerator closure.
 
+Producer `c5c64009876e2fd3c38551763b1a4637587c7d05` passes 24 focused and 166
+overlapping source/memory/control checks against the current consumer. The
+source-pinned reopening report is `out/while-word-ranges/summary.json`: five
+host packages retain 23 initial and 93 replay results, and ten actual serial
+images retain 46 results. Five native bounds violations actually abort without
+outputs. All original model-parent bytes and every result are checked. Final
+logs are `.scratch/while-word-final1.log`, `.scratch/while-word-regression2.log`
+and `.scratch/while-word-report1.log`. Selected hashes are not a full dependency
+closure; the historical operation-name denominator and performance claims remain
+unchanged. Full arbitrary-kernel coverage remains incomplete.
+
 [Source while memory](while_tensor_memory.md) now preserves source conditions,
 both tensor-state regions and final false-edge effects. Real tiled i64/f32
 kernels retain reuse, masks, empty/zero trips and earlier snapshots. The actual

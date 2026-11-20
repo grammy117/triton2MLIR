@@ -120,6 +120,25 @@ source-range, dynamic-dimension and complete-model lifetime failures remain
 in their original logs. Those diagnostic probes stop before bufferization and
 are not successful compiler or target qualifications.
 
+Producer `c5c64009876e2fd3c38551763b1a4637587c7d05` and Merlin
+`83dc7e3a002c9c596de105900c7f3fd1c6113a8e` pass the 24 focused source/model
+checks and 166 overlapping source/memory/control regressions. The independent
+consumer destination/ownership/access selection passes 337 with two skips;
+repository structure checks pass. Targeted Ruff passes. Shared tensor/indexing
+code retains its five/one pre-existing diagnostics respectively.
+
+`out/while-word-ranges/summary.json` reopens all five host packages, every
+original model-parent archive, saved output/reference arrays and ten actual
+serial target qualifications. Four kernel libraries retain twelve initial and
+sixty replay results; the model retains eleven initial and thirty-three replay
+results. Eight kernel images retain twenty-four results, and two complete-model
+images retain twenty-two more. Every comparison uses exact words. Five native
+active-index aborts publish no results, including the oversized i64 case.
+Selected source hashes and actual revisions are retained without claiming a
+full dependency closure. Reopening passes in `.scratch/while-word-report1.log`;
+the final test logs are `.scratch/while-word-final1.log` and
+`.scratch/while-word-regression2.log`. Earlier failed logs remain unchanged.
+
 General relational while invariants, wider source arithmetic/cast/division
 compositions, partial/nested initialization, resizing/permuted owners, irregular
 parallel dependencies, shared/async effects and applicable accelerator

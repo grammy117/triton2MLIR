@@ -10,6 +10,11 @@ i32. Source overflow/cast/divisor refusals remain. The consumer selection passes
 337 with two skips and structure checks pass. These are source/control/ownership
 compositions; the historical opcode inventory and general target claims are
 unchanged. Relational facts, general ownership/effects and accelerators remain.
+The overlapping source/memory/control regression selection passes 166.
+`out/while-word-ranges/summary.json` reopens five host packages, 23 initial and
+93 replay results, and 46 exact results from ten actual serial images. Five
+native active-bounds aborts publish no outputs. Actual revisions and selected
+source hashes remain separate from a full dependency-closure claim.
 
 [Source while memory](while_tensor_memory.md) qualifies original conditions,
 body updates, reused tiles, snapshots, heterogeneous numeric state and final
