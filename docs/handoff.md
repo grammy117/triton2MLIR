@@ -10,6 +10,15 @@ Kernel checks pass 75, model checks twenty (including two original models), and
 related source/control/memory regressions 137. No companion source edit is needed.
 General runtime-stride/conditional/while/alias, dynamic-root, shared/async and
 applicable source/numeric/target closure remains open.
+The final reopening log is `.scratch/ordinal-pointer-report2.log`; fourteen
+selected producer files match `b55fc70d05d37fd840ad9bc0155cedf26679251a`.
+Unchanged companion pins remain model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2`
+and Merlin `53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. This is not a full dependency closure. The next
+reproduced boundary is `.scratch/runtime-pointer-runtime-stride1/`: a separate
+bounded runtime memory stride. Source words pass four native cases; structured
+profiles retain the upstream boxing refusal. Preserve the real invariant scalar
+and exact carried logical offsets when extending that representation.
 
 [Pure loop exit coordinates](pure_loop_exits.md) now close the saved
 final-pointer-only refusal by binding actual cloned result SSA through the

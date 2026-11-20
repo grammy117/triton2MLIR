@@ -117,6 +117,14 @@ archive, source header SSA, package compatibility and actual target receipt
 remains checked. These counts are separate from the older model regressions.
 Selected source hashes are not a full build dependency closure.
 
+The final reopening log is `.scratch/ordinal-pointer-report2.log`. Fourteen
+selected producer implementation/test/helper files match commit
+`b55fc70d05d37fd840ad9bc0155cedf26679251a`, separately from observed reopening
+revisions. The unchanged companion pins are model2MLIR
+`f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`.
+
 The related source/control/memory selection passes 137 checks in
 `.scratch/ordinal-pointer-regression1.log`, including the final independent
 sequential-counter cases. New/changed helper/test Ruff and diff checks pass.
