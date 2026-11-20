@@ -498,7 +498,7 @@ def main(argv=None):
                         help="auto explicitly tries proved tensor, guarded logical and guarded source-word admission")
     tensor.add_argument("--address-policy", choices=("structured", "source-words"), default="structured",
                         help="source-words requires guarded-buffer and retains source integer arithmetic")
-    tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile"), default="ordinary")
+    tensor.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile", "atomic-volatile"), default="ordinary")
     tensor.add_argument("--byte-order", choices=("little", "big"), help="explicit logical byte-buffer word representation")
     tensor.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     tensor.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf", "per-cast"), help="explicit FP8 contract; per-cast requires source t2m.fp8_overflow attributes")
@@ -516,7 +516,7 @@ def main(argv=None):
     sd.add_argument("--optimizer", type=Path)
     sd.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer"), default="tensor")
     sd.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
-    sd.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile"), default="ordinary")
+    sd.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile", "atomic-volatile"), default="ordinary")
     sd.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="explicit source rounding/subnormal policy for f32 atomic addition")
     sd.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf"), help="explicit FP8 contract; fp8-narrow demo defaults to satfinite")
     sd.add_argument("--python", type=Path, help="existing Python with torch-mlir")
@@ -558,7 +558,8 @@ def main(argv=None):
     bind.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer", "auto"), default="tensor",
                       help="auto explicitly selects the first admitted portable representation per kernel")
     bind.add_argument("--address-policy", choices=("structured", "source-words"), default="structured")
-    bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile"), default="ordinary")
+    bind.add_argument("--effect-profile", choices=("ordinary", "atomics", "typed-atomics", "volatile", "atomic-volatile"), default="ordinary")
+    bind.add_argument("--f32-atomic-add", choices=("ieee", "ftz"), help="default f32 atomic numeric policy; each binding may override it")
     bind.add_argument("--fp8-overflow", choices=("ieee", "satfinite", "satfinite-nan-inf", "per-cast"), help="default FP8 contract; per-cast requires explicit source policies; each binding may override it")
     bind.add_argument("--assembly-provider", help="default installed source semantics provider; each binding may override it")
     bind.add_argument("--python", type=Path, help="existing native environment with torch-mlir and safetensors")
@@ -650,6 +651,7 @@ def main(argv=None):
                     abi = json.loads((args.bindings.parent / abi).read_text())
                 options = dict(optimizer=args.optimizer,memory_profile=item.get("memory_profile",args.memory_profile),
                     address_policy=item.get("address_policy",args.address_policy),effect_profile=item.get("effect_profile",args.effect_profile),
+                    f32_atomic_add=item.get("f32_atomic_add",args.f32_atomic_add),
                     fp8_overflow=item.get("fp8_overflow",args.fp8_overflow),byte_order=item.get("byte_order"),
                     assembly_provider=item.get("assembly_provider",args.assembly_provider))
                 if "source_layout" in item:

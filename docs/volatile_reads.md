@@ -13,6 +13,9 @@ source byte reinterpretation or mixed atomic composition. Selected synchronous
 program barriers additionally require the explicit [v3 phase contract](volatile_program_phases.md).
 Other effects require additional source/effect contracts. A source
 volatile request cannot silently become a stable tensor read.
+Selected [atomic/volatile composition](atomic_volatile_effects.md) additionally
+requires `--effect-profile atomic-volatile` and admission v6/word stages v4;
+the atomic numeric/ownership component remains separate from the volatile one.
 Pinned TTIR forbids volatile map reads; native verification still rejects them.
 
 ## Why normalization needs protection

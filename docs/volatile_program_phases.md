@@ -63,8 +63,9 @@ refuse v3; compatibility metadata names the new selection explicitly.
 Bounds, complete initialization, sticky cross-program conflicts and native
 ownership/lifetime checks remain authoritative. The private invocation ABI
 excludes external participants. A program barrier cannot authorize another
-program's ordinary accesses or grid-wide publication. Mixed volatile/atomic,
-shared/external/asynchronous effects, physical observations, broader numeric/
+program's ordinary accesses or grid-wide publication. Selected
+[atomic/volatile composition](atomic_volatile_effects.md) has a separate v4
+contract. Shared/external/asynchronous effects, physical observations, broader numeric/
 storage compositions and accelerator correctness/performance remain completion
 work. The full arbitrary-kernel objective remains open.
 

@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Composed atomic/volatile effects](atomic_volatile_effects.md) explicitly select
+admission v6 and word stages v4. Atomic `effect_profile`, numeric policy and
+participant ownership remain intact alongside `volatile_profile`; actual mixed
+barriers use v4 and bind both selections. The standard atomic computation and
+localized LLVM volatile reads remain executable. Public tensor/scalar ABI and
+capture receipts are unchanged; older admission/word/barrier readers refuse the
+new versions. `bind-model` forwards explicit global/per-kernel f32 policy.
+
 [Volatile program phases](volatile_program_phases.md) additionally select
 `t2m.synchronous-program-barrier.v3` when actual private volatile observations
 compose with synchronous barriers. Both readers check original/protected

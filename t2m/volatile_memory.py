@@ -160,10 +160,12 @@ def validate_evidence(memory, admission, records, source, stage):
     """Tie the explicit profile and every observation to actual typed source."""
     from .shared_tensor import _source_ids, opcode, parse_shared
 
-    if (memory.get("effect_profile") != EFFECT_PROFILE or admission.get("effect_profile") != EFFECT_PROFILE
+    combined = admission.get("schema") == "t2m.memory-admission.v6"
+    field = "volatile_profile" if combined else "effect_profile"
+    if (memory.get(field) != EFFECT_PROFILE or admission.get(field) != EFFECT_PROFILE
             or memory.get("volatile_adaptations") != admission.get("volatile_adaptations")
             or not isinstance(admission.get("volatile_adaptations"), list)
-            or stage.get("schema") != "t2m.source-word-stages.v3"):
+            or stage.get("schema") != ("t2m.source-word-stages.v4" if combined else "t2m.source-word-stages.v3")):
         raise ValueError("volatile memory lacks its selected source/effect/stage contract")
     declared = {r["id"]: r["volatile_read"] for r in records if "volatile_read" in r}
     actual = {}

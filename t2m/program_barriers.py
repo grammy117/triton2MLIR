@@ -15,6 +15,7 @@ from .diagnostics import ConversionError
 SCHEMA = "t2m.synchronous-program-barrier.v1"
 ATOMIC_SCHEMA = "t2m.synchronous-program-barrier.v2"
 VOLATILE_SCHEMA = "t2m.synchronous-program-barrier.v3"
+COMBINED_SCHEMA = "t2m.synchronous-program-barrier.v4"
 SPACES = ((1, "local"), (2, "global_read"), (4, "global_write"),
           (8, "tensor_read"), (16, "tensor_write"))
 
@@ -35,9 +36,9 @@ def atomic_options(value):
 def atomic_selection(effect_profile, f32_atomic_add):
     from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
 
-    if effect_profile not in ("atomics", "typed-atomics"):
+    if effect_profile not in ("atomics", "typed-atomics", "atomic-volatile"):
         raise ValueError("atomic program phases require the selected private atomic effect profile")
-    value = {"profile": TYPED_EFFECT_PROFILE if effect_profile == "typed-atomics" else EFFECT_PROFILE,
+    value = {"profile": TYPED_EFFECT_PROFILE if effect_profile in ("typed-atomics", "atomic-volatile") else EFFECT_PROFILE,
              "f32_atomic_add": f32_atomic_add}
     atomic_options(value)
     return value
@@ -55,7 +56,7 @@ def volatile_options(value):
 def volatile_selection(effect_profile):
     from .volatile_memory import EFFECT_PROFILE
 
-    if effect_profile != "volatile":
+    if effect_profile not in ("volatile", "atomic-volatile"):
         raise ValueError("volatile program phases require the selected private volatile effect profile")
     return {"profile": EFFECT_PROFILE}
 
@@ -84,9 +85,11 @@ def contract(op, source_id, *, atomic_effects=None, volatile_effects=None):
         atomic_options(atomic_effects)
     if volatile_effects is not None:
         volatile_options(volatile_effects)
-        if atomic_effects is not None:
-            refuse("mixed volatile/atomic program phases need a combined effect profile")
-    return {"schema": VOLATILE_SCHEMA if volatile_effects is not None else ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA,
+        if atomic_effects is not None and atomic_options(atomic_effects)["effect_profile"] != "typed-atomics":
+            refuse("combined program phases require the selected typed atomic component")
+    schema = (COMBINED_SCHEMA if atomic_effects is not None and volatile_effects is not None else
+              VOLATILE_SCHEMA if volatile_effects is not None else ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA)
+    return {"schema": schema,
             **({"atomic_effects": atomic_effects} if atomic_effects is not None else {}),
             **({"volatile_effects": volatile_effects} if volatile_effects is not None else {}),
             "source_id": source_id, "address_space_mask": space.value.data,
@@ -127,7 +130,7 @@ def expand(module, source_ids, *, effect_profile="ordinary", f32_atomic_add=None
             refuse(str(error))
         from .atomic_memory import contract as atomic_contract
         for op in atomics:
-            atomic_contract(op, source_ids, typed=effect_profile == "typed-atomics", f32_atomic_add=f32_atomic_add)
+            atomic_contract(op, source_ids, typed=effect_profile in ("typed-atomics", "atomic-volatile"), f32_atomic_add=f32_atomic_add)
     volatile_effects = None
     if volatile_reads:
         try:

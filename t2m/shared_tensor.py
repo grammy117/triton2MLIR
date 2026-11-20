@@ -1264,11 +1264,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     source_words = address_policy == "source-words"
     if byte_order is not None and (byte_order not in ("little", "big") or memory_profile != "guarded-buffer" or not source_words):
         raise ValueError("byte-buffer views require explicit little/big byte order and guarded source-word memory")
-    if effect_profile not in ("ordinary", "atomics", "typed-atomics", "volatile"):
-        raise ValueError("effect profile must be explicitly ordinary, atomics, typed-atomics or volatile")
-    atomics = effect_profile in ("atomics", "typed-atomics")
-    typed_atomics = effect_profile == "typed-atomics"
-    volatile = effect_profile == "volatile"
+    if effect_profile not in ("ordinary", "atomics", "typed-atomics", "volatile", "atomic-volatile"):
+        raise ValueError("effect profile must be explicitly ordinary, atomics, typed-atomics, volatile or atomic-volatile")
+    atomics = effect_profile in ("atomics", "typed-atomics", "atomic-volatile")
+    typed_atomics = effect_profile in ("typed-atomics", "atomic-volatile")
+    volatile = effect_profile in ("volatile", "atomic-volatile")
     if volatile and (memory_profile != "guarded-buffer" or address_policy != "source-words" or byte_order is not None):
         raise ConversionError("volatile reads require guarded source-word memory without a byte-storage reinterpretation")
     if f32_atomic_add not in (None, "ieee", "ftz"):
@@ -1508,8 +1508,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         compute_source.write_text(compute_input)
         compute_stage = lower_with_shared(compute_source, work / "tensor-ir", optimizer=optimizer,
             stage="source-word-volatile-compute" if volatile else "source-word-compute")
-        stage = {"schema": "t2m.source-word-stages.v3" if volatile else "t2m.source-word-stages.v2", "stage_completed": True,
-            **({"compute_effects": "private-invocation-volatile-loads-v1"} if volatile else {}),
+        stage = {"schema": "t2m.source-word-stages.v4" if volatile and atomics else "t2m.source-word-stages.v3" if volatile else "t2m.source-word-stages.v2", "stage_completed": True,
+            **({"compute_effects": "private-invocation-atomic-volatile-v1" if atomics else "private-invocation-volatile-loads-v1"} if volatile else {}),
             "reconstruction": "same-region-same-event-order", "input": word_record(word_input),
             "output": word_record((work / "tensor-ir/lowered.mlir").read_bytes()),
             "events": events, "compute": {"input": compute_input, "native_stage": compute_stage}}
@@ -1583,7 +1583,10 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         admission = instrument(lowered, abi, _source_ids, atomics=atomics, typed_atomics=typed_atomics, f32_atomic_add=f32_atomic_add, byte_order=byte_order,
             volatile_anchors=checked_anchors(lowered)[1] if volatile else ())
         if volatile:
-            admission.update(schema="t2m.memory-admission.v5", effect_profile="private-invocation-volatile-loads-v1")
+            if atomics:
+                admission.update(schema="t2m.memory-admission.v6", volatile_profile="private-invocation-volatile-loads-v1")
+            else:
+                admission.update(schema="t2m.memory-admission.v5", effect_profile="private-invocation-volatile-loads-v1")
         result = witness = None
     else:
         if any(opcode(op) in ("tts.gather", "tts.scatter") and not isinstance(op.operands[1].type, TensorType)
@@ -1828,7 +1831,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             index_overflow="original-integer-word-arithmetic; signed-i64-pointer-offset-accumulation",
             word_stage_sha256=hashlib.sha256(auxiliary["word-stage.json"].encode()).hexdigest())
         if isolated_events:
-            trace["memory"]["word_conversion"] = "native-isolated-volatile-events-v3" if volatile else "native-isolated-events-v2"
+            trace["memory"]["word_conversion"] = ("native-isolated-atomic-volatile-events-v4" if volatile and atomics else
+                "native-isolated-volatile-events-v3" if volatile else "native-isolated-events-v2")
         trace["abi_difference"] += "; source-word address policy uses indirect offset tensors instead of recovered structured slices"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     if atomics:
@@ -1847,8 +1851,9 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     if volatile:
         from .volatile_memory import EFFECT_PROFILE
-        next(iter(result.ops)).attributes["prov.effect_profile"] = StringAttr(EFFECT_PROFILE)
-        trace["memory"].update(effect_profile=EFFECT_PROFILE, volatile_adaptations=admission["volatile_adaptations"])
+        field = "volatile_profile" if atomics else "effect_profile"
+        next(iter(result.ops)).attributes["prov." + field] = StringAttr(EFFECT_PROFILE)
+        trace["memory"].update({field: EFFECT_PROFILE, "volatile_adaptations": admission["volatile_adaptations"]})
         trace["abi_difference"] += "; private volatile reads retain standard LLVM memory leaves and descriptor-derived addresses"
         trace["mlir_sha256"] = hashlib.sha256(text(result).encode()).hexdigest()
     return SharedTensorResult(result, abi, trace, source_text, auxiliary)

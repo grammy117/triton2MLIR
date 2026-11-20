@@ -59,9 +59,9 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("memory evidence differs from source provenance: " + name)
     stage = json.loads(artifacts["memory-stage.json"])
     admission = json.loads(artifacts["memory-admission.json"]) if profile in GUARDED_PROFILES else None
-    version3 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
-    version2 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4", "t2m.memory-admission.v5")
-    volatile = admission is not None and admission.get("schema") == "t2m.memory-admission.v5"
+    version3 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v3", "t2m.memory-admission.v4", "t2m.memory-admission.v6")
+    version2 = admission is not None and admission.get("schema") in ("t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4", "t2m.memory-admission.v5", "t2m.memory-admission.v6")
+    volatile = admission is not None and admission.get("schema") in ("t2m.memory-admission.v5", "t2m.memory-admission.v6")
     if volatile and profile != WORD_PROFILE:
         raise ValueError("volatile memory requires the selected guarded source-word profile")
     if (stage.get("schema") != "t2m.triton-shared-stage.v1" or stage.get("stage") != ("memory-volatile-effects" if volatile else "memory-effects" if version2 else "memory-ir")
@@ -76,7 +76,7 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("guarded memory admission lacks its logical buffer ABI")
         layout = guard_layout(spec, atomics=version3) if version2 else {"guard_storage_bytes_per_output_element": 16}
         from .guard_protocol import ATOMIC, ORDINARY
-        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4", "t2m.memory-admission.v5")
+        if (admission.get("schema") not in ("t2m.memory-admission.v1", "t2m.memory-admission.v2", "t2m.memory-admission.v3", "t2m.memory-admission.v4", "t2m.memory-admission.v5", "t2m.memory-admission.v6")
                 or admission.get("strategy") != "runtime-guarded-private-output-state"
                 or admission.get("spec") != spec or admission.get("internal_arguments") != guarded_arguments(spec)
                 or admission.get("guarded_input_sha256") != record(artifacts["memory-input.mlir"])["sha256"]
@@ -119,7 +119,8 @@ def validate_memory_evidence(trace, artifacts):
             raise ValueError("source-word address evidence does not bind its declared input/output/policy")
         check_word_stage(word_stage, artifacts["word-input.mlir"], artifacts["word-tensor.mlir"])
         expected_conversion = {"t2m.source-word-stages.v2": "native-isolated-events-v2",
-            "t2m.source-word-stages.v3": "native-isolated-volatile-events-v3"}.get(word_stage.get("schema"))
+            "t2m.source-word-stages.v3": "native-isolated-volatile-events-v3",
+            "t2m.source-word-stages.v4": "native-isolated-atomic-volatile-events-v4"}.get(word_stage.get("schema"))
         if memory.get("word_conversion") != expected_conversion:
             raise ValueError("source-word event conversion lacks its explicit representation difference")
         replay_events(word_stage, artifacts["word-input.mlir"])
@@ -130,6 +131,7 @@ def validate_memory_evidence(trace, artifacts):
             check_native(stage, "memory-volatile-effects", list(STAGES["memory-volatile-effects"].flags),
                 artifacts["memory-input.mlir"], artifacts["memory-stage.mlir"])
             validate_evidence(memory, admission, records, artifacts["word-input.mlir"], word_stage)
-        elif word_stage.get("schema") == "t2m.source-word-stages.v3" or memory.get("effect_profile") == "private-invocation-volatile-loads-v1":
+        elif (word_stage.get("schema") in ("t2m.source-word-stages.v3", "t2m.source-word-stages.v4")
+              or memory.get("effect_profile") == "private-invocation-volatile-loads-v1" or "volatile_profile" in memory):
             raise ValueError("volatile memory requires its explicit admission v5 contract")
     return profile

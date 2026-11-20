@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Composed atomic/volatile effects](docs/atomic_volatile_effects.md) now retain
+both executable components, original numeric policy and atomic ownership.
+Selected RMW/CAS kernels pass native, reusable host and serial target checks;
+shared/async participation and broader composition remain open.
+
 [Volatile program phases](docs/volatile_program_phases.md) now retain private
 observations across synchronous single-CTA boundaries. Native, reusable host
 and selected serial images preserve unused reads, transpose observations and

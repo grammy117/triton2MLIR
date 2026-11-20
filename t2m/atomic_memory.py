@@ -51,7 +51,7 @@ def payload(info):
 
 def validate_evidence(admission, memory, records, buffers):
     """Validate declared atomic custody; this does not prove source equivalence."""
-    profile = TYPED_EFFECT_PROFILE if admission.get("schema") == ATOMIC_SCHEMAS[1] else EFFECT_PROFILE
+    profile = TYPED_EFFECT_PROFILE if admission.get("schema") in (ATOMIC_SCHEMAS[1], "t2m.memory-admission.v6") else EFFECT_PROFILE
     if (admission.get("effect_profile") != profile or memory.get("effect_profile") != profile
             or admission.get("f32_atomic_add") not in (None, "ieee", "ftz")
             or memory.get("f32_atomic_add") not in (None, "ieee", "ftz")

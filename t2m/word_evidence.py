@@ -37,9 +37,10 @@ def check_word_stage(stage, source, output):
         check_native(stage, "source-word-tensor", POINTER_FLAGS + COMPUTE_FLAGS, source, output,
                      alternative_flags=(POINTER_FLAGS + RSQRT_COMPUTE_FLAGS,))
         return
-    volatile = stage.get("schema") == "t2m.source-word-stages.v3"
-    if (stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3") or stage.get("stage_completed") is not True
-            or volatile and stage.get("compute_effects") != "private-invocation-volatile-loads-v1"
+    combined = stage.get("schema") == "t2m.source-word-stages.v4"
+    volatile = stage.get("schema") in ("t2m.source-word-stages.v3", "t2m.source-word-stages.v4")
+    if (stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3", "t2m.source-word-stages.v4") or stage.get("stage_completed") is not True
+            or volatile and stage.get("compute_effects") != ("private-invocation-atomic-volatile-v1" if combined else "private-invocation-volatile-loads-v1")
             or stage.get("input") != record(source) or stage.get("output") != record(output)
             or stage.get("reconstruction") != "same-region-same-event-order"
             or not isinstance(stage.get("events"), dict) or not isinstance(stage.get("compute"), dict)):
@@ -67,13 +68,13 @@ def check_word_stage(stage, source, output):
 
 def replay_events(stage, source):
     """Reconstruct every typed event disposition from the retained parent IR."""
-    if stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3"):
+    if stage.get("schema") not in ("t2m.source-word-stages.v2", "t2m.source-word-stages.v3", "t2m.source-word-stages.v4"):
         return
     from .shared_tensor import _source_ids, parse_shared
     from .word_events import print_ir, substitute, templates
     module = parse_shared(source.decode() if isinstance(source, bytes) else source)
     volatile_contracts = {}
-    if stage["schema"] == "t2m.source-word-stages.v3":
+    if stage["schema"] in ("t2m.source-word-stages.v3", "t2m.source-word-stages.v4"):
         from .volatile_memory import contract
         from .shared_tensor import opcode
         from xdsl.dialects import builtin
@@ -87,7 +88,7 @@ def replay_events(stage, source):
     if print_ir(isolated) != events["input"] or bindings != events["bindings"]:
         raise ValueError("source-word event templates differ from the complete typed source event inventory")
     substitute(module, parse_shared(events["output"]), bindings, calls)
-    if stage["schema"] == "t2m.source-word-stages.v3":
+    if stage["schema"] in ("t2m.source-word-stages.v3", "t2m.source-word-stages.v4"):
         from .volatile_memory import protect_events
         protect_events(module, volatile_contracts, _source_ids)
     if not same_computation(module, stage["compute"]["input"]):

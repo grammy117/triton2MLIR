@@ -28,9 +28,14 @@ def validate(graph, reports, generic, protected, *, source_entry):
                    and op.properties["isVolatile"].value.data for op in module.walk())
     options = (atomic_options(reports[0].get("contract", {}).get("atomic_effects")) if atomics else
                volatile_options(reports[0].get("contract", {}).get("volatile_effects")) if volatile else {})
+    if atomics and volatile:
+        volatile_options(reports[0].get("contract", {}).get("volatile_effects"))
+        if options["effect_profile"] != "typed-atomics":
+            raise ValueError("combined program phases require the selected typed atomic component")
+        options["effect_profile"] = "atomic-volatile"
     try:
         actual = _preflight(module, source_entry=source_entry, allow_composite_dots=True, literal_words=literals,
-            atomics=atomics, typed_atomics=options.get("effect_profile") == "typed-atomics",
+            atomics=atomics, typed_atomics=options.get("effect_profile") in ("typed-atomics", "atomic-volatile"),
             f32_atomic_add=options.get("f32_atomic_add"), volatile=volatile)
         if inventory(module, actual, literal_words=literals) != graph:
             raise ValueError("allocation barrier inventory differs from its actual typed source")

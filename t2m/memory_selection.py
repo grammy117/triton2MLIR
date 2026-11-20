@@ -22,7 +22,7 @@ def candidates(options):
 
     if options["address_policy"] not in ("structured", "source-words"):
         raise ValueError("automatic memory selection requires a known address policy")
-    if options["effect_profile"] not in ("ordinary", "atomics", "typed-atomics", "volatile"):
+    if options["effect_profile"] not in ("ordinary", "atomics", "typed-atomics", "volatile", "atomic-volatile"):
         raise ValueError("automatic memory selection requires a known effect profile")
     if options["byte_order"] not in (None, "little", "big"):
         raise ValueError(
@@ -33,7 +33,7 @@ def candidates(options):
     if (
         options["f32_atomic_add"] not in (None, "ieee", "ftz")
         or options["f32_atomic_add"] is not None
-        and options["effect_profile"] != "typed-atomics"
+        and options["effect_profile"] not in ("typed-atomics", "atomic-volatile")
     ):
         raise ValueError(
             "automatic memory selection requires the explicit typed atomic policy"
