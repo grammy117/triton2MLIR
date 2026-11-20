@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
+recurrences and selected-path observations as tensor computation. Actual source
+fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
+kernel libraries and a complete two-call model qualify native/host execution and
+twelve actual serial images, retaining all seven model results. Related regression
+qualification is being recorded. General memory/effect/source and accelerator closure
+remains open.
+
 [Branch-completed tiles](branch_tiles.md) now preserve partial prefixes and
 earlier observations through actual scalar successors, including nested and
 absent-else choices. Conditional arithmetic stays in its original arm. Numeric
@@ -473,7 +481,7 @@ and value-returning public entries remain further work.
 ## What the measurements establish
 
 The maintained inventory at
-`out/pointer-address-seed-inventory/coverage.json` reopens **341 packages,
+`out/live-runtime-model-inventory/coverage.json` records **352 packages,
 278 standalone qualifications and fourteen product cases**. All **50 pinned TTIR
 definition names** occur in source, native- and Merlin-host-qualified captures
 under selected profiles. This is breadth across a pinned dialect inventory,

@@ -78,7 +78,7 @@ def data_control_report(module, source_ids):
             name = opcode(op)
             if name in DIAGNOSTICS or name == "tt.store" and use.index == 1:
                 continue
-            if not numeric_op(op) or any(not numeric_op(nested) for nested in op.walk()):
+            if not numeric_op(op) or any(not supported(nested) for nested in op.walk()):
                 return None
             pending.extend(op.results)
             if name in {"scf.yield", "scf.condition"}:

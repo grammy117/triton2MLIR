@@ -1596,6 +1596,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         middle_source = work / "boolean-intake.ttir"
         middle_source.write_text(stream.getvalue() + "\n")
     source_range_reports = []
+    source_loop_domains = {}
     if source_words:
         for op in middle_module.walk():
             if opcode(op) in ("tt.ptr_to_int", "tt.int_to_ptr"):
@@ -1606,7 +1607,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             if opcode(op) == "tt.map_elementwise" and any(opcode(child) == "tt.load" for child in op.walk()):
                 raise ConversionError("mapped source memory requires guarded-buffer memory with source-words addresses",
                     opcode=opcode(op), source_id=next(iter(_source_ids(op.location)), None))
-        for control, count in check_source_addresses(middle_module, abi):
+        for control, count in check_source_addresses(middle_module, abi, loop_domains=source_loop_domains):
             kind, premise, fact = {
                 "scf.for": ("source-loop-body-ranges", "actual-signed-serial-for-body-reachability",
                             "positive-upper-bound-and-nonnegative-product-factors"),
@@ -1621,7 +1622,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
                 "definition_validation": "original-definition-context-before-narrower-use",
                 "scope": "source-width analysis only; no source rewrite, caller assumption or ownership grant"})
     from .tile_partitions import expand_tile_partitions
-    tile_partition_reports = expand_tile_partitions(middle_module, abi, _source_ids) if not source_words else []
+    tile_partition_reports = expand_tile_partitions(middle_module, abi, _source_ids,
+        loop_domains=source_loop_domains) if not source_words else []
     pointer_control_reports = []
     isolated_events = False
     checked_event_isolation = False

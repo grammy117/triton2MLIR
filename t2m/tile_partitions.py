@@ -27,7 +27,7 @@ class _Group:
     other_accesses: list = field(default_factory=list)
 
 
-def expand_tile_partitions(module, abi, source_ids):
+def expand_tile_partitions(module, abi, source_ids, *, loop_domains=None):
     from .shared_tensor import opcode
 
     entries = [op for op in module.ops if opcode(op) == "tt.func" and op.properties["sym_name"].data == abi.entry]
@@ -112,7 +112,7 @@ def expand_tile_partitions(module, abi, source_ids):
             if "operandSegmentSizes" in last.properties:
                 last.properties["operandSegmentSizes"] = builtin.DenseArrayBase.from_list(builtin.i32, [1, 1, int(not unconditional)])
             last.location = builtin.FusedLoc(builtin.ArrayAttr([op.location for op in stores]), builtin.NoneAttr())
-        return stores, observed
+        return stores, observed, combined
 
     def flush(group):
         events = group.events
@@ -139,7 +139,7 @@ def expand_tile_partitions(module, abi, source_ids):
         # A coverage predicate must dominate the final store. Conditions come
         # only from preceding store/load operands and their existing ancestors.
         scoped = bool(lexical_choices(events[-1]))
-        stores, observed = rewrite_events(events, erase_stores=True, cover=cover, unconditional=unconditional)
+        stores, observed, _ = rewrite_events(events, erase_stores=True, cover=cover, unconditional=unconditional)
         reports.append({"kind": "source-tile-write-partition", "source_ids": list(dict.fromkeys(
             sid for op in stores for sid in source_ids(op.location))), "observed_read_ids": observed,
             "writes": len(stores), "coverage": "actual-pointwise-boolean-union-equals-retained-source-mask" if not unconditional else
@@ -226,8 +226,34 @@ def expand_tile_partitions(module, abi, source_ids):
             groups.clear()
 
         for op in tuple(block.ops):
+            if op.parent is not block:
+                continue
             if pure(op):
                 continue
+            if isinstance(op, (scf.ForOp, scf.IfOp)) and loop_domains:
+                from .loop_tile_state import plan_loop_state
+
+                changed = False
+                for root, group in tuple(groups.items()):
+                    plan = plan_loop_state(group, root, op, pointer=pointer, ordinary=ordinary,
+                        pure=pure, loop_domains=loop_domains)
+                    if plan is None:
+                        continue
+                    _, observed, initial = rewrite_events(group.events, erase_stores=False)
+                    report = plan.apply(initial, source_ids)
+                    for event in group.events:
+                        if opcode(event) == "tt.store" and event.parent is not None:
+                            event.parent.erase_op(event)
+                    report.update(root=roots[root].name, prefix_observed_read_ids=observed)
+                    reports.append(report)
+                    groups.pop(root)
+                    # A replacement loop carries its original domain witness.
+                    op = report.pop("replacement_control")
+                    changed = True
+                if changed:
+                    finish()
+                    event_count = 0
+                    continue
             if isinstance(op, scf.IfOp):
                 for root, group in tuple(groups.items()):
                     stores = [event for event in group.events if opcode(event) == "tt.store"]
@@ -236,7 +262,7 @@ def expand_tile_partitions(module, abi, source_ids):
                     # Prefix observations were proved before considering any
                     # future edge. Reconstruct them at their original points;
                     # only actual stores move into the selected successor.
-                    stores, observed = rewrite_events(group.events, erase_stores=False)
+                    stores, observed, _ = rewrite_events(group.events, erase_stores=False)
                     for region in op.regions:
                         if not region.blocks:
                             if op.results:

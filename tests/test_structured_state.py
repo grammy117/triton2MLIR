@@ -81,3 +81,20 @@ def test_nested_numeric_branch_results_retain_the_complete_recurrence():
         after='''%sum = arith.addi %result, %value : tensor<4xi64>
           "tt.store"(%ptr,%sum) : (!tt.ptr<i64>,tensor<4xi64>) -> ()''')
     assert data_control_report(module,_source_ids)
+
+
+@pytest.mark.parametrize("use,allowed", [
+    ('"tt.store"(%ptr, %carried) : (!tt.ptr<i64>, tensor<4xi64>) -> ()', True),
+    ('"tt.addptr"(%ptr, %carried) : (!tt.ptr<i64>, tensor<4xi64>) -> tensor<4x!tt.ptr<i64>>', False),
+    ('''%zero2 = arith.constant dense<0> : tensor<4xi64>
+        %mask2 = "arith.cmpi"(%carried, %zero2) <{predicate=0:i64}> : (tensor<4xi64>,tensor<4xi64>) -> tensor<4xi1>
+        "tt.store"(%ptr, %value, %mask2) : (!tt.ptr<i64>, tensor<4xi64>, tensor<4xi1>) -> ()''', False),
+])
+def test_dependent_numeric_controls_keep_independent_memory_but_check_carried_uses(use, allowed):
+    module = loop_module(after=f'''%next = scf.for %j = %c0 to %c2 step %c1
+        iter_args(%carried = %result) -> (tensor<4xi64>) {{
+          "tt.load"(%ptr) : (!tt.ptr<i64>) -> i64
+          {use}
+          scf.yield %carried : tensor<4xi64>
+        }}''')
+    assert (data_control_report(module, _source_ids) is not None) == allowed

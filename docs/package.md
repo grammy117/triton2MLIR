@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Loop-carried partial tiles](loop_tiles.md) add numeric tensor state through original
+source control. Actual masks/fills, zero-trip entry coverage and source fallback
+writes determine initialization; source widths, geometry, ownership and effects remain
+independent. Generated compatibility records the transformation. Public ABI, result
+modes, receipts and artifact rosters are unchanged.
+
 [Branch-completed tiles](branch_tiles.md) add selected-path prefix distribution
 and local mask proofs. Exactly one prefix copy executes, earlier observations
 retain their original masks/fills, and branch-local arithmetic is not speculated.

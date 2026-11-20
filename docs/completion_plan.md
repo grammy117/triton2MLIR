@@ -1,5 +1,13 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
+recurrences and selected-path observations as tensor computation. Actual source
+fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
+kernel libraries and a complete two-call model qualify native/host execution and
+twelve actual serial images, retaining all seven model results. Related regression
+qualification is being recorded. General memory/effect/source and accelerator closure
+remains open.
+
 [Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
 refusal with actual source-path coverage and non-speculated arithmetic.
 Prefix observations, nested/absent-else paths and a complete two-call model

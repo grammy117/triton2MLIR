@@ -261,7 +261,7 @@ def logical_coordinates(total, strides, grid):
     return tuple(result)
 
 
-def check_source_addresses(module, abi):
+def check_source_addresses(module, abi, *, loop_domains=None):
     """Check source integer widths before upstream re-raises them to index.
 
     Checking only recovered index arithmetic would miss an i32 overflow that
@@ -434,4 +434,16 @@ def check_source_addresses(module, abi):
     for op in module.walk():
         if name(op) == "tt.addptr":
             bounds(op.operands[1], op.parent)
+    if loop_domains is not None:
+        # Optional transformation witnesses reuse the original definition/scope
+        # checks. Failure grants no rewrite and changes no existing admission.
+        for op in module.walk():
+            if op.name != "scf.for":
+                continue
+            try:
+                require_signed_loop(op)
+                width = getattr(getattr(op.lb.type, "width", None), "data", 64)
+                loop_domains[op] = bounded_loop([bounds(v, op.parent) for v in op.operands[:3]], width=width)
+            except ConversionError:
+                continue
     return [*scopes.proofs, *((loop, len(values)) for loop, values in while_words.items())]

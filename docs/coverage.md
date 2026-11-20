@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
+recurrences and selected-path observations as tensor computation. Actual source
+fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
+kernel libraries and a complete two-call model qualify native/host execution and
+twelve actual serial images, retaining all seven model results. Related regression
+qualification is being recorded. General memory/effect/source and accelerator closure
+remains open.
+
 [Branch-completed tiles](branch_tiles.md) pass 37 proof/prepass, 38 kernel and
 four complete-model checks in separate recorded runs, plus 191 earlier
 regressions. Reopening retains eight kernel and one model libraries: 23 initial,
