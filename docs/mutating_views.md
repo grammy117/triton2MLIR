@@ -1,5 +1,10 @@
 # Shared mutable views through the Merlin interface
 
+[Serial scalar tensor memory](serial_tensor_memory.md) now admits the original
+four model forms and the transposed clone as pure tensor payloads. Complete
+source-ordered versions replace the earlier guarded-memory requirement for
+this selection. The historical guarded results below keep their original scope.
+
 [Dense storage permutations](storage_permutations.md) additionally qualify
 transposed and rank-three cloned roots with explicit standard normalization,
 source stride products and inverse updated-base results. That separate two-model

@@ -1,5 +1,10 @@
 # triton2MLIR
 
+[Serial scalar tensor memory](docs/serial_tensor_memory.md) now keeps selected
+shared-view updates in tensor/SCF data flow, with source-proved fresh results
+and actual bounds checks. Logical root shapes and snapshots remain intact;
+the existing guarded path remains available for broader access compositions.
+
 [Dense mutable storage permutations](docs/storage_permutations.md) now retain
 transposed/rank-three cloned roots through explicit standard tensor operations.
 Two complete models preserve all eight results through changed-shape host

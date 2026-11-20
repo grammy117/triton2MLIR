@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Serial scalar tensor memory](docs/serial_tensor_memory.md) now raises selected
+ordered state updates and complete fresh scalar loops into standard tensor
+versions. Preserve this path's source proofs and native lifetime checks.
+Next close region-local range/reachability facts, broader irregular parallel
+ownership and partial initialization without discarding source loops or reuse.
+
 [Dense mutable storage permutations](docs/storage_permutations.md) now preserve
 zero-origin transpose/rank-three roots and shared matrix views through complete
 models. Standard normalization/inverse operations retain logical results and

@@ -1,5 +1,10 @@
 # Dense mutable storage permutations
 
+[Serial scalar tensor memory](serial_tensor_memory.md) additionally admits the
+transpose/column source as pure tensor computation. The rank-three matrix-view
+example retains the guarded source-word selection described below; original
+qualification records are not relabeled as new tensor-path evidence.
+
 Complete mutable roots may retain a proved dense axis permutation instead of
 requiring row-major source strides. The actual source examples are:
 

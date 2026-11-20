@@ -1,5 +1,25 @@
 # Review handoff — updated 2026-11-20
 
+[Serial scalar tensor memory](serial_tensor_memory.md) at `1ceb878` now closes
+the five shared-view forms' guarded-memory requirement. Source masks, ordering,
+loops, bias reuse, initialization and native lifetime checks remain. Actual
+typed source operations are unchanged in the retained matrix comparison, while
+emitted memref operations drop from 49 to zero. Tensor runtime checks cannot
+authorize the separate unguarded buffer continuation; compatibility says so.
+
+Source-frozen memory/model selections pass 91/30, with overlap. Five tensor
+models retain 44 initial, 132 replay and 44 actual target results; 25 changed
+claims refuse in both readers and five original domains abort. The sixth,
+rank-three guarded source-word model retains its own 8/24/8 results, five
+refusals and domain abort. Native primitives retain 49 results over thirteen
+invocations and three actual bounds aborts, including exact nonfinite copies.
+`out/serial-tensor-memory/summary.json` reopens all source-pinned evidence.
+No Merlin/model2MLIR source change is needed; the foreign m2m docstring edit
+remains. Next prove region-local range/reachability without strengthening valid
+empty entry domains, then broaden irregular parallel ownership/initialization,
+storage/effect composition and applicable accelerator qualification. Full
+arbitrary-kernel coverage and performance remain open.
+
 [Dense mutable storage permutations](storage_permutations.md) now close the
 reported `x.T.clone()` refusal and the rank-three source-stride importer gap.
 Model2MLIR `3ebbe89` proves exact zero-origin dense order, reuses standard

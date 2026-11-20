@@ -73,6 +73,20 @@ only inside the `range(rows * cols)` body when the public scalar range admits
 zero. That is a real reachability/range-analysis obligation, not a GPU-specific
 operation to discard. Its original complete working interface remains available.
 
+The retained matrix-column comparison has identical complete typed source
+operation records after excluding locations: three source loops, four loads and
+four stores. Its emitted kernel changes from 49 memref operations to none,
+with four standard tensor insertions. This measures the abstraction change;
+it is not a timing or allocation-reuse benchmark.
+
+The next proof belongs in `shared_indexing.check_source_addresses`: actual
+loop-body reachability can establish positive factors for a nonnegative product
+bound. Such facts must stay local to the defining region and must not validate
+an earlier, already-executed division outside that region. Preserve valid empty
+entry domains, source-width checks and separate caches for distinct contexts;
+neither tightening a sample-specific bound nor dropping the quotient/remainder
+addresses closes this general obligation.
+
 `t2m/examples/serial_memory_kernels.py` additionally exercises an initialized
 state update, a preserved complete snapshot, a dependent read of the completed
 fresh snapshot and two scalar observations. Native i64/f64 checks include empty
@@ -86,6 +100,39 @@ updates do not require physical copies; downstream bufferization decides reuse
 and retains its ordinary ownership checks. No accelerator or performance result
 is established by retaining this structure.
 
+The unguarded `buffer` continuation retains its earlier static witness scope.
+It does not execute a tensor witness's new runtime checks; serial irregular
+accesses cannot gain admission there merely because the tensor candidate
+passes. An explicit `guarded-buffer` selection retains its executable memory
+admission, independently of the new tensor representation.
+
 General parallel irregular write ownership, multi-lane conflicting stores,
 partial/fresh initialization, broader reachability, pointer/view/effect
 compositions and applicable accelerator qualification remain full-goal work.
+
+## Retained qualification
+
+At implementation commit `1ceb878`, the source-frozen memory selection passes
+91 checks and the complete six-model selection passes 30, with overlap. Five
+tensor models retain all 44 initial, 132 changed-invocation and 44 actual serial
+Spike results. Twenty-five rehashed model claims refuse in both readers and
+five original shape domains abort without outputs. The separate rank-three
+guarded regression retains eight initial, 24 replay and eight target results,
+five refusals and one original-domain abort. Every parent archive remains intact.
+
+Native primitive checks retain 49 exact-word results over thirteen invocations,
+including empty/inactive accesses, complete snapshots, dependent fresh reads,
+all-unit ranked roots and nonfinite f64 transport. Three further actual runs
+abort at the original active gather/scatter bounds checks without outputs.
+Initialization negatives retain masked/conditional/duplicate stores, differing
+counts with equal ranges, early fresh reads and parallel-conflict refusals.
+
+Evidence reopens under `out/serial-tensor-memory/summary.json`, with source/log
+digests, full model references/results, unchanged-source comparison, every
+target receipt, refusal/abort outcomes and the separate native selection.
+Earlier admission, test-driver and lifetime failures stay in their original
+`.scratch` logs; they are not relabeled as successful tensor qualification.
+The final logs are `.scratch/serial-models-pinned1.log` and
+`.scratch/serial-memory-pinned1.log`. The historical opcode inventory is unchanged.
+Reopening passes in `.scratch/serial-tensor-report2.log`; the first report's
+duplicate pytest `current` symlink detection remains in its original failed log.

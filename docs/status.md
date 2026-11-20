@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Serial scalar tensor memory](serial_tensor_memory.md) now removes the guarded
+memory requirement from five shared-view model forms. Source masks, loops,
+overlapping update order, complete results and earlier snapshots remain.
+Pure tensor versions retain actual active bounds and source-proved fresh
+initialization. The rank-three division/reachability case keeps its working
+guarded source-word path; general layouts/effects/targets remain incomplete.
+
 [Dense mutable storage permutations](storage_permutations.md) close the concrete
 `x.T.clone()` storage/correspondence refusal and rank-three `sym_stride` gap.
 Two complete two-call models retain every result and snapshot through host

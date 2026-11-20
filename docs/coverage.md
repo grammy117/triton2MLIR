@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Serial scalar tensor memory](serial_tensor_memory.md) now qualifies five
+complete model forms with no memref payload. Source-frozen memory/model
+selections pass 91/30 with overlap. All 44 initial, 132 replay and 44 tensor
+target results retain exact words; 25 changed claims refuse and five original
+domains abort. A sixth guarded rank-three regression keeps its separate scope.
+Thirteen primitive invocations retain 49 exact results, with three actual bounds
+aborts. `out/serial-tensor-memory/summary.json` reopens the finite evidence and
+unchanged-source abstraction comparison. Full coverage and performance remain
+open; the historical opcode inventory is unchanged.
+
 [Dense mutable storage permutations](storage_permutations.md) now qualify two
 complete transpose/rank-three models with exact source layout proofs and actual
 standard normalization. All sixteen initial, forty-eight host replay and sixteen

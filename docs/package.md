@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Serial scalar tensor memory](serial_tensor_memory.md) uses ordered tensor
+versions, active signed bounds and source-proved initialization without adding
+public arguments or artifact/receipt versions. `prov.serial_tensor_storage`
+retains logical shapes when complete scalar-addressed roots carry linear
+storage. Generated compatibility explicitly records these representation
+details. Tensor-only runtime checks grant no proof to the separate unguarded
+memory continuation. Existing guarded/effect profiles retain their meanings;
+no parallel ownership, physical alias or target permission follows.
+
 [Dense mutable storage permutations](storage_permutations.md) add real standard
 transpose normalization and inverse updated-base result adapters. The existing
 storage-v1 call, functional binding v2 within executed binding v4, receipt v2
