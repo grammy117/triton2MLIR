@@ -5,7 +5,7 @@ import pytest
 
 from t2m.diagnostics import ConversionError
 from t2m.frontend import capture_ttir
-from t2m.native import execute_native
+from t2m.native import execute_native, observe_native
 from t2m.shared_tensor import TensorABI, TensorBuffer, _functionalize, convert_shared, parse_shared
 
 OPT, NATIVE = os.environ.get("TRITON_SHARED_OPT"), os.environ.get("T2M_NATIVE_PYTHON")
@@ -39,8 +39,13 @@ def test_nonunit_loop_header_and_final_pointer_value_are_preserved(tmp_path):
     np.testing.assert_array_equal(actual, x.reshape(4, 8).sum(axis=0))
     assert result.trace["memory"]["source_loops"][0]["iterations"] == 3
     small = TensorABI(abi.entry, (TensorBuffer("x", (24,)), abi.buffers[1]))
-    with pytest.raises(ConversionError, match="bounds"):
-        convert_shared(source, small, tmp_path / "out-of-bounds", optimizer=OPT)
+    guarded = convert_shared(source, small, tmp_path / "out-of-bounds", optimizer=OPT)
+    # Source scalar accesses may retain executable bounds checks. The invalid
+    # final pointer must fail in compiled execution before publishing a result.
+    out = tmp_path / "invalid-final-pointer"
+    report = observe_native(guarded.mlir_text, [x[:24].copy()], out, python=NATIVE)
+    assert report["returncode"] == -6 and not (out / "outputs.npz").exists()
+    assert (out / "invocation-started.json").exists()
 
 
 def test_observable_poison_pointer_is_never_replaced_with_an_initializer():

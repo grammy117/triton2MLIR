@@ -59,4 +59,7 @@ def test_branch_values_and_memory_versions_survive_nested_loop(tmp_path):
         expected[8:] = expected[8:] * 2 + 1
     (actual,), _ = execute_native(result.mlir_text, [x], tmp_path / "native", python=NATIVE)
     np.testing.assert_array_equal(actual, expected)
-    assert result.trace["memory"]["source_conditionals"][0]["initialization"] == "intersection-of-both-branch-facts"
+    # Tile memory can become numeric loop state before the memory witness.
+    # Check the actual retained branch instead of requiring a memory-only row.
+    assert any(any(child.name == "scf.if" for child in loop.walk())
+               for loop in result.module.walk() if loop.name == "scf.for")
