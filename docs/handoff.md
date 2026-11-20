@@ -11,6 +11,11 @@ selection twelve with overlap; eight model checks qualify new and original
 forms separately. `out/pure-loop-exits/summary.json` reopens 18 initial, 78
 replay and 36 exact-word serial results. No companion source change is needed;
 the general pointer/ownership/effect/source/target endpoint remains open.
+The final reopening log is `.scratch/pure-loop-exit-report2.log`; fifteen
+selected sources match `7a4fb747093d9a5c05fb8e787e22c764b4a7b6fe`. The
+unchanged companion pins remain model2MLIR `f3f0de1ae130faebbd27bd36374d11e1e211daa2`
+and Merlin `53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`. This is not a full dependency closure.
 The corrected related source/control/memory regression selection passes 119
 in `.scratch/pure-exit-regression2.log`. The next actual probe is
 `.scratch/runtime-pointer-independent-step1/`: constant pointer advancement

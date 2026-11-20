@@ -121,6 +121,15 @@ complete parent archives and actual target receipts are checked. The original
 body-load model remains separate regression evidence. Source/reopening pins
 are not a full build dependency closure.
 
+The final reopening log is `.scratch/pure-loop-exit-report2.log`. Fifteen
+selected implementation/test/capture-helper files match actual commit
+`7a4fb747093d9a5c05fb8e787e22c764b4a7b6fe`, separately from the observed
+reopening revisions. The two original callsites share one retained source
+implementation. Unchanged companion pins are model2MLIR
+`f3f0de1ae130faebbd27bd36374d11e1e211daa2` and Merlin
+`53e7b01158c918dbd6d4dad0ac38ba0a901f16ba`, both on
+`ttir-experiment-grammy`; the producer remains on `main`.
+
 General conditional/non-step-coupled pointer streams, while/alias ownership,
 variable-step store images, dynamic root projection, shared/asynchronous
 participation, broader source/numeric compositions and applicable accelerator
