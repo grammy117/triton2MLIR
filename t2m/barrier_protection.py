@@ -6,7 +6,7 @@ from .diagnostics import ConversionError
 def validate(graph, reports, generic, protected, *, source_entry):
     records = graph["operations"]
     required = [row for row in records if row.get("opcode") == "ttg.barrier"]
-    from .program_barriers import expand
+    from .program_barriers import atomic_options, expand
     from .shared_tensor import (
         _preflight,
         _source_ids,
@@ -22,11 +22,15 @@ def validate(graph, reports, generic, protected, *, source_entry):
         return
     if not present or not required or not isinstance(reports, list) or not reports:
         raise ValueError("allocation source barriers require complete phase declarations")
+    atomics = any(opcode(op) in ("tt.atomic_rmw", "tt.atomic_cas") for op in module.walk())
+    options = atomic_options(reports[0].get("contract", {}).get("atomic_effects")) if atomics else {}
     try:
-        actual = _preflight(module, source_entry=source_entry, allow_composite_dots=True, literal_words=literals)
+        actual = _preflight(module, source_entry=source_entry, allow_composite_dots=True, literal_words=literals,
+            atomics=atomics, typed_atomics=options.get("effect_profile") == "typed-atomics",
+            f32_atomic_add=options.get("f32_atomic_add"))
         if inventory(module, actual, literal_words=literals) != graph:
             raise ValueError("allocation barrier inventory differs from its actual typed source")
-        expected = expand(module, _source_ids)
+        expected = expand(module, _source_ids, **options)
     except ConversionError as error:
         raise ValueError("allocation barrier source is outside its participation profile") from error
     if reports != expected:
@@ -63,8 +67,26 @@ def check_phases(expected, retained, reports, source_ids, opcode):
         return path
 
     original, current = phases(expected), phases(retained)
-    effects = {"tt.load", "tt.store", "tt.call", "tt.assert", "cf.assert", "tt.print"}
+    effects = {"tt.load", "tt.store", "tt.call", "tt.assert", "cf.assert", "tt.print", "tt.atomic_rmw", "tt.atomic_cas"}
     effect_ids = {sid for op in expected.walk() if opcode(op) in effects for sid in source_ids(op.location)}
+    atomic_selection = reports[0]["contract"].get("atomic_effects")
+    if atomic_selection is not None:
+        from .atomic_memory import contract as atomic_contract
+        from .program_barriers import atomic_options
+
+        options = atomic_options(atomic_selection)
+
+        def atomic(op):
+            return atomic_contract(op, source_ids, typed=options["effect_profile"] == "typed-atomics",
+                                   f32_atomic_add=options["f32_atomic_add"])
+
+        declared = {sid: atomic(op) for op in expected.walk() if opcode(op) in ("tt.atomic_rmw", "tt.atomic_cas")
+                    for sid in source_ids(op.location)}
+        for op in retained.walk():
+            if opcode(op) in ("tt.atomic_rmw", "tt.atomic_cas"):
+                actual = atomic(op)
+                if not any(declared.get(sid) == actual for sid in source_ids(op.location)):
+                    raise ValueError("allocation barrier protection changed original atomic fields")
 
     def events(phase):
         result = []

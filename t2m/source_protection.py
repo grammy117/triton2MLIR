@@ -82,7 +82,7 @@ def protect(
     validate_fp8_casts(module, _source_ids, overflow=fp8_overflow)
     graph = inventory(module, records, literal_words=literals)
     from .program_barriers import expand as expand_barriers
-    barriers = expand_barriers(module, _source_ids)
+    barriers = expand_barriers(module, _source_ids, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
     literal_reports = materialize(module, literals, source_ids=_source_ids)
     casts = expand_fp8_casts(
         module, _source_ids, overflow=fp8_overflow, tensor_carrier="arith"

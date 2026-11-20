@@ -1,5 +1,14 @@
 # Package contract and explicit model2MLIR differences
 
+[Atomic program phases](atomic_program_phases.md) explicitly select
+`t2m.synchronous-program-barrier.v2` with the existing private atomic effect
+profile and f32 policy. Original and protected atomic fields are independently
+checked; selection must match bound executable memory evidence. Returned old
+values, source order and sticky conflict guards remain actual computation.
+Public tensor/scalar ABI, receipt schemas and source-capsule artifact rosters
+are unchanged. Older barrier-v1 readers refuse v2. No grid-wide, external,
+async, new numeric-policy or accelerator permission follows.
+
 [Program barriers](program_barriers.md) add the explicit
 `t2m.synchronous-program-barrier.v1` source contract. Exact masks/source positions
 remain in the original inventory and `prov.program_barriers`; actual standard

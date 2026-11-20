@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+Selected [atomic program phases](docs/atomic_program_phases.md) now retain
+original old values and synchronized observations through native and reusable
+Merlin host execution. Finish complete-model/serial-target qualification before
+extending general shared/async effects and participation scopes. This does not
+close arbitrary-kernel coverage or expand the historical opcode inventory.
+
 [Synchronous program barriers](docs/program_barriers.md) now retain source
 address-space masks and actual phase dependencies through a real runtime-loop
 tile exchange in tensor and guarded-memory forms. Native/host/serial-target

@@ -1,5 +1,13 @@
 # Measured coverage and remaining boundaries
 
+[Atomic program phases](atomic_program_phases.md) now compose selected i64/f32
+atomic updates, returned old values and ordinary synchronized observations
+through direct/protected allocation conversion and reusable Merlin host
+execution. Both source readers check actual primitive fields and memory order;
+cross-program conflicts remain compiled aborts. Complete model/target and
+general shared/async compositions remain separate gates. The historical
+fifty-name inventory is unchanged.
+
 [Program barriers](program_barriers.md) add actual captured `ttg.barrier`
 coverage outside the historical fifty-name `tt` denominator. Two representations
 retain complete tile-update/transpose phases through native execution, reusable

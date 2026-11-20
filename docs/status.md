@@ -1,5 +1,11 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Atomic program phases](atomic_program_phases.md) now retain selected i64/f32
+updates, returned old values and synchronized reads through native and reusable
+Merlin host execution. Independent source readers check primitive fields and
+bound effect policy; actual cross-program conflict guards remain. Complete
+model/target qualification and general shared/async effects remain open.
+
 [Program barriers](program_barriers.md) now reify pinned pre-layout CTA
 rendezvous as actual standard SCF memory phases. Tensor versions or standard
 accesses retain cross-lane visibility and iteration ordering through native,

@@ -95,6 +95,14 @@ def validate(trace, artifacts, source):
     if protected:
         from .source_protection import validate as validate_protection
         validate_protection(artifacts, artifacts["allocation-original.ttir"], binding["source_entry"])
+        protection = json.loads(artifacts["allocation-protection.json"])
+        for phase in protection.get("barrier_conversions", []):
+            selection = phase["contract"].get("atomic_effects")
+            if selection is not None and (
+                trace.get("memory", {}).get("effect_profile") != selection["profile"]
+                or trace.get("memory", {}).get("f32_atomic_add") != selection["f32_atomic_add"]
+            ):
+                raise ValueError("allocation barrier atomic selection differs from bound memory effects")
     arguments = json.loads(artifacts["allocation-arguments.json"])
     if (
         arguments.get("schema")

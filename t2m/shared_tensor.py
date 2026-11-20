@@ -324,6 +324,10 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
                 raise ConversionError(f"pointer type differs from tensor ABI for {value.name}")
             if kind == "runtime" and arg.type != value.type:
                 raise ConversionError(f"runtime scalar type differs from source for {value.name}")
+    barrier_atomic_effects = None
+    if atomics and any(opcode(child) in ("tt.atomic_rmw", "tt.atomic_cas") for child in module.walk()):
+        from .program_barriers import atomic_selection
+        barrier_atomic_effects = atomic_selection("typed-atomics" if typed_atomics else "atomics", f32_atomic_add)
     records, values = [], {}
     for op in module.walk():
         for region in op.regions:
@@ -351,7 +355,7 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
             records[-1]["source_print"] = print_contract(op,source_id)
         elif name == "ttg.barrier":
             from .program_barriers import contract as barrier_contract
-            records[-1]["program_barrier"] = barrier_contract(op, source_id)
+            records[-1]["program_barrier"] = barrier_contract(op, source_id, atomic_effects=barrier_atomic_effects)
         elif name == "tt.extern_elementwise":
             from .external_math import contract as external_math_contract
             records[-1]["external_math"] = external_math_contract(op, source_id)
@@ -1313,7 +1317,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         from .source_graph import inventory
         protected_inventory = inventory(parsed, records, literal_words=literal_words)
     from .program_barriers import expand as expand_program_barriers
-    barrier_reports = expand_program_barriers(parsed, _source_ids)
+    barrier_reports = expand_program_barriers(parsed, _source_ids, effect_profile=effect_profile, f32_atomic_add=f32_atomic_add)
     literal_reports = materialize_literal_words(parsed, literal_words, source_ids=_source_ids)
     early_fp8_reports = expand_fp8_casts(parsed, _source_ids, overflow=fp8_overflow,
         tensor_carrier="arith") if protect_source else []

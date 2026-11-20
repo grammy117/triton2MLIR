@@ -13,11 +13,36 @@ from xdsl.ir import Block, Region
 from .diagnostics import ConversionError
 
 SCHEMA = "t2m.synchronous-program-barrier.v1"
+ATOMIC_SCHEMA = "t2m.synchronous-program-barrier.v2"
 SPACES = ((1, "local"), (2, "global_read"), (4, "global_write"),
           (8, "tensor_read"), (16, "tensor_write"))
 
 
-def contract(op, source_id):
+def atomic_options(value):
+    """Decode only the existing explicit private-invocation atomic profiles."""
+    from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
+
+    if (not isinstance(value, dict) or set(value) != {"profile", "f32_atomic_add"}
+            or value.get("profile") not in (EFFECT_PROFILE, TYPED_EFFECT_PROFILE)
+            or value.get("f32_atomic_add") not in (None, "ieee", "ftz")
+            or value.get("f32_atomic_add") is not None and value["profile"] != TYPED_EFFECT_PROFILE):
+        raise ValueError("program barrier needs an explicit private atomic effect profile")
+    return {"effect_profile": "typed-atomics" if value["profile"] == TYPED_EFFECT_PROFILE else "atomics",
+            "f32_atomic_add": value["f32_atomic_add"]}
+
+
+def atomic_selection(effect_profile, f32_atomic_add):
+    from .atomic_memory import EFFECT_PROFILE, TYPED_EFFECT_PROFILE
+
+    if effect_profile not in ("atomics", "typed-atomics"):
+        raise ValueError("atomic program phases require the selected private atomic effect profile")
+    value = {"profile": TYPED_EFFECT_PROFILE if effect_profile == "typed-atomics" else EFFECT_PROFILE,
+             "f32_atomic_add": f32_atomic_add}
+    atomic_options(value)
+    return value
+
+
+def contract(op, source_id, *, atomic_effects=None):
     """Check the native-verified, pinned source operation's complete fields."""
     def refuse(message):
         raise ConversionError(message, source_id=source_id, opcode="ttg.barrier")
@@ -37,14 +62,18 @@ def contract(op, source_id):
         if any(len(region.blocks) != 1 for region in parent.regions):
             refuse("barrier participation in a source CFG needs a separate proof")
         parent = parent.parent_op()
-    return {"schema": SCHEMA, "source_id": source_id, "address_space_mask": space.value.data,
+    if atomic_effects is not None:
+        atomic_options(atomic_effects)
+    return {"schema": ATOMIC_SCHEMA if atomic_effects is not None else SCHEMA,
+            **({"atomic_effects": atomic_effects} if atomic_effects is not None else {}),
+            "source_id": source_id, "address_space_mask": space.value.data,
             "address_spaces": [name for bit, name in SPACES if space.value.data & bit],
             "participants": "complete-pre-layout-program; single-CTA",
             "ordering": "complete-synchronous-tile-operations-at-source-control-position",
             "external_participants": "not-admitted", "physical_mapping": "undecided"}
 
 
-def expand(module, source_ids):
+def expand(module, source_ids, *, effect_profile="ordinary", f32_atomic_add=None):
     """Preserve each original phase and its live values in a standard region.
 
     Native source verification and complete preflight must run first. All
@@ -63,18 +92,29 @@ def expand(module, source_ids):
         raise ConversionError(message, source_id=next(iter(source_ids(first.location)), None),
                               opcode="ttg.barrier")
 
+    atomics = [op for op in module.walk() if opcode(op) in {"tt.atomic_rmw", "tt.atomic_cas"}]
+    atomic_effects = None
+    if atomics:
+        try:
+            atomic_effects = atomic_selection(effect_profile, f32_atomic_add)
+        except ValueError as error:
+            refuse(str(error))
+        from .atomic_memory import contract as atomic_contract
+        for op in atomics:
+            atomic_contract(op, source_ids, typed=effect_profile == "typed-atomics", f32_atomic_add=f32_atomic_add)
     for op in module.walk():
         ctas = op.attributes.get("ttg.num-ctas", op.properties.get("ttg.num-ctas"))
         if ctas is not None and (not isinstance(ctas, builtin.IntegerAttr) or ctas.value.data != 1):
             refuse("multi-CTA barrier participation needs an explicit cluster contract")
-        if opcode(op) in {"tt.atomic_rmw", "tt.atomic_cas", "tt.elementwise_inline_asm", "tt.inline_asm"}:
-            refuse("barrier composition with atomic or assembly effects needs a separate profile")
+        if opcode(op) in {"tt.elementwise_inline_asm", "tt.inline_asm"}:
+            refuse("barrier composition with assembly effects needs a separate profile")
         arguments = [arg for region in op.regions for block in region.blocks for arg in block.args]
         for value in (*op.operands, *op.results, *arguments):
             if isinstance(value.type, builtin.TensorType) and not isinstance(value.type.encoding, builtin.NoneAttr):
                 refuse("program barriers require pre-layout values without physical encodings")
 
-    contracts = [(op, contract(op, next(iter(source_ids(op.location)), "ttir.barrier"))) for op in barriers]
+    contracts = [(op, contract(op, next(iter(source_ids(op.location)), "ttir.barrier"), atomic_effects=atomic_effects))
+                 for op in barriers]
     reports, previous = [], {}
     # Snapshot before mutations: a phase can itself contain a structured region
     # whose nested source barrier still needs its own original-position phase.

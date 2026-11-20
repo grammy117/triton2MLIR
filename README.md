@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Atomic program phases](docs/atomic_program_phases.md) now compose selected
+private atomic updates with synchronous program barriers through native and
+reusable Merlin host execution. Returned old values, source primitive fields
+and sticky cross-program conflict guards remain; complete model/target
+qualification and shared/async effects remain separate gates.
+
 [Program barriers](docs/program_barriers.md) now become standard exactly-once
 memory phases with complete tensor versions or synchronous standard accesses.
 Protected allocation wrappers and a complete three-call PyTorch model retain
