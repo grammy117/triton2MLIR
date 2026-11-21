@@ -1,5 +1,10 @@
 # Independent runtime memory strides through tensor MLIR
 
+[Conditional runtime strides](conditional_runtime_strides.md) now extend this
+invariant profile with actual selected per-iteration progress and independently
+checked grid uniformity. Varying state is identified separately; the source and
+qualification below retain their original invariant scope.
+
 Bounded invariant integer memory increments can now remain independent of source
 loop controls while reaching the functional tensor interface. The source loop,
 tile shape, masks, numeric state, reuse and final pointer observations remain.

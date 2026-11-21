@@ -23,9 +23,10 @@ from .diagnostics import ConversionError
 from .dynamic_abi import GridExtent, shape_contract, validate_dimensions
 from .control_flow import value_only_region
 from .frontend import DESCRIPTOR_OPS, expand_tensor_pointers
+from .grid_uniformity import is_grid_uniform
 from .ir import context, text
 from .initialization import DefiniteWrites
-from .invariant_recurrences import invariant_increment, recurrence_bounds
+from .invariant_recurrences import additive_increment, invariant_increment, recurrence_bounds
 from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, is_iteration_ordinal, require_signed_loop
 from .launch_domains import launch_domains
 from .scalar_abi import RuntimeScalar, guard_scalar
@@ -546,12 +547,16 @@ def _functionalize(module, abi, *, serial_memory=True):
     loop_counter = 0
     coordinate_counter = -1
     loop_values = {}
+    uniform_inputs = frozenset(value for value, (kind, _binding) in
+        zip(function.regions[0].block.args, abi.source_bindings, strict=True) if kind != "buffer")
     recurrence_ranges = {}
     requested_ranges = []
     for control in module.walk():
+        if control.name == "scf.if":
+            requested_ranges.extend(v for v in control.results if isinstance(v.type, (builtin.IntegerType, builtin.IndexType)))
         if control.name == "scf.for":
             for position, initial_value in enumerate(control.iter_args):
-                recurrence = invariant_increment(control, position, opcode)
+                recurrence = additive_increment(control, position, opcode)
                 if recurrence is not None:
                     requested_ranges.append(initial_value)
                     if recurrence[0] is not None:
@@ -930,8 +935,8 @@ def _functionalize(module, abi, *, serial_memory=True):
         active = tuple(physical[axis] for axis in axes)
         return buffer, sizes, tuple(offsets), active, axes, mask
 
-    def invariant_state_bounds(source, position, domain):
-        recurrence = invariant_increment(source, position, opcode)
+    def additive_state_bounds(source, position, domain):
+        recurrence = additive_increment(source, position, opcode)
         if recurrence is None or source.iter_args[position] not in recurrence_ranges:
             return None
         increment, sign = recurrence
@@ -946,7 +951,8 @@ def _functionalize(module, abi, *, serial_memory=True):
         except ConversionError:
             return None
 
-    def bind_loop_result(source, result, position, domain, identity, evidence):
+    def bind_loop_result(source, result, position, domain, identity, evidence, coordinate_scope):
+        nonlocal coordinate_counter
         if is_exit_induction(source, position):
             role, bounds, field = "exit-IV", exit_induction_bounds(domain), "actual_exit_induction_results"
         elif is_iteration_ordinal(source, position):
@@ -955,18 +961,29 @@ def _functionalize(module, abi, *, serial_memory=True):
             if bounds[1] >= 1 << (width - 1):
                 return False
         else:
-            enclosure = invariant_state_bounds(source, position, domain)
+            enclosure = additive_state_bounds(source, position, domain)
             if enclosure is None:
                 return False
-            role, bounds, field = "invariant-state", enclosure[1], "actual_invariant_recurrence_results"
+            invariant = invariant_increment(source, position, opcode) is not None
+            role = "invariant-state" if invariant else "bounded-additive-state"
+            bounds, field = enclosure[1], "actual_invariant_recurrence_results" if invariant else "actual_bounded_recurrence_results"
         key = f"source-{role}-{identity}-{position}"
         states[key] = result
-        facts[result] = Linear(parameters=((key, *bounds, 1),))
+        if is_grid_uniform(source.results[position], uniform_inputs, opcode):
+            facts[result] = Linear(parameters=((key, *bounds, 1),))
+        else:
+            local = coordinate_counter
+            coordinate_counter -= 1
+            facts[result] = Linear(loops=((local, *bounds, 1),))
+            loop_values[local] = (result, 0, 1)
+            coordinate_scope.append(local)
+            evidence.setdefault("actual_varying_recurrence_results", []).append(position)
         evidence.setdefault(field, []).append(position)
         return True
 
     def translate(source_block, *, phase_body=False):
         nonlocal body, loop_counter, coordinate_counter
+        local_coordinates = []
         for op in source_block.ops:
             name = opcode(op)
             if name == "ub.poison":
@@ -1018,9 +1035,10 @@ def _functionalize(module, abi, *, serial_memory=True):
                     descriptors[result] = buffer, sizes, projected, strides
                     cursor += len(offsets)
             elif name == "scf.if":
-                source_conditionals.append({"source_ids": _source_ids(op.location),
-                                            "memory": "branch-results-carry-tensor-versions",
-                                            "initialization": "intersection-of-both-branch-facts"})
+                conditional_evidence = {"source_ids": _source_ids(op.location),
+                    "memory": "branch-results-carry-tensor-versions",
+                    "initialization": "intersection-of-both-branch-facts"}
+                source_conditionals.append(conditional_evidence)
                 if any(isinstance(v.type, builtin.UnregisteredAttr) or
                        isinstance(v.type, TensorType) and isinstance(v.type.get_element_type(), builtin.UnregisteredAttr)
                        for v in op.results):
@@ -1046,6 +1064,15 @@ def _functionalize(module, abi, *, serial_memory=True):
                                                           *[storage_types[b.name] for b in writable]], *regions), op)
                 mapping.update(zip(op.results, branch.results[:len(op.results)], strict=True))
                 states.update((b.name, value) for b, value in zip(writable, branch.results[len(op.results):], strict=True))
+                for position, source_value in enumerate(op.results):
+                    if source_value in recurrence_ranges:
+                        result = branch.results[position]
+                        local = coordinate_counter
+                        coordinate_counter -= 1
+                        facts[result] = Linear(loops=((local, *recurrence_ranges[source_value], 1),))
+                        loop_values[local] = (result, 0, 1)
+                        local_coordinates.append(local)
+                        conditional_evidence.setdefault("actual_bounded_integer_results", []).append(position)
             elif name == "scf.while":
                 if value_only_region(op):
                     append(op.clone(value_mapper=mapping), op)
@@ -1133,7 +1160,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     if empty_domain is not None:
                         bound = False
                         for position, result in enumerate(cloned.results):
-                            bound |= bind_loop_result(op, result, position, empty_domain, loop_counter, source_loops[-1])
+                            bound |= bind_loop_result(op, result, position, empty_domain, loop_counter, source_loops[-1], local_coordinates)
                         if bound:
                             loop_counter += 1
                     continue
@@ -1201,14 +1228,16 @@ def _functionalize(module, abi, *, serial_memory=True):
                         loop_values[ordinal_identity] = (argument, 0, 1)
                         loop_evidence.setdefault("actual_iteration_ordinal_arguments", []).append(position)
                     elif argument not in facts:
-                        enclosure = invariant_state_bounds(op, position, domain)
+                        enclosure = additive_state_bounds(op, position, domain)
                         if enclosure is not None:
                             local = coordinate_counter
                             coordinate_counter -= 1
                             carried_coordinates.append(local)
                             facts[argument] = Linear(loops=((local, *enclosure[0], 1),))
                             loop_values[local] = (argument, 0, 1)
-                            loop_evidence.setdefault("actual_invariant_recurrence_arguments", []).append(position)
+                            field = ("actual_invariant_recurrence_arguments" if invariant_increment(op, position, opcode) is not None
+                                     else "actual_bounded_recurrence_arguments")
+                            loop_evidence.setdefault(field, []).append(position)
                 translate(op.body.block)
                 complete, complete_proofs, partial = [], {}, []
                 if serial_memory and not parallel and not domain.variable_header:
@@ -1257,7 +1286,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     if i in final_facts:
                         facts[loop.results[position]] = final_facts[i]
                     else:
-                        bind_loop_result(op, loop.results[position], i, domain, identity, loop_evidence)
+                        bind_loop_result(op, loop.results[position], i, domain, identity, loop_evidence, local_coordinates)
                 states.update((b.name, v) for b, v in zip(writable, loop.results[len(kept):len(kept) + len(writable)], strict=True))
                 cursor = len(kept) + len(writable)
                 for i, rank in zip(pointer_slots, pointer_ranks, strict=True):
@@ -1477,6 +1506,9 @@ def _functionalize(module, abi, *, serial_memory=True):
                         raise ConversionError("pointer escaped structured memory conversion", opcode=child_name)
                 cloned = op.clone(value_mapper=mapping)
                 append(cloned, op)
+        for local in local_coordinates:
+            del loop_values[local]
+            initialization.end_loop(local)
     translate(function.regions[0].block)
     if parallel:
         def index_constant(number, source):
@@ -1826,6 +1858,11 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     from .tile_partitions import expand_tile_partitions
     tile_partition_reports = expand_tile_partitions(middle_module, abi, _source_ids,
         loop_domains=source_loop_domains) if not source_words else []
+    from .source_branch_offsets import expose_branch_offsets
+    branch_offset_reports = expose_branch_offsets(middle_module, source_scalar_ranges, _source_ids) if not source_words else []
+    if branch_offset_reports:
+        source_loop_domains, source_scalar_ranges = {}, {}
+        check_source_addresses(middle_module, abi, loop_domains=source_loop_domains, scalar_ranges=source_scalar_ranges)
     from .source_pointer_recurrences import raise_pointer_recurrences
     pointer_recurrence_reports = raise_pointer_recurrences(middle_module, _source_ids, source_loop_domains,
         scalar_ranges=source_scalar_ranges) if not source_words else []
@@ -1833,6 +1870,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         # Recheck newly emitted arithmetic and actual exit-state edges. The
         # original source has already passed its independent width audit.
         check_source_addresses(middle_module, abi)
+    pointer_recurrence_reports[:0] = branch_offset_reports
     pointer_control_reports = []
     isolated_events = False
     checked_event_isolation = False

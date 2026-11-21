@@ -6,7 +6,7 @@ from xdsl.dialects import builtin
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
 
 from .diagnostics import ConversionError
-from .invariant_recurrences import invariant_increment, recurrence_bounds
+from .invariant_recurrences import additive_increment, recurrence_bounds
 from .loop_domains import enclosed_loop, exit_induction_bounds, is_exit_induction, is_iteration_ordinal, require_signed_loop
 from .dynamic_abi import GridExtent
 
@@ -337,9 +337,9 @@ def check_source_addresses(module, abi, *, loop_domains=None, scalar_ranges=None
                     raise ConversionError("source memory recurrence has cyclic/unproved increments")
                 pending.add(key)
                 initial = bounds(parent.operands[value.index + 2], parent.parent)
-                recurrence = invariant_increment(parent, value.index - 1, name)
+                recurrence = additive_increment(parent, value.index - 1, name)
                 if recurrence is None:
-                    raise ConversionError("source memory recurrence needs an invariant affine increment")
+                    raise ConversionError("source memory recurrence needs a bounded additive increment")
                 increment, sign = recurrence
                 delta = (0, 0) if increment is None else operand(increment)
                 if sign < 0:
@@ -364,9 +364,9 @@ def check_source_addresses(module, abi, *, loop_domains=None, scalar_ranges=None
                          else (domain.minimum_iterations, domain.maximum_iterations))
         elif kind == "scf.for":
             require_signed_loop(op)
-            recurrence = invariant_increment(op, value.index, name)
+            recurrence = additive_increment(op, value.index, name)
             if recurrence is None:
-                raise ConversionError("returned source state needs an invariant recurrence proof", opcode=kind)
+                raise ConversionError("returned source state needs a bounded additive recurrence proof", opcode=kind)
             domain = enclosed_loop([bounds(v, op.parent) for v in op.operands[:3]],
                 width=getattr(getattr(op.lb.type, "width", None), "data", 64), allow_empty=True)
             initial = bounds(op.iter_args[value.index], op.parent)
@@ -378,6 +378,19 @@ def check_source_addresses(module, abi, *, loop_domains=None, scalar_ranges=None
                 width=getattr(getattr(value.type, "width", None), "data", 64))
         elif kind == "scf.execute_region":
             low, high = operand(region_yield(value))
+        elif kind == "scf.if":
+            intervals = []
+            for region in op.regions:
+                if len(region.blocks) != 1 or region.block.args:
+                    raise ConversionError("source conditional ranges need two argument-free yield regions", opcode=kind)
+                end = region.block.last_op
+                if (end is None or name(end) != "scf.yield" or len(end.operands) != len(op.results)
+                        or end.operands[value.index].type != value.type):
+                    raise ConversionError("source conditional range differs from its actual typed yield", opcode=kind)
+                intervals.append(bounds(end.operands[value.index], region.block))
+            if len(intervals) != 2:
+                raise ConversionError("source conditional ranges need both actual successors", opcode=kind)
+            low, high = min(row[0] for row in intervals), max(row[1] for row in intervals)
         elif kind in ("tt.get_program_id", "tt.get_num_programs"):
             axis = op.properties["axis"].value.data
             size = abi.grid_bounds[axis] if axis < len(abi.grid) else 1
@@ -407,13 +420,24 @@ def check_source_addresses(module, abi, *, loop_domains=None, scalar_ranges=None
                 low, high = min(values), max(values)
             else:
                 raise ConversionError("memory offset constant must be integer")
+            type_ = value.type.get_element_type() if isinstance(value.type, TensorType) else value.type
+            if type_ == builtin.i1:
+                low, high = min(-(low & 1), -(high & 1)), max(-(low & 1), -(high & 1))
+        elif kind == "arith.cmpi" or kind in ("arith.andi", "arith.ori", "arith.xori") and (
+                value.type.get_element_type() if isinstance(value.type, TensorType) else value.type) == builtin.i1:
+            for argument in op.operands:
+                operand(argument)
+            low, high = -1, 0  # Signed i1 words; extui below preserves their bits.
         elif kind == "arith.bitcast" and value.type == op.operands[0].type:
             low, high = operand(op.operands[0])
         elif kind in ("tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans", "tt.reshape",
                        "arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
             low, high = operand(op.operands[0])
             if kind == "arith.extui" and low < 0:
-                raise ConversionError("source unsigned address extension needs a nonnegative range")
+                source_type = op.operands[0].type.get_element_type() if isinstance(op.operands[0].type, TensorType) else op.operands[0].type
+                if source_type != builtin.i1:
+                    raise ConversionError("source unsigned address extension needs a nonnegative range")
+                low, high = ((1, 1) if high < 0 else (0, 1))
         elif kind == "arith.select":
             a, b = (operand(v) for v in op.operands[1:])
             low, high = min(a[0], b[0]), max(a[1], b[1])

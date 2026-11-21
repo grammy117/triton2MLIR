@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Conditional runtime strides](conditional_runtime_strides.md) now retain six
+selected-progress forms as tensor computation, including nested pointer choices,
+boolean steps, preloaded reuse and reads after updates. Twelve kernel libraries
+and six complete models qualify host replays and thirty-six serial images with
+every result. Actual grid-uniformity checks prevent varying returned states
+from granting ownership; general memory/effect/source/accelerator closure remains.
+
 [Independent runtime memory strides](invariant_runtime_strides.md) now retain
 signed/zero logical progress independently of actual source loop controls.
 Eight kernel libraries and four complete dependent-call models preserve all

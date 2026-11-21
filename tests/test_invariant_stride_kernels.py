@@ -17,16 +17,20 @@ MODES = ("memory", "pure", "mixed", "late")
 CASES = ((0, 8, 1, -2), (1, 8, 3, 2), (3, 1, 2, -2), (0, 0, 1, 0), (2, 7, 2, -1), (3, 8, 1, 0), (0, 1, 1, 1))
 
 
-def capture(root, mode="memory", transpose=False, dtype="i32", profile="tensor", policy="structured", *, memory_bounds=(-2, 2)):
+def capture(root, mode="memory", transpose=False, dtype="i32", profile="tensor", policy="structured", *, memory_bounds=(-2, 2), conditional_mode=None):
     from t2m.examples.runtime_stride_kernels import invariant_stride
 
+    kernel = invariant_stride
+    if conditional_mode:
+        from t2m.examples.conditional_stride_kernels import conditional_stride
+        kernel, mode = conditional_stride, conditional_mode
     constants = {"N": 17, "R": 64, "B": 8, "TRANSPOSE": transpose, "MODE": mode}
     source = root / "source.ttir"
-    source.write_text(capture_ttir(invariant_stride,
+    source.write_text(capture_ttir(kernel,
         {**dict.fromkeys(("x", "out", "last"), "*i64"),
          **dict.fromkeys(("lower", "upper", "stride", "memory_stride"), dtype),
          **dict.fromkeys(constants, "constexpr")}, constants))
-    abi = TensorABI("invariant_stride", (TensorBuffer("x", (17, 64) if transpose else (64, 17), "read", "i64"),
+    abi = TensorABI(kernel.__name__, (TensorBuffer("x", (17, 64) if transpose else (64, 17), "read", "i64"),
         TensorBuffer("out", (17,), "write", "i64"), TensorBuffer("last", (17,), "write", "i64")), grid=(3,),
         runtime_scalars=tuple(RuntimeScalar(name, dtype, i, bounds=bounds) for i, (name, bounds) in enumerate(
             zip(("lower", "upper", "stride", "memory_stride"), ((0, 3), (0, 8), (1, 3), memory_bounds), strict=True), 3)))
@@ -34,7 +38,7 @@ def capture(root, mode="memory", transpose=False, dtype="i32", profile="tensor",
         memory_profile=profile, address_policy=policy)
 
 
-def reference(x, controls, mode):
+def reference(x, controls, mode, *, conditional=False):
     lo, hi, step, memory_stride = map(int, controls)
     rows = list(range(lo, hi, step))
     increment = step + memory_stride if mode == "mixed" else (1 // hi if rows else 0) if mode == "late" else memory_stride
@@ -44,16 +48,18 @@ def reference(x, controls, mode):
             state = (state ^ np.int64(row + 2)) * np.int64(3)
         else:
             state = state + (x[position] ^ (x[63-position] * np.int64(3)))
-        position += increment
+        position += (int(row < 3) if mode == "bit" else memory_stride if row < 3 else -memory_stride if mode == "nested" and row >= 5 else 1 // (row-2)) if conditional else increment
+        if conditional and mode == "observe":
+            state ^= x[position]
     return state ^ x[position], x[position] - x[63-position] * np.int64(3)
 
 
-def arguments(mode, transpose, dtype, index):
+def arguments(mode, transpose, dtype, index, *, conditional=False):
     controls = CASES[index]
     x = np.arange(64*17, dtype=np.int64).reshape(64, 17) * (37 + index) + (1 << 55)
     x[1::2] *= -1
     x.flat[16*17], x.flat[47*17+1] = -(1 << 63), (1 << 63)-1
-    expected = reference(x, controls, mode)
+    expected = reference(x, controls, mode, conditional=conditional)
     integer = np.int32 if dtype == "i32" else np.int64
     return [x.T.copy() if transpose else x, *[np.asarray(v, integer) for v in controls]], expected
 

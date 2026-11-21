@@ -37,7 +37,8 @@ def is_loop_invariant(value, loop, opcode):
     return True
 
 
-def invariant_increment(loop, position, opcode):
+def additive_increment(loop, position, opcode):
+    """Read actual additive edges; callers must separately bound each delta."""
     argument = loop.body.block.args[position + 1]
     if not isinstance(argument.type, (IntegerType, IndexType)):
         return None
@@ -55,11 +56,23 @@ def invariant_increment(loop, position, opcode):
         delta, sign = a, 1
     else:
         return None
-    return (delta, sign) if is_loop_invariant(delta, loop, opcode) else None
+    return delta, sign
+
+
+def invariant_increment(loop, position, opcode):
+    recurrence = additive_increment(loop, position, opcode)
+    if recurrence is None:
+        return None
+    delta, _sign = recurrence
+    return recurrence if delta is None or is_loop_invariant(delta, loop, opcode) else None
 
 
 def recurrence_bounds(domain, initial, delta, *, width):
-    """Enclose actual additive state, including the original zero-trip edge."""
+    """Enclose actual additive state and zero trips, even for varying deltas.
+
+    Each executed increment must lie within delta. No invariance, exact count,
+    congruence or summation formula is inferred from the interval enclosure.
+    """
     def after(counts):
         products = [n * value for n in counts for value in delta]
         return initial[0] + min(products), initial[1] + max(products)
@@ -67,5 +80,5 @@ def recurrence_bounds(domain, initial, delta, *, width):
     body = after((0, max(0, domain.maximum_iterations - 1)))
     final = after((domain.minimum_iterations, domain.maximum_iterations))
     if any(not -(1 << (width-1)) <= lo <= hi < 1 << (width-1) for lo, hi in (body, final)):
-        raise ConversionError("source invariant recurrence may overflow its carried width", opcode="scf.for")
+        raise ConversionError("source additive recurrence may overflow its carried width", opcode="scf.for")
     return body, final

@@ -1,5 +1,13 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Conditional runtime strides](docs/conditional_runtime_strides.md) now preserve
+selected integer/pointer offsets, nested choices, boolean steps and intermediate
+observations without flattening logical tiles or speculating arithmetic. Twelve
+kernel libraries and six complete dependent-call models qualify through host
+replays and thirty-six serial images. Loop invariance and grid uniformity remain
+separate actual proofs. General base selection/while/alias, dynamic-root/write-
+image, shared/async, numeric/source and applicable accelerator closure remain.
+
 [Independent runtime memory strides](docs/invariant_runtime_strides.md) now
 retain signed/zero additive progress, source constant axis factors, original
 loop controls, reused tiles and final reads as tensor computation. Eight kernel

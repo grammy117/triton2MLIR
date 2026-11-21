@@ -1,5 +1,12 @@
 # triton2MLIR
 
+[Conditional runtime strides](docs/conditional_runtime_strides.md) now retain
+actual scalar/pointer/nested choices, boolean steps, preloaded reuse and reads
+after updates as tensor computation. Twelve kernel libraries and six complete
+two-call models preserve every result through host replays and thirty-six
+serial images. Uniformity requires actual dataflow; broader memory/effect/
+source/accelerator closure remains open.
+
 [Independent runtime memory strides](docs/invariant_runtime_strides.md) now
 retain signed/zero logical progress independently of source loop controls.
 Eight kernel libraries and four complete two-call PyTorch models preserve all

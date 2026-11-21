@@ -1,5 +1,15 @@
 # Measured coverage and remaining boundaries
 
+[Conditional runtime strides](conditional_runtime_strides.md) qualify twelve
+kernel libraries and six complete two-call models, with ninety initial, 366
+replay and 180 exact-word serial results across thirty-six actual images, plus
+six actual source-domain aborts. The final source/control/memory/attention
+regression selection passes 188; fresh conversion reproduces all eighteen
+implementation payloads byte-for-byte after the final safety refinements.
+The linked contract separates the earlier kernel/model, boolean-step and safety
+selections and their overlap. General memory/effect/source/accelerator closure
+and the historical operation-name denominator remain unchanged.
+
 [Independent runtime memory strides](invariant_runtime_strides.md) pass 51
 kernel checks and 62 combined model/source checks. Four complete models retain
 all eleven results, both original calls, learned state and live controls.

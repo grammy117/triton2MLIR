@@ -40,7 +40,7 @@ def test_unrelated_runtime_stride_keeps_its_own_actual_scalar_and_axis_factor(he
 
 
 @pytest.mark.parametrize("increment", ["%iv", "%value"])
-def test_varying_iv_or_body_load_does_not_become_invariant_even_with_a_range(increment):
+def test_varying_iv_or_body_load_needs_its_actual_enclosure_and_never_claims_invariance(increment):
     from xdsl.dialects import builtin
 
     module = source(increment="%iv")
@@ -48,13 +48,22 @@ def test_varying_iv_or_body_load_does_not_become_invariant_even_with_a_range(inc
     update = loop.body.block.last_op.operands[0].owner
     value = loop.body.block.args[0] if increment == "%iv" else next(op for op in loop.body.block.ops if opcode(op) == "tt.load").results[0]
     update.operands = [update.operands[0], value]
-    ranges[value] = (-2, 2)
     loop.attributes["prov.invariant"] = builtin.StringAttr("claimed")
     before = str(module)
     assert not is_loop_invariant(value, loop, opcode)
     assert raise_pointer_recurrences(module, _source_ids,
         {loop: enclosed_loop(((0, 3), (0, 8), (1, 3)), width=32)}, scalar_ranges=ranges) == []
     assert str(module) == before
+    ranges[value] = (0, 7) if increment == "%iv" else (-(1 << 63), (1 << 63)-1)
+    reports = raise_pointer_recurrences(module, _source_ids,
+        {loop: enclosed_loop(((0, 3), (0, 8), (1, 3)), width=32)}, scalar_ranges=ranges)
+    if increment == "%iv":
+        assert reports[0]["kind"] == "source-bounded-runtime-pointer-recurrences"
+        assert reports[0]["streams"][0]["bounded_scalar_terms"] == 1
+        assert "invariant_scalar_terms" not in reports[0]["streams"][0]
+        module.verify()
+    else:
+        assert reports == [] and str(module) == before
 
 
 def test_body_defined_division_stays_inside_actual_loop_and_uses_original_definition():

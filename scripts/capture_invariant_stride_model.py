@@ -12,14 +12,15 @@ from m2m.ir.kernel_registry import KERNEL_REGISTRY, KernelSpec
 from torch.library import triton_op, wrap_triton
 
 
-def capture(out, mode="memory"):
-    source = Path(__file__).resolve().parents[1] / "t2m/examples/runtime_stride_kernels.py"
+def capture(out, mode="memory", *, conditional=False):
+    source = Path(__file__).resolve().parents[1] / "t2m/examples" / ("conditional_stride_kernels.py" if conditional else "runtime_stride_kernels.py")
     loader = importlib.util.spec_from_file_location("invariant_stride_source", source)
     kernels = importlib.util.module_from_spec(loader)
     loader.loader.exec_module(kernels)
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
-    name = "t2m_demo::invariant_stride"
+    name = "t2m_demo::conditional_stride" if conditional else "t2m_demo::invariant_stride"
+    kernel = kernels.conditional_stride if conditional else kernels.invariant_stride
 
     @triton_op(name, mutates_args={})
     def transform(x: torch.Tensor, lower: torch.Tensor, upper: torch.Tensor,
@@ -28,7 +29,7 @@ def capture(out, mode="memory"):
         if not (0 <= lo <= 3 and 0 <= hi <= 8 and 1 <= step <= 3 and -2 <= advance <= 2):
             raise ValueError("invariant-stride controls outside the source contract")
         result, last = (torch.empty((17,), dtype=x.dtype, device=x.device) for _ in range(2))
-        wrap_triton(kernels.invariant_stride)[(3,)](x, result, last, lo, hi, step, advance,
+        wrap_triton(kernel)[(3,)](x, result, last, lo, hi, step, advance,
             N=17, R=64, B=8, TRANSPOSE=False, MODE=mode)
         return result, last
 
@@ -47,7 +48,12 @@ def capture(out, mode="memory"):
                 state = (state ^ (row + 2)) * 3
             else:
                 state = state + (x[position] ^ (x[63-position] * 3))
-            position += step + advance if mode == "mixed" else 1 // hi if mode == "late" else advance
+            if conditional:
+                position += int(row < 3) if mode == "bit" else advance if row < 3 else -advance if mode == "nested" and row >= 5 else 1 // (row-2)
+                if mode == "observe":
+                    state ^= x[position]
+            else:
+                position += step + advance if mode == "mixed" else 1 // hi if mode == "late" else advance
         return state ^ x[position], x[position] - x[63-position] * 3
 
     class Model(torch.nn.Module):
@@ -86,6 +92,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--mode", choices=("memory", "pure", "mixed", "late"), default="memory")
+    parser.add_argument("--conditional-mode", choices=("scalar", "pointer", "pure", "observe", "nested", "bit"))
     args = parser.parse_args()
     torch.set_num_threads(1)
-    print(capture(args.out, args.mode))
+    print(capture(args.out, args.conditional_mode or args.mode, conditional=bool(args.conditional_mode)))

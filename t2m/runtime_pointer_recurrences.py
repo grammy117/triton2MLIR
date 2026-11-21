@@ -1,8 +1,8 @@
-"""Carry checked invariant logical offsets instead of pointer-valued SCF state.
+"""Carry checked bounded logical offsets instead of pointer-valued SCF state.
 
 Native shared pointer conversion remains responsible for memory and tiling.
 Source constant factors keep progress in logical axis units. No arithmetic is
-hoisted: invariant expressions defined in the body are used at its yield edge.
+hoisted: expressions defined in the body are used at its actual yield edge.
 """
 
 from dataclasses import dataclass, field
@@ -32,7 +32,7 @@ class Form:
         return Form(self.constant + other.constant, {v: c for v, c in terms.items() if c})
 
 
-def uniform_form(value, loop, opcode, ranges, budget):
+def uniform_form(value, loop, opcode, ranges, budget, *, allow_varying=False):
     budget[0] -= 1
     if budget[0] < 0:
         return None
@@ -48,9 +48,9 @@ def uniform_form(value, loop, opcode, ranges, budget):
                 return Form(values[0])
     if (kind in {"tt.splat", "tt.broadcast", "tt.expand_dims", "tt.trans", "tt.reshape", "arith.extsi"}
             or kind == "arith.bitcast" and value.type == op.operands[0].type):
-        return uniform_form(op.operands[0], loop, opcode, ranges, budget)
+        return uniform_form(op.operands[0], loop, opcode, ranges, budget, allow_varying=allow_varying)
     if kind in {"arith.addi", "arith.subi", "arith.muli"}:
-        a, b = (uniform_form(v, loop, opcode, ranges, budget) for v in op.operands)
+        a, b = (uniform_form(v, loop, opcode, ranges, budget, allow_varying=allow_varying) for v in op.operands)
         if a is not None and b is not None:
             if kind == "arith.addi":
                 return a.add(b)
@@ -60,7 +60,8 @@ def uniform_form(value, loop, opcode, ranges, budget):
                 return b.scale(a.constant)
             if not b.terms:
                 return a.scale(b.constant)
-    if value in ranges and is_loop_invariant(value, loop, opcode):
+    if (value in ranges and isinstance(value.type, (builtin.IntegerType, builtin.IndexType))
+            and (allow_varying or is_loop_invariant(value, loop, opcode))):
         return Form(terms={value: 1})
     return None
 
@@ -82,7 +83,7 @@ def raise_runtime_loop(loop, domain, source_ids, ranges):
             if (not hasattr(op, "name") or opcode(op) != "tt.addptr"
                     or value.type != argument.type or op.operands[0].type != argument.type):
                 return None
-            form = uniform_form(op.operands[1], loop, opcode, ranges, [256])
+            form = uniform_form(op.operands[1], loop, opcode, ranges, [256], allow_varying=True)
             if form is None:
                 return None
             total = total.add(form)
@@ -120,6 +121,7 @@ def raise_runtime_loop(loop, domain, source_ids, ranges):
         plans[position] = coefficient, factor, normalized
     if not any(form.terms for _a, _g, form in plans.values()):
         return None
+    varying = any(not is_loop_invariant(atom, loop, opcode) for _a, _factor, form in plans.values() for atom in form.terms)
 
     kept = [i for i in range(len(loop.iter_args)) if i not in pointer_slots]
     body = Block(arg_types=[source.args[0].type, *[source.args[i+1].type for i in kept], loop.lb.type,
@@ -187,9 +189,10 @@ def raise_runtime_loop(loop, domain, source_ids, ranges):
         results[position] = pointer_at(after, loop.iter_args[position], replacement.results[len(kept)],
             replacement.results[len(kept)+1+j], coefficient, factor)
     Rewriter.replace_op(loop, [*before, replacement, *after], [results[i] for i in range(len(loop.results))])
-    return {"kind": "source-invariant-runtime-pointer-recurrences", "source_ids": source_ids(loop.location),
+    return {"kind": "source-bounded-runtime-pointer-recurrences" if varying else "source-invariant-runtime-pointer-recurrences", "source_ids": source_ids(loop.location),
         "streams": [{"carried_argument": i, "step_coefficient": a, "logical_unit_factor": factor,
-                     "invariant_scalar_terms": len(form.terms)} for i, (a, factor, form) in plans.items()],
-        "control": "original-SSA; actual-zero-initialized-invariant-increment-progress",
+                     "bounded_scalar_terms" if varying else "invariant_scalar_terms": len(form.terms)}
+                    for i, (a, factor, form) in plans.items()],
+        "control": "original-SSA; actual-zero-initialized-bounded-increment-progress",
         "evaluation": "original-body-definitions-retained; no-hoisting-or-zero-trip-speculation",
         "scope": "source-width-checked-logical-offsets; no-ownership-complete-write-or-effect-grant"}

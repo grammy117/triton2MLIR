@@ -1,5 +1,16 @@
 # Review handoff — updated 2026-11-20
 
+[Conditional runtime strides](conditional_runtime_strides.md) now qualify six
+source forms through tensor MLIR: scalar/pointer/nested choices, preloaded reuse,
+reads after updates and boolean steps. Twelve kernel libraries and six complete
+two-call models retain ninety initial, 366 replay and 180 exact-word target
+results across thirty-six serial images, plus six actual source-domain aborts.
+The final regression selection passes 188. Fresh conversion reproduces all
+eighteen qualified implementation payloads byte-for-byte after scoped coordinate,
+grid-uniformity and signed-i1/zero-extension refinements. General base/while/
+alias/dynamic-root/write-image, shared/async, numeric/source and accelerator
+closure remains open. The linked contract records exact logs and limits.
+
 [Independent runtime memory strides](invariant_runtime_strides.md) now close
 the separate-runtime-increment refusal as tensor computation. Four modes retain
 body memory, preloaded reuse, mixed step/progress and body-local division with

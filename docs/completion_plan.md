@@ -1,5 +1,13 @@
 # Completion plan: all TTIR kernels through the Merlin interface
 
+[Conditional runtime strides](conditional_runtime_strides.md) close selected
+scalar/pointer/nested and boolean-step compositions while retaining actual
+branches, tile axes, reuse and every observation. Actual dataflow distinguishes
+loop invariance from grid uniformity; varying coordinates grant no ownership.
+Kernel/model host and serial qualification retain all results. Continue general
+base selection, while/nonlinear state, alias/dynamic-root/write-image proofs,
+shared/async and applicable target correctness/performance.
+
 [Independent runtime memory strides](invariant_runtime_strides.md) close the
 reproduced separate-scalar stride refusal while retaining signed/zero logical
 progress, original controls and body-local non-speculated arithmetic. Kernel

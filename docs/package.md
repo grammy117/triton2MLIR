@@ -6,6 +6,14 @@ Package schemas and source-bound tensor/effect/result semantics are unchanged.
 The retained `stage_compile_inputs` path is distinct from the newer generic
 `StagedProgram` service; the integration guide states that admission difference.
 
+[Conditional runtime strides](conditional_runtime_strides.md) retain actual
+selected integer/pointer offsets and checked per-iteration progress, using source
+axis factors and original regions. Varying coordinates expire with their actual
+scope; returned states become uniform parameters only after actual dependency
+proof through original controls and tuple edges. Program IDs, unknown state or
+memory observations grant no uniformity/ownership. Generated compatibility names
+the representation extensions; public ABI, receipt schemas and rosters are unchanged.
+
 [Independent invariant runtime pointer increments](invariant_runtime_strides.md)
 use actual zero-initialized logical progress carriers, source constant axis
 factors and any actual-loop-step term. Body-defined increments stay in their
