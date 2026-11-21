@@ -16,11 +16,11 @@ def _record(path):
 
 
 def compile(staged, work, source, module, signature, features):
-    from merlin.frontends.execution_result_signature import PROFILE, validate_signature
-    from merlin.llvmlower.owned_result_abi import pipeline
-    from merlin.llvmlower.owned_result_program import save
-    from merlin.llvmlower.owned_results import compile_owned_results
-    from merlin.llvmlower.toolchain import clang, compiler_python
+    from merlin.compiler.frontend.intake.execution_result_signature import PROFILE, validate_signature
+    from merlin.compiler.lower.options.owned_result_abi import pipeline
+    from merlin.compiler.lower.options.owned_result_program import save
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
+    from merlin.compiler.lower.model.toolchain import clang, compiler_python
 
     validate_signature(module, signature)
     manifest = json.loads((staged / "compile-inputs.json").read_text())
@@ -55,8 +55,8 @@ def compile(staged, work, source, module, signature, features):
         "owned_result_program": _record(saved),
         "pipeline": pipeline(features=features),
         "features": sorted(features),
-        "lowering_api": "merlin.llvmlower.owned_results.compile_owned_results",
-        "codegen_api": "merlin.llvmlower.codegen.build_host_shared",
+        "lowering_api": 'merlin.compiler.lower.options.owned_results.compile_owned_results',
+        "codegen_api": 'merlin.compiler.lower.model.codegen.build_host_shared',
         "compiler_python": str(compiler_python()),
         "codegen_tool": str(clang()),
         "host_machine": platform.machine(),
@@ -72,9 +72,9 @@ def execute(
     staged, work, arguments, arrays, signature, compiled, evaluation, *, observed=False
 ):
     import numpy as np
-    from merlin.frontends.execution_result_signature import PROFILE
-    from merlin.llvmlower.execution_result_inputs import resolve
-    from merlin.llvmlower.owned_result_program import FILENAME, load
+    from merlin.compiler.frontend.intake.execution_result_signature import PROFILE
+    from merlin.compiler.lower.options.execution_result_inputs import resolve
+    from merlin.compiler.lower.options.owned_result_program import FILENAME, load
 
     if (
         compiled.get("schema") != "t2m.merlin-host-compilation.v2"

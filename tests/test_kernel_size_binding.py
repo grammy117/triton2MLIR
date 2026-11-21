@@ -126,7 +126,7 @@ def test_actual_count_and_pack_execute_once_and_preserve_all_original_results(
 ):
     root, parent, _source, _bindings, bound = selected
     monkeypatch.syspath_prepend(str(Path(os.environ["T2M_MERLIN_ROOT"]) / "src"))
-    from merlin.llvmlower.owned_results import compile_owned_results
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
 
     # Compilation receives source only; neither arguments nor references
     # exist in its build directory or participate in result allocation.
@@ -214,7 +214,7 @@ def test_executed_binding_retains_original_call_contract_refusals(selected, fail
 def consumer_inputs(selected, monkeypatch):
     _root, _parent, source, bindings, bound = selected
     monkeypatch.syspath_prepend(str(Path(os.environ["T2M_MERLIN_ROOT"]) / "src"))
-    from merlin.frontends.linalg_mlir import parse_mlir_text
+    from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
 
     from t2m.executed_model_binding import serialize
 
@@ -234,7 +234,7 @@ def test_independent_consumer_reconstructs_every_original_ssa_edge(
     selected, monkeypatch
 ):
     inputs = consumer_inputs(selected, monkeypatch)
-    from merlin.frontends.execution_model_correspondence import checked_execution_model
+    from merlin.compiler.frontend.intake.execution_model_correspondence import checked_execution_model
 
     report = checked_execution_model(*inputs)
     assert report["calls"] == 3
@@ -249,7 +249,7 @@ def test_rehashed_records_cannot_replace_independent_source_body_guard_checks(
     selected, monkeypatch, damage
 ):
     parent, bound, trace, interfaces = consumer_inputs(selected, monkeypatch)
-    from merlin.frontends.execution_model_correspondence import checked_execution_model
+    from merlin.compiler.frontend.intake.execution_model_correspondence import checked_execution_model
     from xdsl.dialects import arith, builtin
 
     trace = deepcopy(trace)

@@ -19,8 +19,8 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
     # fusion; emitted frontend IR retains the source tensor recurrence.
-    from merlin.llvmlower.pipeline import _UPSTREAM_PASSES, _splice
-    from merlin.llvmlower.loop_tensor_destinations import edit_pipeline
+    from merlin.compiler.lower.native.policy import _UPSTREAM_PASSES, _splice
+    from merlin.compiler.lower.options.loop_tensor_destinations import edit_pipeline
 
     passes, adapted = ["scf-forall-to-for"], 0
     for entry in _UPSTREAM_PASSES:
@@ -34,31 +34,31 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions
         passes.append(entry)
     passes = edit_pipeline(passes)
     if scalar_diagnostics:
-        from merlin.llvmlower.scalar_diagnostics import edit_pipeline as edit_scalar_diagnostics
+        from merlin.compiler.lower.options.scalar_diagnostics import edit_pipeline as edit_scalar_diagnostics
         passes = edit_scalar_diagnostics(passes)
     elif literal_diagnostics:
-        from merlin.llvmlower.length_aware_diagnostics import edit_pipeline as edit_literal_diagnostics
+        from merlin.compiler.lower.options.length_aware_diagnostics import edit_pipeline as edit_literal_diagnostics
         passes = edit_literal_diagnostics(passes)
     if bfloat:
-        from merlin.llvmlower.bfloat_transport import edit_pipeline as edit_bfloat_transport
+        from merlin.compiler.lower.options.bfloat_transport import edit_pipeline as edit_bfloat_transport
         passes = edit_bfloat_transport(passes)
     if word_views:
-        from merlin.llvmlower.atomic_word_views import edit_pipeline as edit_word_views
+        from merlin.compiler.lower.options.atomic_word_views import edit_pipeline as edit_word_views
         passes = edit_word_views(passes)
     elif compare_exchange:
-        from merlin.llvmlower.atomic_compare_exchange import edit_pipeline as edit_compare_exchange
+        from merlin.compiler.lower.options.atomic_compare_exchange import edit_pipeline as edit_compare_exchange
         passes = edit_compare_exchange(passes)
     if integer_regions:
-        from merlin.llvmlower.atomic_integer_regions import edit_pipeline as edit_integer_regions
+        from merlin.compiler.lower.options.atomic_integer_regions import edit_pipeline as edit_integer_regions
         passes = edit_integer_regions(passes)
     if bfloat_elementwise:
-        from merlin.llvmlower.bfloat_elementwise import edit_pipeline as edit_bfloat_elementwise
+        from merlin.compiler.lower.options.bfloat_elementwise import edit_pipeline as edit_bfloat_elementwise
         passes = edit_bfloat_elementwise(passes)
     if fp8_widening:
-        from merlin.llvmlower.fp8_widening import edit_pipeline as edit_fp8_widening
+        from merlin.compiler.lower.options.fp8_widening import edit_pipeline as edit_fp8_widening
         passes = edit_fp8_widening(passes)
     if fp8_narrowing:
-        from merlin.llvmlower.fp8_narrowing import edit_pipeline as edit_fp8_narrowing
+        from merlin.compiler.lower.options.fp8_narrowing import edit_pipeline as edit_fp8_narrowing
         passes = edit_fp8_narrowing(passes)
     result = _splice(passes)
     if adapted != 1 or "ownership-based-buffer-deallocation" not in result:
@@ -74,12 +74,12 @@ def record(path):
 def compile_model(staged, work):
     # This entry receives only the staged compiler directory. It has no runtime
     # arrays, golden or evaluator argument path in its command line.
-    from merlin.frontends.linalg_mlir import parse_mlir_text
-    from merlin.llvmlower.passes_xdsl import add_c_interface
-    from merlin.llvmlower.pipeline import lower_to_llvm_ir
-    from merlin.llvmlower.codegen import build_host_shared
-    from merlin.llvmlower.toolchain import clang, compiler_python
-    from merlin.xdsl_dialects._common import text
+    from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
+    from merlin.compiler.frontend.preprocess import add_c_interface
+    from merlin.compiler.lower.native.pipeline import lower_to_llvm_ir
+    from merlin.compiler.lower.model.codegen import build_host_shared
+    from merlin.compiler.lower.model.toolchain import clang, compiler_python
+    from merlin.compiler.dialects.xdsl_context import text
 
     manifest = json.loads((staged / "compile-inputs.json").read_text())
     if manifest.get("schema") != "merlin.compile-inputs.v1":
@@ -122,8 +122,8 @@ def compile_model(staged, work):
               "source_signature": record(staged / "signature.json"),
               "llvm": record(ll), "shared_library": record(library), "pipeline": pipeline,
               "features": sorted(features),
-              "lowering_api": "merlin.llvmlower.pipeline.lower_to_llvm_ir",
-              "codegen_api": "merlin.llvmlower.codegen.build_host_shared",
+              "lowering_api": 'merlin.compiler.lower.native.pipeline.lower_to_llvm_ir',
+              "codegen_api": 'merlin.compiler.lower.model.codegen.build_host_shared',
               "compiler_python": str(compiler_python()), "codegen_tool": str(clang()),
               "host_machine": platform.machine(), "evaluator_data_supplied_to_compiler": False,
               "accelerator_execution": "not-performed"}
@@ -134,7 +134,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     from diagnostic_runtime import prepare_stdout
     prepare_stdout()
     import numpy as np
-    from merlin.llvmlower.abi import HostModel, ScalarArg
+    from merlin.compiler.lower.model.oracle import HostModel, ScalarArg
     from runtime_shapes import resolve_shapes
     from tensor_storage import DTYPES as dtypes
 
@@ -160,7 +160,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
         execute_execution_results(staged, work, arguments, arrays, signature, compiled, evaluation, observed=observed)
         return
     if signature["schema"] in ("merlin.compile-signature.v3", "merlin.compile-signature.v4", "merlin.compile-signature.v5"):
-        from merlin.llvmlower.runtime_invocation import resolve
+        from merlin.compiler.lower.options.runtime_invocation import resolve
 
         plan = resolve(staged / "program.mlir", staged / "signature.json", arguments, max_bytes=128 << 20)
         shapes = [row["shape"] for row in plan["outputs"]]

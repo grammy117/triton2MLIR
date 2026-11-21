@@ -61,13 +61,14 @@ def worker(mode, root, out, *arguments):
     sys.path.insert(0, str(Path(root) / "src"))
     out = Path(out)
     if mode == "stage":
-        from merlin.frontends.compile_inputs import stage_compile_inputs
+        from merlin.compiler.frontend.inputs import stage_compile_inputs
         stage_compile_inputs(arguments[0], out / "compiler", result_mode=arguments[1] if len(arguments) > 1 else None)
         checked_stage(out / "compiler")
     elif mode == "build":
-        from merlin.llvmlower import toolchain
-        from merlin.frontends.linalg_mlir import parse_mlir_text
-        from merlin.runtime.backends import spike, spike_model
+        from merlin.compiler.lower.model import toolchain
+        from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
+        from merlin.runtime.backends.baremetal import spike_launcher as spike, image_link as spike_model
+        from merlin.runtime.backends.baremetal import model_build as _merlin_model_build
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "t2m"))
         from consumer_features import select_features
         manifest = checked_stage(out / "compiler")
@@ -99,7 +100,7 @@ def worker(mode, root, out, *arguments):
         tools = {name: {"path": str(path.resolve(strict=True)), **pin(path)} for name, path in (
             ("clang", toolchain.clang()), ("compiler_python", toolchain.compiler_python()),
             ("gcc", spike.gcc_path()), ("spike", spike.spike_path()), ("nm", toolchain.nm()))}
-        report = spike_model.build(projection, out / "image", inputs_npz=arguments[0],
+        report = _merlin_model_build.build(projection, out / "image", inputs_npz=arguments[0],
             backend="scalar", features=features,
             full_readback=True, readonly_input_indices=tuple(range(len(signature["inputs"]))),
             arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20,
@@ -114,35 +115,36 @@ def worker(mode, root, out, *arguments):
             "requested_features": requested_features,
             "feature_selector": pin(Path(__file__).resolve().parents[1] / "t2m/consumer_features.py"),
             "merlin_sources": {name: pin(Path(root) / name) for name in (
-                "src/merlin/runtime/backends/spike_model.py", "src/merlin/runtime/backends/_model_elf_metadata.py",
-                "src/merlin/runtime/whole_model_readback.py", "src/merlin/runtime/out_bin.py",
-                "src/merlin/runtime/input_observation.py", "src/merlin/llvmlower/c_runtime.py",
+                'src/merlin/runtime/backends/baremetal/image_link.py', 'src/merlin/runtime/backends/baremetal/model_build.py',
+                'src/merlin/runtime/harness/output_observation.py', 'src/merlin/runtime/harness/output_decoding.py',
+                'src/merlin/runtime/harness/output_observation.py', "src/merlin/compiler/lower/c/runtime.py",
                 "src/merlin/runtime/effect_observation.py",
-                "src/merlin/llvmlower/runtime_invocation.py",
-                "src/merlin/llvmlower/pipeline.py", "src/merlin/llvmlower/toolchain.py",
-                "src/merlin/frontends/linalg_mlir.py", "src/merlin/frontends/linalg_named_regions.py",
-                "src/merlin/xdsl_dialects/standard_linalg.py",
-                "src/merlin/xdsl_dialects/standard_scf.py",
-                "src/merlin/xdsl_dialects/standard_llvm.py", "src/merlin/frontends/kernel_volatile_evidence.py",
-                "src/merlin/frontends/kernel_word_source_effects.py",
-                "src/merlin/llvmlower/loop_tensor_destinations.py",
-                "src/merlin/llvmlower/atomic_compare_exchange.py",
-                "src/merlin/llvmlower/atomic_word_views.py",
-                "src/merlin/llvmlower/atomic_integer_regions.py")},
+                'src/merlin/compiler/lower/options/runtime_invocation.py',
+                'src/merlin/compiler/lower/native/features.py', 'src/merlin/compiler/lower/native/invocation.py', 'src/merlin/compiler/lower/native/pipeline.py', 'src/merlin/compiler/lower/native/policy.py', 'src/merlin/compiler/lower/native/runners.py', 'src/merlin/compiler/lower/native/stages.py', 'src/merlin/compiler/lower/native/vector.py', 'src/merlin/compiler/lower/model/toolchain.py',
+                'src/merlin/compiler/frontend/linalg_mlir.py', 'src/merlin/compiler/frontend/patterns/linalg_named_regions.py',
+                'src/merlin/compiler/dialects/standard_linalg.py',
+                'src/merlin/compiler/dialects/standard_scf.py',
+                'src/merlin/compiler/dialects/standard_llvm.py', 'src/merlin/compiler/frontend/intake/kernel_volatile_evidence.py',
+                'src/merlin/compiler/frontend/intake/kernel_word_source_effects.py',
+                'src/merlin/compiler/lower/options/loop_tensor_destinations.py',
+                'src/merlin/compiler/lower/options/atomic_compare_exchange.py',
+                'src/merlin/compiler/lower/options/atomic_word_views.py',
+                'src/merlin/compiler/lower/options/atomic_integer_regions.py')},
             "dependency_source_closure": "not-established",
             "source_program": pin(out / "compiler/program.mlir"),
             "runtime_input_path": str(Path(arguments[0]).resolve()),
             "runtime_inputs": pin(arguments[0]), "runtime_inputs_embedded_in_elf": True,
-            "runtime_input_consumer": "merlin.llvmlower.c_runtime.generate",
+            "runtime_input_consumer": 'merlin.compiler.lower.c.runtime.generate',
             "compiler_directory_contains_evaluator_data": False,
             "reference_values_supplied_to_build": False,
             "compiler_staging_source": manifest["source"]})
     elif mode in ("run", "check"):
-        from merlin.llvmlower.c_runtime import _out_specs
-        from merlin.runtime.backends import spike_model
-        from merlin.runtime.input_observation import verify_observed_inputs
-        from merlin.runtime.out_bin import parse_binary_console_details
-        from merlin.runtime.whole_model_readback import decode_outputs
+        from merlin.compiler.lower.c.runtime import _out_specs
+        from merlin.runtime.backends.baremetal import image_link as spike_model
+        from merlin.runtime.backends.baremetal import model_build as _merlin_model_build
+        from merlin.runtime.harness.output_observation import verify_observed_inputs
+        from merlin.runtime.harness.output_decoding import parse_binary_console_details
+        from merlin.runtime.harness.output_observation import decode_outputs
         build = json.loads((out / "build.json").read_text())
         tools = build["tools"]
         report = build["build"]
@@ -171,7 +173,7 @@ def worker(mode, root, out, *arguments):
             raise ValueError("target run lacks complete original input observations")
         runtime_abi = report.get("runtime_invocation_abi")
         if runtime_abi is not None:
-            from merlin.llvmlower.runtime_invocation import resolve
+            from merlin.compiler.lower.options.runtime_invocation import resolve
             expected = resolve(out / "image-input/model.mlir", out / "compiler/signature.json", build["runtime_input_path"])
             if runtime_abi != expected or json.loads((out / "image/cgen/runtime-abi.json").read_text()) != expected:
                 raise ValueError("runtime ABI does not match original types and actual invocation inputs")

@@ -217,10 +217,10 @@ def test_actual_merlin_library_keeps_byte_aliases_and_original_word_results(
     if os.environ.get("T2M_MERLIN_CLANG"):
         monkeypatch.setenv("MERLIN_CLANG", os.environ["T2M_MERLIN_CLANG"])
     sys.path.insert(0, str(root / "src"))
-    from merlin.llvmlower import atomic_integer_regions
-    from merlin.llvmlower.abi import HostModel
-    from merlin.llvmlower.codegen import build_host_shared
-    from merlin.llvmlower.pipeline import lower_to_llvm_ir
+    from merlin.compiler.lower.options import atomic_integer_regions
+    from merlin.compiler.lower.model.oracle import HostModel
+    from merlin.compiler.lower.model.codegen import build_host_shared
+    from merlin.compiler.lower.native.pipeline import lower_to_llvm_ir
 
     atomic_integer_regions.ensure_registered()
     program = module(width, operation, order)

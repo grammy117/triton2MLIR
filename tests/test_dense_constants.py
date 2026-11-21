@@ -85,15 +85,15 @@ def test_shared_hook_is_idempotent_in_both_reader_orders_and_versions(
     if not python:
         pytest.skip("explicit frontend/native Python required")
     script = tmp_path / "check.py"
-    script.write_text("""import sys,json
+    script.write_text(r"""import sys,json
 sys.path[:0]=sys.argv[1:3]
 if sys.argv[3]=='merlin':
-    import merlin.xdsl_dialects.fp8
+    import merlin.compiler.dialects.fp8
 from t2m.shared_tensor import parse_shared
 from t2m.ir import text
 from t2m.standard_floats import register_fp8_types
 register_fp8_types()
-import merlin.xdsl_dialects.fp8 as consumer
+import merlin.compiler.dialects.fp8 as consumer
 consumer.register_fp8_types()
 from xdsl.dialects import builtin
 before=builtin.DenseIntOrFPElementsAttr.is_splat

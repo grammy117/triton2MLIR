@@ -14,40 +14,61 @@ import qualify_spike_model as Q
 
 SCHEMA = "t2m.spike-owned-result-qualification.v1"
 SOURCES = (
-    "src/merlin/runtime/backends/owned_result_model.py", "src/merlin/runtime/backends/spike_model.py",
-    "src/merlin/runtime/backends/host_compiler_policy.py", "src/merlin/runtime/backends/_model_elf_metadata.py",
-    "src/merlin/runtime/owned_result_readback.py", "src/merlin/runtime/out_bin.py",
-    "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/llvmlower/owned_result_lowering.py",
-    "src/merlin/llvmlower/owned_result_abi.py", "src/merlin/llvmlower/owned_result_c.py",
-    "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_allocations.py",
-    "src/merlin/llvmlower/dealloc_lifetime.py", "src/merlin/llvmlower/dealloc_promotions.py",
-    "src/merlin/llvmlower/runtime_invocation.py", "src/merlin/llvmlower/compilation_recipe.py",
-    "src/merlin/llvmlower/execution_result_inputs.py", "src/merlin/frontends/execution_result_signature.py",
-    "src/merlin/frontends/execution_call_views.py", "src/merlin/frontends/execution_call_contracts.py",
-    "src/merlin/frontends/execution_model_correspondence.py", "src/merlin/frontends/derived_source_views.py",
-    "src/merlin/frontends/execution_runtime_views.py",
-    "src/merlin/frontends/execution_source_coordinates.py",
-    "src/merlin/frontends/execution_functional_state.py",
-    "src/merlin/frontends/execution_storage_views.py",
-    "src/merlin/frontends/kernel_allocation_evidence.py", "src/merlin/frontends/kernel_barrier_evidence.py",
-    "src/merlin/frontends/kernel_atomic_evidence.py",
-    "src/merlin/frontends/kernel_volatile_evidence.py", "src/merlin/xdsl_dialects/standard_llvm.py",
-    "src/merlin/frontends/kernel_word_source_effects.py",
-    "merlin/runtime/c/owned_result_driver.c", "merlin/runtime/c/owned_result_driver.h",
-    "merlin/runtime/c/owned_result_readback.c", "merlin/runtime/c/owned_result_readback.h",
-    "merlin/runtime/abi/owned_results.c", "merlin/runtime/abi/owned_result_views.c",
-    "merlin/runtime/abi/owned_result_views.h", "merlin/runtime/abi/mlir_runtime.c", "merlin/runtime/abi/half_extend.h",
-    "merlin/runtime/baremetal/spike/owned_result_main.c", "merlin/runtime/baremetal/spike/crt.S",
-    "merlin/runtime/baremetal/spike/htif.c", "merlin/runtime/baremetal/spike/htif.h",
-    "merlin/runtime/baremetal/spike/libc_min.c", "merlin/runtime/baremetal/spike/merlin_malloc.c",
-    "merlin/runtime/baremetal/spike/model_link.ld",
+    'src/merlin/runtime/backends/owned_result_model.py',
+    'src/merlin/runtime/backends/baremetal/image_link.py',
+    'src/merlin/runtime/backends/baremetal/model_build.py',
+    'src/merlin/runtime/owned_result_readback.py',
+    'src/merlin/runtime/harness/output_decoding.py',
+    'src/merlin/compiler/lower/options/owned_result_driver.py',
+    'src/merlin/compiler/lower/options/owned_result_lowering.py',
+    'src/merlin/compiler/lower/options/owned_result_abi.py',
+    'src/merlin/compiler/lower/options/owned_result_c.py',
+    'src/merlin/compiler/lower/options/owned_results.py',
+    'src/merlin/compiler/lower/options/owned_result_allocations.py',
+    'src/merlin/compiler/lower/native/lifetime.py',
+    'src/merlin/compiler/lower/options/dealloc_promotions.py',
+    'src/merlin/compiler/lower/options/runtime_invocation.py',
+    'src/merlin/compiler/lower/model/compilation_recipe.py',
+    'src/merlin/compiler/lower/options/execution_result_inputs.py',
+    'src/merlin/compiler/frontend/intake/execution_result_signature.py',
+    'src/merlin/compiler/frontend/intake/execution_call_views.py',
+    'src/merlin/compiler/frontend/intake/execution_call_contracts.py',
+    'src/merlin/compiler/frontend/intake/execution_model_correspondence.py',
+    'src/merlin/compiler/frontend/intake/derived_source_views.py',
+    'src/merlin/compiler/frontend/intake/execution_runtime_views.py',
+    'src/merlin/compiler/frontend/intake/execution_source_coordinates.py',
+    'src/merlin/compiler/frontend/intake/execution_functional_state.py',
+    'src/merlin/compiler/frontend/intake/execution_storage_views.py',
+    'src/merlin/compiler/frontend/intake/kernel_allocation_evidence.py',
+    'src/merlin/compiler/frontend/intake/kernel_barrier_evidence.py',
+    'src/merlin/compiler/frontend/intake/kernel_atomic_evidence.py',
+    'src/merlin/compiler/frontend/intake/kernel_volatile_evidence.py',
+    'src/merlin/compiler/dialects/standard_llvm.py',
+    'src/merlin/compiler/frontend/intake/kernel_word_source_effects.py',
+    'src/merlin/runtime/native/c/owned_result_driver.c',
+    'src/merlin/runtime/native/c/owned_result_driver.h',
+    'src/merlin/runtime/native/c/owned_result_readback.c',
+    'src/merlin/runtime/native/c/owned_result_readback.h',
+    'src/merlin/runtime/native/abi/owned_results.c',
+    'src/merlin/runtime/native/abi/owned_result_views.c',
+    'src/merlin/runtime/native/abi/owned_result_views.h',
+    'src/merlin/runtime/native/abi/mlir_runtime.c',
+    'src/merlin/runtime/native/abi/half_extend.h',
+    'src/merlin/runtime/native/baremetal/spike/owned_result_main.c',
+    'src/merlin/runtime/native/baremetal/spike/crt.S',
+    'src/merlin/runtime/native/baremetal/spike/htif.c',
+    'src/merlin/runtime/native/baremetal/spike/htif.h',
+    'src/merlin/runtime/native/baremetal/spike/libc_min.c',
+    'src/merlin/runtime/native/baremetal/spike/merlin_malloc.c',
+    'src/merlin/runtime/native/baremetal/spike/model_link.ld',
 )
 
 
 def build(root, out, inputs, features):
-    from merlin.frontends.linalg_mlir import parse_mlir_text
-    from merlin.llvmlower import toolchain
-    from merlin.runtime.backends import spike, spike_model
+    from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
+    from merlin.compiler.lower.model import toolchain
+    from merlin.runtime.backends.baremetal import spike_launcher as spike
+    from merlin.runtime.backends.baremetal import model_build as _merlin_model_build
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "t2m"))
     from consumer_features import select_features
@@ -65,7 +86,7 @@ def build(root, out, inputs, features):
         ("clang", toolchain.clang()), ("compiler_python", toolchain.compiler_python()),
         ("gcc", spike.gcc_path()), ("spike", spike.spike_path()), ("nm", toolchain.nm()))}
     signature = json.loads((out / "compiler/signature.json").read_text())
-    report = spike_model.build(projection, out / "image", inputs_npz=inputs,
+    report = _merlin_model_build.build(projection, out / "image", inputs_npz=inputs,
         runtime_signature=out / "compiler/signature.json", backend="scalar", features=selected,
         full_readback=True, readonly_input_indices=tuple(range(len(signature["inputs"]))),
         max_readonly_input_bytes=64 << 20, arena_mb=4, dram_bytes=64 << 20, code_reserve=2 << 20)
@@ -78,16 +99,17 @@ def build(root, out, inputs, features):
         "merlin_sources": {name: Q.pin(Path(root) / name) for name in SOURCES},
         "dependency_source_closure": "not-established", "source_program": Q.pin(out / "compiler/program.mlir"),
         "runtime_input_path": str(Path(inputs).resolve()), "runtime_inputs": Q.pin(inputs),
-        "runtime_inputs_embedded_in_elf": True, "runtime_input_consumer": "merlin.llvmlower.owned_result_driver",
+        "runtime_inputs_embedded_in_elf": True, "runtime_input_consumer": 'merlin.compiler.lower.options.owned_result_driver',
         "compiler_directory_contains_evaluator_data": False, "reference_values_supplied_to_build": False,
         "compiler_staging_source": manifest["source"]})
 
 
 def observe(mode, root, out):
-    from merlin.frontends.compile_inputs import stage_compile_inputs
-    from merlin.llvmlower.owned_result_driver import load_arguments
-    from merlin.llvmlower.owned_result_driver import verify as verify_driver
-    from merlin.runtime.backends import spike_model
+    from merlin.compiler.frontend.inputs import stage_compile_inputs
+    from merlin.compiler.lower.options.owned_result_driver import load_arguments
+    from merlin.compiler.lower.options.owned_result_driver import verify as verify_driver
+    from merlin.runtime.backends.baremetal import image_link as spike_model
+    from merlin.runtime.backends.baremetal import model_build as _merlin_model_build
     from merlin.runtime.owned_result_readback import PROFILE, decode
 
     build = json.loads((out / "build.json").read_text())
@@ -117,7 +139,7 @@ def observe(mode, root, out):
                 raise ValueError("selected owned-result tool changed after compilation")
         os.environ.update(MERLIN_SPIKE=tools["spike"]["path"], MERLIN_NM=tools["nm"]["path"])
         isa = spike_model.declared_isa(report["elf"])
-        if isa is None or spike_model.declared_harts(report["elf"]) != 1:
+        if isa is None or _merlin_model_build.declared_harts(report["elf"]) != 1:
             raise ValueError("owned-result image lacks an observed ISA or serial hart declaration")
         process = spike_model.run_process(report["elf"], isa=isa, harts=1,
             mem_bytes=report["mem_bytes"], vlen=report["vlen"], timeout=30)

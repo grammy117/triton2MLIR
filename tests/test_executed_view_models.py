@@ -26,10 +26,10 @@ def check_forged_views(package, root):
         trace_path.read_bytes(),
         receipt_path.read_bytes(),
     )
-    worker = """import sys
+    worker = r"""import sys
 from pathlib import Path
 sys.path.insert(0,sys.argv[1]+'/src')
-from merlin.frontends.compile_inputs import stage_compile_inputs
+from merlin.compiler.frontend.inputs import stage_compile_inputs
 read=Path.read_bytes
 def checked(path):
     if path.name in ('inputs.npz','golden.npy','goldens.npz','extra.npz','tensor_words.npz','execution.json'):

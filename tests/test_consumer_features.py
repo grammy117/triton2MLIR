@@ -36,7 +36,7 @@ def test_atomic_storage_type_selects_capability_without_granting_body_permission
 
 
 def test_byte_word_region_uses_existing_integer_region_capability():
-    pytest.importorskip("merlin.llvmlower.atomic_integer_regions")
+    pytest.importorskip('merlin.compiler.lower.options.atomic_integer_regions')
     module = parse_shared('''module {func.func @f(%value:i32)->i32 {
       %raw=memref.alloc():memref<32xi8>
       %zero=arith.constant 0:index

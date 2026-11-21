@@ -10,12 +10,12 @@ from pathlib import Path
 
 import numpy as np
 
-SCRIPT = '''
+SCRIPT = r'''
 import hashlib, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "src"))
-from merlin.common.mlir_query import forward_signature
-from merlin.llvmlower.c_runtime import generate
-from merlin.frontends.compile_inputs import stage_compile_inputs
+from merlin.compiler.ir.mlir_query import forward_signature
+from merlin.compiler.lower.c.runtime import generate
+from merlin.compiler.frontend.inputs import stage_compile_inputs
 capture, out = pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
 signature = forward_signature(capture / "model.mlir")
 stage = stage_compile_inputs(capture, out.parent / "compiler", result_mode=sys.argv[5] or None)
@@ -39,7 +39,7 @@ else:
 files = {} if execution_owned else {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
          for p in out.iterdir() if p.is_file()}
 print(json.dumps({"schema": "t2m.merlin-interface-check.v3" if execution_owned else "t2m.merlin-interface-check.v2", "forward_signature": signature,
-                 "parser": "merlin.frontends.linalg_mlir", "runtime": "merlin.llvmlower.owned_results" if execution_owned else "merlin.llvmlower.c_runtime.generate",
+                 "parser": 'merlin.compiler.frontend.linalg_mlir', "runtime": 'merlin.compiler.lower.options.owned_results' if execution_owned else 'merlin.compiler.lower.c.runtime.generate',
                  "interface_ingestion": "passed", "runtime_generation": "not-performed; execution-produced result descriptors" if execution_owned else "passed",
                  "compiler_input_staging": "passed", "compiler_input_manifest": stage,
                  "target_execution": "not-performed", "generated_artifacts": files}))
@@ -48,7 +48,7 @@ print(json.dumps({"schema": "t2m.merlin-interface-check.v3" if execution_owned e
 
 def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments=None, result_mode=None):
     capture, work, root = Path(capture), Path(work), Path(merlin_root).resolve()
-    if not (root / "src/merlin/llvmlower/c_runtime.py").is_file():
+    if not (root / "src/merlin/compiler/lower/c/runtime.py").is_file():
         raise ValueError("Merlin checkout does not expose the expected model runtime interface")
     work.mkdir(parents=True, exist_ok=False)
     (work / "input-receipt.json").write_bytes((capture / "capture_receipt.json").read_bytes())
@@ -68,38 +68,38 @@ def check_merlin_interface(capture, work, *, merlin_root, python=None, arguments
     report = json.loads(process.stdout)
     report["model_sha256"] = hashlib.sha256((capture / "model.mlir").read_bytes()).hexdigest()
     report["merlin_root"] = str(root)
-    for name in ("src/merlin/frontends/linalg_mlir.py", "src/merlin/llvmlower/c_runtime.py",
-                 "src/merlin/frontends/compile_inputs.py", "src/merlin/frontends/derived_compile_inputs.py",
-                 "src/merlin/frontends/kernel_allocation_evidence.py", "src/merlin/frontends/kernel_barrier_evidence.py",
-                 "src/merlin/frontends/kernel_atomic_evidence.py",
-                 "src/merlin/frontends/kernel_volatile_evidence.py", "src/merlin/frontends/kernel_word_source_effects.py",
-                 "src/merlin/xdsl_dialects/standard_llvm.py",
-                 "src/merlin/xdsl_dialects/standard_tensor.py", "src/merlin/frontends/derived_runtime_arguments.py",
-                 "src/merlin/frontends/derived_live_arguments.py", "src/merlin/frontends/source_index_ranges.py",
-                 "src/merlin/frontends/model_shape_facts.py", "src/merlin/frontends/derived_symbolic_shapes.py",
-                 "src/merlin/frontends/shape_expressions.py", "src/merlin/frontends/shape_expression_ir.py",
-                 "src/merlin/frontends/shape_input_words.py", "src/merlin/frontends/shape_word_bindings.py",
-                 "src/merlin/llvmlower/runtime_invocation.py"):
+    for name in ('src/merlin/compiler/frontend/linalg_mlir.py', "src/merlin/compiler/lower/c/runtime.py",
+                 "src/merlin/compiler/frontend/inputs.py", 'src/merlin/compiler/frontend/intake/derived_compile_inputs.py',
+                 'src/merlin/compiler/frontend/intake/kernel_allocation_evidence.py', 'src/merlin/compiler/frontend/intake/kernel_barrier_evidence.py',
+                 'src/merlin/compiler/frontend/intake/kernel_atomic_evidence.py',
+                 'src/merlin/compiler/frontend/intake/kernel_volatile_evidence.py', 'src/merlin/compiler/frontend/intake/kernel_word_source_effects.py',
+                 'src/merlin/compiler/dialects/standard_llvm.py',
+                 'src/merlin/compiler/dialects/standard_tensor.py', 'src/merlin/compiler/frontend/intake/derived_runtime_arguments.py',
+                 'src/merlin/compiler/frontend/intake/derived_live_arguments.py', 'src/merlin/compiler/frontend/intake/source_index_ranges.py',
+                 'src/merlin/compiler/frontend/intake/model_shape_facts.py', 'src/merlin/compiler/frontend/intake/derived_symbolic_shapes.py',
+                 'src/merlin/compiler/frontend/intake/shape_expressions.py', 'src/merlin/compiler/frontend/intake/shape_expression_ir.py',
+                 'src/merlin/compiler/frontend/intake/shape_input_words.py', 'src/merlin/compiler/frontend/intake/shape_word_bindings.py',
+                 'src/merlin/compiler/lower/options/runtime_invocation.py'):
         if (root / name).is_file():
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     if result_mode is not None:
-        for name in ("src/merlin/frontends/execution_result_signature.py", "src/merlin/llvmlower/owned_result_program.py",
-                     "src/merlin/frontends/execution_model_correspondence.py", "src/merlin/frontends/execution_call_contracts.py",
-                     "src/merlin/frontends/execution_call_views.py", "src/merlin/frontends/derived_source_views.py",
-                     "src/merlin/frontends/execution_runtime_views.py",
-                     "src/merlin/frontends/execution_source_coordinates.py",
-                     "src/merlin/frontends/execution_functional_state.py",
-                     "src/merlin/frontends/execution_storage_views.py",
-                     "src/merlin/llvmlower/owned_results.py", "src/merlin/llvmlower/owned_result_abi.py",
-                     "src/merlin/llvmlower/owned_result_allocations.py", "src/merlin/llvmlower/execution_result_inputs.py",
-                     "merlin/runtime/abi/owned_results.c", "src/merlin/llvmlower/owned_result_c.py",
-                     "src/merlin/llvmlower/owned_result_lowering.py",
-                     "src/merlin/llvmlower/dealloc_lifetime.py", "src/merlin/llvmlower/dealloc_promotions.py",
-                     "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/runtime/owned_result_readback.py",
-                     "src/merlin/runtime/out_bin.py", "merlin/runtime/c/owned_result_driver.c",
-                     "merlin/runtime/c/owned_result_driver.h", "merlin/runtime/c/owned_result_readback.c",
-                     "merlin/runtime/c/owned_result_readback.h", "merlin/runtime/c/owned_result_host_main.c",
-                     "merlin/runtime/abi/owned_result_views.c", "merlin/runtime/abi/owned_result_views.h"):
+        for name in ('src/merlin/compiler/frontend/intake/execution_result_signature.py', 'src/merlin/compiler/lower/options/owned_result_program.py',
+                     'src/merlin/compiler/frontend/intake/execution_model_correspondence.py', 'src/merlin/compiler/frontend/intake/execution_call_contracts.py',
+                     'src/merlin/compiler/frontend/intake/execution_call_views.py', 'src/merlin/compiler/frontend/intake/derived_source_views.py',
+                     'src/merlin/compiler/frontend/intake/execution_runtime_views.py',
+                     'src/merlin/compiler/frontend/intake/execution_source_coordinates.py',
+                     'src/merlin/compiler/frontend/intake/execution_functional_state.py',
+                     'src/merlin/compiler/frontend/intake/execution_storage_views.py',
+                     'src/merlin/compiler/lower/options/owned_results.py', 'src/merlin/compiler/lower/options/owned_result_abi.py',
+                     'src/merlin/compiler/lower/options/owned_result_allocations.py', 'src/merlin/compiler/lower/options/execution_result_inputs.py',
+                     'src/merlin/runtime/native/abi/owned_results.c', 'src/merlin/compiler/lower/options/owned_result_c.py',
+                     'src/merlin/compiler/lower/options/owned_result_lowering.py',
+                     'src/merlin/compiler/lower/native/lifetime.py', 'src/merlin/compiler/lower/options/dealloc_promotions.py',
+                     'src/merlin/compiler/lower/options/owned_result_driver.py', "src/merlin/runtime/owned_result_readback.py",
+                     'src/merlin/runtime/harness/output_decoding.py', 'src/merlin/runtime/native/c/owned_result_driver.c',
+                     'src/merlin/runtime/native/c/owned_result_driver.h', 'src/merlin/runtime/native/c/owned_result_readback.c',
+                     'src/merlin/runtime/native/c/owned_result_readback.h', 'src/merlin/runtime/native/c/owned_result_host_main.c',
+                     'src/merlin/runtime/native/abi/owned_result_views.c', 'src/merlin/runtime/native/abi/owned_result_views.h'):
             report.setdefault("consumer_source_sha256", {})[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     (work / "interface.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report

@@ -37,8 +37,8 @@ Printer(print_generic_format=True).print_op(module)
 @pytest.fixture(scope="module")
 def programs(tmp_path_factory):
     sys.path.insert(0, os.environ["T2M_MERLIN_ROOT"] + "/src")
-    from merlin.llvmlower.owned_result_program import save
-    from merlin.llvmlower.owned_results import compile_owned_results
+    from merlin.compiler.lower.options.owned_result_program import save
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
 
     root = tmp_path_factory.mktemp("tensor-selection-native")
     made = {}
@@ -85,11 +85,11 @@ def test_out_of_bounds_indices_abort_instead_of_clamping_or_returning_an_empty_v
     inputs, ready, outputs = tmp_path / "inputs.npz", tmp_path / "ready", tmp_path / "outputs.npz"
     np.savez(inputs, in0=np.empty(shape, np.int64))
     script = tmp_path / "invoke.py"
-    script.write_text('''import sys,ctypes,resource
+    script.write_text(r"""import sys,ctypes,resource
 from pathlib import Path
 import numpy as np
 sys.path.insert(0,sys.argv[1]+'/src')
-from merlin.llvmlower.owned_result_program import load
+from merlin.compiler.lower.options.owned_result_program import load
 resource.setrlimit(resource.RLIMIT_CORE,(0,0))
 libc=ctypes.CDLL(None)
 libc.setbuf.argtypes=[ctypes.c_void_p,ctypes.c_void_p]
@@ -99,7 +99,7 @@ with np.load(sys.argv[3],allow_pickle=False) as data: value=data['in0'].copy()
 Path(sys.argv[4]).write_text('invoking')
 values,_=program.execute((value,))
 np.savez(sys.argv[5],**{f'out{i}':v for i,v in enumerate(values)})
-''')
+""")
     done = subprocess.run([sys.executable, str(script), os.environ["T2M_MERLIN_ROOT"],
         str(programs["i64", kind].source.parent), str(inputs), str(ready), str(outputs)],
         capture_output=True, text=True, timeout=20, check=False)

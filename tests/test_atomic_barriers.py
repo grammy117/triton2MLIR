@@ -19,10 +19,10 @@ def merlin_refusal(root, members, *, trace=None, source=None, source_entry="atom
     """Exercise the selected consumer checkout in its own supported environment."""
     request = root / "consumer-refusal.json"
     request.write_text(json.dumps({"members": members, "trace": trace, "source": source}))
-    script = '''import json, sys
+    script = r"""import json, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(sys.argv[1]) / "src"))
-from merlin.frontends.kernel_allocation_evidence import _checked_protection, checked_allocation_sources
+from merlin.compiler.frontend.intake.kernel_allocation_evidence import _checked_protection, checked_allocation_sources
 request = json.loads(Path(sys.argv[2]).read_text())
 members = {name: value.encode() for name, value in request["members"].items()}
 try:
@@ -34,7 +34,7 @@ except ValueError as error:
     print(str(error))
 else:
     raise AssertionError("consumer accepted the changed atomic phase evidence")
-'''
+"""
     done = subprocess.run([os.environ["T2M_MERLIN_PYTHON"], "-c", script,
         os.environ["T2M_MERLIN_ROOT"], str(request), source_entry], capture_output=True, text=True, timeout=30,
         env=dict(os.environ, TMPDIR=str(root), OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1"))

@@ -139,18 +139,18 @@ def test_one_merlin_library_handles_distinct_input_result_and_launch_shapes(tmp_
     import signal
     import subprocess
     script = tmp_path / "raw-guard.py"
-    script.write_text('''import ctypes, resource, sys
+    script.write_text(r"""import ctypes, resource, sys
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 sys.path.insert(0, sys.argv[1] + '/src')
 import numpy as np
-from merlin.llvmlower.abi import HostModel, ScalarArg
+from merlin.compiler.lower.model.oracle import HostModel, ScalarArg
 libc = ctypes.CDLL(None)
 libc.setbuf.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
 libc.setbuf.restype = None
 libc.setbuf(ctypes.c_void_p.in_dll(libc, 'stdout'), None)
 x, out = np.arange(6, dtype=np.float32), np.zeros(7, dtype=np.float32)
 HostModel.load(sys.argv[2])([(x.ctypes.data, x.shape), ScalarArg(7, 'i32'), (out.ctypes.data, out.shape)])
-''')
+""")
     process = subprocess.run([python, str(script), root, str((compiled / "host/model.so").resolve())],
         capture_output=True, text=True, timeout=10,
         env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))

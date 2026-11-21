@@ -115,15 +115,15 @@ def test_merlin_and_frontend_share_types_in_either_import_order(first):
 import sys
 sys.path.insert(0, {str(Path(root) / "src")!r})
 if {first!r} == 'merlin':
-    import merlin.xdsl_dialects.fp8
+    import merlin.compiler.dialects.fp8
 else:
     import t2m.standard_floats
 from t2m.shared_tensor import parse_shared
 from t2m.ir import text
-from merlin.frontends.linalg_mlir import parse_mlir_text
-from merlin.xdsl_dialects._common import text as merlin_text
+from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
+from merlin.compiler.dialects.xdsl_context import text as merlin_text
 from t2m.standard_floats import _FP8_BY_NAME
-from merlin.xdsl_dialects.fp8 import _FP8_BY_NAME as consumer_types
+from merlin.compiler.dialects.fp8 import _FP8_BY_NAME as consumer_types
 for name, type_ in _FP8_BY_NAME.items():
     assert type_ is consumer_types[name]
     source = 'module {{func.func @f()->tensor<256x'+name+'> {{%v=arith.constant dense<"0x'+bytes(range(256)).hex()+'">:tensor<256x'+name+'> return %v:tensor<256x'+name+'>}}}}'

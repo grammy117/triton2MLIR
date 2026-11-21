@@ -302,9 +302,9 @@ def test_public_bind_cli_selects_each_kernel_representation_from_source_only(
 
 def test_standalone_pack_refuses_unwritten_results_without_changing_scan(selected, tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(Path(os.environ["T2M_MERLIN_ROOT"]) / "src"))
-    from merlin.llvmlower.abi import ScalarArg
-    from merlin.llvmlower.owned_result_program import save
-    from merlin.llvmlower.owned_results import compile_owned_results
+    from merlin.compiler.lower.model.oracle import ScalarArg
+    from merlin.compiler.lower.options.owned_result_program import save
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
 
     from t2m.consumer_features import select_features
 
@@ -322,12 +322,12 @@ def test_standalone_pack_refuses_unwritten_results_without_changing_scan(selecte
         np.savez(tmp_path / f"valid-{n}.npz", actual=actual, reference=x[x > 0][:n])
         (tmp_path / f"valid-{n}.json").write_text(json.dumps(report, sort_keys=True) + "\n")
     worker = tmp_path / "invalid.py"
-    worker.write_text('''import ctypes
+    worker.write_text(r"""import ctypes
 import resource
 import sys
 import numpy as np
-from merlin.llvmlower.abi import ScalarArg
-from merlin.llvmlower.owned_result_program import load
+from merlin.compiler.lower.model.oracle import ScalarArg
+from merlin.compiler.lower.options.owned_result_program import load
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 libc = ctypes.CDLL(None)
 libc.setbuf.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
@@ -337,7 +337,7 @@ outputs, _ = program.execute([
     np.asarray([4, -7, 2], np.int32), ScalarArg(3, "i64"), ScalarArg(3, "i64")
 ])
 np.savez(sys.argv[2], result=outputs[0])
-''')
+""")
     output = tmp_path / "invalid-output.npz"
     done = subprocess.run(
         [sys.executable, str(worker), str(saved), str(output)],

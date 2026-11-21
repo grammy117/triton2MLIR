@@ -18,11 +18,11 @@ SCHEMA = "t2m.spike-effect-qualification.v1"
 
 def observe(mode, root, out):
     """Worker: observe actual execution without reading any expected outcome."""
-    from merlin.llvmlower.runtime_invocation import resolve
-    from merlin.runtime.backends import spike_model
+    from merlin.compiler.lower.options.runtime_invocation import resolve
+    from merlin.runtime.backends.baremetal import image_link as spike_model
     from merlin.runtime.effect_observation import decode
-    from merlin.runtime.input_observation import verify_observed_inputs
-    from merlin.runtime.whole_model_readback import decode_outputs
+    from merlin.runtime.harness.output_observation import verify_observed_inputs
+    from merlin.runtime.harness.output_observation import decode_outputs
 
     out = Path(out)
     build = json.loads((out / "build.json").read_text())

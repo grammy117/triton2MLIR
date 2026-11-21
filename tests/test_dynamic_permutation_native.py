@@ -52,7 +52,7 @@ Printer(print_generic_format=True).print_op(module)
 @pytest.mark.parametrize("dtype", ("i64", "f32"))
 def test_actual_permutation_reuses_one_library_for_independent_empty_and_unit_extents(tmp_path, monkeypatch, dtype):
     monkeypatch.syspath_prepend(os.environ["T2M_MERLIN_ROOT"] + "/src")
-    from merlin.llvmlower.owned_results import compile_owned_results
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
 
     done = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], "-c", SOURCE, dtype],
         capture_output=True, text=True, timeout=30, check=False)
@@ -77,7 +77,7 @@ def test_actual_permutation_reuses_one_library_for_independent_empty_and_unit_ex
 @pytest.mark.parametrize("dtype", ("i64", "f32"))
 def test_actual_slices_preserve_words_and_empty_boundary_shapes(tmp_path, monkeypatch, dtype):
     monkeypatch.syspath_prepend(os.environ["T2M_MERLIN_ROOT"] + "/src")
-    from merlin.llvmlower.owned_results import compile_owned_results
+    from merlin.compiler.lower.options.owned_results import compile_owned_results
 
     done = subprocess.run([os.environ["T2M_MODEL2MLIR_PYTHON"], "-c", SLICE_SOURCE, dtype],
         capture_output=True, text=True, timeout=30, check=False)

@@ -17,12 +17,12 @@ MERLIN, PYTHON, CLANG = (os.environ.get(name) for name in
 pytestmark = pytest.mark.skipif(not all((OPT, NATIVE, MERLIN, PYTHON, CLANG)), reason="existing full-stage/Merlin toolchains required")
 
 
-BUILD = '''
+BUILD = r"""
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(sys.argv[1])/'src'))
-from merlin.frontends.linalg_mlir import parse_mlir_text
-from merlin.xdsl_dialects._common import text
+from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
+from merlin.compiler.dialects.xdsl_context import text
 from xdsl.dialects import arith,bufferization,func,memref
 from xdsl.dialects.builtin import ArrayAttr,DenseArrayBase,DictionaryAttr,IndexType,IntegerAttr,MemRefType,ModuleOp,TensorType,UnitAttr,f32,i1,i32,i64
 from xdsl.ir import Block,Region
@@ -60,22 +60,22 @@ module=ModuleOp([func.FuncOp('forward',([t,t,i32],[t]),Region(entry))]);module.v
 assert all(op.name!='builtin.unregistered' for op in module.walk())
 function=next(iter(module.ops))
 function.properties['arg_attrs']=ArrayAttr(DictionaryAttr({'bufferization.writable':IntegerAttr(0,i1)} if isinstance(t,TensorType) else {}) for t in function.function_type.inputs)
-from merlin.llvmlower.passes_xdsl import add_c_interface
-from merlin.llvmlower.pipeline import lower_to_llvm_ir
-from merlin.llvmlower.codegen import build_host_shared
+from merlin.compiler.lower.model.passes_xdsl import add_c_interface
+from merlin.compiler.lower.native.pipeline import lower_to_llvm_ir
+from merlin.compiler.lower.model.codegen import build_host_shared
 from t2m.consumer_worker import COMPILER_FEATURES, tensor_pipeline
 add_c_interface(module)
 prepared=text(module,generic=True);(root/'prepared.mlir').write_text(prepared)
 llvm=lower_to_llvm_ir(prepared,workdir=root/'lowering',pipeline=tensor_pipeline(),timeout=30,features=COMPILER_FEATURES,retain_llvm_dialect=True)
 (root/'model.ll').write_text(llvm);build_host_shared(root/'model.ll',root/'model.so')
-'''
+"""
 
-EXECUTE = '''
+EXECUTE = r"""
 from pathlib import Path
 import hashlib,json,sys
 import numpy as np
 sys.path.insert(0,str(Path(sys.argv[1])/'src'))
-from merlin.llvmlower.abi import HostModel,ScalarArg
+from merlin.compiler.lower.model.oracle import HostModel, ScalarArg
 root=Path(sys.argv[2]);library=root/'model.so'
 model=HostModel.load(str(library.resolve()))
 x=np.arange(13,dtype=np.float32);old=np.arange(13,dtype=np.float32)*7+99
@@ -88,7 +88,7 @@ for n in (0,1,7,13):
  assert [x.tobytes(),old.tobytes()]==before
 print(json.dumps({'scope':'closed-full-stage-Merlin-probe','values':[0,1,7,13],'inputs_preserved':True,
  'portable_conversion_complete':False,'library_sha256':hashlib.sha256(library.read_bytes()).hexdigest()}))
-'''
+"""
 
 
 def worker(code, root):

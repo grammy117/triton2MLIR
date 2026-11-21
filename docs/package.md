@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Merlin repository-layout integration](repository_layout.md) moves consumer
+imports and source rosters to `merlin.compiler.*` and `runtime.backends.baremetal`.
+Package schemas and source-bound tensor/effect/result semantics are unchanged.
+The retained `stage_compile_inputs` path is distinct from the newer generic
+`StagedProgram` service; the integration guide states that admission difference.
+
 [Independent invariant runtime pointer increments](invariant_runtime_strides.md)
 use actual zero-initialized logical progress carriers, source constant axis
 factors and any actual-loop-step term. Body-defined increments stay in their

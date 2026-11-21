@@ -126,7 +126,7 @@ def test_legacy_embedding_recovery_is_explicit_and_weights_do_not_select_project
 
 
 def test_every_bfloat_encoding_reaches_actual_merlin_c_storage(tmp_path):
-    runtime = pytest.importorskip("merlin.llvmlower.c_runtime")
+    runtime = pytest.importorskip('merlin.compiler.lower.c.runtime')
     compiler = shutil.which("cc")
     if compiler is None:
         pytest.skip("existing C compiler required")

@@ -13,10 +13,10 @@ from .consumer import check_merlin_host
 from .tensor_storage import assert_tensor_close
 
 
-STAGE = '''
+STAGE = r'''
 import pathlib, sys
 sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "src"))
-from merlin.frontends.compile_inputs import stage_compile_inputs
+from merlin.compiler.frontend.inputs import stage_compile_inputs
 stage_compile_inputs(sys.argv[2], sys.argv[3])
 '''
 

@@ -140,10 +140,10 @@ def check_rehashed_refusals(out, root):
     from t2m.bundle import verify_bundle, _record
     trace_path, receipt_path = out / "kernel-bindings.json", out / "capture_receipt.json"
     original_trace, original_receipt = trace_path.read_bytes(), receipt_path.read_bytes()
-    worker = '''import sys
+    worker = r"""import sys
 from pathlib import Path
 sys.path.insert(0,sys.argv[1]+'/src')
-from merlin.frontends.compile_inputs import stage_compile_inputs
+from merlin.compiler.frontend.inputs import stage_compile_inputs
 read=Path.read_bytes
 def checked(path):
     if path.name in ('inputs.npz','golden.npy','goldens.npz','extra.npz','tensor_words.npz','execution.json'):
@@ -154,7 +154,7 @@ try: stage_compile_inputs(sys.argv[2],sys.argv[3])
 except ValueError as error:
     assert 'view' in str(error) or str(error)=='derived runtime kernel binding disagrees with its original typed call',str(error)
 else: raise AssertionError('forged source view accepted')
-'''
+"""
     try:
         for change in ("layout", "source-pointer", "downgrade", "profile", "missing-call"):
             trace, receipt = json.loads(original_trace), json.loads(original_receipt)

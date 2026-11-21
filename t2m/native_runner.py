@@ -141,7 +141,7 @@ def main(work):
             if not root:
                 raise ValueError("nested tensor region state requires the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0, str(Path(root).resolve() / "src"))
-            from merlin.llvmlower.loop_tensor_destinations import PRELUDE
+            from merlin.compiler.lower.options.loop_tensor_destinations import PRELUDE
             namespace = {"ir": ir, "print": compiler_diagnostic, "_run_stages": None}
             exec(PRELUDE, namespace)
             preparation = "builtin.module(scf-forall-to-for,canonicalize,cse)"
@@ -170,7 +170,7 @@ def main(work):
             if not root:
                 raise ValueError("native generic atomics require the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0, str(Path(root).resolve() / "src"))
-            from merlin.llvmlower import atomic_compare_exchange
+            from merlin.compiler.lower.options import atomic_compare_exchange
             namespace = {"ir": ir, "print": compiler_diagnostic}
             exec(atomic_compare_exchange.SUPPORT, namespace)
             word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "bf16", "f32", "f64")
@@ -192,7 +192,7 @@ def main(work):
             if not root:
                 raise ValueError("native FP8 narrowing requires the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0,str(Path(root).resolve() / "src"))
-            from merlin.llvmlower import fp8_narrowing
+            from merlin.compiler.lower.options import fp8_narrowing
             scope = {"ir":ir}
             exec(fp8_narrowing.SUPPORT,scope)
             count = scope["_fp8_narrow"](module)
@@ -206,7 +206,7 @@ def main(work):
             if not root:
                 raise ValueError("native FP8 widening requires the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0,str(Path(root).resolve() / "src"))
-            from merlin.llvmlower import fp8_widening
+            from merlin.compiler.lower.options import fp8_widening
             scope = {"ir":ir}
             exec(fp8_widening.SUPPORT,scope)
             count = scope["_fp8_widen"](module)
@@ -221,7 +221,7 @@ def main(work):
             if not root:
                 raise ValueError("native BF16 arithmetic requires the explicit T2M_MERLIN_ROOT compiler support path")
             sys.path.insert(0,str(Path(root).resolve() / "src"))
-            from merlin.llvmlower import bfloat_elementwise
+            from merlin.compiler.lower.options import bfloat_elementwise
             scope = {"ir":ir}
             exec(bfloat_elementwise.SUPPORT,scope)
             count = scope["_bf_elementwise"](module)
@@ -245,7 +245,7 @@ def main(work):
                 if not root:
                     raise ValueError("native diagnostic materialization requires the explicit T2M_MERLIN_ROOT compiler support path")
                 sys.path.insert(0, str(Path(root).resolve() / "src"))
-                from merlin.llvmlower import scalar_diagnostics,length_aware_diagnostics
+                from merlin.compiler.lower.options import scalar_diagnostics, length_aware_diagnostics
                 selected = scalar_diagnostics if needs_scalar_diagnostics else length_aware_diagnostics
                 scope = {"ir": ir, "print": compiler_diagnostic}
                 exec(selected.SUPPORT, scope)
@@ -267,7 +267,7 @@ def main(work):
                 if not root:
                     raise ValueError("BF16 native transport requires the explicit T2M_MERLIN_ROOT compiler support path")
                 sys.path.insert(0, str(Path(root).resolve() / "src"))
-                from merlin.llvmlower import bfloat_transport
+                from merlin.compiler.lower.options import bfloat_transport
                 scope = {"ir": ir, "print": compiler_diagnostic}
                 exec(bfloat_transport.SUPPORT, scope)
                 count = scope["_bf_transport"](module)

@@ -35,7 +35,7 @@ def select_features(module):
     regions = [op for op in module.walk() if op.name == "memref.generic_atomic_rmw"]
     integer_regions = requires_integer_atomic_regions(module)
     if integer_regions:
-        from merlin.llvmlower.atomic_integer_regions import ensure_registered
+        from merlin.compiler.lower.options.atomic_integer_regions import ensure_registered
         ensure_registered()
         features.add("lower_integer_atomic_regions")
     if any(str(op.results[0].type) in ("f16", "bf16", "f32", "f64") for op in regions):

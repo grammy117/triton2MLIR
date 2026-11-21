@@ -34,7 +34,7 @@ def program(selected):
     root = Path(os.environ["T2M_MERLIN_ROOT"])
     with pytest.MonkeyPatch.context() as patch:
         patch.syspath_prepend(str(root / "src"))
-        from merlin.llvmlower.owned_result_driver import generate, verify
+        from merlin.compiler.lower.options.owned_result_driver import generate, verify
         from merlin.runtime.owned_result_readback import decode
     source = (package / "consumer/compiler/program.mlir").read_text()
     signature = json.loads((package / "consumer/compiler/signature.json").read_text())

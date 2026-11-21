@@ -25,7 +25,7 @@ def bfloat_weight(capture, argument, abi):
     if not root:
         raise ValueError("BF16 weight materialization requires the explicit T2M_MERLIN_ROOT reader path")
     sys.path.insert(0, str(Path(root).resolve() / "src"))
-    from merlin.runtime.captured_constants import verify_capture_constant
+    from merlin.runtime.engine.storage_binding import verify_capture_constant
     receipt = json.loads((capture / "capture_receipt.json").read_text())["artifacts"]
     checked = verify_capture_constant(manifest_path=capture / "weights.safetensors.manifest.json",
         manifest_sha256=receipt["weights.safetensors.manifest.json"]["sha256"],

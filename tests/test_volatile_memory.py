@@ -132,11 +132,11 @@ def consumer_check(root, result, *, model=None, artifacts=None, trace=None):
     request = root / "consumer-request.json"
     request.write_text(json.dumps({"model": model or result.mlir_text,
         "artifacts": artifacts or result.auxiliary_artifacts, "trace": trace or result.trace}))
-    script = '''import json,sys
+    script = r"""import json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(sys.argv[1])/"src"))
-from merlin.frontends.kernel_compile_inputs import _checked_memory_members,_checked_word_intent
-from merlin.frontends.linalg_mlir import parse_mlir_text
+from merlin.compiler.frontend.intake.kernel_compile_inputs import _checked_memory_members, _checked_word_intent
+from merlin.compiler.frontend.linalg_mlir import parse_mlir_text
 data=json.loads(Path(sys.argv[2]).read_text())
 members={k:v.encode() for k,v in data["artifacts"].items()}
 try:
@@ -148,7 +148,7 @@ except ValueError as error:
     print(json.dumps({"accepted":False,"error":str(error)}))
 else:
     print(json.dumps({"accepted":True}))
-'''
+"""
     done = subprocess.run([os.environ["T2M_MERLIN_PYTHON"], "-c", script,
         os.environ["T2M_MERLIN_ROOT"], str(request)], capture_output=True, text=True, timeout=30,
         env=dict(os.environ, TMPDIR=str(root), OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1"))
