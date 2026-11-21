@@ -190,6 +190,36 @@ checks. Continue with general shared/async/atomic effects and participation scop
 
 ## Remaining execution sequence
 
+The repository-layout integration is now Merlin `dd7b62801` with consumer
+adapter `56409ce`. Resume the full goal against those owners. Execute the
+following concrete sequence, keeping the later work open when an earlier item
+passes:
+
+1. Revalidate and commit the pending conditional-progress implementation against
+   the merged compiler. Check original widths, grid ownership and unsafe-definition
+   refusals, then real reusable kernel/model libraries and serial images.
+2. Replace the opcode-name summary as the planning denominator with an explicit
+   boundary ledger: original typed source and attributes, control/memory/root
+   relationships, numeric/effect policy, runtime ABI, Merlin lowering and target
+   execution. Record the current failing witness and next action for each open
+   family; preserve unknown and unmeasured scope.
+3. Close general memory/control boundaries using upstream structured and residual
+   pointer analyses together. Start with different-root pointer selection and
+   while-carried address state, then dynamic root/view/alias projections and
+   variable-step initialization/write images. Preserve successful tensor tiles,
+   actual control, masks, reuse and width checks through every extension.
+4. Advance numeric/effect families alongside memory: remaining packed/read map
+   forms and contractions, actual external implementations, publication and
+   asynchronous completion/participation. Give required behavior executable
+   semantics and retain explicit dependencies instead of opaque success markers.
+5. Carry these same forms through runtime shapes/scalars, complete PyTorch
+   packages and staged target materialization. Generic transport belongs in
+   Merlin; target mapping and implementations belong to the selected OOT provider.
+   Verify complete results/effects, source correspondence and useful structure.
+6. Reopen the complete ledger and corpus against committed producers. Every
+   valid supported form needs all applicable gates below. Any missing family,
+   refused valid kernel or unqualified consumer/target keeps the full goal open.
+
 The full endpoint still requires every supported kernel's observable computation
 and effects to reach the Merlin interface with applicable execution evidence.
 The following order closes semantic families and their actual integration gates;
