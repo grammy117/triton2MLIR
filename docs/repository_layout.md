@@ -3,7 +3,11 @@
 The `ttir-experiment-grammy` Merlin branch merges upstream
 `refactor/repository-layout` at `2451b8134a7995d4e73efa3a465f975a1d532727`.
 The triton2MLIR adapters now require that layout and the retained TTIR extensions.
-The integrated Merlin commit is `dd7b62801d8fba37ba5e2dc88fc0c04fd2cebd1e`.
+The initial integrated Merlin commit is `dd7b62801d8fba37ba5e2dc88fc0c04fd2cebd1e`.
+The public-stage extension below additionally requires
+`compiler.frontend.intake.staged_projection` and the revised public preparation
+services, delivered by Merlin `e1c2c7f88ac454b42b68052ccfa87ea605fff39c` on
+`ttir-experiment-grammy`.
 An unmodified upstream checkout does not supply those extensions. Historical
 receipts and the previous adapter remain available at their recorded Git revisions;
 there is no second namespace or automatic fallback to the retired layout.
@@ -34,10 +38,51 @@ worker scripts. Existing report schemas remain unchanged; new reports name and
 hash the refactored sources. A source-roster hash alone does not establish a
 complete dependency closure or qualify an accelerator.
 
-The newer generic `load_compile_inputs` / `StagedProgram` service retains its
-own m2m profile and precision-policy requirements. The retained triton2MLIR path
-uses `stage_compile_inputs` and the native/host/bare-metal adapters. Acceptance
-through that path does not establish admission through every new public service.
+Fresh standalone kernel/effect stages now also support generic
+`load_compile_inputs` / `StagedProgram` preparation. The current Merlin builder
+adds a closed `source/intake.json` projection and a non-transforming
+`merlin.imported-source-policy.v1` document. Loading replays the same source,
+typed ABI and effect checks, reconstructing every staged member. Resealing a
+changed body, signature, source binding or numerical policy does not supply those
+relationships. Public preparation retains the complete program byte-for-byte,
+including scalar inputs, dynamic shapes, void effects and execution-owned results.
+
+The selected backend must explicitly admit that policy. `MerlinHostBackend`
+uses the same existing whole-body Merlin native pipeline as standalone
+qualification; it introduces no source decomposition or arithmetic policy:
+
+```python
+from merlin.api import StagedProgram, compile
+from merlin.compiler.frontend.inputs import stage_compile_inputs
+from t2m.merlin_backend import MerlinHostBackend
+
+stage_compile_inputs(capture, compiler, result_mode="execution-owned")
+compiled = compile(
+    StagedProgram(compiler),
+    backend=MerlinHostBackend(
+        merlin_root=merlin_checkout,
+        python=merlin_python,
+        compiler_python=native_python,
+        clang=selected_clang,
+    ),
+    output=compiled_directory,
+)
+```
+
+Omit `result_mode` for the ordinary declared-shape/void ABI. Compilation
+publishes the source projection under `frontend/`, the actual signature under
+`frontend/signature.json`, and the library under `host/model.so`. Runtime
+arguments and references remain outside compilation. The backend reports
+compilation only; actual invocation and reference comparison are separate.
+It accepts no unimplemented deployment/options and supplies no accelerator
+execution or performance verdict.
+
+This is a compiler-stage extension: original triton2MLIR capture/receipt schemas
+and standard MLIR payloads remain unchanged. Restage older standalone captures
+to obtain the new projection. Bound-model generic public preparation still
+requires its own source/parameter/state projection; its existing dedicated
+native/host/bare-metal path remains available. Neither path establishes every
+backend's support.
 
 Set `T2M_MERLIN_ROOT` to the merged checkout and `T2M_MERLIN_PYTHON` to an
 environment installed from it. Native MLIR and cross-tool selections remain

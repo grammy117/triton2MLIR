@@ -1,5 +1,17 @@
 # Review handoff — updated 2026-11-21
 
+Merlin `e1c2c7f88` adds shared standalone source replay and public staged
+preparation on the existing experimental branch. T2M's `MerlinHostBackend`
+delegates public compilation to the existing native pipeline. Five real kernel
+libraries retain scalar/dynamic, guarded source-word, atomic, execution-owned
+and void interfaces; changed invocations and an actual source abort qualify.
+The public selection passes 35, existing consumer/effect checks pass 30, and
+the frozen Merlin replay passes 2,600 with two prerequisite skips. Permanent
+stage checks pass eight with one optional companion-OOT skip (141/150 budget).
+Next implement bound-model compiler projection and immutable parameter/state
+preparation, then return to the retained i8 register-packing witness. Keep the
+broader memory/effect/runtime/numeric/target requirements open.
+
 Merlin's repository-layout merge remains `dd7b62801` on the existing
 `ttir-experiment-grammy`; triton2MLIR stays on `main`. [All high-product widths](integer_products.md)
 and [full-width packed assembly](source_assembly.md#full-width-packed-register-programs)

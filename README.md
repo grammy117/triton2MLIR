@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Public Merlin staging](docs/repository_layout.md) now accepts standalone
+tensor/effect packages through `StagedProgram` and `MerlinHostBackend`, retaining
+dynamic/scalar inputs, atomic observations, execution-owned results and void
+effects. Source replay rejects resealed body/ABI/policy substitutions. Bound-model
+public preparation and the full coverage ledger remain active work.
+
 [Packed source assembly](docs/source_assembly.md#full-width-packed-register-programs)
 now exposes proved independent i32/i64 register programs as parallel logical
 computation, retaining original packs, loops and rank-two tiles. Twelve kernel

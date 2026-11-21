@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Standalone public Merlin staging](repository_layout.md) now reconstructs the
+same source/ABI/effect checks during generic loading and preserves complete
+programs through `StagedProgram`. The production `MerlinHostBackend` passes 35
+public compile/invoke/refusal checks for dynamic, atomic, execution-owned and
+void-effect kernels. Replayed Merlin integration passes 2,600 with two skips.
+Bound-model public parameter/state preparation and the full coverage ledger
+remain active; standalone success does not close those families.
+
 [Unsigned high products](integer_products.md) now qualify every legal TTIR
 integer width through native/host/serial execution. [Packed source assembly](source_assembly.md#full-width-packed-register-programs)
 additionally retains proved independent full-width register programs, original

@@ -239,11 +239,14 @@ passes:
    packages and staged target materialization. Generic transport belongs in
    Merlin; target mapping and implementations belong to the selected OOT provider.
    Verify complete results/effects, source correspondence and useful structure.
-   Prioritize the reproduced `public-stage-frontier`: the dedicated TTIR stage
-   executes, but generic `load_compile_inputs` rejects its member roster. Extend
-   the shared stage loader and public preparation with the real TTIR profiles,
-   typed dynamic/effect signatures and explicit source numeric admission; do not
-   relabel receipts or hide that gap behind the already working native adapter.
+   The reproduced standalone `public-stage-frontier` now has a shared replay
+   projection, typed generic loader and public `StagedProgram` preparation.
+   `MerlinHostBackend` delegates public compilation to the existing whole-body
+   Merlin pipeline; actual scalar/dynamic, source-word, atomic, execution-owned
+   and void-effect programs qualify, including a real source assertion abort.
+   Continue the bound-model projection with original parameters/state and full
+   source correspondence, then applicable target providers. Preserve the full
+   family rather than hiding these remaining paths behind standalone success.
 6. Reopen the complete ledger and corpus against committed producers. Every
    valid supported form needs all applicable gates below. Any missing family,
    refused valid kernel or unqualified consumer/target keeps the full goal open.

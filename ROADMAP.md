@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Standalone public staging](docs/repository_layout.md) now replays the same
+source/ABI/effect builder in Merlin's generic loader and preserves complete
+programs through public preparation/compilation. The host adapter reuses the
+existing native pipeline. Continue original bound-model parameter/state
+projection, subword register packing and the remaining memory/effect/target work.
+
 [Packed source assembly](docs/source_assembly.md#full-width-packed-register-programs)
 reuses typed slot congruence to retain full-width packed programs as standard
 logical computation. Actual multidimensional stores now have a checked flat
