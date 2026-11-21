@@ -2,7 +2,7 @@
 
 `tt.mulhiui` now expands to standard `arith.mului_extended`, selecting the high
 result. Scalar words remain scalar; tensor words use a parallel identity-indexed
-`linalg.generic` with the exact scalar operation. Source i32/i64 bit patterns
+`linalg.generic` with the exact scalar operation. Source i1/i4/i8/i16/i32/i64 bit patterns
 are interpreted as unsigned, including sign-bit and all-one inputs. No physical
 instruction, lane mapping, memory space or external library is selected.
 
@@ -20,8 +20,18 @@ define/test the standard extended unsigned product.
 `prov.composite_family = "unsigned_high_product"`, source word width and stable
 source/emission correspondence retain intent on the standard expansion. These
 annotations grant no arithmetic rewrite. The expansion retains the original
-source operation and every meaningful bit in executable arithmetic. Other
-source integer widths remain an explicit, located qualification boundary.
+source operation and every meaningful bit in executable arithmetic. These are
+all widths admitted by `TT_Int` in `TritonTypes.td` at the pinned Triton
+`f797708c0626e5f9840ca5b0a98790e2c7cb09ad`. Widths outside that definition
+refuse during original native source verification.
+
+The public Python `tl.umulhi` builtin exposes only 32/64-bit words. Narrow
+qualification therefore saves a new TTIR kernel with explicit truncation,
+the actual narrow `tt.mulhiui`, and zero extension to an i32 public carrier.
+Its memory/grid structure comes from a real captured kernel; its numeric
+semantics are those of the new, independently native-verified source. This
+does not assert equivalence to the original wide Python builtin or add a
+public subbyte pointer ABI. Internal word arithmetic remains exact.
 
 The shipped `philox_words` kernel uses Triton's original `tl.randint4x`, with
 runtime i64 seed and counter, four i32 output tensors and a runtime logical
@@ -63,3 +73,16 @@ the published-vector oracle and located nonempty-flag refusals. The existing
 shared-tensor/buffer regression also passes all 21 cases. General scalar
 irregular memory in tensor-witness profiles is a separate existing rank/proof
 boundary; scalar product qualification does not imply that memory coverage.
+
+The additional all-width selection passes **62 cases without skips**: all six
+legal widths, scalar/tensor forms, three memory profiles, original invalid-width
+refusals, twelve reusable Merlin libraries and twenty-four actual serial images.
+Independent unbounded Python multiplication checks every pair of i4 words
+(256 pairs) and i8 words (65,536 pairs) for each vector native profile and the
+unchanged host libraries; wider words use boundary/sign-bit/all-one patterns.
+Empty/ragged/changed runtime shapes retain every result. Serial execution
+checks empty and ragged domains as exact words and retains identical computation
+object hashes between those domains. This qualifies the high-product operation;
+other narrow numeric/storage/effect compositions and accelerator implementations
+remain full-goal work. Evidence: `.scratch/high-product-widths-final.log` and
+`.scratch/high-product-regression2.log`.

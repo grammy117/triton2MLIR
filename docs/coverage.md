@@ -19,6 +19,14 @@ The current plan starts with the reproduced root/control failures, then advances
 numeric/effect and runtime/target families alongside remaining memory work.
 See [the execution sequence](completion_plan.md#remaining-execution-sequence).
 
+[Unsigned high products](integer_products.md) now qualify all six legal TTIR
+integer widths through standard arithmetic, twelve reusable Merlin libraries
+and twenty-four serial images. Narrow values use explicit source casts and
+i32 public carriers; no public subbyte pointer transport is inferred. The
+62-check all-width selection covers exhaustive i4/i8 vector word pairs and
+invalid original source widths. Broader numeric/packed/effect compositions and
+applicable accelerator materialization remain open.
+
 [Conditional runtime strides](conditional_runtime_strides.md) qualify twelve
 kernel libraries and six complete two-call models, with ninety initial, 366
 replay and 180 exact-word serial results across thirty-six actual images, plus

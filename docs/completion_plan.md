@@ -203,9 +203,9 @@ adapter `56409ce`. Resume the full goal against those owners. Execute the
 following concrete sequence, keeping the later work open when an earlier item
 passes:
 
-1. Revalidate and commit the pending conditional-progress implementation against
-   the merged compiler. Check original widths, grid ownership and unsafe-definition
-   refusals, then real reusable kernel/model libraries and serial images.
+1. Conditional progress is committed as `04ba1dc` and revalidated against
+   the merged compiler: 144 checks pass without skips, including original widths,
+   grid ownership, unsafe definitions and real kernel/model host/serial execution.
 2. Replace the opcode-name summary as the planning denominator with an explicit
    boundary ledger: original typed source and attributes, control/memory/root
    relationships, numeric/effect policy, runtime ABI, Merlin lowering and target
@@ -225,6 +225,10 @@ passes:
    forms and contractions, actual external implementations, publication and
    asynchronous completion/participation. Give required behavior executable
    semantics and retain explicit dependencies instead of opaque success markers.
+   All legal `tt.mulhiui` widths now have native/host/serial qualification;
+   next close packed assembly register groups, broader numeric/effect forms
+   and remaining runtime/public-stage admission. Descriptor origins already
+   have a checked allocation-wrapper route; general mixed-type projections stay open.
 5. Carry these same forms through runtime shapes/scalars, complete PyTorch
    packages and staged target materialization. Generic transport belongs in
    Merlin; target mapping and implementations belong to the selected OOT provider.

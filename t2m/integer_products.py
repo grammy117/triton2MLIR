@@ -25,6 +25,9 @@ Adapted from TritonMulhiuiConverter in TritonOpConverter.cpp at Ascend
 8f0ade66580245e30ad97093526a4018e4e18fc7. The original converter selects
 arith.mului_extended's high result. The tensor form here makes the parallel
 elementwise body explicit for the shared tensor pipeline; it selects no ISA.
+
+Word widths follow TT_Int in TritonTypes.td at Triton
+f797708c0626e5f9840ca5b0a98790e2c7cb09ad, including narrow internal values.
 """
 
 from xdsl.dialects import arith, builtin, tensor
@@ -46,9 +49,9 @@ def expand_high_products(module, source_ids):
         ids = source_ids(op.location)
         type_ = op.results[0].type
         element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
-        if (not isinstance(element, builtin.IntegerType) or element.width.data not in (32, 64)
+        if (not isinstance(element, builtin.IntegerType) or element.width.data not in (1, 4, 8, 16, 32, 64)
                 or len(op.operands) != 2 or any(v.type != type_ for v in op.operands)):
-            raise ConversionError("unsigned high products require matching scalar/tensor i32 or i64 words",
+            raise ConversionError("unsigned high products require matching legal Triton integer words",
                                   opcode="tt.mulhiui", source_id=next(iter(ids), None))
         if isinstance(type_, builtin.TensorType):
             shape = type_.get_shape()
