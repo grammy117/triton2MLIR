@@ -35,8 +35,9 @@ class AssemblyRequest:
 
     For full-width packed elements the core expands each input/output type
     ``pack`` times. Providers implement every slot; the core separately proves
-    independence before abstracting an unspecified physical grouping. Subword
-    register packing requires its own explicit decoding contract.
+    independence before abstracting an unspecified physical grouping. Narrow
+    source integers are packed/unpacked at the core's explicit register ABI;
+    providers receive whole registers, never an assumed tensor-lane grouping.
     """
 
     assembly: str
@@ -129,10 +130,12 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
             refuse("source assembly tensors require matching static tile shapes and tensor results")
         input_types = tuple(v.type.element_type if isinstance(v.type, builtin.TensorType) else v.type for v in operands)
         output_types = tuple(t.element_type if isinstance(t, builtin.TensorType) else t for t in outputs)
-        if pack > 1 and (not shapes or any(
+        narrow = pack > 1 and any(isinstance(typ, builtin.IntegerType) and typ.width.data < 32
+                                  for typ in (*input_types, *output_types))
+        if pack > 1 and (not shapes or not narrow and any(
                 type_ not in (builtin.i32, builtin.i64, builtin.f32, builtin.f64)
                 for type_ in (*input_types, *output_types))):
-            refuse("packed source assembly needs full 32/64-bit tensor registers; subword register packing needs its own decoding contract")
+            refuse("packed source assembly needs matching tensor values and an explicit typed register contract")
         if pack > 16384 // max(1, len(input_types) + len(output_types)):
             refuse("source assembly scalar register interface exceeds its checked expansion budget")
         tensor_inputs = [v for v in operands if isinstance(v.type, builtin.TensorType)]
@@ -145,22 +148,39 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 index += 1
             else:
                 arguments.append(value)
-        register_inputs = tuple(type_ for type_ in input_types for _ in range(pack))
-        register_outputs = tuple(type_ for type_ in output_types for _ in range(pack))
-        packed_body = Block(arg_types=register_inputs) if pack > 1 else None
+        logical_inputs = tuple(type_ for type_ in input_types for _ in range(pack))
+        logical_outputs = tuple(type_ for type_ in output_types for _ in range(pack))
+        register_inputs, register_outputs = logical_inputs, logical_outputs
+        packed_body = Block(arg_types=logical_inputs) if pack > 1 else None
         decoded_arguments = [
             packed_body.args[i * pack + slot] if isinstance(value.type, builtin.TensorType) else value
             for i, value in enumerate(operands) for slot in range(pack)
         ] if packed_body is not None else arguments
-        request = AssemblyRequest(assembly.data, constraints.data, register_inputs, register_outputs, pack)
+        transport, packing_contract = [], None
         try:
-            expansion = implementation.lower(request, decoded_arguments)
+            if narrow:
+                from .packed_words import interface, pack_inputs
+
+                register_inputs, register_outputs, packing_contract = interface(input_types, output_types, pack)
+                transport, provider_arguments = pack_inputs(decoded_arguments, input_types, pack)
+            else:
+                provider_arguments = decoded_arguments
+            request = AssemblyRequest(assembly.data, constraints.data, register_inputs, register_outputs, pack)
+            expansion = implementation.lower(request, provider_arguments)
         except AssemblyRefusal as exc:
             refuse(str(exc))
         if load_provider(provider)[1] != identity:
             refuse("source assembly provider changed during expansion")
         if not isinstance(expansion, AssemblyExpansion) or len(expansion.operations) > 16384:
             refuse("source assembly provider returned an invalid or oversized expansion")
+        if [v.type for v in expansion.outputs] != list(register_outputs):
+            refuse("source assembly provider changed result register types or arity")
+        if narrow:
+            from .packed_words import unpack_outputs
+
+            unpacked, results = unpack_outputs(expansion.outputs, output_types, pack)
+            expansion.operations = [*transport, *expansion.operations, *unpacked]
+            expansion.outputs = results
         known = set(decoded_arguments)
         for op in expansion.operations:
             if (not isinstance(op, Operation) or op.parent is not None or op.regions or op.successors
@@ -171,28 +191,36 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 refuse("source assembly provider must return a closed effect-free standard scalar DAG")
             known.update(op.results)
             op.location = source.location
-        if ([v.type for v in expansion.outputs] != list(register_outputs)
+        if ([v.type for v in expansion.outputs] != list(logical_outputs)
                 or any(v not in known for v in expansion.outputs) or not isinstance(expansion.contract, dict)):
             refuse("source assembly provider changed result types, arity or value custody")
         emitted = expansion.operations
         packing_proof = None
         if packed_body is not None:
-            from .elementwise_map import _independent_packing
-
             terminal = YieldOp(*expansion.outputs)
             terminal.location = source.location
             packed_body.add_ops([*emitted, terminal])
-            selected, returned, locations, packing_proof = _independent_packing(
-                packed_body, terminal, pack,
-                lambda message, child=None: refuse(message), source_ids,
-                family="packed source assembly")
-            mapping = {value: arguments[i // pack] for i, value in enumerate(packed_body.args)}
-            emitted = []
-            for child in selected:
-                cloned = child.clone(value_mapper=mapping)
-                cloned.location = locations.get(child, child.location)
-                emitted.append(cloned)
-            expansion.outputs = [mapping.get(value, value) for value in returned]
+            if narrow:
+                from .packed_words import project
+
+                try:
+                    emitted, expansion.outputs, packing_proof = project(packed_body, terminal, pack, arguments)
+                except AssemblyRefusal as exc:
+                    refuse(str(exc))
+            else:
+                from .elementwise_map import _independent_packing
+
+                selected, returned, locations, packing_proof = _independent_packing(
+                    packed_body, terminal, pack,
+                    lambda message, child=None: refuse(message), source_ids,
+                    family="packed source assembly")
+                mapping = {value: arguments[i // pack] for i, value in enumerate(packed_body.args)}
+                emitted = []
+                for child in selected:
+                    cloned = child.clone(value_mapper=mapping)
+                    cloned.location = locations.get(child, child.location)
+                    emitted.append(cloned)
+                expansion.outputs = [mapping.get(value, value) for value in returned]
             if [value.type for value in expansion.outputs] != list(output_types):
                 refuse("packed source assembly proof changed the logical result interface")
         if shapes and tensor_carrier == "arith":
@@ -230,6 +258,7 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
         reports.append({"kind": "source-assembly-implementation", "source_ids": ids,
             "provider": identity, "assembly_sha256": hashlib.sha256(assembly.data.encode()).hexdigest(),
             "constraints": constraints.data, "packed_elements": pack, "contract": expansion.contract,
+            **({"register_packing": packing_contract} if packing_contract is not None else {}),
             **({"packing_proof": packing_proof,
                 "provider_input_types": [str(type_) for type_ in register_inputs],
                 "provider_output_types": [str(type_) for type_ in register_outputs]} if packing_proof else {}),

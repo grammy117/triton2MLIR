@@ -28,8 +28,9 @@ The provider interface supplies only source text/types and scalar SSA operands.
 It receives no example inputs or reference outputs. The core independently
 checks a closed, bounded, effect-free standard scalar DAG, complete typed
 results and matching tile shapes. Unknown operations, addresses, free values,
-parented operations and effects refuse. Source `pure=false`, subword register
-packing and cross-slot forms need further explicit contracts. There is no provider call or assembly opcode
+parented operations and effects refuse. Source `pure=false`, floating subword
+registers, partial padding and cross-slot forms need further explicit contracts.
+There is no provider call or assembly opcode
 in executable `model.mlir`.
 
 Provider entry point, distribution/version and installed Python/metadata file
@@ -146,8 +147,9 @@ Reviewed upstream source and tests at Triton
 - `lib/Conversion/TritonGPUToLLVM/ElementwiseOpToLLVM.cpp`,
   `ElementwiseInlineAsmOpConversion`, including `packOperands` and result unpacking.
 - `python/test/unit/language/test_core.py`, `test_inline_asm_packed` and
-  `test_inline_asm_packed_multiple_outputs`. Those subword fixtures remain
-  explicit next work, rather than evidence for the current full-width profile.
+  `test_inline_asm_packed_multiple_outputs`. The byte-shift fixture now has
+  narrow-integer qualification below; its mixed float example remains separate
+  source/transport work.
 - The pinned native source verifier rejects packs that do not divide the logical
   input element count. The failed pack-sixteen/eight-element experiment remains
   a source failure; it is not a valid refused-kernel coverage gap.
@@ -295,6 +297,48 @@ at `out/source-assembly-provider/build-receipt.json` checks identical decoder
 bytes in the checkout, built wheel and installed package. This Python-wheel
 receipt does not establish source/build correspondence for the native
 Triton/shared binaries.
+
+## Narrow integer register groups
+
+`t2m.packed_words` adapts Triton's pinned `packOperands`/result-unpacking rule:
+complete narrow elements occupy 32-bit source registers in operand/result-major
+order, with increasing elements in increasing bit positions. This is the source
+language ABI, not a consumer hardware layout. The upstream copyright, MIT license
+and adaptation notice are retained under `docs/licenses/`.
+
+The selected provider receives the actual whole-register interface. Standard
+unsigned extension/shift/OR and extraction/truncation surround its complete
+decoded program. A bounded Z3 counterexample query checks every scalar operation's
+definedness and compares every output slot with one common scalar function.
+All original integer bit patterns and uniform scalar captures are quantified.
+Other slots become zero only after UNSAT proves both independence and congruence;
+coupled carries/shifts and asymmetric outputs therefore refuse. Nonempty overflow
+flags, undefined shifts and unknown semantic properties cannot become annotations
+claiming success. Install the optional `word-proofs` extra when doing conversion;
+the emitted standard MLIR requires no runtime solver or source provider.
+
+Original pack intent, actual register types, `triton.inline-asm-word-packing.v1`
+and `typed-word-bitvector-equivalence-v1` remain in the trace and function
+provenance. Original public ABI and receipt schemas stay unchanged. Generated
+compatibility metadata explicitly records the new transport/proof boundary.
+Provider/source equivalence retains its named specification and qualified scope;
+the word proof alone supplies no universal PTX or GPU-execution verdict.
+
+The initial selection in `.scratch/packed-word-qualification1.log` passes 25
+checks, covering 21 native/Merlin host libraries: byte and halfword recurrences
+with one/two source registers, and unsigned byte/halfword/wide conversions across
+tensor, buffer and guarded source-word memory. Original loops and rank-two tiles
+remain. Empty/scalar/ragged inputs and zero/nonpositive-trip controls reuse the
+same libraries. The focused seven refusal checks pass in
+`.scratch/packed-word-negative-final.log`; they include three additional invalid
+provider obligations. Existing source/provider regressions pass 49.
+
+The retained byte-shift frontier now converts using the original verified TTIR.
+Next retain the complete word program once per portable logical packet so its
+register sharing stays explicit, then qualify complete captured models and
+serial materialization. Partially filled registers, floating bitcasts, coupled
+source groups, broader instructions/effects and applicable accelerators remain
+open. Choosing coordinate adjacency cannot supply an unspecified source grouping.
 
 ## Complete model captures
 

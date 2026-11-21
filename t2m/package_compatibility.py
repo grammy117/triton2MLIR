@@ -191,6 +191,7 @@ def kernel_representation_differences(trace, *, dynamic=False):
     if any(record.get("kind") == "source-assembly-implementation" for record in transformations):
         differences.append("explicit optional source-assembly providers decode complete pure snippets into closed standard scalar arithmetic/math DAGs, lifted through parallel Linalg for tensor values; exact source strings/constraints, source IDs, provider distribution/file identities and specification contracts remain in provenance; physical instruction selection, opaque assembly and runtime provider calls are absent from the emitted payload; public tensor/scalar ABI and receipts are unchanged; source equivalence is limited to the named provider contract and qualified cases, with unsupported effects, packing and instructions remaining refused")
     if any(record.get("kind") == "source-assembly-implementation" and record.get("packing_proof")
+           and not record.get("register_packing")
            for record in transformations):
         differences.append(
             "full-width packed source assembly uses its complete decoded scalar register "
@@ -200,6 +201,19 @@ def kernel_representation_differences(trace, *, dynamic=False):
             "no register-to-coordinate adjacency is inferred; subword register packing, "
             "coupled/asymmetric outputs and effects retain their separate contracts; "
             "public ABI and receipt schemas remain unchanged"
+        )
+    if any(record.get("register_packing", {}).get("schema") == "triton.inline-asm-word-packing.v1"
+           for record in transformations):
+        differences.append(
+            "narrow integer source assembly uses Triton's explicit complete-register "
+            "pack/unpack order around the selected provider's whole-register program; "
+            "a bounded bitvector counterexample check proves all decoded arithmetic total "
+            "and every output a congruent slot-local function before parallel logical "
+            "projection; other slots become zero only after that universal proof; "
+            "original register ABI, pack, provider custody and proof remain in provenance; "
+            "no physical coordinate grouping is inferred, and coupled/asymmetric outputs, "
+            "partial register padding, float bitcasts and effects retain their separate "
+            "contracts; public tensor/scalar ABI and receipt schemas are unchanged"
         )
     if any(record.get("kind") == "ttir-elementwise-map" and record.get("packing_proof", {}).get("grouping") == "independent-of-register-layout"
            for record in transformations):
