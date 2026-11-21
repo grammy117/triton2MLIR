@@ -2,13 +2,12 @@
 
 import json
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import numpy as np
 import pytest
-
-from test_bfloat_model import REQUIRED, M2M, NATIVE, MERLIN, CLANG, translate
+from test_bfloat_model import CLANG, M2M, MERLIN, NATIVE, REQUIRED, translate
 
 
 @REQUIRED
@@ -21,7 +20,8 @@ def test_actual_lifted_source_constants_keep_types_bytes_and_every_result(tmp_pa
     source = tmp_path / "capture"
     script = Path(__file__).resolve().parents[1] / "scripts/capture_bfloat_model.py"
     captured = subprocess.run([M2M, str(script), "--out", str(source), "--mode", mode, "--lifted"], capture_output=True,
-        text=True, timeout=60, env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
+        text=True, timeout=60, check=False,
+        env=dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", TMPDIR=str(tmp_path)))
     assert captured.returncode == 0, captured.stdout + captured.stderr
     parent = json.loads((source / "capture_receipt.json").read_text())
     assert len(parent["compiler_constants"]["bindings"]) == 2
@@ -53,3 +53,12 @@ def test_actual_lifted_source_constants_keep_types_bytes_and_every_result(tmp_pa
                     np.testing.assert_array_equal(actual[f"out{i}"], legacy[f"out{i}"])
     else:
         assert "linalg.matmul" in (out / "model.mlir").read_text()
+        from public_model_helpers import compile_public, invoke_public
+
+        product, _, bound = compile_public(out, tmp_path / "public")
+        assert len(bound["initializers"]) == 2
+        assert {row["kind"] for row in bound["initializers"]} == {"constant"}
+        with TensorWords(source) as words, np.load(source / "inputs.npz", allow_pickle=False) as inputs:
+            value = words.get("inputs.npz", "in0", inputs["in0"], "bf16", [16,16]).copy()
+        expected = [np.load(source / "golden.npy", allow_pickle=False)]
+        invoke_public(product, [value], expected, tmp_path / "public-invoke")

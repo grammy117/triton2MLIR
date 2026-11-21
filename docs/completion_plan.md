@@ -244,9 +244,12 @@ passes:
    `MerlinHostBackend` delegates public compilation to the existing whole-body
    Merlin pipeline; actual scalar/dynamic, source-word, atomic, execution-owned
    and void-effect programs qualify, including a real source assertion abort.
-   Continue the bound-model projection with original parameters/state and full
-   source correspondence, then applicable target providers. Preserve the full
-   family rather than hiding these remaining paths behind standalone success.
+   Bound models now also replay parent/kernel/constant relationships, embed
+   immutable parameters and preserve explicit runtime BUFFER ports. The public
+   host adapter compiles the actual prepared body with remapped input-axis/word
+   coordinates while retaining original staged source/ABI separately. Continue
+   initializer-dependent shape materialization, broader state/storage forms and
+   applicable target providers. Preserve the full family beyond these examples.
 6. Reopen the complete ledger and corpus against committed producers. Every
    valid supported form needs all applicable gates below. Any missing family,
    refused valid kernel or unqualified consumer/target keeps the full goal open.

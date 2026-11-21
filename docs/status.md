@@ -1,20 +1,30 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
-[Standalone public Merlin staging](repository_layout.md) now reconstructs the
+[Public Merlin staging](repository_layout.md) reconstructs the
 same source/ABI/effect checks during generic loading and preserves complete
 programs through `StagedProgram`. The production `MerlinHostBackend` passes 35
 public compile/invoke/refusal checks for dynamic, atomic, execution-owned and
 void-effect kernels. Replayed Merlin integration passes 2,600 with two skips.
-Bound-model public parameter/state preparation and the full coverage ledger
-remain active; standalone success does not close those families.
+Derived-model preparation now also replays parent/kernel/constant relationships,
+embeds immutable parameters and retains explicit runtime buffer state. Its
+prepared execution view has a remapped input-axis/word ABI and preserves the
+original source stage separately. Initializer-dependent runtime shapes, general
+storage/state/numeric/effect combinations and applicable targets remain open.
+
+`out/public-model-staging/summary.json` reopens nineteen model configurations,
+forty-eight successful invocations, all 257 result arrays and six actual source
+aborts. The fresh shape/publication selection passes six, including invocations
+from two artifact-only owned-result model copies. The linked integration
+contract retains earlier failures and their exact corrections.
 
 [Unsigned high products](integer_products.md) now qualify every legal TTIR
 integer width through native/host/serial execution. [Packed source assembly](source_assembly.md#full-width-packed-register-programs)
 additionally retains proved independent full-width register programs, original
 loops and rank-two tiles; twelve kernel and two complete-model libraries retain
 every result through Merlin and serial images. Full coverage remains open.
-The next reproduced boundaries are subword register packing and generic
-`load_compile_inputs`/`StagedProgram` admission, alongside the full active ledger.
+The next reproduced source boundary is subword register packing; public
+integration still needs initializer-dependent shapes and broader state/storage
+forms alongside the full active ledger.
 
 [Checked memory continuation](checked_memory_continuation.md) now closes the
 reproduced selected-root/while structured-pass refusal through the existing

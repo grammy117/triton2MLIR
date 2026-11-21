@@ -23,6 +23,90 @@ REQUIRED = all(os.environ.get(name) for name in ("T2M_NATIVE_PYTHON", "T2M_MODEL
 pytestmark = pytest.mark.skipif(not REQUIRED, reason="existing native/model2MLIR/Merlin environments required")
 
 
+def test_public_model_compiler_preserves_dynamic_inputs_and_embedded_parameters(packaged, tmp_path):
+    from public_model_helpers import (
+        compile_public,
+        invoke_public,
+        observe_public_shape_abort,
+    )
+
+    package, _, weighted = packaged
+    product, _, bindings = compile_public(package, tmp_path)
+    assert len(bindings["initializers"]) == int(weighted)
+    signature = json.loads((product.directory / "compiler/signature.json").read_text())
+    assert all(row["argument"] == 0 for row in signature["dimension_bindings"].values())
+    for n in (0, 7, 31):
+        x = np.arange(n, dtype=np.int32) * 83 - 49
+        weight = np.array([17], dtype=np.int32)
+        expected = [x, x ^ weight[0], x, weight] if weighted else [x, x, x]
+        invoke_public(product, [x], expected, tmp_path / f"run-{n}")
+    observe_public_shape_abort(product, [np.arange(32, dtype=np.int32)], tmp_path / "source-abort")
+
+
+@pytest.mark.parametrize("damage", ("parameter-type", "source-role", "parent-binding", "kernel-binding",
+                                  "unused-source", "policy", "program", "signature"))
+def test_public_model_projection_rechecks_source_and_storage_relations(packaged, tmp_path, damage):
+    from merlin.compiler.frontend.inputs import (
+        load_compile_inputs,
+        stage_compile_inputs,
+    )
+
+    package, _, weighted = packaged
+    stage = tmp_path / "stage"
+    manifest = stage_compile_inputs(package, stage)
+    capsule = json.loads((stage / "source/intake.json").read_text())
+    member = None
+    if damage == "parameter-type":
+        member = "weights.safetensors.manifest.json"
+        value = json.loads((stage / member).read_text())
+        value["0"]["dtype"] = "float64"
+    elif damage == "source-role":
+        member = "source/parent/frontend-trace.json"
+        value = json.loads((stage / member).read_text())
+        node = next(node for node in value["graphs"]["prepared"]["nodes"] if node.get("op") == "placeholder")
+        node["input_kind"] = "BUFFER"
+    elif damage == "parent-binding":
+        capsule["parent_receipt"]["artifacts"]["model.mlir"]["sha256"] = "0" * 64
+    elif damage == "kernel-binding":
+        member = "source/kernel-bindings.json"
+        value = json.loads((stage / member).read_text())
+        value["input_model_sha256"] = "0" * 64
+    elif damage == "unused-source":
+        capsule["source_members"]["golden.npy"] = "source/model.mlir"
+    elif damage == "policy":
+        member = "precision-policy.json"
+        value = json.loads((stage / member).read_text())
+        value["numerical_transforms"] = ["reassociate"]
+    elif damage == "signature":
+        member = "signature.json"
+        value = json.loads((stage / member).read_text())
+        value["inputs"][-1]["shape"] = [1]
+    else:
+        member = "program.mlir"
+        original = (stage / member).read_text()
+        changed = original.replace("arith.xori", "arith.ori") if weighted else original.replace("arith.addi", "arith.subi")
+        assert changed != original
+        (stage / member).write_text(changed)
+    if member is not None:
+        if member != "program.mlir":
+            (stage / member).write_text(json.dumps(value))
+        pin = _record(stage / member)
+        manifest["members"][member] = pin["sha256"]
+        if damage in ("parameter-type", "source-role"):
+            original = member.removeprefix("source/parent/")
+            capsule["parent_receipt"]["artifacts"][original] = pin
+            parent_member = "source/parent/compiler-artifacts.json"
+            parent = json.loads((stage / parent_member).read_text())
+            parent["artifacts"][original] = pin
+            (stage / parent_member).write_text(json.dumps(parent,indent=2,sort_keys=True)+"\n")
+            manifest["members"][parent_member] = _record(stage / parent_member)["sha256"]
+    (stage / "source/intake.json").write_text(json.dumps(capsule))
+    manifest["members"]["source/intake.json"] = _record(stage / "source/intake.json")["sha256"]
+    (stage / "compile-inputs.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError):
+        load_compile_inputs(stage)
+
+
 @pytest.fixture(scope="module", params=[False, True], ids=["copy", "weighted"])
 def captured(tmp_path_factory, request):
     root = tmp_path_factory.mktemp("symbolic-package-capture")

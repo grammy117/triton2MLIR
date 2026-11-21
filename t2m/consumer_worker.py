@@ -82,7 +82,7 @@ def compile_model(staged, work):
     from merlin.compiler.dialects.xdsl_context import text
 
     manifest = json.loads((staged / "compile-inputs.json").read_text())
-    if manifest.get("schema") != "merlin.compile-inputs.v1":
+    if manifest.get("schema") not in ("merlin.compile-inputs.v1", "merlin.bound-compile-inputs.v1"):
         raise ValueError("expected staged Merlin compiler inputs")
     for name, digest in manifest["members"].items():
         path = Path(name)

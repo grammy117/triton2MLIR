@@ -78,6 +78,9 @@ def compiled(tmp_path_factory, request):
         compiler_python=os.environ["T2M_NATIVE_PYTHON"], clang=os.environ["T2M_MERLIN_CLANG"]), output=root / "compiled")
     product.verify()
     names = {str(artifact.path.relative_to(product.directory)) for artifact in product.artifacts}
+    if mode == "owned":
+        assert {"host/owned-result-program.json", "host/source.mlir", "host/prepared.mlir",
+                "host/owned_result_bridge.c"} <= names
     manifest = json.loads((root / "stage/compile-inputs.json").read_text())
     assert {"frontend/" + name for name in manifest["members"]} <= names
     assert not any(path.name in {"inputs.npz", "golden.npy", "extra.npz", "reference.json"}

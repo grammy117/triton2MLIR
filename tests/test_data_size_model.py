@@ -34,6 +34,25 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def test_public_model_compiler_remaps_original_word_and_axis_bindings(packaged, tmp_path):
+    from public_model_helpers import compile_public, invoke_public
+
+    package, _ = packaged
+    product, _, bindings = compile_public(package, tmp_path)
+    assert len(bindings["initializers"]) == 1
+    signature = json.loads((product.directory / "compiler/signature.json").read_text())
+    assert list(signature["word_bindings"].values()) == [{"argument": 1, "indices": [], "dtype": "i64"}]
+    assert all(row["argument"] == 0 for row in signature["dimension_bindings"].values())
+    weight = np.asarray(17, np.int32)
+    for index, (capacity, n) in enumerate(((2, 0), (13, 7), (31, 31))):
+        x = np.arange(capacity, dtype=np.int32) * 83 - 49
+        count = np.asarray(n, np.int64)
+        original = x + weight
+        first = original[:n].copy()
+        expected = (first, first, original, x, count, weight, first[::2])
+        invoke_public(product, [x, count], expected, tmp_path / f"run-{index}")
+
+
 def implementation(root, profile):
     from t2m.examples.data_size_kernels import data_size_prefix
 

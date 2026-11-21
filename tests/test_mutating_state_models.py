@@ -22,6 +22,27 @@ TOOLS = all(os.environ.get(name) for name in ("TRITON_SHARED_OPT", "T2M_MODEL2ML
 pytestmark = pytest.mark.skipif(not TOOLS, reason="existing source/model/Merlin tools required")
 
 
+def test_public_model_compiler_keeps_live_buffer_and_user_state(selected, tmp_path):
+    from public_model_helpers import compile_public, invoke_public
+
+    _, _, package, kind = selected
+    product, staged, bindings = compile_public(package, tmp_path, result_mode="execution-owned")
+    assert len(bindings["initializers"]) == 1
+    assert sum(row.get("source_kind") == "buffer" for row in bindings["runtime_inputs"]) == 1
+    weight = np.asarray((1 << 53) + 1, np.int64)
+    for index in range(2):
+        n = 17 if kind == "buffer" else (2, 23)[index]
+        x = np.arange(n, dtype=np.int64) * (index + 3) + (1 << 56)
+        state = np.arange(17, dtype=np.int64) + 40 + index
+        initial = state if kind == "buffer" else x if kind == "public" else x + weight
+        user = (initial.copy(), initial.copy(), initial + 3, initial + 1,
+                initial + 1 if kind == "public" else x, weight)
+        expected = user if kind == "internal" else (initial + 1, *user)
+        values = {"x": x, "state": state}
+        arrays = [values[row["name"]] for row in staged.argument_bindings if row["kind"] == "input"]
+        invoke_public(product, arrays, expected, tmp_path / f"run-{index}")
+
+
 def implementation(root):
     from t2m.examples.mutating_state import observe_and_bump
 

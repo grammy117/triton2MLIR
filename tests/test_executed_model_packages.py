@@ -22,6 +22,21 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def test_public_model_compiler_keeps_internally_sized_complete_results(selected, tmp_path):
+    from public_model_helpers import compile_public, invoke_public
+
+    _, _, package = selected
+    product, _, bindings = compile_public(package, tmp_path, result_mode="execution-owned")
+    assert len(bindings["initializers"]) == 1
+    weight = np.asarray(-3, np.int32)
+    for index, x in enumerate((np.arange(2, dtype=np.int32), np.arange(31, dtype=np.int32))):
+        original = x + weight
+        count = np.asarray([np.count_nonzero(original > 0)], np.int64)
+        first = original[:count[0]].copy()
+        expected = (first, first, original, x, count, weight, first[::2])
+        invoke_public(product, [x], expected, tmp_path / f"run-{index}")
+
+
 @pytest.fixture(scope="module", params=["tensor", "buffer", "guarded-buffer"])
 def selected(tmp_path_factory, parent, request):
     root = tmp_path_factory.mktemp("executed-package-" + request.param)

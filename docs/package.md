@@ -9,13 +9,17 @@ initialization requirements. Public ABI and receipt schemas remain unchanged.
 [Merlin repository-layout integration](repository_layout.md) moves consumer
 imports and source rosters to `merlin.compiler.*` and `runtime.backends.baremetal`.
 Package schemas and source-bound tensor/effect/result semantics are unchanged.
-Fresh standalone tensor/effect stages additionally support the generic
+Fresh standalone tensor/effect and derived-model stages support the generic
 `StagedProgram` service through a replayed compiler-only source projection and
 an explicit non-transforming imported-source policy. Public compilation retains
 the full scalar/dynamic/effect ABI and publishes every nested member. Capture
 receipt schemas stay unchanged; restaging supplies the new compiler members.
-Bound-model generic preparation remains separate work. The integration guide
-states the backend admission and parameter/state boundaries.
+Derived models replay their original parent/call/constant relationships,
+embed immutable parameters and retain explicit runtime BUFFER ports. Original
+stage signatures stay intact; `compiler/` publishes the actual prepared
+program, remapped runtime ABI and a distinct `merlin.bound-compile-inputs.v1`
+execution-view manifest. It is not an m2m or Triton capture receipt. The
+integration guide states the remaining shape/state and backend boundaries.
 
 [Conditional runtime strides](conditional_runtime_strides.md) retain actual
 selected integer/pointer offsets and checked per-iteration progress, using source

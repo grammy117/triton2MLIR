@@ -9,7 +9,7 @@ source/type/attribute/composition and consumer requirements are established.
 | Boundary | Current evidence | Remaining execution work |
 | --- | --- | --- |
 | Irregular memory/control | [Checked root/while continuation](checked_memory_continuation.md), dynamic tiles, actual masks, source-width and initialization/ownership gates. | General nonlinear/loaded relations, view/alias/root projections and complete variable write images. Keep unknown relations in the denominator. |
-| Runtime interface | Reusable dynamic kernel libraries, scalar/shape/grid guards, complete model bindings and execution-owned results; standalone public Merlin staging now replays source/ABI/effect checks. | Bound-model public preparation with parameters/state, broader dynamic intermediates, public physical aliases/copyback and remaining storage/model compositions. |
+| Runtime interface | Public Merlin model/kernel staging replays original source/ABI/effect checks; model preparation embeds immutable parameters and keeps buffers as runtime state with remapped axis/word coordinates. | Initializer-dependent runtime shape materialization, broader dynamic intermediates, public physical aliases/copyback and remaining storage/model compositions. |
 | Numeric source profiles | Existing typed cast/dot/scaled-dot, map/reduce/scan, math/RNG and selected exact-word policies. | Qualify the remaining valid widths, attributes, packed/source-region combinations and external implementations against the source definitions. |
 | Observable effects | Existing private atomics/volatile observations, source diagnostics and synchronous program phases. | General external participants, publication and asynchronous completion/participation with executable semantics and dependency evidence. |
 | Staged materialization | Actual reusable host libraries and complete serial target images, with payload and source custody. | Applicable accelerator scheduling, materialization, correctness and separately measured performance; host/serial results supply no accelerator verdict. |
@@ -25,8 +25,9 @@ host adapter retains dynamic scalars/shapes, guarded source-word memory, atomic
 old/final values, execution-owned results and void effects. Thirty-five public
 compile/invoke/refusal checks pass, including changed inputs and a real source
 abort. Original receipt schemas remain unchanged; compiler stages add explicit
-replay and non-transforming policy members. Bound-model public preparation and
-broader runtime/effect/target closure remain open.
+replay and non-transforming policy members. Derived models now have the separate
+parent/parameter/state projection and prepared runtime ABI described in the
+same contract. Broader runtime/effect/target closure remains open.
 
 [Packed source assembly](source_assembly.md#full-width-packed-register-programs)
 now uses the complete decoded register program and the existing typed

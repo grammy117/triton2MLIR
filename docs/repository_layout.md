@@ -79,10 +79,9 @@ execution or performance verdict.
 
 This is a compiler-stage extension: original triton2MLIR capture/receipt schemas
 and standard MLIR payloads remain unchanged. Restage older standalone captures
-to obtain the new projection. Bound-model generic public preparation still
-requires its own source/parameter/state projection; its existing dedicated
-native/host/bare-metal path remains available. Neither path establishes every
-backend's support.
+to obtain the new projection. Derived models now have the separate parent,
+parameter and runtime-state replay described below. Neither path establishes
+every backend's support.
 
 The 35-check public staging selection passes in
 `.scratch/public-kernel-staging-final.log`. Its five compiled libraries execute
@@ -94,12 +93,79 @@ compare as exact words. These separate image checks do not make the host-only
 public adapter a deployment backend.
 
 `out/public-staging/summary.json` reopens the public compilation artifacts and
-selected committed source identities. The fresh, valid bound-model failure is
-retained in `.scratch/public-bound-model-frontier/boundary.json`: receipt staging
-passes, but its generic loader lacks the model replay projection. Continue that
-source/parameter/state path before claiming complete public-model integration.
+selected committed source identities. The original bound-model refusal is
+retained in `.scratch/public-bound-model-frontier/boundary.json`; fresh stages
+now supply its missing parent/source replay projection.
 Selected source hashes establish no full dependency closure or accelerator/
 performance qualification.
+
+## Bound-model public compilation
+
+This path requires Merlin `28e4d702fa1d384a4c6c66cac0ebced9ed7108c6` on
+`ttir-experiment-grammy`, in addition to the repository-layout merge above.
+
+`derived-tensor-model` stages use the same `prepare_bound_model_inputs` builder
+for original receipt admission and compiler-only replay. The projection retains
+the parent compiler graph/trace, original bound graph, kernel implementations,
+shape/effect checks and declared compiler constants. Parent receipt fields and
+artifact bindings are projected to the compiler members; evaluator archives and
+their digests stay outside this view. Original receipt identities remain
+observations, not authenticated lineage or numerical evidence. Model weight
+archives are hashed/copied in bounded chunks rather than loaded wholesale.
+
+Public preparation joins the actual source placeholders to their storage roles.
+Immutable parameters/constants become exact-storage MLIR constants, with every
+original operation checked under only those argument substitutions. BUFFER
+arguments remain explicit runtime state, including unused source state ports;
+their captured archive values are not freeze consent. Outputs retain every
+functional state observation. Physical aliases and caller copyback remain
+separate requirements.
+
+The original stage and signature stay under `frontend/`. The actual prepared
+body is `frontend.mlir`; model host compilation also publishes that body and
+its reduced runtime signature under `compiler/`, beside the empty host build
+directory required by execution-owned lowering. Its explicit
+`merlin.bound-compile-inputs.v1` manifest and `source-bindings.json` distinguish
+this execution view from a capture receipt. Immutable arguments are removed;
+input-axis and input-word coordinates are remapped to the surviving runtime
+ports. Expression/word shape programs are reconstructed from the actual prepared
+body so their symbols also name the new roster. Execution-owned allocation
+limits remain unchanged.
+`compiled.metadata["runtime_stage"]` selects the actual invocation signature:
+`compiler` for derived models, `frontend` for standalone kernels.
+
+The host backend compiles the prepared body, verifies exact source/signature
+identities around compilation and publishes both source views. It still
+reports compilation separately from invocation and supplies no deployment or
+accelerator verdict. Broader initializer-dependent shape materialization still
+requires qualification; unknown source dependencies refuse. General storage,
+state, numeric/effect and applicable target closure remain open.
+
+Execution-owned compilation also publishes the producer's checked runtime
+record and every file it opens, including the source/prepared bodies and C
+bridge. Model tests copy only the declared public artifacts into a fresh
+directory before invocation, exercising that publication boundary.
+
+`out/public-model-staging/summary.json` reopens nineteen model configurations
+and two extra publication compilations: forty-eight successful model invocations,
+257 complete result arrays and six actual source assertion aborts. The cases
+include dynamic copies with learned parameters, functional buffer/user state,
+internally produced sizes, input-word sizes, lifted BF16/F32 matmul constants
+and a nine-output packed-kernel model with empty results. Two owned-result
+models additionally run from artifact-only copies. These are host observations;
+they supply no accelerator, performance or full dependency-closure verdict.
+
+The first broad selection retains 83 passes and fifteen failures in
+`.scratch/public-model-staging-final.log`. Six were a new test's local-variable
+typo; six exposed the occupied owned-result work directory; three exposed stale
+word/shape symbols. The corrected selection passes 21 while its already-imported
+old shape helper still fails the three word cases. A fresh process passes all
+six selected shape/publication checks in
+`.scratch/public-model-shape-and-publication.log`, and the separate packed model
+passes both invocations. The final frozen Merlin replay passes 2,600 with two
+prerequisite skips; seven permanent intake checks pass at the 141/150 budget.
+Repository-wide dependency-direction and module-size gates retain incoming
+refactor debt; changed source, docs and artifact-layout checks pass.
 
 Set `T2M_MERLIN_ROOT` to the merged checkout and `T2M_MERLIN_PYTHON` to an
 environment installed from it. Native MLIR and cross-tool selections remain

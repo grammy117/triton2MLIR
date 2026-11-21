@@ -1,5 +1,22 @@
 # Review handoff — updated 2026-11-21
 
+Merlin `28e4d702f` now replays derived-model source/constant relationships and
+prepares exact immutable parameters plus explicit runtime BUFFER ports. The
+public host adapter compiles the actual prepared body, reconstructs source-word
+shape expressions for its new argument roster and publishes complete owned
+runtime inputs. Original staged source/ABI stay separate under `frontend/`;
+the actual runtime view is `compiler/` beside `host/`.
+
+`out/public-model-staging/summary.json` reopens nineteen model configurations,
+forty-eight invocations, 257 complete result arrays and six actual source
+aborts. The fresh six-check selection passes all three word profiles and both
+artifact-only owned model copies. The packed model separately retains all nine
+results for original/changed inputs. Final Merlin replay passes 2,600/two skips;
+permanent intake passes seven at 141/150. Earlier test-variable, build-directory
+and stale-symbol failures are retained in the linked integration contract.
+Continue the full memory/runtime/state/storage/numeric/effect/target ledger;
+embedded-initializer shape generality and i8 register packing still need audit.
+
 Merlin `e1c2c7f88` adds shared standalone source replay and public staged
 preparation on the existing experimental branch. T2M's `MerlinHostBackend`
 delegates public compilation to the existing native pipeline. Five real kernel
@@ -8,15 +25,19 @@ and void interfaces; changed invocations and an actual source abort qualify.
 The public selection passes 35, existing consumer/effect checks pass 30, and
 the frozen Merlin replay passes 2,600 with two prerequisite skips. Permanent
 stage checks pass eight with one optional companion-OOT skip (141/150 budget).
-Next implement bound-model compiler projection and immutable parameter/state
-preparation, then return to the retained i8 register-packing witness. Keep the
-broader memory/effect/runtime/numeric/target requirements open.
+Bound-model compiler projection and immutable parameter/runtime-state
+preparation are now implemented in the shared Merlin intake and public adapter.
+Model host compilation uses a separate `compiler/` execution view beside `host/`,
+preserving the owned-result compiler's empty-directory requirement. Recheck the
+current public-model test logs before citing qualification. Continue embedded-
+initializer shape materialization and the retained i8 register-packing witness;
+keep broader memory/effect/runtime/numeric/target requirements open.
 
 `out/public-staging/summary.json` reopens five real public compilations,
 thirteen successful invocations, twenty complete result arrays and one actual
 assertion abort. Separate atomic/owned serial materialization passes both images
-and all three exact-word results. The real bound-model generic-load failure is
-reproduced after fresh staging in `.scratch/public-bound-model-frontier/`.
+and all three exact-word results. The original bound-model generic-load failure
+remains in `.scratch/public-bound-model-frontier/`; fresh stages now replay it.
 
 Merlin's repository-layout merge remains `dd7b62801` on the existing
 `ttir-experiment-grammy`; triton2MLIR stays on `main`. [All high-product widths](integer_products.md)
@@ -26,8 +47,8 @@ rank-two tile computation and every result of two complete PyTorch models.
 The checked flat-store projection also has independent non-assembly cases.
 Read the [current execution sequence](completion_plan.md#remaining-execution-sequence)
 and reopened `out/packed-source-assembly/summary.json` before claiming coverage.
-Next close the reproduced generic public-stage roster/signature/policy gap and
-the native-verified i8 register pack/unpack witness; all memory/effect/runtime/
+Next close the remaining initializer-shape/state/storage paths and the
+native-verified i8 register pack/unpack witness; all memory/effect/runtime/
 numeric and applicable target requirements remain active.
 
 [Checked memory continuation](checked_memory_continuation.md) closes three
