@@ -31,6 +31,14 @@ class AssemblyRefusal(ValueError):
 
 @dataclass(frozen=True)
 class AssemblyRequest:
+    """Scalar register interface, ordered by logical operand then packed slot.
+
+    For full-width packed elements the core expands each input/output type
+    ``pack`` times. Providers implement every slot; the core separately proves
+    independence before abstracting an unspecified physical grouping. Subword
+    register packing requires its own explicit decoding contract.
+    """
+
     assembly: str
     constraints: str
     input_types: tuple
@@ -104,8 +112,9 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 or not isinstance(constraints, builtin.StringAttr) or len(constraints.data.encode()) > 4096
                 or not isinstance(pure, builtin.IntegerAttr) or pure.value.data == 0):
             refuse("source assembly requires a bounded snippet and an explicitly pure source contract; hardware/effect observations need another interface")
-        if not isinstance(pack, builtin.IntegerAttr) or pack.value.data != 1:
-            refuse("packed source assembly needs established register grouping and packing semantics")
+        if not isinstance(pack, builtin.IntegerAttr) or pack.value.data < 1:
+            refuse("source assembly requires a positive integer pack")
+        pack = pack.value.data
         operands, outputs = list(source.operands), [v.type for v in source.results]
         if not outputs:
             refuse("pure source assembly must have declared value results")
@@ -120,6 +129,12 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
             refuse("source assembly tensors require matching static tile shapes and tensor results")
         input_types = tuple(v.type.element_type if isinstance(v.type, builtin.TensorType) else v.type for v in operands)
         output_types = tuple(t.element_type if isinstance(t, builtin.TensorType) else t for t in outputs)
+        if pack > 1 and (not shapes or any(
+                type_ not in (builtin.i32, builtin.i64, builtin.f32, builtin.f64)
+                for type_ in (*input_types, *output_types))):
+            refuse("packed source assembly needs full 32/64-bit tensor registers; subword register packing needs its own decoding contract")
+        if pack > 16384 // max(1, len(input_types) + len(output_types)):
+            refuse("source assembly scalar register interface exceeds its checked expansion budget")
         tensor_inputs = [v for v in operands if isinstance(v.type, builtin.TensorType)]
         body = Block(arg_types=[v.type.element_type for v in tensor_inputs] + list(output_types)) if shapes else None
         arguments = []
@@ -130,16 +145,23 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 index += 1
             else:
                 arguments.append(value)
-        request = AssemblyRequest(assembly.data, constraints.data, input_types, output_types, 1)
+        register_inputs = tuple(type_ for type_ in input_types for _ in range(pack))
+        register_outputs = tuple(type_ for type_ in output_types for _ in range(pack))
+        packed_body = Block(arg_types=register_inputs) if pack > 1 else None
+        decoded_arguments = [
+            packed_body.args[i * pack + slot] if isinstance(value.type, builtin.TensorType) else value
+            for i, value in enumerate(operands) for slot in range(pack)
+        ] if packed_body is not None else arguments
+        request = AssemblyRequest(assembly.data, constraints.data, register_inputs, register_outputs, pack)
         try:
-            expansion = implementation.lower(request, arguments)
+            expansion = implementation.lower(request, decoded_arguments)
         except AssemblyRefusal as exc:
             refuse(str(exc))
         if load_provider(provider)[1] != identity:
             refuse("source assembly provider changed during expansion")
         if not isinstance(expansion, AssemblyExpansion) or len(expansion.operations) > 16384:
             refuse("source assembly provider returned an invalid or oversized expansion")
-        known = set(arguments)
+        known = set(decoded_arguments)
         for op in expansion.operations:
             if (not isinstance(op, Operation) or op.parent is not None or op.regions or op.successors
                     or op.name.split(".")[0] not in ("arith", "math")
@@ -149,10 +171,30 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 refuse("source assembly provider must return a closed effect-free standard scalar DAG")
             known.update(op.results)
             op.location = source.location
-        if ([v.type for v in expansion.outputs] != list(output_types)
+        if ([v.type for v in expansion.outputs] != list(register_outputs)
                 or any(v not in known for v in expansion.outputs) or not isinstance(expansion.contract, dict)):
             refuse("source assembly provider changed result types, arity or value custody")
         emitted = expansion.operations
+        packing_proof = None
+        if packed_body is not None:
+            from .elementwise_map import _independent_packing
+
+            terminal = YieldOp(*expansion.outputs)
+            terminal.location = source.location
+            packed_body.add_ops([*emitted, terminal])
+            selected, returned, locations, packing_proof = _independent_packing(
+                packed_body, terminal, pack,
+                lambda message, child=None: refuse(message), source_ids,
+                family="packed source assembly")
+            mapping = {value: arguments[i // pack] for i, value in enumerate(packed_body.args)}
+            emitted = []
+            for child in selected:
+                cloned = child.clone(value_mapper=mapping)
+                cloned.location = locations.get(child, child.location)
+                emitted.append(cloned)
+            expansion.outputs = [mapping.get(value, value) for value in returned]
+            if [value.type for value in expansion.outputs] != list(output_types):
+                refuse("packed source assembly proof changed the logical result interface")
         if shapes and tensor_carrier == "arith":
             from .tensor_dag import lift
             try:
@@ -164,6 +206,9 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
             for operation in emitted:
                 operation.location = source.location
                 operation.attributes["prov.composite_family"] = builtin.StringAttr("source_assembly")
+                if packing_proof:
+                    operation.attributes["prov.assembly_pack"] = builtin.IntegerAttr(pack, builtin.i32)
+                    operation.attributes["prov.assembly_grouping"] = builtin.StringAttr("proved-slot-independent-v1")
             Rewriter.replace_op(source, emitted, results)
         elif shapes:
             body.add_ops(emitted)
@@ -174,6 +219,9 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
                 [IteratorTypeAttr.parallel()] * len(shape), outputs)
             generic.location = source.location
             generic.attributes["prov.composite_family"] = builtin.StringAttr("source_assembly")
+            if packing_proof:
+                generic.attributes["prov.assembly_pack"] = builtin.IntegerAttr(pack, builtin.i32)
+                generic.attributes["prov.assembly_grouping"] = builtin.StringAttr("proved-slot-independent-v1")
             for value in empty:
                 value.location = source.location
             Rewriter.replace_op(source, [*empty, generic])
@@ -181,7 +229,10 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
             Rewriter.replace_op(source, emitted, expansion.outputs)
         reports.append({"kind": "source-assembly-implementation", "source_ids": ids,
             "provider": identity, "assembly_sha256": hashlib.sha256(assembly.data.encode()).hexdigest(),
-            "constraints": constraints.data, "packed_elements": 1, "contract": expansion.contract,
+            "constraints": constraints.data, "packed_elements": pack, "contract": expansion.contract,
+            **({"packing_proof": packing_proof,
+                "provider_input_types": [str(type_) for type_ in register_inputs],
+                "provider_output_types": [str(type_) for type_ in register_outputs]} if packing_proof else {}),
             "input_types": [str(t) for t in input_types], "output_types": [str(t) for t in output_types],
             "expansion": ("standard-elementwise-arith" if tensor_carrier == "arith" else "standard-scalar-dag-in-parallel-linalg") if shapes else "standard-scalar-dag",
             "physical_mapping": "undecided", "source_equivalence": "provider-specification-and-qualified-cases; not-universal-proof"})

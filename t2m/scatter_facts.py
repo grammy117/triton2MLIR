@@ -48,6 +48,45 @@ class TileFacts:
         if self.steps > 1024:
             raise ConversionError("scatter tile proof exceeds its bounded SSA analysis budget")
 
+    def flattened(self, node):
+        """Project only an exact static row-major collapse, retaining its SSA.
+
+        A polynomial of source tile coordinates projects only when all lane
+        coefficients factor through the same row-major linear coordinate.
+        This proves an address/mask relationship; no lane is enumerated and
+        no arbitrary tensor value is assumed affine.
+        """
+        op = node.value.owner
+        source = op.operands[0]
+        before, after = source.type.get_shape(), node.value.type.get_shape()
+        groups = tuple(tuple(axis.value.data for axis in group) for group in op.reassociation)
+        if (len(before) < 2 or any(size <= 0 for size in before)
+                or after != (prod(before),) or len(node.coordinates) != 1
+                or groups != (tuple(range(len(before))),)
+                or source.type.element_type != node.value.type.element_type):
+            raise ConversionError("scatter collapse_shape needs an exact static row-major reassociation")
+        coordinates = tuple(lane(axis, size) for axis, size in enumerate(before))
+
+        def project(value):
+            base, strides = [], [[] for _ in before]
+            for atoms, coefficient in value.terms:
+                local = [atom for atom in atoms if atom[0] == "d"]
+                if not local:
+                    base.append((atoms, coefficient))
+                elif (len(local) == 1 and type(local[0][1]) is int
+                      and 0 <= local[0][1] < len(before)
+                      and local[0] == ("d", local[0][1], 0, before[local[0][1]] - 1)):
+                    strides[local[0][1]].append((tuple(atom for atom in atoms if atom[0] != "d"), coefficient))
+                else:
+                    raise ConversionError("flattened scatter cannot project nonlinear tile coordinates")
+            strides = tuple(P.make(terms) for terms in strides)
+            common = strides[-1]
+            if any(stride != common.scale(prod(before[axis + 1:])) for axis, stride in enumerate(strides)):
+                raise ConversionError("flattened scatter requires proved row-major lane coefficients")
+            return P.make(base) + common * node.coordinates[0]
+
+        return Node(source, coordinates, node.bindings, node.indices), project
+
     def affine(self, value, dimensions):
         if isinstance(value, AffineDimExpr):
             return dimensions[value.position]
@@ -155,6 +194,9 @@ class TileFacts:
                 raise ConversionError("scatter indices need scalar/splat integer constants")
         elif name == "linalg.index":
             result = node.indices[op.dim.value.data]
+        elif name == "tensor.collapse_shape":
+            source, project = self.flattened(node)
+            result = project(self.number(source))
         elif name in ("arith.index_cast", "arith.extsi", "arith.extui", "arith.trunci"):
             result = operand(0)
             if name == "arith.extui" and result.bounds(self.grid)[0] < 0:
@@ -182,6 +224,9 @@ class TileFacts:
             name = getattr(op, "name", "")
             def operand(i):
                 return Node(op.operands[i], bindings=node.bindings, indices=node.indices)
+            if name == "tensor.collapse_shape":
+                source, project = self.flattened(node)
+                return tuple(project(value) for value in self.necessary_bounds(source))
             if name == "arith.andi":
                 return tuple(dict.fromkeys((*self.necessary_bounds(operand(0)), *self.necessary_bounds(operand(1)))))
             if name == "arith.ori":
@@ -275,7 +320,7 @@ def covers_clipped_tile(buffer, abi, mask, forms, sizes, axes, facts):
         dimension = P.affine(dimension) if isinstance(dimension, Linear) else P.constant(dimension)
         assumptions.extend((point.scale(-1) + P.constant(-1), point + dimension.scale(-1)))
 
-    def sufficient(node):
+    def sufficient(node, project=lambda value: value):
         analysis.tick()
         node = analysis.normalize(node)
         op = node.value.owner
@@ -284,17 +329,20 @@ def covers_clipped_tile(buffer, abi, mask, forms, sizes, axes, facts):
         def operand(i):
             return Node(op.operands[i], node.coordinates, node.bindings, node.indices)
 
+        if name == "tensor.collapse_shape":
+            source, nested = analysis.flattened(node)
+            return sufficient(source, lambda value: project(nested(value)))
         if name == "arith.andi":
-            return sufficient(operand(0)) and sufficient(operand(1))
+            return sufficient(operand(0), project) and sufficient(operand(1), project)
         if name == "arith.ori":
-            return sufficient(operand(0)) or sufficient(operand(1))
+            return sufficient(operand(0), project) or sufficient(operand(1), project)
         if name == "arith.constant":
             value = analysis.number(node)
             lo, hi = value.bounds(abi.grid_bounds)
             return hi < 0 or lo > 0
         if name != "arith.cmpi":
             return False
-        conditions = analysis.necessary_bounds(node)
+        conditions = tuple(project(value) for value in analysis.necessary_bounds(node))
         if len(conditions) != (2 if op.predicate.value.data == 0 else 1):
             return False
         return all(

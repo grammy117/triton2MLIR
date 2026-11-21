@@ -1,5 +1,11 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Packed source assembly](docs/source_assembly.md#full-width-packed-register-programs)
+reuses typed slot congruence to retain full-width packed programs as standard
+logical computation. Actual multidimensional stores now have a checked flat
+projection. Kernel/model host and serial qualification retain every result;
+subword packing, source-layout coupling and broader effects remain active work.
+
 [Checked memory continuation](docs/checked_memory_continuation.md) extends the
 structured path with independently verified source and existing isolated memory
 events when native pointer/control conversion fails. Selected roots, while

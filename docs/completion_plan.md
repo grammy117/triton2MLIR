@@ -229,10 +229,21 @@ passes:
    next close packed assembly register groups, broader numeric/effect forms
    and remaining runtime/public-stage admission. Descriptor origins already
    have a checked allocation-wrapper route; general mixed-type projections stay open.
+   Full-width packed assembly now has the shared slot-independence abstraction
+   and a checked multidimensional-to-flat store projection. The retained
+   `packed-byte-frontier` probe verifies the original i8 source but still refuses
+   conversion. Execute that upstream subword fixture with actual register
+   pack/unpack semantics; retain cross-slot/source-layout and asynchronous/
+   external effect requirements.
 5. Carry these same forms through runtime shapes/scalars, complete PyTorch
    packages and staged target materialization. Generic transport belongs in
    Merlin; target mapping and implementations belong to the selected OOT provider.
    Verify complete results/effects, source correspondence and useful structure.
+   Prioritize the reproduced `public-stage-frontier`: the dedicated TTIR stage
+   executes, but generic `load_compile_inputs` rejects its member roster. Extend
+   the shared stage loader and public preparation with the real TTIR profiles,
+   typed dynamic/effect signatures and explicit source numeric admission; do not
+   relabel receipts or hide that gap behind the already working native adapter.
 6. Reopen the complete ledger and corpus against committed producers. Every
    valid supported form needs all applicable gates below. Any missing family,
    refused valid kernel or unqualified consumer/target keeps the full goal open.

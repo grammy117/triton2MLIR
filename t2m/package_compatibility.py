@@ -190,6 +190,17 @@ def kernel_representation_differences(trace, *, dynamic=False):
     transformations = trace.get("transformations", [])
     if any(record.get("kind") == "source-assembly-implementation" for record in transformations):
         differences.append("explicit optional source-assembly providers decode complete pure snippets into closed standard scalar arithmetic/math DAGs, lifted through parallel Linalg for tensor values; exact source strings/constraints, source IDs, provider distribution/file identities and specification contracts remain in provenance; physical instruction selection, opaque assembly and runtime provider calls are absent from the emitted payload; public tensor/scalar ABI and receipts are unchanged; source equivalence is limited to the named provider contract and qualified cases, with unsupported effects, packing and instructions remaining refused")
+    if any(record.get("kind") == "source-assembly-implementation" and record.get("packing_proof")
+           for record in transformations):
+        differences.append(
+            "full-width packed source assembly uses its complete decoded scalar register "
+            "program before the shared typed slot-independence proof; only congruent "
+            "slot-local functions become parallel logical element computation; original "
+            "pack, source IDs, register ordering and proof remain in emitted provenance; "
+            "no register-to-coordinate adjacency is inferred; subword register packing, "
+            "coupled/asymmetric outputs and effects retain their separate contracts; "
+            "public ABI and receipt schemas remain unchanged"
+        )
     if any(record.get("kind") == "ttir-elementwise-map" and record.get("packing_proof", {}).get("grouping") == "independent-of-register-layout"
            for record in transformations):
         differences.append("packed scalar arithmetic and structured control are exposed as parallel logical element computation only after typed SSA establishes identical slot-local functions independent of register grouping; lexical binders, conditions, carried/result order, captured producers and complete region bodies remain executable; original pack size, congruence evidence and equivalent source locations remain in provenance; no physical lane/register layout, new public ABI or caller proof annotation is assumed; coupled/asymmetric slots, packed memory and unretained control execution/termination require their own grouping/effect contracts")

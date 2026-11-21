@@ -39,7 +39,7 @@ def _attribute_key(value):
     return value
 
 
-def _independent_packing(source, end, pack, refuse, source_ids):
+def _independent_packing(source, end, pack, refuse, source_ids, *, family="packed elementwise maps"):
     """Certify slot-local congruent computations without choosing a register layout.
 
     Intern typed SSA terms, separately retaining their actual slot dependency.
@@ -80,7 +80,7 @@ def _independent_packing(source, end, pack, refuse, source_ids):
         pure = control or is_side_effect_free(child) or isinstance(child, arith.ExtSIOp)
         if (not control and (child.regions or not pure
                 or opcode(child).split(".")[0] not in ("arith", "math") and not terminal)):
-            refuse("packed elementwise maps need an explicit logical grouping contract unless pure scalar computation proves slot independence", child)
+            refuse(f"{family} need an explicit logical grouping contract unless pure scalar computation proves slot independence", child)
         captures = set()
         operands = []
         for value in child.operands:
@@ -133,7 +133,7 @@ def _independent_packing(source, end, pack, refuse, source_ids):
         for slot, value in enumerate(values):
             term(value)
             if dependencies[value] not in (None, slot) or terms[value] != terms[values[0]]:
-                refuse("packed elementwise maps need an explicit logical grouping contract: output slots are coupled or compute different scalar functions")
+                refuse(f"{family} need an explicit logical grouping contract: output slots are coupled or compute different scalar functions")
 
     # Retain only the representative outputs' dependency closure. Pure dead
     # arithmetic (including unused divisions) must not become speculative

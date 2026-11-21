@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Packed source assembly](docs/source_assembly.md#full-width-packed-register-programs)
+now exposes proved independent i32/i64 register programs as parallel logical
+computation, retaining original packs, loops and rank-two tiles. Twelve kernel
+libraries and two complete PyTorch models execute through Merlin and serial
+images. Subword packing, cross-slot effects and general coverage remain open.
+
 [Checked memory continuation](docs/checked_memory_continuation.md) now retains
 branch-selected roots and while-carried addresses after a recorded native
 structured-pass refusal. Symbolic widths, actual controls, tile computation,

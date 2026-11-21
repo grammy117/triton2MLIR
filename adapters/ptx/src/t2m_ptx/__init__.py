@@ -81,8 +81,8 @@ class Provider:
     api_version = 1
 
     def lower(self, request, arguments):
-        if request.pack != 1:
-            refuse("packed elements require register-group facts")
+        if type(request.pack) is not int or request.pack < 1:
+            refuse("source pack must be a positive integer")
         types = [*request.output_types, *request.input_types]
         if any(t not in (builtin.i32, builtin.i64) for t in types):
             refuse("this profile requires i32/i64 scalar interfaces")
@@ -261,6 +261,8 @@ class Provider:
         return AssemblyExpansion(operations, [values[name] for name in names], {
             "profile": "ptx-integer-v1", "source_language": "PTX", "specification": SPECIFICATION,
             "specification_version": "8.7", "word_arithmetic": "modular-without-saturation",
+            "source_pack": request.pack,
+            "packing": "full-width scalar registers; operand-major then packed-slot order; grouping proved by caller",
             "shift_counts": "unsigned-i32-clamped-to-word-width", "instructions": instructions,
             "registers": len(registers), "effects": "none; all source instructions decoded",
             "register_constraints": "distinct logical operands under valid readonly/early-clobber source constraints"})

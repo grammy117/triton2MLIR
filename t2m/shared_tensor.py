@@ -893,6 +893,8 @@ def _functionalize(module, abi, *, serial_memory=True):
             "bounds": "all-retained-and-dropped-axis-accesses-proved"})
         return loaded
 
+    scatter_values = {}
+
     def scatter_access(op):
         if len(op.operands) not in (3, 4) or op.operands[0] not in buffers:
             raise ConversionError("scatter needs a declared logical tensor and explicit index/value/mask schema", opcode=opcode(op))
@@ -903,6 +905,20 @@ def _functionalize(module, abi, *, serial_memory=True):
                 or index.type.get_shape() != value.type.get_shape() or value.type.element_type != buffer.type.element_type
                 or mask is not None and mask.type != TensorType(builtin.i1, value.type.get_shape())):
             raise ConversionError("scatter index/value/mask types differ from the logical tensor ABI", opcode=opcode(op))
+        if len(buffer.shape) == 1 and len(index.type.get_shape()) > 1:
+            # Retain the original computation tile; only the actual transfer
+            # receives an explicit row-major tensor projection. TileFacts must
+            # independently prove its original address and mask relationships.
+            def flatten(value):
+                target = TensorType(value.type.element_type, (host_math.prod(value.type.get_shape()),))
+                projected = append(collapse(value, target), op)
+                projected.attributes.update({"prov.family": StringAttr("memory"),
+                    "prov.op": StringAttr("source_tile_store_projection")})
+                return projected.result
+            index, value = flatten(index), flatten(value)
+            if mask is not None:
+                mask = flatten(mask)
+        scatter_values[op] = value
         try:
             if all(n == 1 for n in buffer.shape):
                 return (*access(op, unit_descriptor(op, store=True), store=True), mask)
@@ -1461,7 +1477,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     if buffer.name in writes and writes[buffer.name][0] != footprint:
                         raise ConversionError("parallel local stores need one established owned tile per output")
                     writes[buffer.name] = (footprint, offsets, op)
-                value = mapping[op.operands[2 if name == "tts.scatter" else 1]]
+                value = scatter_values[op] if name == "tts.scatter" else mapping[op.operands[1]]
                 if lane_mask is not None:
                     initialization.load(buffer, tuple(off.form for off in offsets), physical,
                         source_id=next(iter(_source_ids(op.location)), None), opcode=name)
@@ -1486,6 +1502,7 @@ def _functionalize(module, abi, *, serial_memory=True):
                     value = merged.results[0]
                 if name == "tts.scatter":
                     source_scatters.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
+                        "source_tile": list(op.operands[2].type.get_shape()), "logical_write_tile": list(sizes),
                         "address": "proved-affine-dense-tile", "mask": ("exact-per-lane-select" if lane_mask is not None else
                                  "source-mask-covers-complete-clipped-tile" if len(op.operands) == 4 else "unmasked"),
                         "proof": "projected-linalg-index-and-necessary-mask-bounds.v1",
@@ -2171,6 +2188,12 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         next(iter(result.ops)).attributes["prov.source_prints"] = StringAttr(json.dumps(print_reports,sort_keys=True))
     if source_assertions:
         next(iter(result.ops)).attributes["prov.source_assertions"] = StringAttr(json.dumps(source_assertions, sort_keys=True))
+    if assembly_reports:
+        next(iter(result.ops)).attributes["prov.source_assembly_contracts"] = StringAttr(json.dumps([
+            {key: report[key] for key in (
+                "source_ids", "assembly_sha256", "constraints", "packed_elements",
+                "packing_proof", "input_types", "output_types") if key in report}
+            for report in assembly_reports], sort_keys=True))
     if barrier_reports:
         next(iter(result.ops)).attributes["prov.program_barriers"] = StringAttr(json.dumps(
             [report["contract"] for report in barrier_reports], sort_keys=True))

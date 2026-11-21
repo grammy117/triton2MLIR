@@ -1,5 +1,13 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Unsigned high products](integer_products.md) now qualify every legal TTIR
+integer width through native/host/serial execution. [Packed source assembly](source_assembly.md#full-width-packed-register-programs)
+additionally retains proved independent full-width register programs, original
+loops and rank-two tiles; twelve kernel and two complete-model libraries retain
+every result through Merlin and serial images. Full coverage remains open.
+The next reproduced boundaries are subword register packing and generic
+`load_compile_inputs`/`StagedProgram` admission, alongside the full active ledger.
+
 [Checked memory continuation](checked_memory_continuation.md) now closes the
 reproduced selected-root/while structured-pass refusal through the existing
 checked event converter. Original controls, symbolic widths and tile computation

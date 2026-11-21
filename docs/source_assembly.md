@@ -28,8 +28,8 @@ The provider interface supplies only source text/types and scalar SSA operands.
 It receives no example inputs or reference outputs. The core independently
 checks a closed, bounded, effect-free standard scalar DAG, complete typed
 results and matching tile shapes. Unknown operations, addresses, free values,
-parented operations and effects refuse. Source `pure=false` and packed forms
-need further explicit contracts. There is no provider call or assembly opcode
+parented operations and effects refuse. Source `pure=false`, subword register
+packing and cross-slot forms need further explicit contracts. There is no provider call or assembly opcode
 in executable `model.mlir`.
 
 Provider entry point, distribution/version and installed Python/metadata file
@@ -107,9 +107,125 @@ does not qualify broader instructions, effects, packing or accelerators.
 
 Semantics follow [NVIDIA PTX ISA 8.7](https://docs.nvidia.com/cuda/archive/12.8.0/parallel-thread-execution/index.html):
 integer arithmetic, comparison/selection, logic and shift sections. Input/output
-words are i32/i64 with matching `r`/`l` constraints. Pack size is one. Checked
+words are i32/i64 with matching `r`/`l` constraints. Pack size one and proved
+slot-independent full-width packs are supported. Checked
 local register declarations and SSA register updates preserve source order;
 initialized predicated writes become value selects.
+
+## Full-width packed register programs
+
+The original pinned Triton `ElementwiseInlineAsmOpConversion` supplies the
+register order: each logical input/output, then its packed elements. The core
+passes that entire scalar register interface to the selected provider. Every
+instruction, declared register and output must validate before abstraction.
+Provider version `0.2.0` extends `ptx-integer-v1` to this full-width interface;
+provider API v1 and the explicitly typed `AssemblyRequest.pack` remain.
+An older provider still refuses packed requests. Installed implementation and
+distribution hashes remain mandatory, including rechecking after decoding.
+
+The same typed SSA proof used for [packed maps](packed_maps.md) checks every
+decoded output slot. Each output must depend only on corresponding input slots
+and uniform captures, and all slots of that output must compute congruent typed
+functions. Opcode, widths, operand/result order and executable attributes remain
+part of the proof. A complete, checked representative dependency closure becomes
+parallel logical element computation. Coupled/asymmetric outputs remain in the
+coverage denominator and require actual grouping; a provenance claim cannot
+supply it. No adjacent logical-coordinate grouping is inferred.
+
+`prov.source_assembly_contracts` on the final standard function retains original
+source IDs, snippet hash, constraints, pack, logical types and the packing proof
+through native normalization and serialization. Scalar expansion nodes additionally
+carry `prov.assembly_pack` and `prov.assembly_grouping` before native rewrites.
+The original loop, tile shape, reuse and every result stay executable. Public
+tensor/scalar ABI, package and receipt schemas are unchanged. Generated
+compatibility metadata explicitly identifies the checked abstraction.
+
+Reviewed upstream source and tests at Triton
+`f797708c0626e5f9840ca5b0a98790e2c7cb09ad`:
+
+- `lib/Conversion/TritonGPUToLLVM/ElementwiseOpToLLVM.cpp`,
+  `ElementwiseInlineAsmOpConversion`, including `packOperands` and result unpacking.
+- `python/test/unit/language/test_core.py`, `test_inline_asm_packed` and
+  `test_inline_asm_packed_multiple_outputs`. Those subword fixtures remain
+  explicit next work, rather than evidence for the current full-width profile.
+- The pinned native source verifier rejects packs that do not divide the logical
+  input element count. The failed pack-sixteen/eight-element experiment remains
+  a source failure; it is not a valid refused-kernel coverage gap.
+
+### Flat writes from multidimensional computation tiles
+
+The packed i64 source exposed a separate memory composition: its `2x4` tile
+reached an unstructured store into a rank-one allocation. The tensor adapter now
+retains the computation tile and emits an explicit row-major
+`tensor.collapse_shape` only at the actual transfer. It reconstructs the original
+index/mask polynomial from structured Linalg SSA and verifies that every lane
+coefficient factors through the same linear coordinate. Source arithmetic width,
+actual Boolean predicates, bounds, initialization and parallel ownership remain
+independent requirements. Unknown/nonlinear/non-row-major relations refuse.
+
+The Boolean proof projects actual necessary bounds and separately checks mask
+sufficiency. A data-dependent partial fresh write cannot become a complete
+write by collapsing its shape. Existing upstream projected-map, pointer-axis and
+necessary-mask analyses remain authoritative; the extension proves a logical
+view relationship and introduces no memory order or hardware layout choice.
+The reviewed Meta/shared `17f0c234` source is `MaskAnalysis.cpp::parseAnd` /
+`parseCmp`, including its typed mask collapse; the pointer-axis fixture is
+`test/Conversion/TritonToStructured/addptr_reshape_broadcast.mlir`. Those passes
+remain in the pipeline. Their output alone does not establish a tensor root's
+flat transfer or complete-write proof, which the source-derived projection adds.
+
+### Qualification and next work
+
+The 32-check selection in `.scratch/packed-source-assembly2.log` passes without
+skips. It qualifies twelve i32/i64 kernel libraries with packs two/four, original
+numeric loops and all three memory profiles. Libraries retain both outputs
+across empty, scalar, ragged and changed-control invocations. Twenty-four actual
+serial images compare complete words and retain the same computation object
+between empty/ragged materialization. Coupled, asymmetric and hardware-observing
+snippets refuse with original source locations.
+
+`scripts/capture_packed_assembly_model.py` captures real PyTorch/Triton models
+with learned state, two dependent calls and an empty call. The two model tests
+check all nine original results each, unchanged parent archives/weights and two
+actual serial model images. `tests/test_linear_tile_scatter.py` independently
+checks memory projection without source assembly, including i32/i64/f32 words,
+changed runtime shapes and data-predicate refusals. The earlier packed-map,
+source/provider and PTX regression selection passes 73 cases.
+
+The independent linear-tile selection passes eight checks in
+`.scratch/linear-tile-final.log`. Sixty pre-existing masked/matrix, branch-range
+and checked-memory checks pass in `.scratch/packed-scatter-regression1.log`;
+that earlier run also records three new-test assertion failures from requiring
+a tensor projection in the standard-memory payload instead of its archived
+tensor witness. The corrected tests inspect the appropriate representation and
+execute both profiles. Earlier packed-source failures remain in
+`.scratch/packed-source-assembly1.log`: the new rank projection closes the valid
+i64 failures, while the oversized source pack is correctly a native refusal.
+
+The final combined selection passes all **40 checks without skips** in
+`.scratch/packed-source-final.log`. `out/packed-source-assembly/summary.json`
+reopens the twelve kernel, two model and six independent projection libraries:
+48 initial result arrays, 114 host replay arrays and 66 exact-word serial arrays
+across twenty-six actual images. Selected committed source hashes are recorded;
+they do not establish a complete dependency closure or accelerator/performance
+qualification.
+
+Two concrete next boundaries have retained source-backed probes:
+
+- `.scratch/packed-byte-frontier/boundary.json`: native-verified i8 pack-four
+  masked byte shifts, matching the pinned upstream fixture, still need actual
+  register pack/unpack semantics. Duplicating a narrow input as a whole register
+  would change the source and is not an admitted workaround.
+- `.scratch/public-stage-frontier/boundary.json`: an actual host-qualified
+  kernel stage refuses in Merlin's generic `load_compile_inputs` service at its
+  closed member roster. The existing dedicated TTIR consumer works; generic
+  roster/signature validation and explicit numerical-policy admission must be
+  extended before claiming `StagedProgram` integration.
+
+Subword pack/unpack, cross-slot programs, broader instructions and observable
+effects, runtime public-stage admission and applicable accelerator correctness/
+performance remain full-goal work. Native/host/serial qualification of these
+programs establishes no GPU-binary equivalence or universal kernel completion.
 
 | Source computation | Executable standard representation |
 |---|---|

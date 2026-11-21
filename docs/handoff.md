@@ -1,4 +1,16 @@
-# Review handoff — updated 2026-11-20
+# Review handoff — updated 2026-11-21
+
+Merlin's repository-layout merge remains `dd7b62801` on the existing
+`ttir-experiment-grammy`; triton2MLIR stays on `main`. [All high-product widths](integer_products.md)
+and [full-width packed assembly](source_assembly.md#full-width-packed-register-programs)
+now have native/host/serial qualification. The latter retains original loops,
+rank-two tile computation and every result of two complete PyTorch models.
+The checked flat-store projection also has independent non-assembly cases.
+Read the [current execution sequence](completion_plan.md#remaining-execution-sequence)
+and reopened `out/packed-source-assembly/summary.json` before claiming coverage.
+Next close the reproduced generic public-stage roster/signature/policy gap and
+the native-verified i8 register pack/unpack witness; all memory/effect/runtime/
+numeric and applicable target requirements remain active.
 
 [Checked memory continuation](checked_memory_continuation.md) closes three
 reproduced structured native failures without changing the public ABI: selected

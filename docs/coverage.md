@@ -19,6 +19,15 @@ The current plan starts with the reproduced root/control failures, then advances
 numeric/effect and runtime/target families alongside remaining memory work.
 See [the execution sequence](completion_plan.md#remaining-execution-sequence).
 
+[Packed source assembly](source_assembly.md#full-width-packed-register-programs)
+now uses the complete decoded register program and the existing typed
+slot-independence proof before exposing parallel logical computation. Original
+pack intent, loops, tiles and results remain. Multidimensional tiles also receive
+an independently checked flat-write projection. Subword register packing (the
+upstream i8 packed fixture), actual cross-slot grouping, source effects and
+applicable target materialization remain open; the operation-name denominator
+does not change.
+
 [Unsigned high products](integer_products.md) now qualify all six legal TTIR
 integer widths through standard arithmetic, twelve reusable Merlin libraries
 and twenty-four serial images. Narrow values use explicit source casts and
