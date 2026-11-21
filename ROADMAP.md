@@ -1,5 +1,12 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+[Checked memory continuation](docs/checked_memory_continuation.md) extends the
+structured path with independently verified source and existing isolated memory
+events when native pointer/control conversion fails. Selected roots, while
+state, dynamic tails and complete clipped writes remain tensor computation;
+complete two-call models retain learned state and all thirteen results.
+General address/view/alias, effect/numeric/source and accelerator closure remain.
+
 [Conditional runtime strides](docs/conditional_runtime_strides.md) now preserve
 selected integer/pointer offsets, nested choices, boolean steps and intermediate
 observations without flattening logical tiles or speculating arithmetic. Twelve

@@ -12,11 +12,17 @@ from dataclasses import dataclass, field
 from math import prod
 
 from xdsl.dialects.builtin import DenseIntOrFPElementsAttr, IntegerAttr, TensorType
-from xdsl.ir.affine import AffineBinaryOpExpr, AffineBinaryOpKind, AffineConstantExpr, AffineDimExpr
+from xdsl.ir.affine import (
+    AffineBinaryOpExpr,
+    AffineBinaryOpKind,
+    AffineConstantExpr,
+    AffineDimExpr,
+)
 
 from .diagnostics import ConversionError
 from .shared_indexing import Linear
-from .symbolic_layout import Polynomial as P, dense_strides, expression, recover_axes
+from .symbolic_layout import Polynomial as P
+from .symbolic_layout import dense_strides, expression, recover_axes
 
 
 def lane(axis, size):
@@ -248,3 +254,59 @@ def scatter_tile(buffer, abi, indices, mask, facts):
         if not any((last + condition.scale(-1)).bounds(abi.grid_bounds)[1] <= 0 for condition in conditions):
             raise ConversionError("scatter mask does not prove active lanes inside the declared logical axes")
     return tuple(forms), sizes, axes
+
+
+def covers_clipped_tile(buffer, abi, mask, forms, sizes, axes, facts):
+    """Prove that the actual mask is true throughout a clipped dense tile.
+
+    Geometry must come from scatter_tile. Necessary mask bounds alone do not
+    prove this converse: inspect the actual Boolean DAG and prove every needed
+    comparison from the destination's in-bounds coordinates. Unknown payload
+    predicates decline, so partial stores still need initialized prior state.
+    """
+    if mask is None:
+        return True
+    analysis = TileFacts(facts, abi.grid_bounds)
+    coordinates = tuple(lane(i, n) for i, n in enumerate(sizes))
+    assumptions = []
+    for source_axis, destination_axis in enumerate(axes):
+        point = P.affine(forms[destination_axis]) + coordinates[source_axis]
+        dimension = abi.dimension(buffer.shape[destination_axis])
+        dimension = P.affine(dimension) if isinstance(dimension, Linear) else P.constant(dimension)
+        assumptions.extend((point.scale(-1) + P.constant(-1), point + dimension.scale(-1)))
+
+    def sufficient(node):
+        analysis.tick()
+        node = analysis.normalize(node)
+        op = node.value.owner
+        name = getattr(op, "name", "")
+
+        def operand(i):
+            return Node(op.operands[i], node.coordinates, node.bindings, node.indices)
+
+        if name == "arith.andi":
+            return sufficient(operand(0)) and sufficient(operand(1))
+        if name == "arith.ori":
+            return sufficient(operand(0)) or sufficient(operand(1))
+        if name == "arith.constant":
+            value = analysis.number(node)
+            lo, hi = value.bounds(abi.grid_bounds)
+            return hi < 0 or lo > 0
+        if name != "arith.cmpi":
+            return False
+        conditions = analysis.necessary_bounds(node)
+        if len(conditions) != (2 if op.predicate.value.data == 0 else 1):
+            return False
+        return all(
+            condition.bounds(abi.grid_bounds)[1] < 0
+            or any(
+                (condition + known.scale(-1)).bounds(abi.grid_bounds)[1] <= 0
+                for known in assumptions
+            )
+            for condition in conditions
+        )
+
+    try:
+        return sufficient(Node(mask, coordinates))
+    except ConversionError:
+        return False

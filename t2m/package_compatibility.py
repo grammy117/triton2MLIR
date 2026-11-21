@@ -12,6 +12,16 @@ from .memory_contract import (
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "native-structured-memory-residual"
+           and row.get("native_stage", {}).get("stage_completed") is False
+           for row in trace.get("transformations", [])):
+        differences.append(
+            "native structured pointer/control conversion may decline before producing tensor IR; "
+            "the exact retained graph is independently native-verified before the existing checked "
+            "memory-event continuation, preserving original controls, tile computation and memory positions; "
+            "the failed stage and its exact artifacts remain recorded; bounds, initialization, ownership "
+            "and effects still require their own executable proofs; public ABI and receipt schemas are unchanged"
+        )
     if any(row.get("actual_varying_recurrence_results") for row in trace.get("memory", {}).get("source_loops", [])):
         differences.append("returned source-loop coordinates are uniform parameters only after an actual scalar dependency closure through original controls and SCF tuple edges reaches uniform by-value inputs/constants; program IDs, memory observations and unknown operations retain scoped varying coordinates instead; loop invariance and equal ranges grant no cross-program uniformity, parallel write ownership or initialization permission")
     if any(row.get("kind") == "source-branch-logical-offsets" for row in trace.get("transformations", [])):

@@ -1,5 +1,24 @@
 # Measured coverage and remaining boundaries
 
+## Active semantic boundary ledger
+
+The fifty-name inventory below is an operation denominator, not the remaining
+completion denominator. Keep these boundaries open until their full applicable
+source/type/attribute/composition and consumer requirements are established.
+
+| Boundary | Current evidence | Remaining execution work |
+| --- | --- | --- |
+| Irregular memory/control | [Checked root/while continuation](checked_memory_continuation.md), dynamic tiles, actual masks, source-width and initialization/ownership gates. | General nonlinear/loaded relations, view/alias/root projections and complete variable write images. Keep unknown relations in the denominator. |
+| Runtime interface | Reusable dynamic kernel libraries, explicit scalar/shape/grid guards, complete model bindings and execution-owned results. | Broader dynamic intermediates, public physical aliases/copyback and remaining storage/model compositions. |
+| Numeric source profiles | Existing typed cast/dot/scaled-dot, map/reduce/scan, math/RNG and selected exact-word policies. | Qualify the remaining valid widths, attributes, packed/source-region combinations and external implementations against the source definitions. |
+| Observable effects | Existing private atomics/volatile observations, source diagnostics and synchronous program phases. | General external participants, publication and asynchronous completion/participation with executable semantics and dependency evidence. |
+| Staged materialization | Actual reusable host libraries and complete serial target images, with payload and source custody. | Applicable accelerator scheduling, materialization, correctness and separately measured performance; host/serial results supply no accelerator verdict. |
+| Coverage closure | Pinned complete TTIR definitions, original typed source inventories, product successes and located refusals. | Reopen the complete semantic/consumer ledger against committed producers. No valid refused, unknown or unmeasured family counts as complete. |
+
+The current plan starts with the reproduced root/control failures, then advances
+numeric/effect and runtime/target families alongside remaining memory work.
+See [the execution sequence](completion_plan.md#remaining-execution-sequence).
+
 [Conditional runtime strides](conditional_runtime_strides.md) qualify twelve
 kernel libraries and six complete two-call models, with ninety initial, 366
 replay and 180 exact-word serial results across thirty-six actual images, plus

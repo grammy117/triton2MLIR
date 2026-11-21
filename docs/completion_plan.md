@@ -216,6 +216,11 @@ passes:
    while-carried address state, then dynamic root/view/alias projections and
    variable-step initialization/write images. Preserve successful tensor tiles,
    actual control, masks, reuse and width checks through every extension.
+   The first three selected-root/while witnesses now have
+   [checked continuation qualification](checked_memory_continuation.md), including
+   symbolic kernels and complete dependent-call models. General relations,
+   projections, aliases and write images remain open; continue the other families
+   rather than counting this selection as their closure.
 4. Advance numeric/effect families alongside memory: remaining packed/read map
    forms and contractions, actual external implementations, publication and
    asynchronous completion/participation. Give required behavior executable

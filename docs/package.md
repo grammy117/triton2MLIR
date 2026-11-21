@@ -1,5 +1,11 @@
 # Package contract and explicit model2MLIR differences
 
+[Checked memory continuation](checked_memory_continuation.md) records a failed
+native structured stage separately from its independently verified retained
+source and successful checked event continuation. Complete clipped-mask proofs
+omit only unobserved prior-value merges; unknown partial writes keep their
+initialization requirements. Public ABI and receipt schemas remain unchanged.
+
 [Merlin repository-layout integration](repository_layout.md) moves consumer
 imports and source rosters to `merlin.compiler.*` and `runtime.backends.baremetal`.
 Package schemas and source-bound tensor/effect/result semantics are unchanged.

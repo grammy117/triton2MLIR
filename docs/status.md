@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+[Checked memory continuation](checked_memory_continuation.md) now closes the
+reproduced selected-root/while structured-pass refusal through the existing
+checked event converter. Original controls, symbolic widths and tile computation
+remain; complete clipped masks need no invented prior values. Reusable kernel
+and full model libraries reach host and serial execution with every result.
+General address/view/alias, effect/numeric/source and accelerator closure remain.
+
 [Conditional runtime strides](conditional_runtime_strides.md) now retain six
 selected-progress forms as tensor computation, including nested pointer choices,
 boolean steps, preloaded reuse and reads after updates. Twelve kernel libraries

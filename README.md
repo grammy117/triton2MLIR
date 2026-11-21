@@ -1,5 +1,11 @@
 # triton2MLIR
 
+[Checked memory continuation](docs/checked_memory_continuation.md) now retains
+branch-selected roots and while-carried addresses after a recorded native
+structured-pass refusal. Symbolic widths, actual controls, tile computation,
+complete clipped writes and every kernel/model result reach the same Merlin
+interface. General memory/effect/numeric/target closure remains active.
+
 [Conditional runtime strides](docs/conditional_runtime_strides.md) now retain
 actual scalar/pointer/nested choices, boolean steps, preloaded reuse and reads
 after updates as tensor computation. Twelve kernel libraries and six complete

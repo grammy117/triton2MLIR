@@ -933,6 +933,10 @@ def _functionalize(module, abi, *, serial_memory=True):
             offsets.append(Coordinate(form, offset))
             physical.append(extent)
         active = tuple(physical[axis] for axis in axes)
+        from .scatter_facts import covers_clipped_tile
+
+        if mask is not None and covers_clipped_tile(buffer, abi, mask, forms, sizes, axes, facts):
+            mask = None  # Every inserted element is actually written; no prior value is observed.
         return buffer, sizes, tuple(offsets), active, axes, mask
 
     def additive_state_bounds(source, position, domain):
@@ -1482,9 +1486,11 @@ def _functionalize(module, abi, *, serial_memory=True):
                     value = merged.results[0]
                 if name == "tts.scatter":
                     source_scatters.append({"source_ids": _source_ids(op.location), "buffer": buffer.name,
-                        "address": "proved-affine-dense-tile", "mask": "exact-per-lane-select" if lane_mask is not None else "unmasked",
+                        "address": "proved-affine-dense-tile", "mask": ("exact-per-lane-select" if lane_mask is not None else
+                                 "source-mask-covers-complete-clipped-tile" if len(op.operands) == 4 else "unmasked"),
                         "proof": "projected-linalg-index-and-necessary-mask-bounds.v1",
-                        "inactive_values": "preserved-initialized-state", "write_independence": "separately-proved-owned-tile"})
+                        "inactive_values": ("preserved-initialized-state" if lane_mask is not None else "outside-inserted-slice"),
+                        "write_independence": "separately-proved-owned-tile"})
                 if active != sizes:
                     value = append(slice_op(value, [Coordinate(Linear()) for _ in sizes], active), op).result
                 value = transpose(value, inverse_permutation(axes), op)
@@ -1941,13 +1947,35 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         return stage, events, compute_stage
 
     tensor_stage = work / "tensor-ir"
+    native_structured_failure = None
     if isolated_events:
         stage, events, compute_stage = lower_isolated_events(tensor_stage)
     else:
-        stage = lower_with_shared(middle_source, tensor_stage, optimizer=optimizer,
-            stage="source-word-tensor" if source_words else "tensor-ir-data-control" if data_control else "tensor-ir")
-    lowered = parse_shared((tensor_stage / "lowered.mlir").read_text())
-    if not source_words and any(opcode(op) in ("tt.load", "tt.store") for op in lowered.walk()):
+        stage_name = "source-word-tensor" if source_words else "tensor-ir-data-control" if data_control else "tensor-ir"
+        try:
+            stage = lower_with_shared(middle_source, tensor_stage, optimizer=optimizer, stage=stage_name)
+        except ConversionError:
+            failure_path = tensor_stage / "failure.json"
+            if source_words or not failure_path.is_file():
+                raise
+            # A pass limitation is different from invalid source. Validate the
+            # exact transformed source before the checked event continuation.
+            from .word_events import print_ir
+
+            checked_source = work / "checked-event-original.ttir"
+            checked_source.write_text(print_ir(middle_module))
+            verified = lower_with_shared(checked_source, work / "checked-event-source", optimizer=optimizer, stage="source")
+            from .upstream import _record as upstream_record
+
+            native_structured_failure = {
+                "stage_completed": False, "stage": stage_name,
+                "failure": json.loads(failure_path.read_text()), "verified_source": verified,
+                "artifacts": {name: upstream_record(tensor_stage / name)
+                    for name in ("source.ttir", "failure.json", "lowered.mlir", "stderr.log")},
+            }
+            stage = native_structured_failure
+    lowered = None if native_structured_failure else parse_shared((tensor_stage / "lowered.mlir").read_text())
+    if not source_words and (native_structured_failure or any(opcode(op) in ("tt.load", "tt.store") for op in lowered.walk())):
         # Keep the structured path whenever it actually converts the source.
         # Older native pointer passes refuse region-local addptr even when no
         # pointer escapes the branch. Reuse the established event converter on
@@ -1979,7 +2007,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
     if residual_pointer_stage is not None:
         transformations.append({"kind": "native-structured-memory-residual",
             "native_stage": residual_pointer_stage,
-            "selection": "actual-remaining-source-loads-or-stores-after-structured-conversion",
+            "selection": ("native-structured-stage-refused; transformed-source-independently-verified"
+                          if native_structured_failure else "actual-remaining-source-loads-or-stores-after-structured-conversion"),
             "continuation": "original-source-width-checked-computation; isolated-native-memory-events"})
     if native_source_print is not None:
         transformations.append({"kind": "native-verified-source-serialization", **native_source_print,

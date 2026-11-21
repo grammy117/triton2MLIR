@@ -1,5 +1,12 @@
 # Review handoff — updated 2026-11-20
 
+[Checked memory continuation](checked_memory_continuation.md) closes three
+reproduced structured native failures without changing the public ABI: selected
+roots inside loops, root-changing carried pointers and while memory progress.
+Dynamic empty/tail kernels and complete two-call models reach host and serial
+execution with all results. The contract retains failed probes, exact native
+failure/source-verification records and open full-goal requirements.
+
 [Conditional runtime strides](conditional_runtime_strides.md) now qualify six
 source forms through tensor MLIR: scalar/pointer/nested choices, preloaded reuse,
 reads after updates and boolean steps. Twelve kernel libraries and six complete
