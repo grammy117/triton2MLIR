@@ -84,6 +84,23 @@ requires its own source/parameter/state projection; its existing dedicated
 native/host/bare-metal path remains available. Neither path establishes every
 backend's support.
 
+The 35-check public staging selection passes in
+`.scratch/public-kernel-staging-final.log`. Its five compiled libraries execute
+thirteen successful changed-input invocations, retain all twenty result arrays,
+and preserve one actual source assertion abort. Thirty existing consumer/effect
+checks and the source-roster check also pass. The shared stage path additionally
+materializes actual atomic and execution-owned serial images; all three results
+compare as exact words. These separate image checks do not make the host-only
+public adapter a deployment backend.
+
+`out/public-staging/summary.json` reopens the public compilation artifacts and
+selected committed source identities. The fresh, valid bound-model failure is
+retained in `.scratch/public-bound-model-frontier/boundary.json`: receipt staging
+passes, but its generic loader lacks the model replay projection. Continue that
+source/parameter/state path before claiming complete public-model integration.
+Selected source hashes establish no full dependency closure or accelerator/
+performance qualification.
+
 Set `T2M_MERLIN_ROOT` to the merged checkout and `T2M_MERLIN_PYTHON` to an
 environment installed from it. Native MLIR and cross-tool selections remain
 explicit. Reinstall Merlin in the selected environment after the layout change;

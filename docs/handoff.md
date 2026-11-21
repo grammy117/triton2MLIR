@@ -12,6 +12,12 @@ Next implement bound-model compiler projection and immutable parameter/state
 preparation, then return to the retained i8 register-packing witness. Keep the
 broader memory/effect/runtime/numeric/target requirements open.
 
+`out/public-staging/summary.json` reopens five real public compilations,
+thirteen successful invocations, twenty complete result arrays and one actual
+assertion abort. Separate atomic/owned serial materialization passes both images
+and all three exact-word results. The real bound-model generic-load failure is
+reproduced after fresh staging in `.scratch/public-bound-model-frontier/`.
+
 Merlin's repository-layout merge remains `dd7b62801` on the existing
 `ttir-experiment-grammy`; triton2MLIR stays on `main`. [All high-product widths](integer_products.md)
 and [full-width packed assembly](source_assembly.md#full-width-packed-register-programs)
