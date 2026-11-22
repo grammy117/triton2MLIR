@@ -1,5 +1,13 @@
 # Review handoff — updated 2026-11-21
 
+The first fixed release run is retained under
+`out/v1-closure/acceptance-initial/`: 26 pass, three f16 scalar-math failures,
+then stop at the configured failure limit. Do not count the other 65 as run.
+The mismatch was signaling-NaN clamp behavior in Merlin LLVM finalization.
+The generic fix has passed all twelve scalar dtype/memory-profile cases and
+one actual permanent Merlin native min/max program. See [scalar math](scalar_math.md)
+for exact logs and the remaining whole-selection/transport scope.
+
 New user requirements keep every generic/useful computation mandatory; hardware
 and assembly observations may be limitations. Do not use the older finite-plan
 exclusion wording to drop difficult generic memory/control. The updated plan
@@ -26,12 +34,13 @@ kernel support are different claims; the latter is not established.
 The committed frontend baseline is `b579ada9675aa7d7f0f2033c5fd03568274e24c1`.
 Its narrow integer word recipe has native/host qualification recorded in
 [the source contract](source_assembly.md#narrow-integer-register-groups).
-Four local code/test files additionally contain an uncommitted packet-sharing
-extension. Native packet execution works in selected probes, but its dynamic
-recurrence currently fails Merlin's post-deallocation lifetime verifier. It is
-not release-qualified. C1 must fix that proof or retain the qualified scalar
-default with an explicit sharing/performance limitation; never bypass the gate.
-This plan-only update preserves those local edits.
+The packet-sharing experiment is preserved as
+`.scratch/deferred-word-packets-on-b579.patch` with its base/source note beside
+it. Its dynamic recurrence failed Merlin's lifetime verifier. The frontend now
+retains the qualified scalar word recipe, with explicit `packet_execution`
+provenance declaring that register sharing is not materialized. The experiment
+is not an active or release-qualified default. Generic source grouping remains
+on its existing qualified implementation; no lifetime gate is bypassed.
 
 Merlin `28e4d702f` now replays derived-model source/constant relationships and
 prepares exact immutable parameters plus explicit runtime BUFFER ports. The

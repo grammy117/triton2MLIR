@@ -55,6 +55,32 @@ other rounding/format profiles remain separate work.
 
 ## Numeric contract and independent reference
 
+The v1 acceptance run exposed a signaling-NaN difference in the selected
+Merlin Python native path: f16 clamp-NONE returned the upper rather than lower
+bound because an LLVM number-min/max intrinsic propagated a signaling NaN.
+The retained failure is `out/v1-closure/acceptance-initial/` (26 passes, three
+f16 failures; the remaining cases were not run). This is generic computation,
+not an excluded hardware instruction or a reason to relax the reference.
+
+Merlin `27d84489e95e7b8bee40a8d5f49ec7409b7b841b` on
+`ttir-experiment-grammy` adds `compiler.lower.native.number_minmax`, making the numeric-operand
+selection explicit for either NaN position, retaining the original intrinsic
+for two numeric values and leaving propagating min/max unchanged. The portable
+Triton payload remains standard min/max. The source distinction is documented
+by [MLIR arith](https://mlir.llvm.org/docs/Dialects/ArithOps/#arithmaxnumf-arithmaxnumfop)
+and [LLVM's number-min/max NaN rules](https://llvm.org/docs/LangRef.html#llvm-maxnum-intrinsic).
+All twelve dtype/memory-profile cases pass in
+`.scratch/number-minmax-all-formats.log`, with exact-rational and IEEE references,
+empty/tail domains and changed-input reuse. A separate actual Merlin scalar
+program checks both NaN operand positions and signed zeros. This does not yet
+claim a complete rerun of the 94-case release selection or qualification of
+the separately selected stock CLI transport.
+The complete frozen Merlin replay separately passes 2,600 with two prerequisite
+skips in `out/build/number-minmax-ttir-replay.log`; its current source identities
+are retained under `out/build/ttir-replay/layout-agh0fjmv/`. The new permanent
+native test passes at the 142/150 case budget. Incoming structure/dependency debt
+remains explicit; changed source lint, documentation and artifact-layout checks pass.
+
 Precise math retains nearest-even rounding and gradual-underflow semantics
 under the selected host's normal floating-point environment. Qualification
 does not grant an alternate ambient rounding/flush mode. Source `clampf`
