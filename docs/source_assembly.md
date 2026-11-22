@@ -319,7 +319,12 @@ the emitted standard MLIR requires no runtime solver or source provider.
 
 Original pack intent, actual register types, `triton.inline-asm-word-packing.v1`
 and `typed-word-bitvector-equivalence-v1` remain in the trace and function
-provenance. Original public ABI and receipt schemas stay unchanged. Generated
+provenance. `packet_execution.kind = proved-scalar-word-projection` explicitly
+records that source register sharing is not materialized by this qualified
+recipe. A packet-preserving experiment is deferred after its dynamic recurrence
+failed native lifetime checks; it is not selected by the frontend. Logical
+source grouping for ordinary maps retains its existing implementation.
+Original public ABI and receipt schemas stay unchanged. Generated
 compatibility metadata explicitly records the new transport/proof boundary.
 Provider/source equivalence retains its named specification and qualified scope;
 the word proof alone supplies no universal PTX or GPU-execution verdict.

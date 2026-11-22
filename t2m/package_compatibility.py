@@ -211,6 +211,8 @@ def kernel_representation_differences(trace, *, dynamic=False):
             "and every output a congruent slot-local function before parallel logical "
             "projection; other slots become zero only after that universal proof; "
             "original register ABI, pack, provider custody and proof remain in provenance; "
+            "packet_execution explicitly records that source register sharing is not "
+            "materialized by this scalar projection; "
             "no physical coordinate grouping is inferred, and coupled/asymmetric outputs, "
             "partial register padding, float bitcasts and effects retain their separate "
             "contracts; public tensor/scalar ABI and receipt schemas are unchanged"

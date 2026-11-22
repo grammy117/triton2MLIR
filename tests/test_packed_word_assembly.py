@@ -125,6 +125,8 @@ def compiled(request, tmp_path_factory):
     intent = json.loads(next(iter(result.module.ops)).attributes["prov.source_assembly_contracts"].data)[0]
     assert intent["register_packing"] == record["register_packing"]
     assert intent["provider_input_types"] == record["provider_input_types"]
+    assert intent["packet_execution"] == record["packet_execution"]
+    assert record["packet_execution"]["kind"] == "proved-scalar-word-projection"
     if kind[0] == "state":
         assert "scf.for" in result.mlir_text
     arrays, expected = arguments(kind)

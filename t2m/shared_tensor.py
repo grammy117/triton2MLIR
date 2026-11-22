@@ -2193,7 +2193,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             {key: report[key] for key in (
                 "source_ids", "assembly_sha256", "constraints", "packed_elements",
                 "packing_proof", "input_types", "output_types", *(
-                    ("register_packing", "provider_input_types", "provider_output_types")
+                    ("register_packing", "provider_input_types", "provider_output_types", "packet_execution")
                     if "register_packing" in report else ())) if key in report}
             for report in assembly_reports], sort_keys=True))
     if barrier_reports:

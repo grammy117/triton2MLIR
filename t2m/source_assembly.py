@@ -258,7 +258,10 @@ def expand_source_assembly(module, source_ids, *, provider, tensor_carrier="lina
         reports.append({"kind": "source-assembly-implementation", "source_ids": ids,
             "provider": identity, "assembly_sha256": hashlib.sha256(assembly.data.encode()).hexdigest(),
             "constraints": constraints.data, "packed_elements": pack, "contract": expansion.contract,
-            **({"register_packing": packing_contract} if packing_contract is not None else {}),
+            **({"register_packing": packing_contract,
+                "packet_execution": {"kind": "proved-scalar-word-projection",
+                    "packet_sharing": "source register sharing is not materialized; scalar/tensor computation remains executable"}}
+               if packing_contract is not None else {}),
             **({"packing_proof": packing_proof,
                 "provider_input_types": [str(type_) for type_ in register_inputs],
                 "provider_output_types": [str(type_) for type_ in register_outputs]} if packing_proof else {}),
