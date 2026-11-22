@@ -1,0 +1,398 @@
+{
+  "allowed_exclusions": [
+    "source assembly without qualified implementation",
+    "physical device observations or post-layout GPU operations",
+    "external behavior without a supplied semantic/execution contract"
+  ],
+  "closure_status": "open",
+  "consumer": "public Merlin StagedProgram kernel and bound-model input, whole-body host execution",
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "final_evidence": [
+    "verified original source and full disposition",
+    "actual typed standard payload and source correspondence",
+    "ABI/scalar/shape/storage/effect checks",
+    "compiler-only public staging",
+    "complete independent result/effect comparison and changed-input replay",
+    "useful structure or disclosed generic fallback",
+    "bounded serial smoke and artifact-only publication"
+  ],
+  "generic_computation": "mandatory; broaden standard MLIR instead of excluding a difficult generic form",
+  "generic_exclusion_allowed": false,
+  "groups": {
+    "assembly": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "source_assembly.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Assembly is optional. Refuse absent semantics with source location; a selected provider must emit qualified executable computation and explicit effects."
+    },
+    "atomics": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "atomic_memory.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Retain old/final values, collisions and declared scope/order; generic atomics need executable effects. External participants/publication require an execution contract."
+    },
+    "casts": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "float_casts.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Implement defined storage and arithmetic formats with source rounding/overflow/NaN rules; retain exact bits for transport."
+    },
+    "combiners": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "reductions.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Preserve the actual combiner, captures, tuple/result order, initialization and permitted arithmetic order; no invented neutral value."
+    },
+    "contractions": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "dot_precision.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Keep original C, contraction tiles, K reuse, scaling/packing and named numeric policy; use standard software expansions where needed."
+    },
+    "descriptors": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "external_descriptors.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Expand logical descriptor fields to checked loads/stores/reductions; retain tiling and declared root/stride/padding. Physical descriptor bytes are separate."
+    },
+    "diagnostics": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "effect_abi.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Retain complete strings/values, source placement, termination and observable streams under the declared logical profile."
+    },
+    "external": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "external_math.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Implement the generic call with an actual typed function definition/provider. Missing symbol semantics need user implementation; a name is not an arithmetic definition."
+    },
+    "functions": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "model_integration.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Preserve helper calls/returns and complete public value/effect ABI; use standard func/CF where inlining is unsuitable."
+    },
+    "gather": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "scalar_tile_reads.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Use checked tensor extraction for logical queries, retaining loaded-value snapshots and masks."
+    },
+    "histogram": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "numeric_regions.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Implement generic indexed count state and exact masks with the source integer semantics."
+    },
+    "logical-domain": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "dynamic_shapes.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Preserve the logical grid, runtime dimensions and source-width index arithmetic independently of device mapping."
+    },
+    "logical-memory": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "checked_memory_continuation.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Use structured tensors or guarded logical roots/offsets/SSA; masks, fill, initialization and ordered effects remain executable. Physical address escapes need a backend contract."
+    },
+    "maps": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "packed_maps.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Retain complete generic regions and valid source groups, captured reads and control. A hardware layout proof is not needed for independent logical slots."
+    },
+    "scalar-numeric": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "scalar_math.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Preserve typed value semantics, precision and widths with executable standard arithmetic or qualified software implementation."
+    },
+    "tile-shapes": {
+      "audit": "pending-final-source-and-consumer-evidence",
+      "contract": "tensor_regions.md",
+      "generic_gaps": "release-blockers",
+      "requirement": "Preserve logical coordinates, storage words and all control/region compositions; layouts do not grant physical aliases."
+    }
+  },
+  "limitations": "limitations.md",
+  "operations": {
+    "tt.addptr": {
+      "definition": "TritonOps.td:193",
+      "family": "logical-memory",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.advance": {
+      "definition": "TritonOps.td:208",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.assert": {
+      "definition": "TritonOps.td:987",
+      "family": "diagnostics",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.atomic_cas": {
+      "definition": "TritonOps.td:386",
+      "family": "atomics",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.atomic_rmw": {
+      "definition": "TritonOps.td:350",
+      "family": "atomics",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.bitcast": {
+      "definition": "TritonOps.td:67",
+      "family": "casts",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.broadcast": {
+      "definition": "TritonOps.td:491",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.call": {
+      "definition": "TritonOps.td:1083",
+      "family": "functions",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.cat": {
+      "definition": "TritonOps.td:514",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.clampf": {
+      "definition": "TritonOps.td:111",
+      "family": "scalar-numeric",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.descriptor_gather": {
+      "definition": "TritonOps.td:1360",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.descriptor_load": {
+      "definition": "TritonOps.td:1291",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.descriptor_reduce": {
+      "definition": "TritonOps.td:1339",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.descriptor_scatter": {
+      "definition": "TritonOps.td:1386",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.descriptor_store": {
+      "definition": "TritonOps.td:1319",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.dot": {
+      "definition": "TritonOps.td:658",
+      "family": "contractions",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.dot_scaled": {
+      "definition": "TritonOps.td:700",
+      "family": "contractions",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.elementwise_inline_asm": {
+      "definition": "TritonOps.td:880",
+      "family": "assembly",
+      "requirement": "optional-source-language-provider"
+    },
+    "tt.expand_dims": {
+      "definition": "TritonOps.td:451",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.extern_elementwise": {
+      "definition": "TritonOps.td:827",
+      "family": "external",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.fp_to_fp": {
+      "definition": "TritonOps.td:81",
+      "family": "casts",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.func": {
+      "definition": "TritonOps.td:1161",
+      "family": "functions",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.gather": {
+      "definition": "TritonOps.td:931",
+      "family": "gather",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.get_num_programs": {
+      "definition": "TritonOps.td:636",
+      "family": "logical-domain",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.get_program_id": {
+      "definition": "TritonOps.td:616",
+      "family": "logical-domain",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.histogram": {
+      "definition": "TritonOps.td:907",
+      "family": "histogram",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.int_to_ptr": {
+      "definition": "TritonOps.td:40",
+      "family": "logical-memory",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.join": {
+      "definition": "TritonOps.td:526",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.load": {
+      "definition": "TritonOps.td:226",
+      "family": "logical-memory",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.make_range": {
+      "definition": "TritonOps.td:854",
+      "family": "logical-domain",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.make_tensor_descriptor": {
+      "definition": "TritonOps.td:1043",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.make_tensor_ptr": {
+      "definition": "TritonOps.td:1000",
+      "family": "descriptors",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.map_elementwise": {
+      "definition": "TritonOps.td:806",
+      "family": "maps",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.map_elementwise.return": {
+      "definition": "TritonOps.td:817",
+      "family": "maps",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.mulhiui": {
+      "definition": "TritonOps.td:174",
+      "family": "scalar-numeric",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.precise_divf": {
+      "definition": "TritonOps.td:158",
+      "family": "scalar-numeric",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.precise_sqrt": {
+      "definition": "TritonOps.td:142",
+      "family": "scalar-numeric",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.print": {
+      "definition": "TritonOps.td:966",
+      "family": "diagnostics",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.ptr_to_int": {
+      "definition": "TritonOps.td:53",
+      "family": "logical-memory",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.reduce": {
+      "definition": "TritonOps.td:741",
+      "family": "combiners",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.reduce.return": {
+      "definition": "TritonOps.td:764",
+      "family": "combiners",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.reshape": {
+      "definition": "TritonOps.td:466",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.return": {
+      "definition": "TritonOps.td:1262",
+      "family": "functions",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.scan": {
+      "definition": "TritonOps.td:774",
+      "family": "combiners",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.scan.return": {
+      "definition": "TritonOps.td:796",
+      "family": "combiners",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.splat": {
+      "definition": "TritonOps.td:427",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.split": {
+      "definition": "TritonOps.td:546",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.store": {
+      "definition": "TritonOps.td:301",
+      "family": "logical-memory",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.trans": {
+      "definition": "TritonOps.td:566",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    },
+    "tt.unsplat": {
+      "definition": "TritonOps.td:441",
+      "family": "tile-shapes",
+      "requirement": "mandatory-generic-computation"
+    }
+  },
+  "purpose": "Release obligations and evidence ledger; never a production kernel/op allowlist or a coverage proof.",
+  "required_demo": "ordinary PyTorch transformer block followed by automatically integrated full Triton transformer block",
+  "schema": "t2m.release-policy.v1",
+  "supporting_dialects": {
+    "generic_computation": "mandatory within verified pre-layout source; unknown or unimplemented valid generic forms remain gaps",
+    "note": "Dialect membership alone grants no operation/type/attribute/effect admission. Use the existing structural verifier and source/effect accounting.",
+    "portable_payload": [
+      "builtin",
+      "func",
+      "linalg",
+      "tensor",
+      "scf",
+      "arith",
+      "math",
+      "cf",
+      "memref",
+      "ub"
+    ]
+  }
+}

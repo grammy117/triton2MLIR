@@ -2,6 +2,13 @@
 
 ## Active semantic boundary ledger
 
+The [v1 policy](v1_policy.json) records all 50 pinned definitions, with all 49
+generic operations mandatory and assembly optional. Its final semantic audit
+is open. The [fixed acceptance roster](../tests/data/v1_acceptance.json) collects
+94 cases and freezes fixture hashes; collection is not execution evidence.
+The [two-transformer workflow](transformer_demo.md) has independent native and
+public host evidence, including ragged and artifact-only publication checks.
+
 The [finite v1 plan](completion_plan.md) governs release closure. The fifty-name
 inventory is an operation denominator; portable support, contract-dependent
 support, qualified fallbacks and explicit exclusions have separate counters.

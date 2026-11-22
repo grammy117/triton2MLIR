@@ -157,11 +157,17 @@ is the proposed implementation ceiling.** Each package ends in a reviewable
 commit, updated dispositions and exact evidence. Do not start a sixth package
 by finding another interesting variant.
 
-Planned authored deliverables are `docs/v1_policy.json` (profile/route rules),
-`tests/data/v1_acceptance.json` (exact case and invocation roster) and
-`scripts/check_v1_closure.py` (the release gate). Generated run records belong
-under `out/v1-closure/<run>/`, including `summary.json`. These files are C0/C4
-implementation work, not artifacts already supplied by this planning update.
+The [authored policy ledger](v1_policy.json) now partitions all 50 definitions:
+49 mandatory generic operations and one optional source-assembly operation.
+Its semantic audit remains open; this is not a production allowlist.
+The [frozen acceptance manifest](../tests/data/v1_acceptance.json) names 94
+collected cases across K1-K12, M1-M7, negative boundaries and serial smoke,
+including hashes of its 26 fixture source files. The complete selection has
+not yet been executed. Existing broader regressions remain required.
+
+`scripts/check_v1_closure.py` remains planned C4 work. Generated run records
+belong under `out/v1-closure/<run>/`, including `summary.json`. Do not infer a
+release pass from either manifest, collected tests or operation-name counts.
 
 | Package | Ceiling | Concrete output and exit |
 | --- | --- | --- |

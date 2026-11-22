@@ -1,0 +1,292 @@
+{
+  "case_count": 94,
+  "cases": [
+    "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[tensor]",
+    "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[buffer]",
+    "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[minimal-grid-False]",
+    "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[minimal-grid-True]",
+    "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[surplus-grid-False]",
+    "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[surplus-grid-True]",
+    "tests/test_shared_tensor.py::test_k_loop_memory_and_accumulator_recurrence_are_retained",
+    "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[tensor]",
+    "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[buffer]",
+    "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[guarded-buffer]",
+    "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-0]",
+    "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-1]",
+    "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-0]",
+    "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-1]",
+    "tests/test_indexed_gather.py::test_indexed_gather_has_working_merlin_consumer_with_unchanged_reference",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled0]",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled1]",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled2]",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled3]",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled4]",
+    "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled5]",
+    "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[False]",
+    "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[True]",
+    "tests/test_cfg_model.py::test_complete_learned_model_retains_original_cfg_and_all_four_results",
+    "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[f32]",
+    "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[bf16]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-tensor]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-guarded-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-tensor]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-guarded-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-tensor]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-guarded-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-tensor]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-buffer]",
+    "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-guarded-buffer]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-tensor]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-buffer]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-guarded-buffer]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-tensor]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-buffer]",
+    "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-guarded-buffer]",
+    "tests/test_grouped_maps.py::test_source_grouped_coupled_branches_and_while_state_keep_full_execution",
+    "tests/test_source_assembly.py::test_default_intake_still_refuses_undeclared_source_semantics",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-i32]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-i64]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-f32]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-f64]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-i32]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-i64]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-f32]",
+    "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-f64]",
+    "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[tensor]",
+    "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[buffer]",
+    "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[guarded-buffer]",
+    "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[owned]",
+    "tests/test_public_kernel_staging.py::test_rehashed_compiler_projection_cannot_replace_source_abi_or_policy[owned-extra]",
+    "tests/test_public_kernel_staging.py::test_rehashed_compiler_projection_cannot_replace_source_abi_or_policy[owned-program]",
+    "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[atomic]",
+    "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[effect]",
+    "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[exact-tiles]",
+    "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[ragged-tiles]",
+    "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[block-pointers]",
+    "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[tensor-descriptors]",
+    "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[tensor]",
+    "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[buffer]",
+    "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[guarded-buffer]",
+    "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[2]",
+    "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[13]",
+    "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[31]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[tensor-observe]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[tensor-matmul]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[buffer-observe]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[buffer-matmul]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[guarded-buffer-observe]",
+    "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[guarded-buffer-matmul]",
+    "tests/test_volatile_models.py::test_complete_model_retains_every_snapshot_parameter_and_volatile_result[i64]",
+    "tests/test_volatile_models.py::test_complete_model_retains_every_snapshot_parameter_and_volatile_result[f32]",
+    "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[positive]",
+    "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[wrapper-math]",
+    "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[two-launches]",
+    "tests/test_automatic_transformer.py::test_ragged_transformer_blocks_automatically_bind_and_execute_all_results",
+    "tests/test_indexed_gather.py::test_active_out_of_bounds_index_fails_before_extract[False--1]",
+    "tests/test_indexed_gather.py::test_active_out_of_bounds_index_fails_before_extract[True-15]",
+    "tests/test_runtime_state_loops.py::test_positive_trip_count_does_not_initialize_an_unexecuted_branch[tensor]",
+    "tests/test_runtime_state_loops.py::test_positive_trip_count_does_not_initialize_an_unexecuted_branch[buffer]",
+    "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[scalars]",
+    "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[names]",
+    "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[identity]",
+    "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[missing]",
+    "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[ambiguous]",
+    "tests/test_compact_model_target.py::test_actual_model_package_preserves_all_original_results_on_target"
+  ],
+  "closure_authority": "passing this selection alone is not generic semantic/type/attribute closure; final policy/source/consumer audit is required",
+  "fixture_sources": {
+    "tests/test_allocation_word_model.py": "fb1fb7caa40844be37d00b1a241db0acb59cfa7e5d105f6dcb2d457906b72eaf",
+    "tests/test_atomic_volatile.py": "24a249caed179b40661be81d31451be91b4fd9c2356925c7796f5282f83bb3c7",
+    "tests/test_attention.py": "ee23328c3bcf6829ef1655dd7594c84afee7115b9cbe12d6a5bc4705fbb3be37",
+    "tests/test_automatic_transformer.py": "8ecdf24c0d7ee84a649e66757ebda8fb33f7fe49a17d52f97ba26b814d61c61a",
+    "tests/test_cfg_model.py": "fb63f41d9dfb8052da0851fcbf34ed623cc1a50ea38df2e167408442f8fdfa64",
+    "tests/test_compact_model_driver.py": "b5e51e6a5235f5c2eadf19b9adb723b4caf3b6fc9cf3a4e391402c098abe202c",
+    "tests/test_compact_model_target.py": "0b57f60569327624afb1cdcc9095ff36645b99432fca332d9520be597949c17c",
+    "tests/test_dynamic_shapes.py": "e7b65d9ae87a89e17d4c5161264c3fc71b912845d446722c58aa4a52ac833297",
+    "tests/test_external_descriptors.py": "9db09209081d62e66b3168ded9ceb7bd95bb1dbb8d33e73ac62c2e03df5e6eec",
+    "tests/test_external_math.py": "fb3bf8e1ce27d31f303a02c98ec9e3d88223c81ee959017d6e55de4bef43d9b1",
+    "tests/test_grouped_maps.py": "6f1a838e29f8ad42b0b005fa337fef92d7a08521d19657df9efec01cd0335dde",
+    "tests/test_indexed_gather.py": "92c30e36dee8f1b3361982ec63bc2cf699746e2b3f54b5ada321ba7891786992",
+    "tests/test_lifted_bfloat_models.py": "0a1dd21d661ab8283a28438111cac89eb2afde022464e43cdad21044c1a80735",
+    "tests/test_mixed_effects.py": "c34d88c685942564449254b3eb66ba2addef5dbee61b1e5e068c1daa1b69d649",
+    "tests/test_model_binding.py": "c2163be584378f1d824e2a022039312057edd69313d717daa8de643b368049ff",
+    "tests/test_model_bundle.py": "c326fdb6038c2a94b37f0b475f850f4f170d75b6abd983703f7d4fb2c1cdb5ce",
+    "tests/test_public_kernel_staging.py": "6477fa78c0e0f53aab4682115b86c111b8a8b8a79e9c5bb97962769b769288f1",
+    "tests/test_ragged_tiles.py": "6ab29a69e72a4cb46c4b0eb0e7a0816f3ece9928470f9cc9fa083357424e8adf",
+    "tests/test_runtime_headers.py": "db92ab1828f105a3eb11df605cfe848e983a774a4fed2cb1a08abfa3628346e4",
+    "tests/test_runtime_state_loops.py": "1881de6d8ee9c5a6ac0c3db35be5d59b7677bef35249a8a79ce7eeec57cdbda8",
+    "tests/test_scalar_math.py": "e99d2f684cf43f705a76bbc7f4e96d8fcc52ce156c671c417c9f312c943cb1fe",
+    "tests/test_scans.py": "024d14f42dc2f9d818550e358c5bad8a4868df87a043eeaee6e802aff5e20e96",
+    "tests/test_shared_tensor.py": "5bafeee3ff3463c41d79f6b64ab76c45d409b5b7990843cb2e8315361a20acfe",
+    "tests/test_source_assembly.py": "0badde00f2cae20501c771adb58511c37a275cc6f66b63fb9403d4ae96503ea6",
+    "tests/test_symbolic_model_binding.py": "6756832095c14da474bfb7bab6b9337e5cc98443a4658b1e0cb0b6cc9c8ae60b",
+    "tests/test_volatile_models.py": "3234bbfbb28bd2f01f5fcc7ca299752c8eab8e1c03cf51cf1bb1516c3d9812a7"
+  },
+  "maximum_cases": 128,
+  "producer_baseline": {
+    "merlin": "28e4d702fa1d384a4c6c66cac0ebced9ed7108c6",
+    "model2mlir": "f3f0de1ae130faebbd27bd36374d11e1e211daa2",
+    "triton2mlir": "c636c18e8f08729ab667bd6168c80f877743c708"
+  },
+  "required_results": {
+    "errors": 0,
+    "failed": 0,
+    "not_run": 0,
+    "skipped": 0
+  },
+  "resource_policy": {
+    "new_toolchain_builds": false,
+    "omp_threads": 1,
+    "openblas_threads": 1,
+    "workers": 1
+  },
+  "schema": "t2m.release-acceptance.v1",
+  "selection": "fixed collected integration/boundary tests; separate baseline regressions remain required",
+  "source_definitions": "docs/v1_policy.json",
+  "status": "frozen-selection-not-yet-executed-as-a-whole",
+  "workflows": {
+    "K1": [
+      "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[tensor]",
+      "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[buffer]"
+    ],
+    "K10": [
+      "tests/test_grouped_maps.py::test_source_grouped_coupled_branches_and_while_state_keep_full_execution",
+      "tests/test_source_assembly.py::test_default_intake_still_refuses_undeclared_source_semantics"
+    ],
+    "K11": [
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-i32]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-i64]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-f32]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[False-f64]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-i32]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-i64]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-f32]",
+      "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-f64]",
+      "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[tensor]",
+      "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[buffer]",
+      "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[guarded-buffer]"
+    ],
+    "K12": [
+      "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[owned]",
+      "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[atomic]",
+      "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[effect]"
+    ],
+    "K2": [
+      "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[minimal-grid-False]",
+      "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[minimal-grid-True]",
+      "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[surplus-grid-False]",
+      "tests/test_ragged_tiles.py::test_ragged_mnk_gemm_keeps_source_tiles_and_k_reuse[surplus-grid-True]",
+      "tests/test_shared_tensor.py::test_k_loop_memory_and_accumulator_recurrence_are_retained"
+    ],
+    "K3": [
+      "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[tensor]",
+      "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[buffer]",
+      "tests/test_attention.py::test_one_merlin_attention_library_retains_tiling_and_runtime_softmax_state[guarded-buffer]"
+    ],
+    "K4": [
+      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-0]",
+      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-1]",
+      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-0]",
+      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-1]"
+    ],
+    "K5": [
+      "tests/test_indexed_gather.py::test_indexed_gather_has_working_merlin_consumer_with_unchanged_reference",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled0]",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled1]",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled2]",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled3]",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled4]",
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled5]"
+    ],
+    "K6": [
+      "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[False]",
+      "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[True]"
+    ],
+    "K7": [
+      "tests/test_cfg_model.py::test_complete_learned_model_retains_original_cfg_and_all_four_results"
+    ],
+    "K8": [
+      "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[f32]",
+      "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[bf16]"
+    ],
+    "K9": [
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-tensor]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-guarded-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-tensor]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[bf16-guarded-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-tensor]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f32-guarded-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-tensor]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-buffer]",
+      "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f64-guarded-buffer]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-tensor]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-buffer]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-guarded-buffer]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-tensor]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-buffer]",
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-guarded-buffer]"
+    ],
+    "M1": [
+      "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[exact-tiles]",
+      "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[ragged-tiles]",
+      "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[block-pointers]",
+      "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[tensor-descriptors]"
+    ],
+    "M2": [
+      "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[tensor]",
+      "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[buffer]",
+      "tests/test_symbolic_model_binding.py::test_complete_native_results_follow_independent_input_axes_and_compiled_source_guards[guarded-buffer]"
+    ],
+    "M3": [
+      "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[2]",
+      "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[13]",
+      "tests/test_compact_model_driver.py::test_one_driver_preserves_all_results_with_execution_produced_shapes[31]"
+    ],
+    "M4": [
+      "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[False]",
+      "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[True]"
+    ],
+    "M5": [
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[tensor-observe]",
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[tensor-matmul]",
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[buffer-observe]",
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[buffer-matmul]",
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[guarded-buffer-observe]",
+      "tests/test_lifted_bfloat_models.py::test_actual_lifted_source_constants_keep_types_bytes_and_every_result[guarded-buffer-matmul]"
+    ],
+    "M6": [
+      "tests/test_volatile_models.py::test_complete_model_retains_every_snapshot_parameter_and_volatile_result[i64]",
+      "tests/test_volatile_models.py::test_complete_model_retains_every_snapshot_parameter_and_volatile_result[f32]"
+    ],
+    "M7": [
+      "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[positive]",
+      "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[wrapper-math]",
+      "tests/test_automatic_transformer.py::test_actual_launch_graph_controls_bindings_and_rejects_omitted_work[two-launches]",
+      "tests/test_automatic_transformer.py::test_ragged_transformer_blocks_automatically_bind_and_execute_all_results"
+    ],
+    "negative-contracts": [
+      "tests/test_indexed_gather.py::test_active_out_of_bounds_index_fails_before_extract[False--1]",
+      "tests/test_indexed_gather.py::test_active_out_of_bounds_index_fails_before_extract[True-15]",
+      "tests/test_runtime_state_loops.py::test_positive_trip_count_does_not_initialize_an_unexecuted_branch[tensor]",
+      "tests/test_runtime_state_loops.py::test_positive_trip_count_does_not_initialize_an_unexecuted_branch[buffer]",
+      "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[scalars]",
+      "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[names]",
+      "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[identity]",
+      "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[missing]",
+      "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[ambiguous]"
+    ],
+    "negative-publication": [
+      "tests/test_public_kernel_staging.py::test_rehashed_compiler_projection_cannot_replace_source_abi_or_policy[owned-extra]",
+      "tests/test_public_kernel_staging.py::test_rehashed_compiler_projection_cannot_replace_source_abi_or_policy[owned-program]"
+    ],
+    "serial-smoke": [
+      "tests/test_compact_model_target.py::test_actual_model_package_preserves_all_original_results_on_target"
+    ]
+  }
+}
