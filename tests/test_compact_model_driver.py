@@ -28,10 +28,11 @@ def program(selected):
     _root, _parent, _pack, package = selected
     verify_bundle(package)
     interface = json.loads((package / "consumer/interface.json").read_text())
-    assert all(name in interface["consumer_source_sha256"] for name in (
-        "src/merlin/llvmlower/owned_result_driver.py", "src/merlin/runtime/owned_result_readback.py",
-        "merlin/runtime/c/owned_result_host_main.c"))
     root = Path(os.environ["T2M_MERLIN_ROOT"])
+    assert all(interface["consumer_source_sha256"][name] == hashlib.sha256((root / name).read_bytes()).hexdigest()
+        for name in ("src/merlin/compiler/lower/options/owned_result_driver.py",
+                     "src/merlin/runtime/owned_result_readback.py",
+                     "src/merlin/runtime/native/c/owned_result_host_main.c"))
     with pytest.MonkeyPatch.context() as patch:
         patch.syspath_prepend(str(root / "src"))
         from merlin.compiler.lower.options.owned_result_driver import generate, verify
@@ -47,7 +48,7 @@ def compile_driver(program, arrays, root):
     merlin, _package, source, signature, llvm, generate, verify, _decode = program
     generated = root / "driver"
     record = generate(source, signature, arrays, generated)
-    runtime, abi = merlin / "merlin/runtime/c", merlin / "merlin/runtime/abi"
+    runtime, abi = merlin / "src/merlin/runtime/native/c", merlin / "src/merlin/runtime/native/abi"
     executable = root / "model"
     done = subprocess.run(
         [os.environ["T2M_MERLIN_CLANG"], "-std=c11", "-Wall", "-Wextra", "-O2",

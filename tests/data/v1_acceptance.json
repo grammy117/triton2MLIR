@@ -103,7 +103,7 @@
     "tests/test_attention.py": "ee23328c3bcf6829ef1655dd7594c84afee7115b9cbe12d6a5bc4705fbb3be37",
     "tests/test_automatic_transformer.py": "8ecdf24c0d7ee84a649e66757ebda8fb33f7fe49a17d52f97ba26b814d61c61a",
     "tests/test_cfg_model.py": "fb63f41d9dfb8052da0851fcbf34ed623cc1a50ea38df2e167408442f8fdfa64",
-    "tests/test_compact_model_driver.py": "b5e51e6a5235f5c2eadf19b9adb723b4caf3b6fc9cf3a4e391402c098abe202c",
+    "tests/test_compact_model_driver.py": "cf12175c386cd36fbb1a8c0ec7f70812c682739b7c6456cfc250faaf34d1139c",
     "tests/test_compact_model_target.py": "0b57f60569327624afb1cdcc9095ff36645b99432fca332d9520be597949c17c",
     "tests/test_dynamic_shapes.py": "e7b65d9ae87a89e17d4c5161264c3fc71b912845d446722c58aa4a52ac833297",
     "tests/test_external_descriptors.py": "9db09209081d62e66b3168ded9ceb7bd95bb1dbb8d33e73ac62c2e03df5e6eec",
@@ -143,6 +143,13 @@
     "openblas_threads": 1,
     "workers": 1
   },
+  "reviewed_fixture_updates": [
+    {
+      "path": "tests/test_compact_model_driver.py",
+      "previous_sha256": "b5e51e6a5235f5c2eadf19b9adb723b4caf3b6fc9cf3a4e391402c098abe202c",
+      "reason": "repository-layout source/C runtime owner migration; strengthen custody to actual hashes; exact 94-case roster unchanged"
+    }
+  ],
   "schema": "t2m.release-acceptance.v1",
   "selection": "fixed collected integration/boundary tests; separate baseline regressions remain required",
   "source_definitions": "docs/v1_policy.json",
