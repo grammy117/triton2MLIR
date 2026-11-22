@@ -2,6 +2,15 @@
 
 ## Governing v1 closure plan
 
+The final pinned-profile selection passes: 128/128 cases, no skips/failures,
+35 unchanged fixture hashes and all five release gates. Seventy-two verified
+packages and 58 standalone qualifications observe all 49 generic definitions.
+[The qualification report](docs/v1_qualification.md) and [limits](docs/limitations.md)
+are the current review handoff. The automatic two-transformer demo is retained
+under `out/two-transformer-demo-v1/`. Arbitrary-kernel/universal-composition
+support is not established. Stop the finite plan here; the history below is
+superseded wherever it calls for final acceptance or semantic evidence joins.
+
 The latest scope requires all generic/useful computation; difficult generic
 memory/control must use a broader executable representation or remain open.
 Assembly and hardware observations have explicit limitations. The required

@@ -1,3 +1,20 @@
+# Current review handoff — 2026-11-22
+
+Use [the pinned qualification report](v1_qualification.md) and
+[limitations with expected encounters/remedies](limitations.md). The final
+128-case selection passed without skips/failures, all five release gates pass,
+and all 49 generic definitions have reviewed source/package/result witnesses.
+The required automatic two-transformer demo has a verified review copy under
+`out/two-transformer-demo-v1/`. Full arbitrary-kernel/universal-composition support
+is not established. The finite plan stops at this review candidate; unused
+budget is not another implementation backlog.
+
+The historical handoff below retains prior measurements and failures. Its
+125-case roster, next atomic gap and pending semantic audit are superseded;
+do not restart those resolved work items.
+
+---
+
 # Review handoff — updated 2026-11-21
 
 The governing [completion plan](completion_plan.md#remaining-execution-sequence)

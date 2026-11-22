@@ -1,5 +1,14 @@
 # Source admission review and bounded generic closure work
 
+The final 128-case qualification and all five release gates now pass. The
+review is joined to actual source/package/result evidence for all 49 generic
+definitions in 72 verified packages and 58 standalone qualifications. See
+[the qualified scope](v1_qualification.md). Historical focused extensions retain
+their exact original revisions; a finite observation/profile join is not a
+universal source-equivalence or arbitrary-composition proof. Pending-qualification
+statements below describe the preceding checkpoint and are superseded by this
+result.
+
 The [source/profile ledger](semantic_profiles.json) reviews all fifty pinned
 definitions: forty-nine required generic operations and optional source assembly.
 It records family admission, actual caller contracts, complement rules,

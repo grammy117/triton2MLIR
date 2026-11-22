@@ -66,6 +66,16 @@ the version boundary; it does not prove arbitrary source-version equivalence.
 
 ## Evidence and limits
 
+The final frozen 128-case qualification passed without skips/failures at producer
+`460cac6` and consumer `cd2fe16bb`. Its 13-token demo is available as a verified
+byte-identical review copy under `out/two-transformer-demo-v1/`. Both outputs
+pass for original, changed and zero inputs from one artifact-only published
+library; maximum observed absolute error is about `1.32e-6`. The bound standard
+MLIR has sixteen `linalg.matmul` operations and no remaining opaque calls.
+`out/v1-closure/acceptance-128/demo-handoff.json` binds all 235 copied files.
+See [the qualification and exact limits](v1_qualification.md).
+
+
 The first 16-token run is retained under `out/two-transformer-demo-initial/`:
 native comparison plus three public-host invocations, both output matrices
 retained, maximum observed absolute error below `1.2e-6`. The original run

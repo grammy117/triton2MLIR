@@ -51,7 +51,7 @@
         "K10"
       ],
       "complement": "Unknown assembly/device observations and missing provider semantics are explicit allowed exclusions. A purity string, instruction mnemonic or provenance supplies no computation. No ISA implementation is required for generic TTIR closure.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
@@ -75,7 +75,7 @@
         "M6"
       ],
       "complement": "Packed pairs of nibbles need actual byte-storage/unpack and shared-byte effect semantics. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/atomic_memory.py",
@@ -113,7 +113,7 @@
         "M5"
       ],
       "complement": "Unknown rounding/overflow semantics require a selected implemented profile; no global default may overwrite source per-cast choices. Pointer casts require actual storage/address contracts. Public i4 tensors now use qualified unpacked canonical uint8 cells; numeric value ports use the explicit v3 storage wrapper rather than a native by-value i4 ABI. Reader type admission alone grants no arithmetic or by-value low-precision ABI.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/float_casts.py",
@@ -151,7 +151,7 @@
         "M5"
       ],
       "complement": "Native-invalid geometry/prototypes are invalid source. Unknown effects or direct pointer reads need their actual effect contract. FP8 arithmetic and unpacked i4 storage now have qualified extensions; arbitrary region/control/packing compositions remain subject to actual source checks and final qualification. A valid generic failure remains a gap.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/reductions.py",
@@ -188,7 +188,7 @@
         "M7"
       ],
       "complement": "Reserved FP6 enumerants have no pinned storage/packing semantics. Other defined type/attribute tuples still need actual admission and qualification; FP8 storage alone supplies neither a new contraction mode nor hardware arithmetic equivalence. Device tensor-core rounding/order/FTZ requires its own numeric profile. The public i4 carrier is explicitly unpacked and does not infer packed operands.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/frontend.py",
@@ -217,7 +217,7 @@
         "M1"
       ],
       "complement": "Absent external logical fields require the existing descriptor bindings. Physical descriptor bytes, opaque DMA state and post-layout im2col/device descriptors need their provider. Generic transfer/reduction forms outside current typed profiles remain open until their ordinary-memory/atomic expansion is qualified; an opaque descriptor call is not portable support.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/frontend.py",
@@ -250,7 +250,7 @@
         "M6"
       ],
       "complement": "Physical pointer printing requires an actual address contract. Device printf varargs replication/order remains outside the declared logical-element profile. Unknown effects/messages cannot disappear or be inferred from an expected stream. I4 public storage is separately qualified as unpacked canonical uint8 cells; printing grants no packed storage or native by-value ABI.",
-      "evidence_status": "source-admission-reviewed; focused low-precision public qualification passed; final whole-candidate qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/source_prints.py",
@@ -285,7 +285,7 @@
         "K9"
       ],
       "complement": "An unknown symbol, custom library path or impure declaration has missing external semantics, not permission to emit an opaque successful portable call. Source names/prototypes do not define device approximations, floating environment or external effects. Such behavior requires an actual implementation/provider or is explicitly backend-required.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/external_math.py",
@@ -315,7 +315,7 @@
         "M7"
       ],
       "complement": "Physical call boundaries, code size and register pressure may change after exposing noinline helper bodies; provenance grants no outlining or numeric/effect permission. Additional public library entries require per-entry source modules; raw pointer/descriptor value interfaces need actual logical root/offset/field contracts. Unknown effects/external implementations and source control not accepted by existing normalization remain explicit limits; numeric ports grant no missing implementation or alias permission.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
@@ -367,7 +367,7 @@
         "K5"
       ],
       "complement": "Out-of-range active indices abort under the guarded profile. Malformed shapes/axes fail the pinned verifier; the prose-only smaller non-axis shape is not native-valid. Pointer gathers need pointer-state/memory normalization. Internal i4 indices and public unpacked canonical uint8 i4 arrays have separately qualified routes; no packed-nibble mapping is inferred.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/tile_gather.py",
@@ -390,7 +390,7 @@
         "K4"
       ],
       "complement": "Invalid ranks/types/geometry fail native verification or explicit admission. Out-of-range samples contribute nothing; masked padding has no contribution. Global histogram accumulation needs the actual separate atomic/effect profile. Internal narrow widths and the public unpacked canonical uint8 i4 carrier are separately qualified; histogram results still retain their actual source width.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/histogram.py",
@@ -411,7 +411,7 @@
         "M2"
       ],
       "complement": "Missing runtime extents/bounds require bindings rather than specialization from examples. Exceeding a selected resource/analysis budget is an explicit limit. Physical lane/core/warp identities and clocks need backend semantics and are not program IDs.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/dynamic_abi.py",
@@ -447,7 +447,7 @@
         "M6"
       ],
       "complement": "Try the existing guarded source-word continuation when structured pointer recovery fails. Missing roots/layout/effect facts require bindings and executable guards; provenance is insufficient. Unimplemented valid generic address/alias/control forms remain bugs/gaps. Escaping numeric physical addresses, physical spaces and external observations need backend semantics. I4 public storage is explicitly unpacked canonical uint8 cells 0..15; paired packed nibbles and low-precision by-value scalar ABI are not inferred. Automatic BF16/FP8 integer-atomic views remain unqualified; explicit raw owning-allocation bindings are a candidate existing route, not yet measured evidence.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
@@ -491,7 +491,7 @@
         "K10"
       ],
       "complement": "Missing source register-group coordinate semantics require the existing checked source-layout specialization. Unknown effects retain effect admission. FP8 scalar/tensor body math now has the qualified native extension; arbitrary source packing and recurrence compositions still need their actual checks. Packet sharing is separate from executable scalar semantics.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/elementwise_map.py",
@@ -526,7 +526,7 @@
         "K9"
       ],
       "complement": "Source poison/undefined input domains remain distinct from missing implementations. Unknown semantic fields require their actual implementation/contract. The installed native source parser does not admit newer directed binary-rounding syntax. Hardware-specific precision/FTZ/exact-bit claims need a separately selected profile; provenance cannot replace numeric semantics.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/scalar_builtins.py",
@@ -567,7 +567,7 @@
         "M7"
       ],
       "complement": "Invalid dimensions/axes/prototypes fail native verification. Source encoding/device-layout requirements need a supported earlier IR or explicit grouping facts; no hardware placement is invented. Unknown numeric/effectful compositions use their own admission and remain gaps when valid generic computation is missing. Public i4 storage is separately qualified with canonical unpacked uint8 cells; shape transforms do not infer packed-nibble mapping.",
-      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "evidence_status": "source-admission-reviewed; final selected package/result evidence joined; unseen valid generic failures remain bugs",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
@@ -589,6 +589,19 @@
       "unresolved_generic_forms": []
     }
   },
+  "final_qualification": {
+    "acceptance_manifest_sha256": "92f240917756209d602a42988d12ba9cf949ea0a1d925287cf99e0c195b9f102",
+    "case_count": 128,
+    "consumer_commit": "cd2fe16bb61c62b929255b3a5fc4f67691b789df",
+    "generic_operation_witness_count": 49,
+    "interpretation": "Frozen final selection, actual source/ABI/execution receipts and reviewed typed profiles; focused extensions retain their separate exact source revisions. Valid generic counterexamples reopen closure.",
+    "junit_sha256": "985cbb8b108f600504834ab60e28dbe5088cf8ea625c734321aa0ac590aa67fc",
+    "package_count": 72,
+    "package_observations_sha256": "170feb58897130a20583ce9b529a6de67acfc24dfd2c18c61fbf680f9c69d998",
+    "producer_code_commit": "460cac6aa996eb0f7385f220e72f28a06f85357c",
+    "run_directory": "out/v1-closure/acceptance-128",
+    "standalone_qualification_count": 58
+  },
   "finalization": "Resolve or explicitly retain every tracked generic gap, qualify the final exact revisions/128 cases, and join actual byte-bound packages/results in semantic-audit.json. Do not translate this review into automatic passed labels.",
   "initial_admission_consumer_commit": "b77e0233f9ae3a2a0e7ee2d1aaa311c9d7cb60fd",
   "initial_admission_producer_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
@@ -597,7 +610,7 @@
       "admission": "scalar/shaped pointer plus source integer offsets; logical root units retained",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:193",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-memory",
       "semantic_fields": [],
       "source_arguments": [
@@ -617,7 +630,7 @@
       "admission": "native tensor-pointer metadata advancement; original shape/order retained",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:208",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [],
       "source_arguments": [
@@ -637,7 +650,7 @@
       "admission": "scalar or tensor i1 condition; complete message",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:987",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "diagnostics",
       "semantic_fields": [
         "message"
@@ -659,7 +672,7 @@
       "admission": "exact integer compare/select/update/old value under selected source scope/order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:386",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "atomics",
       "semantic_fields": [
         "sem",
@@ -697,7 +710,7 @@
       "admission": "actual pinned RMW enum and source word/float type with selected numeric policy",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:350",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "atomics",
       "semantic_fields": [
         "atomic_rmw_op",
@@ -741,7 +754,7 @@
       "admission": "equal numeric word widths or independently checked logical pointer view",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:67",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "casts",
       "semantic_fields": [],
       "source_arguments": [
@@ -756,7 +769,7 @@
       "admission": "native shape-compatible numeric/pointer tile broadcast",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:491",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -771,7 +784,7 @@
       "admission": "actual private typed helper; complete arguments and returned values",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1083",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "functions",
       "semantic_fields": [
         "callee",
@@ -805,7 +818,7 @@
       "admission": "native equal-rank/non-concatenated axes; source-permitted original operand order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:514",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -825,7 +838,7 @@
       "admission": "same-format floating operands/result; NONE or ALL NaN mode",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:111",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "scalar-numeric",
       "semantic_fields": [
         "propagateNan"
@@ -857,7 +870,7 @@
       "admission": "actual logical descriptor plus loaded row indices; original bounds/padding",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1360",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [],
       "source_arguments": [
@@ -882,7 +895,7 @@
       "admission": "actual logical descriptor and offsets; original block result and padding",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1291",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [
         "cache",
@@ -915,7 +928,7 @@
       "admission": "actual descriptor reducing store; existing typed numeric/effect contract",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1339",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [
         "kind"
@@ -947,7 +960,7 @@
       "admission": "actual logical descriptor plus loaded row indices and exact source tile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1386",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [],
       "source_arguments": [
@@ -977,7 +990,7 @@
       "admission": "actual descriptor, logical coordinates and complete source value tile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1319",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [],
       "source_arguments": [
@@ -1002,7 +1015,7 @@
       "admission": "native legal A/B/C/result tuple, original C and implemented logical precision profile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:658",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "contractions",
       "semantic_fields": [
         "inputPrecision",
@@ -1040,7 +1053,7 @@
       "admission": "native legal source tuple, actual scales/group sizes/packing and implemented accumulator profile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:700",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "contractions",
       "semantic_fields": [
         "a_elem_type",
@@ -1147,7 +1160,7 @@
       "admission": "native rank/axis relationship; numeric or normalized logical pointer tiles",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:451",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [
         "axis"
@@ -1169,7 +1182,7 @@
       "admission": "exact default-library typed pure prototype or supplied actual implementation",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:827",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "external",
       "semantic_fields": [
         "libname",
@@ -1209,7 +1222,7 @@
       "admission": "all eight pinned float formats with exact defined RTNE/RTZ and overflow policy",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:81",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "casts",
       "semantic_fields": [
         "rounding"
@@ -1231,7 +1244,7 @@
       "admission": "selected complete entry signature and private helper definitions",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1161",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "functions",
       "semantic_fields": [
         "sym_name",
@@ -1272,7 +1285,7 @@
       "admission": "native equal non-axis dimensions and exact axis; all six integer index widths",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:931",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "gather",
       "semantic_fields": [
         "axis",
@@ -1305,7 +1318,7 @@
       "admission": "actual logical extent on pinned axis; source i32 result",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:636",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-domain",
       "semantic_fields": [
         "axis"
@@ -1322,7 +1335,7 @@
       "admission": "unmapped logical coordinate on pinned axis; source i32 result",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:616",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-domain",
       "semantic_fields": [
         "axis"
@@ -1339,7 +1352,7 @@
       "admission": "rank-one source/counters of any TT integer width, optional matching Boolean mask",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:907",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "histogram",
       "semantic_fields": [],
       "source_arguments": [
@@ -1359,7 +1372,7 @@
       "admission": "closed original logical pointer base plus proved/checked byte displacement",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:40",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-memory",
       "semantic_fields": [],
       "source_arguments": [
@@ -1374,7 +1387,7 @@
       "admission": "native matching inputs and appended two-element axis",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:526",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -1394,7 +1407,7 @@
       "admission": "actual logical root/indices/mask/other and separately selected volatile semantics",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:226",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-memory",
       "semantic_fields": [
         "boundaryCheck",
@@ -1451,7 +1464,7 @@
       "admission": "native static source interval and exact integer source tile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:854",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-domain",
       "semantic_fields": [
         "start",
@@ -1474,7 +1487,7 @@
       "admission": "actual base, shape, strides, block shape and logical format fields",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1043",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [
         "padding"
@@ -1506,7 +1519,7 @@
       "admission": "actual base/shape/strides/offsets and block shape/order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1000",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "descriptors",
       "semantic_fields": [
         "order"
@@ -1543,7 +1556,7 @@
       "admission": "complete numeric scalar body, pack and independence or actual source grouping",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:806",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "maps",
       "semantic_fields": [
         "pack"
@@ -1565,7 +1578,7 @@
       "admission": "all exact typed map output slots in original order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:817",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "maps",
       "semantic_fields": [],
       "source_arguments": [
@@ -1580,7 +1593,7 @@
       "admission": "same-type scalar/tensor unsigned high product for all six TT integer widths",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:174",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "scalar-numeric",
       "semantic_fields": [],
       "source_arguments": [
@@ -1600,7 +1613,7 @@
       "admission": "same-format floating operands/result; standard division retains source rounding boundary",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:158",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "scalar-numeric",
       "semantic_fields": [],
       "source_arguments": [
@@ -1620,7 +1633,7 @@
       "admission": "same-format floating operand/result; standard square root retains source rounding boundary",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:142",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "scalar-numeric",
       "semantic_fields": [],
       "source_arguments": [
@@ -1635,7 +1648,7 @@
       "admission": "complete literal prefix, Boolean hex, signedness roster and source numeric values",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:966",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "diagnostics",
       "semantic_fields": [
         "prefix",
@@ -1669,7 +1682,7 @@
       "admission": "source i64 scalar/tensor logical pointer expression; no escaping physical numeric address",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:53",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-memory",
       "semantic_fields": [],
       "source_arguments": [
@@ -1684,7 +1697,7 @@
       "admission": "positive static numeric equal source tiles; valid axis and complete pure tuple combiner",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:741",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "combiners",
       "semantic_fields": [
         "axis"
@@ -1706,7 +1719,7 @@
       "admission": "all reduction tuple components retain actual format and order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:764",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "combiners",
       "semantic_fields": [],
       "source_arguments": [
@@ -1721,7 +1734,7 @@
       "admission": "same native element count and source-permitted reorder/layout facts",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:466",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [
         "allow_reorder",
@@ -1749,7 +1762,7 @@
       "admission": "complete private helper value returns; selected entry is currently void",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:1262",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "functions",
       "semantic_fields": [],
       "source_arguments": [
@@ -1764,7 +1777,7 @@
       "admission": "positive static numeric source tiles; exact axis/direction and complete tuple combiner",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:774",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "combiners",
       "semantic_fields": [
         "axis",
@@ -1792,7 +1805,7 @@
       "admission": "all scan tuple components retain actual format and order",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:796",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "combiners",
       "semantic_fields": [],
       "source_arguments": [
@@ -1807,7 +1820,7 @@
       "admission": "scalar numeric or normalized pointer value to native static source tile",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:427",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -1822,7 +1835,7 @@
       "admission": "native final two-element axis and complete ordered result pair",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:546",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -1837,7 +1850,7 @@
       "admission": "actual logical root/indices/mask/value with ownership and definite writes",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:301",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "logical-memory",
       "semantic_fields": [
         "boundaryCheck",
@@ -1881,7 +1894,7 @@
       "admission": "native permutation and exact original coordinate correspondence",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:566",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [
         "order"
@@ -1903,7 +1916,7 @@
       "admission": "native singleton scalar projection; logical pointer singleton uses pointer normalization",
       "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
       "definition": "TritonOps.td:441",
-      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "evidence_status": "final selected source/package/result evidence joined; no universal type/attribute/composition proof",
       "family": "tile-shapes",
       "semantic_fields": [],
       "source_arguments": [
@@ -2565,7 +2578,7 @@
     }
   ],
   "schema": "t2m.source-profile-review.v1",
-  "status": "source-admission-reviewed; all demonstrated gaps focused-qualified; final qualification open",
+  "status": "pinned source-profile review and final selected package/result join complete; no universal closure claim",
   "supporting_dialects": {
     "control": "Reuse official CF-to-SCF lifting and actual structured regions; no name-based pattern whitelist or source-loop unrolling.",
     "effects": "Readonly tensor snapshots remain SSA values; live memory, external participants, barriers, atomics and volatile observations need actual effect contracts.",

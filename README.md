@@ -1,30 +1,31 @@
 # triton2MLIR
 
-[Two complete transformer blocks](docs/transformer_demo.md) now run through the
-public Merlin interface: ordinary PyTorch first, a fused Triton block second.
-Actual fake launch tracing discovers the source and derives the bindings;
-there is no hand-written kernel table or replacement with the CPU reference.
-Native/public-host checks retain both outputs across changed inputs. The
-[limitations inventory](docs/limitations.md) explains hardware exclusions,
-automatic-adapter boundaries and the generic work still required for closure.
+The pinned Triton 3.7.1 frontend now has a qualified route through Merlin's public
+interface. The frozen **128 cases pass with no skips/failures**, and the release
+checker passes all five gates. The verified final selection contains 72 packages,
+58 standalone qualifications and original-source witnesses for all **49 generic
+TTIR definitions**. Optional assembly is separate. These are measured profiles,
+not universal support for arbitrary kernels/types/compositions.
 
-The [finite v1 closure plan](docs/completion_plan.md) now governs the remaining
-work: freeze the source/support profile, qualify the public Merlin interface,
-and close generic forms through checked contracts or disclosed fallbacks.
-Assembly/hardware behavior has explicit exclusions. The
-[source admission review](docs/semantic_profiles.md) now freezes five named
-generic work items with exact reproducers and per-item attempt ceilings, all
-within the original forty-hour cap. Those work items do not replace the full
-generic-computation requirement: unresolved generic forms mean incomplete
-closure. Low-precision printing and unpacked i4 storage are now qualified;
-FP8 arithmetic/accumulators now also qualify through thirteen public programs;
-[FP8 atomic addition](docs/fp8_atomics.md) now qualifies through eight public programs;
-[Entry value ports](docs/entry_values.md) also qualify nineteen public programs.
-All five original named items are implemented and focused-qualified. [Defined `noinline` helpers](docs/call_intent.md) now qualify five public programs
-and eighteen invocations, preserving the original grouping intent as provenance;
-final acceptance and semantic qualification remain open.
-The measurements below describe delivered capabilities; the release is not
-closed yet.
+[The qualification report](docs/v1_qualification.md) records exact revisions,
+contracts, fallback costs and reproduction artifacts. [Limitations](docs/limitations.md)
+explain when boundaries arise, why, and what extra information or implementation
+is needed. Valid generic failures remain bugs; difficult computation is not
+reclassified as hardware behavior.
+
+The required [two-transformer demo](docs/transformer_demo.md) runs an ordinary
+PyTorch block followed by a complete real Triton block. Actual launch tracing
+automatically discovers the kernel and derives bindings. Both outputs match on
+original/changed/zero inputs using one artifact-only Merlin library; the verified
+review copy is `out/two-transformer-demo-v1/`. It demonstrates integration and
+correctness, not GPU execution or speedup.
+
+The [finite closure plan](docs/completion_plan.md) has reached its pinned-profile
+review exit. All five original demonstrated work items and the additional
+defined-noinline-helper correction are focused-qualified. Its historical
+roadmap is not an instruction to spend the unused budget or expand the corpus.
+The capability history below retains its original measurements and broader
+unqualified ambitions.
 
 [Public Merlin staging](docs/repository_layout.md) accepts standalone
 tensor/effect packages through `StagedProgram` and `MerlinHostBackend`, retaining

@@ -1,5 +1,17 @@
 # Finite closure plan: portable TTIR to the Merlin interface
 
+**Final review exit, 2026-11-22:** the frozen 128 cases pass with no skips or
+failures, all 35 fixture hashes are unchanged, and all five release gates pass.
+The selected verified artifacts have 72 packages, 58 standalone qualifications
+and original-source witnesses for all 49 generic definitions. All demonstrated
+named gaps are resolved with retained original failures. The required automatic
+two-transformer demo has a verified review copy at `out/two-transformer-demo-v1/`.
+[The qualification report](v1_qualification.md) records revisions, evidence,
+fallback costs and limitations. This is pinned-profile qualification, not a
+universal arbitrary-kernel/composition claim. The finite plan stops at this
+review candidate. Historical pending-run/evidence instructions below are
+superseded, and unused effort is not authorization for another workstream.
+
 Updated 2026-11-22. This is the governing v1 release plan. The requested scope
 requires every generic/useful TTIR computation to have an executable lowering;
 exclusions apply to assembly, hardware observations and missing external

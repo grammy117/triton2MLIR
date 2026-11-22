@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Defined `noinline` helpers](call_intent.md) retain original Boolean grouping
+intent and body source IDs in descriptive conversion/module provenance before
+the existing upstream inliner exposes their complete computation. Generated
+compatibility metadata discloses changes to physical call boundaries, code size
+and register pressure. This supplies no missing body or numeric/effect permission;
+public ABI and receipt schemas are unchanged.
+
 [FP8 arithmetic](fp8_arithmetic.md) retains standard typed math and source
 rounding boundaries in portable MLIR. The native consumer adds f64 emulation
 with exact FP8 casts; word operations retain their original encodings. FP8

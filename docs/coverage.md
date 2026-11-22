@@ -2,6 +2,17 @@
 
 ## Active semantic boundary ledger
 
+The final pinned-profile qualification now passes all five release gates and
+all 128 cases without skips/failures. All 35 fixture files are unchanged.
+The selected byte-verified artifacts contain 72 packages, 58 standalone
+qualifications and original-source witnesses for all 49 generic definitions.
+[Exact scope and evidence](v1_qualification.md) supersede the pending-run
+statements retained below. Expected refusals, source names and finite tests do
+not establish universal type/attribute/composition coverage. The final audit
+keeps 23 selected operation witnesses on contract-dependent structured routes
+and 26 on explicit generic-memory fallbacks; these are witness-route counts,
+not a partition of every supported form or a count of portable programs.
+
 The [v1 policy](v1_policy.json) records all 50 pinned definitions, with all 49
 generic operations mandatory and assembly optional. Its final semantic audit
 is open. The [fixed acceptance roster](../tests/data/v1_acceptance.json) now
