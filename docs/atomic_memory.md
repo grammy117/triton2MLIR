@@ -780,3 +780,11 @@ check collisions without fixing lane order; every model retains weights and
 all three tuple references. Existing f32 IEEE/FTZ, f64 and integer profiles pass
 18 execution regressions. See [mixed storage](mixed_storage.md#selected-integer-atomics)
 for the consumer pin, exact evidence scope and remaining numeric/effect gates.
+
+## FP8 source-width atomic addition
+
+The typed private-invocation profile also admits FP8 `fadd` on all four pinned
+formats. Exact extension, f64 addition and one FP8 narrowing remain inside
+every standard atomic event; returned original words stay exact. Native
+integer byte-CAS helpers retain per-retry rounding and complete ownership/body
+checks. See [the numeric contract, qualification and throughput limitations](fp8_atomics.md).

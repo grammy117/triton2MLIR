@@ -12,7 +12,7 @@ from xdsl.ir import Block, Region
 
 from .diagnostics import ConversionError
 from .standard_memref import AtomicYieldOp, GenericAtomicRMWOp
-from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT, HALF_CONTRACTS, HALF_PAYLOADS
+from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT, HALF_CONTRACTS, HALF_PAYLOADS, FP8_CONTRACTS, FP8_PAYLOADS
 
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
@@ -27,6 +27,7 @@ SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bitwise-exchange",),
                    ("fadd", "f64"): (F64_CONTRACT, "ieee-f64-rne-add"), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
 FLOAT_CONTRACTS.update({("fadd", dtype): (contract,) for dtype, contract in HALF_CONTRACTS.items()})
+FLOAT_CONTRACTS.update({("fadd", dtype): (contract,) for dtype, contract in FP8_CONTRACTS.items()})
 FLOAT_WIDTHS = {"f16": 16, "bf16": 16, "f32": 32, "f64": 64,
                 "f8E4M3FN": 8, "f8E4M3FNUZ": 8, "f8E5M2": 8, "f8E5M2FNUZ": 8}
 FLOAT_CONTRACTS.update({("exch", dtype): ("bitwise-exchange",) for dtype in FLOAT_WIDTHS})
@@ -37,6 +38,8 @@ def payload(info):
         return "standard-byte-backed-word-atomic-with-original-returned-old-value"
     if info.get("numeric_contract") in HALF_CONTRACTS.values():
         return HALF_PAYLOADS[info["value_dtype"]]
+    if info.get("numeric_contract") in FP8_CONTRACTS.values():
+        return FP8_PAYLOADS[info["value_dtype"]]
     if info.get("numeric_contract") == F64_CONTRACT:
         from .atomic_float_add import F64_PAYLOAD
         return F64_PAYLOAD
@@ -247,7 +250,7 @@ def adapt_payload(module, abi, admission, source_ids):
         observed[index] += 1
         access = accesses[index]
         info = access["atomic"]
-        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add", F64_CONTRACT, *HALF_CONTRACTS.values()):
+        if info.get("numeric_contract") in (F32_ADD_CONTRACT, "ieee-f32-rne-add", F64_CONTRACT, *HALF_CONTRACTS.values(), *FP8_CONTRACTS.values()):
             from .atomic_float_add import materialize
             op = materialize(op, ftz=info["numeric_contract"] == F32_ADD_CONTRACT)
         ancestor = generic

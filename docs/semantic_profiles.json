@@ -33,7 +33,6 @@
     "valid_generic_failure": "An unimplemented defined computation or ABI/native transport remains a generic gap; try broader standard computation and retain the exact reproducer."
   },
   "confirmed_generic_gap_ids": [
-    "fp8-atomic-addition",
     "public-value-entry-binding"
   ],
   "definitions": {
@@ -64,7 +63,7 @@
       "unresolved_generic_forms": []
     },
     "atomics": {
-      "admission": "Selected private-invocation i1/i4/i8/i16/i32/i64 nine-kind RMW and CAS retain all old/final values, masks, collisions, source scope/order and source-width arithmetic. Typed exchange covers all eight pinned float formats. Named f16/BF16/f64 and IEEE/FTZ f32 additions retain each update rounding. Existing integer word/ordered-byte views preserve actual owning storage and alignment.",
+      "admission": "Selected private-invocation i1/i4/i8/i16/i32/i64 nine-kind RMW and CAS retain all old/final values, masks, collisions, source scope/order and source-width arithmetic. Typed exchange covers all eight pinned float formats. Named f16/BF16/f64, all four FP8 and IEEE/FTZ f32 additions retain each update rounding. FP8 uses exact f64 operands, one FP8 rounding per event and checked byte-CAS transport; folded wide constants retain f64. Existing integer word/ordered-byte views preserve actual owning storage and alignment.",
       "caller_contracts": [
         "effect_profile atomics or typed-atomics and actual private invocation ownership",
         "Explicit f32 addition policy; source order/scope; actual state/results",
@@ -77,16 +76,16 @@
         "M4",
         "M6"
       ],
-      "complement": "FP8 floating addition lacks an implemented named update policy. This is a generic gap. Packed pairs of nibbles need actual byte-storage/unpack and shared-byte effect semantics. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
+      "complement": "Packed pairs of nibbles need actual byte-storage/unpack and shared-byte effect semantics. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
           "path": "t2m/atomic_memory.py",
-          "sha256": "f396b1b8abafa78d002f62d3784f673127ef4616912562ac373d0a94bc925b9b"
+          "sha256": "b1a1994c1c9f7f3dbe4ed022720b374b89891a9819133e630ca02d67f6b304ab"
         },
         {
           "path": "t2m/atomic_float_add.py",
-          "sha256": "28c89f3a0aa2f20f319d6a563a7fe797196928fde91d4f7af872978660a3c60a"
+          "sha256": "6c4d39d3e13ed64651dddd1ebdd9987d385150e9a6acd60a2d187a83ff3fb5cb"
         },
         {
           "path": "t2m/atomic_word_views.py",
@@ -101,9 +100,7 @@
           "sha256": "030ed6845e3f49f10d3af2d6f6c158116e621cf7559dfb2043511e2f35b50f91"
         }
       ],
-      "unresolved_generic_forms": [
-        "fp8-atomic-addition"
-      ]
+      "unresolved_generic_forms": []
     },
     "casts": {
       "admission": "Equal-width numeric bitcasts preserve words. Floating casts retain source/destination formats, explicit RTNE/RTZ narrowing boundaries and executable overflow policy, including same-width FP8 format changes. Pointer casts remain with logical memory and actual storage units.",
@@ -275,7 +272,7 @@
         },
         {
           "path": "t2m/package_compatibility.py",
-          "sha256": "fc4a880eae7b6a5abd87fa8d9c7834df8ea480da14719fe647129ac79a2ec6d8"
+          "sha256": "c42fb50e603bb490c72b585b00bf6b915cfcbe88fe002f0e40227acea6782c74"
         }
       ],
       "unresolved_generic_forms": []
@@ -2225,6 +2222,131 @@
         "maps",
         "combiners",
         "casts"
+      ]
+    },
+    {
+      "consumer_commit": "b7a3add3fa0e0f293b632466ea2af8ffdd507ab1",
+      "consumer_sources": [
+        {
+          "path": "src/merlin/compiler/frontend/intake/kernel_atomic_evidence.py",
+          "repository": "merlin",
+          "sha256": "f820cc65db923292c0186295b0f707ac1c0034aceea5e63d6939ad701f29ecc1"
+        },
+        {
+          "path": "src/merlin/compiler/lower/native/pipeline.py",
+          "repository": "merlin",
+          "sha256": "f28b868824a405aa843ed5dbc506445bc70c0ba42da7df029bab0242367b3ee4"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/atomic_compare_exchange.py",
+          "repository": "merlin",
+          "sha256": "bedaed68f4ddaa23c3c6821ea85439135e72b256f7901ee710f300cc006797c8"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/atomic_float_add.py",
+          "repository": "merlin",
+          "sha256": "8ecfc2204048a01793750ee103ab3e18e688a5b788b26b5a6f78ae65a6add147"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/atomic_word_views.py",
+          "repository": "merlin",
+          "sha256": "bddb9745c717436ee629fbc9bf853ed8650be498975ba1806ecbc77918cf4f3a"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_atomic_add.py",
+          "repository": "merlin",
+          "sha256": "b2c329b992de48236684b2f513e3fd684340055fe8824e243b65404b61eacc2c"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_narrowing.py",
+          "repository": "merlin",
+          "sha256": "83ad6c53f34be36d2061e29bae850bf3d18d7439274365cd916923defb05d019"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_widening.py",
+          "repository": "merlin",
+          "sha256": "b9bf7596ac125b97ed2d3a38f10da92e9d0856d2976afd7974459da1e5bba4c7"
+        }
+      ],
+      "evidence": {
+        "affected_regression_log": {
+          "bytes": 192,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-atomic-regressions.log",
+          "sha256": "e45c1ac5bc86b74a1dba235e39c276ac1e6fdb787e3e2a30f4b1a85ab0c40d14"
+        },
+        "baseline_log": {
+          "bytes": 3091,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/fp8-atomic-source-replay.log",
+          "sha256": "fdfd8fba121efd82f242c59567078237a35b8e8e7596f7e6ff65a33673376509"
+        },
+        "baseline_replay": {
+          "bytes": 379509,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-1mjjibfz/replay.json",
+          "sha256": "4d67efe3c4bef348edc63adb967d82409afe8e3a6c7426237dd284b03a961122"
+        },
+        "consumer_commit": "b7a3add3fa0e0f293b632466ea2af8ffdd507ab1",
+        "contract": "docs/fp8_atomics.md",
+        "helper_cases": [
+          "tests/test_fp8_atomic_add.py::test_native_fp8_atomic_borrowing_checks_complete_helper"
+        ],
+        "helper_validation_decisions": 56,
+        "limitations": "Computed NaN payload/sign unspecified. Software f64/CAS can cost throughput under contention. Private invocation storage excludes external publication/device order or GPU arithmetic/performance equivalence. Automatic integer RMW/CAS through BF16/FP8 owning roots remains unqualified. Entry value adapters and final 128-case/semantic qualification remain open.",
+        "producer_sources": [
+          {
+            "bytes": 6028,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/atomic_float_add.py",
+            "sha256": "6c4d39d3e13ed64651dddd1ebdd9987d385150e9a6acd60a2d187a83ff3fb5cb"
+          },
+          {
+            "bytes": 21987,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/atomic_memory.py",
+            "sha256": "b1a1994c1c9f7f3dbe4ed022720b374b89891a9819133e630ca02d67f6b304ab"
+          },
+          {
+            "bytes": 79621,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/package_compatibility.py",
+            "sha256": "c42fb50e603bb490c72b585b00bf6b915cfcbe88fe002f0e40227acea6782c74"
+          }
+        ],
+        "public_cases": [
+          "tests/test_fp8_atomic_add.py::test_all_fp8_atomic_pairs_keep_old_words_rounding_masks_and_replay",
+          "tests/test_fp8_atomic_add.py::test_constant_zero_atomic_updates_preserve_old_signaling_words"
+        ],
+        "public_formats": [
+          "f8E4M3FN",
+          "f8E4M3FNUZ",
+          "f8E5M2",
+          "f8E5M2FNUZ"
+        ],
+        "public_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-atomic-final.log",
+          "sha256": "5e6572c07118a39ca06d03457697a0a964ecf38b7f2333873956503a9b2b664e"
+        },
+        "public_programs": 8,
+        "public_source_custody": {
+          "bytes": 3137,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-atomic-public-source-custody.json",
+          "sha256": "cfc53c90d8adebf8b67b653cbfc2df371c233081abd2b8a3bc94da2903d6f96d"
+        },
+        "public_test_source": {
+          "bytes": 12651,
+          "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_atomic_add.py",
+          "sha256": "8879ab93d86ab8e975f91c93fc63b4ba8769f8690e70f1248145c5a439d4cb94"
+        },
+        "qualification": "Every input pair in all four formats across three masks; exact original old words and unchanged storage; finite outputs and arithmetic quiet NaNs; ordered scalar recurrence, constant +/-zero, collision histories, changed/ragged/single/empty replays and invalid active indices. Caller/execution-owned results and compiler-only staging. Whole-helper checks reject altered address, retry, return and arithmetic bodies. Public lowering-source hashes all match the subsequently committed clean consumer (489 file checks); public runs are not described as clean-checkout runs.",
+        "route": "Meta element-typed atomic events plus exact f64 extension/addition and one FP8 narrowing per event; original word transport, masks, order and scope remain. Checked byte-CAS helpers retain arithmetic inside every retry and complete ownership/body matching. Outside folded wide constants retain their actual f64 value.",
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_public_invocations": 36,
+        "upstream_revision": "17f0c234ce474bee334af36e351c62eca7852836"
+      },
+      "family": "atomics",
+      "final_candidate_status": "Focused source/profile evidence plus clean consumer baseline; final frozen 128-case selection and semantic audit remain pending.",
+      "gap_id": "fp8-atomic-addition",
+      "related_families": [
+        "logical-memory",
+        "casts",
+        "scalar-numeric"
       ]
     }
   ],

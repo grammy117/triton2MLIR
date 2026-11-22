@@ -25,7 +25,9 @@ items: public i4 storage, FP8 arithmetic/accumulators, FP8 atomic addition,
 low-precision diagnostics and entry value bindings. Low-precision diagnostics
 are now qualified through four public programs. Unpacked i4 storage qualifies
 both public result ABIs. [FP8 arithmetic and accumulators](docs/fp8_arithmetic.md)
-qualify thirteen public programs with 69 library replays; two items remain open.
+qualify thirteen public programs with 69 library replays.
+[FP8 atomic addition](docs/fp8_atomics.md) now qualifies eight public programs
+and 36 public invocations; entry-value bindings remain the final named item.
 Final semantic qualification and full closure remain open.
 Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
 format regressions with exact old/new words. Boolean atomics now pass a full

@@ -117,5 +117,6 @@ binary-rounding syntax is rejected by its actual native parser; its probe is
 retained separately. Existing explicit FP8 cast rounding/overflow profiles
 remain available. Unknown semantic fields, external implementations and
 post-layout vector/device forms retain their own admission requirements.
-FP8 atomic addition and low-precision public scalar/return entry adapters are
-still separate work items; this extension does not implement them.
+[FP8 atomic addition](fp8_atomics.md) now has its separate qualified numeric
+and effect profile. Low-precision public scalar/return entry adapters remain
+an open work item; scalar arithmetic alone supplies no entry ABI.

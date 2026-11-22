@@ -7,8 +7,12 @@ scaled-dot results extend the existing logical MX profile while retaining C,
 wide inputs and per-dot narrowing. Generated compatibility metadata records
 these consumer requirements and native cost differences; public schemas stay
 unchanged. Named Boolean controls also work with execution-owned results;
-dimension sources still require non-Boolean integers. This adds no FP8 atomic
-addition or low-precision by-value entry scalar adapter.
+dimension sources still require non-Boolean integers.
+[FP8 atomic addition](fp8_atomics.md) uses a separate qualified per-update
+numeric/effect profile, exact integer old-word transport and checked byte-CAS
+helpers. Folded wide constants retain f64; generated compatibility metadata
+records its source-width rounding and possible native throughput cost. Public
+schemas stay unchanged. Low-precision by-value entry adapters remain separate.
 
 [Unpacked i4 cells](atomic_memory.md#unpacked-four-bit-integer-cells) use
 `TensorBuffer(dtype="i4")` with canonical uint8 archive/descriptor cells 0..15,

@@ -18,7 +18,8 @@ within the original forty-hour cap. Those work items do not replace the full
 generic-computation requirement: unresolved generic forms mean incomplete
 closure. Low-precision printing and unpacked i4 storage are now qualified;
 FP8 arithmetic/accumulators now also qualify through thirteen public programs;
-two named items remain open.
+[FP8 atomic addition](docs/fp8_atomics.md) now qualifies through eight public programs;
+entry-value bindings remain the final named implementation item.
 The measurements below describe delivered capabilities; the release is not
 closed yet.
 

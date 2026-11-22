@@ -1,4 +1,4 @@
-"""Executable IEEE f16/BF16/f32/f64 and FTZ f32 atomic addition.
+"""Executable source-width floating and FTZ f32 atomic addition.
 
 Meta 17f0c234's unstructured atomic conversion supplies the typed parallel
 event, mask and old value. This adapter supplies the missing numeric policy
@@ -25,17 +25,31 @@ HALF_PAYLOADS = {
     name: f"standard-memref-generic-{name}-quiet-add-with-original-returned-old-value"
     for name in HALF_CONTRACTS
 }
+FP8_CONTRACTS = {
+    name: f"ieee-{name}-rne-add-quiet-nans"
+    for name in ("f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
+}
+FP8_PAYLOADS = {
+    name: f"standard-memref-generic-{name}-quiet-add-with-original-returned-old-value"
+    for name in FP8_CONTRACTS
+}
 
 
 def flush(value, *, quiet=False, ftz=True):
     """Zero exponent means zero/subnormal; retaining only sign preserves zero signs."""
     element = value.type
+    if str(element) in FP8_CONTRACTS and str(element) != "f8E5M2" and not ftz:
+        # FN/FNUZ formats have no signaling NaN. Setting an IEEE quiet bit
+        # would corrupt FNUZ's sole NaN (0x80) into a finite value.
+        return [], value
     formats = {
         builtin.f16: (builtin.i16, 0x7C00, 10),
         builtin.bf16: (builtin.i16, 0x7F80, 7),
         builtin.f32: (builtin.i32, 0x7F800000, 23),
         builtin.f64: (builtin.i64, 0x7FF0000000000000, 52),
     }
+    if str(element) == "f8E5M2":
+        formats[element] = (builtin.i8, 0x7C, 2)
     if element not in formats or ftz and element != builtin.f32:
         raise ConversionError(
             "floating atomic regions require a qualified IEEE type or FTZ f32"
@@ -90,8 +104,8 @@ def materialize(op, *, ftz=True):
     if (
         not isinstance(op, memref.AtomicRMWOp)
         or op.kind.value.data != 0
-        or op.results[0].type
-        not in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
+        or (op.results[0].type not in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
+            and str(op.results[0].type) not in FP8_CONTRACTS)
         or op.operands[0].type != op.results[0].type
         or ftz
         and op.results[0].type != builtin.f32
@@ -103,10 +117,11 @@ def materialize(op, *, ftz=True):
     body = Block(arg_types=[op.results[0].type])
     current_ops, current = flush(body.args[0]) if ftz else ([], body.args[0])
     arithmetic = []
-    if current.type == builtin.bf16:
-        lhs, rhs = arith.ExtFOp(current, builtin.f32), arith.ExtFOp(value, builtin.f32)
+    if current.type == builtin.bf16 or str(current.type) in FP8_CONTRACTS:
+        wide = builtin.f32 if current.type == builtin.bf16 else builtin.f64
+        lhs, rhs = arith.ExtFOp(current, wide), arith.ExtFOp(value, wide)
         summed = arith.AddfOp(lhs.result, rhs.result)
-        updated = arith.TruncFOp(summed.result, builtin.bf16)
+        updated = arith.TruncFOp(summed.result, current.type)
         arithmetic.extend((lhs, rhs, summed))
     else:
         updated = arith.AddfOp(current, value)
