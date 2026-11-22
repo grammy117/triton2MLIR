@@ -29,7 +29,9 @@ FP8 arithmetic/accumulators, FP8 atomic addition, low-precision diagnostics
 and entry value bindings. Low-precision diagnostics now pass four complete
 public programs. Unpacked i4 storage also qualifies through both public result
 ABIs, with all sixteen words and nineteen replays per library. The ledger
-retains the resolved witnesses; three items with five witnesses remain open.
+retains the resolved witnesses. [FP8 arithmetic/accumulators](fp8_arithmetic.md)
+now pass thirteen public programs and 69 library replays; two items with three
+witnesses remain open.
 See the exact boundaries and remedies in
 [limitations](limitations.md).
 These are source-operation observations, not universal typed/composition

@@ -85,7 +85,7 @@ def contract(op, source_id=None):
     rank = len(c.get_shape())
     if rank not in (2, 3) or any(len(typ.get_shape()) != rank for typ in types):
         refuse("scaled dot requires matching rank-two or batched rank-three tiles")
-    if c != types[-1] or str(c.element_type) not in ("f16", "bf16", "f32", "f64"):
+    if c != types[-1] or str(c.element_type) not in ("f16", "bf16", "f32", "f64", *_FP8_BY_NAME):
         refuse("scaled dot requires a matching standard floating accumulator/result")
     shapes = [list(a.get_shape()), list(b.get_shape())]
     for side, (fmt, pack, typ) in enumerate(zip(formats, packs, (a, b), strict=True)):

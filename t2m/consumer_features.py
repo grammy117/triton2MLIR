@@ -27,11 +27,11 @@ def requires_subbyte_atomics(operations):
 def select_features(module):
     if __package__:
         from .bfloat_math import requires_emulation
-        from .fp8_math import requires_widening, requires_narrowing
+        from .fp8_math import requires_widening, requires_narrowing, requires_emulation as fp8_emulation
         from .native import requires_integer_atomic_regions
     else:
         from bfloat_math import requires_emulation
-        from fp8_math import requires_widening, requires_narrowing
+        from fp8_math import requires_widening, requires_narrowing, requires_emulation as fp8_emulation
         from native import requires_integer_atomic_regions
 
     features = set(COMPILER_FEATURES)
@@ -39,6 +39,8 @@ def select_features(module):
         features.add("preserve_bfloat_transport")
     if requires_emulation(module.walk()):
         features.add("emulate_bfloat_elementwise")
+    if fp8_emulation(module.walk()):
+        features.update(("emulate_fp8_elementwise", "lower_fp8_narrowing", "lower_fp8_widening"))
     if requires_widening(module.walk()):
         features.add("lower_fp8_widening")
     if requires_narrowing(module.walk()):

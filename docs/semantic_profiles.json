@@ -33,7 +33,6 @@
     "valid_generic_failure": "An unimplemented defined computation or ABI/native transport remains a generic gap; try broader standard computation and retain the exact reproducer."
   },
   "confirmed_generic_gap_ids": [
-    "fp8-generic-arithmetic",
     "fp8-atomic-addition",
     "public-value-entry-binding"
   ],
@@ -99,7 +98,7 @@
         },
         {
           "path": "t2m/consumer_features.py",
-          "sha256": "0f84b96a7979d4be8970ef2d6234eae1569c8e15dcc64aeebdf3fd79ad6d5570"
+          "sha256": "030ed6845e3f49f10d3af2d6f6c158116e621cf7559dfb2043511e2f35b50f91"
         }
       ],
       "unresolved_generic_forms": [
@@ -156,7 +155,7 @@
         "K9",
         "M5"
       ],
-      "complement": "Native-invalid geometry/prototypes are invalid source. Unknown effects or direct pointer reads require their real effect contract rather than purity from a parent label. Unsupported valid generic numeric/control bodies are gaps, not silently discarded. FP8 arithmetic and public i4 storage inherit their known numeric/interface gaps.",
+      "complement": "Native-invalid geometry/prototypes are invalid source. Unknown effects or direct pointer reads need their actual effect contract. FP8 arithmetic and unpacked i4 storage now have qualified extensions; arbitrary region/control/packing compositions remain subject to actual source checks and final qualification. A valid generic failure remains a gap.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -176,12 +175,10 @@
           "sha256": "030f97937a04f36edeb8f390428a5879303a2d1c89722134edfbc058ef32c0e4"
         }
       ],
-      "unresolved_generic_forms": [
-        "fp8-generic-arithmetic"
-      ]
+      "unresolved_generic_forms": []
     },
     "contractions": {
-      "admission": "Rank-two/batched named contractions retain original C, source M/N/K tiles, K recurrence and operand reuse. Standard/FP8 inputs and implemented mixed/scaled profiles use executable casts, packing, scaling and accumulation. BF16x3/x6 and TF32/x3 use actual pinned normalization with explicit logical numeric profiles.",
+      "admission": "Rank-two/batched named contractions retain original C, source M/N/K tiles, K recurrence and operand reuse. Standard/FP8 inputs and implemented mixed/scaled profiles use executable casts, packing, scaling and accumulation. BF16x3/x6 and TF32/x3 use actual pinned normalization with explicit logical numeric profiles. The existing logical-mx-f64-v1 profile also admits FP8 C/results, retaining original wider inputs, C and narrowing at each original dot before an outer recurrence continues.",
       "caller_contracts": [
         "Actual inputPrecision/maxNumImpreciseAcc; no implicit precision relaxation",
         "Named logical dot/FP8 overflow/scaled-dot numeric profile",
@@ -195,7 +192,7 @@
         "M5",
         "M7"
       ],
-      "complement": "Reserved FP6 enumerants have no pinned storage/packing semantics; require an implementation contract rather than invent one. A legal source type/shape is not proof that its full numeric tuple is implemented: public i4 and FP8 accumulator/native arithmetic require separate closure. Unspecified device tensor-core rounding/order/FTZ needs a selected explicit profile, not a universal GPU bit-equivalence claim. Rank/attribute/type tuples outside current converters remain generic gaps when defined.",
+      "complement": "Reserved FP6 enumerants have no pinned storage/packing semantics. Other defined type/attribute tuples still need actual admission and qualification; FP8 storage alone supplies neither a new contraction mode nor hardware arithmetic equivalence. Device tensor-core rounding/order/FTZ requires its own numeric profile. The public i4 carrier is explicitly unpacked and does not infer packed operands.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -208,12 +205,10 @@
         },
         {
           "path": "t2m/scaled_dot.py",
-          "sha256": "fe7b1a0c11e57b8c42726b65542655f974bd5c4b59c7f0cb6a4c6d9eda44e161"
+          "sha256": "9764f307fb4886ae8007e01429b0e657c655cfceb12a1b26ba641682e7489aff"
         }
       ],
-      "unresolved_generic_forms": [
-        "fp8-generic-arithmetic"
-      ]
+      "unresolved_generic_forms": []
     },
     "descriptors": {
       "admission": "Official pre-layout tensor-pointer/descriptor normalization retains actual root, block shape, strides, origin, padding, indexing and reducing-store effects. External logical descriptors bind their complete fields to declared allocations/scalars. Indexed transfers retain row-index checks and ownership.",
@@ -280,7 +275,7 @@
         },
         {
           "path": "t2m/package_compatibility.py",
-          "sha256": "1aba3f631641ca4b19fc4003a4ac3aca140bcc85a2524278b2d698bf624cfb35"
+          "sha256": "fc4a880eae7b6a5abd87fa8d9c7834df8ea480da14719fe647129ac79a2ec6d8"
         }
       ],
       "unresolved_generic_forms": []
@@ -485,7 +480,7 @@
         "K4",
         "K10"
       ],
-      "complement": "Missing register-group-to-logical-coordinate semantics require the existing explicit source-layout specialization; neighboring tensor elements cannot be guessed. Unknown source effects retain effect admission. Valid pure generic bodies outside current expansion remain gaps. FP8 arithmetic inherits its native-format gap; packet-sharing optimization is separate from executable scalar semantics.",
+      "complement": "Missing source register-group coordinate semantics require the existing checked source-layout specialization. Unknown effects retain effect admission. FP8 scalar/tensor body math now has the qualified native extension; arbitrary source packing and recurrence compositions still need their actual checks. Packet sharing is separate from executable scalar semantics.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -509,12 +504,10 @@
           "sha256": "030f97937a04f36edeb8f390428a5879303a2d1c89722134edfbc058ef32c0e4"
         }
       ],
-      "unresolved_generic_forms": [
-        "fp8-generic-arithmetic"
-      ]
+      "unresolved_generic_forms": []
     },
     "scalar-numeric": {
-      "admission": "High unsigned products use the standard extended product for all six pinned integer widths. Clamp retains NONE/ALL NaN modes; precise division/sqrt retain standard typed operations. f16/BF16/f32/f64 have exact-rational public qualification, including source-position rounding and signaling-NaN number selection.",
+      "admission": "High unsigned products use the standard extended product for all six pinned integer widths. Clamp retains NONE/ALL NaN modes; precise division/sqrt retain standard typed operations. f16/BF16/f32/f64 have exact-rational public qualification, including source-position rounding and signaling-NaN number selection. FP8 scalar/tensor arithmetic retains its actual source format and per-operation rounding through official f64 emulation and exact casts; word negation/absolute value/copy-sign retain payloads and FNUZ rules. Source fast-math permissions may select the qualified strict refinement.",
       "caller_contracts": [
         "Actual source NaN/rounding/overflow flags and selected normal host floating environment",
         "Any source-specific approximation or saturation policy must be explicit and implemented"
@@ -522,7 +515,7 @@
       "candidate_workflows": [
         "K9"
       ],
-      "complement": "A legal FP8 clamp/div/sqrt chain converts to standard MLIR but fails the native math legalization. This is a generic implementation gap requiring compute plus per-operation narrowing, not a GPU exclusion. Source poison/undefined input domains remain distinct from missing implementations. Nonneutral semantic flags must survive or refuse explicitly.",
+      "complement": "Source poison/undefined input domains remain distinct from missing implementations. Unknown semantic fields require their actual implementation/contract. The installed native source parser does not admit newer directed binary-rounding syntax. Hardware-specific precision/FTZ/exact-bit claims need a separately selected profile; provenance cannot replace numeric semantics.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -535,16 +528,22 @@
         },
         {
           "path": "t2m/consumer_features.py",
-          "sha256": "0f84b96a7979d4be8970ef2d6234eae1569c8e15dcc64aeebdf3fd79ad6d5570"
+          "sha256": "030ed6845e3f49f10d3af2d6f6c158116e621cf7559dfb2043511e2f35b50f91"
         },
         {
           "path": "t2m/fp8_math.py",
-          "sha256": "d541616c6b06de9d1339322d4404c4e04527b210a07240b44c223e493852ef77"
+          "sha256": "2f55c102386063ce3ccb65ecf80a5f8383c9e92032018a86870b2753901aa833"
+        },
+        {
+          "path": "t2m/native_runner.py",
+          "sha256": "37d1e981d857a476d7110605090fc8a08e5872bac8cc25fe41456bdae7814e68"
+        },
+        {
+          "path": "t2m/consumer_worker.py",
+          "sha256": "f62acdcc0025676fcdd7a42440842f15d155f75bc5f2f3bf6b173c1bcf18207c"
         }
       ],
-      "unresolved_generic_forms": [
-        "fp8-generic-arithmetic"
-      ]
+      "unresolved_generic_forms": []
     },
     "tile-shapes": {
       "admission": "Native-verified shape/axis/element relationships and registered types use upstream tensor/Linalg shape conversions; cat selects a source-permitted operand order. Numeric local tensors and structured value state remain in their original regions. Pointer-valued shapes use the separate pointer-state normalization.",
@@ -2066,6 +2065,167 @@
         "logical-memory",
         "casts"
       ]
+    },
+    {
+      "consumer_commit": "5b43d2a147242c012c8742b0fc0c071dd7e48da5",
+      "consumer_sources": [
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_elementwise.py",
+          "repository": "merlin",
+          "sha256": "3b051693a2757ce2f23b92b44dd8b5cd374a253783a04ca67ac8ae35cb633784"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_narrowing.py",
+          "repository": "merlin",
+          "sha256": "0f58f7a9245d345ad74cbfbd3920e48c6a72416ed67728feefb87d903cd484a2"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/fp8_widening.py",
+          "repository": "merlin",
+          "sha256": "2e237a3a839d999024a19d8f15f56b48cc86024095e376d7ae5f78a69af75f6c"
+        },
+        {
+          "path": "src/merlin/compiler/lower/native/runners.py",
+          "repository": "merlin",
+          "sha256": "b26b1e53c2883f4dfdec153d3e9416db01a44bc679e1b170dfb63424a17311e3"
+        },
+        {
+          "path": "src/merlin/compiler/lower/native/pipeline.py",
+          "repository": "merlin",
+          "sha256": "64a8ab125d3f338a73deff5577e40dc862bf0f79dc1131d10dba0317315f983a"
+        },
+        {
+          "path": "src/merlin/compiler/frontend/intake/execution_result_signature.py",
+          "repository": "merlin",
+          "sha256": "f3b1287d14a04ef24a7c063a8eef9b0adca53b50780ef715081de00f279008ed"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/execution_result_inputs.py",
+          "repository": "merlin",
+          "sha256": "6b483811e6c8f7f096147d29075afe4d3d00c2b15f089e61fe414c7bc200c165"
+        }
+      ],
+      "evidence": {
+        "affected_regression_log": {
+          "bytes": 181,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-arithmetic-regressions.log",
+          "sha256": "3c764969791cbbf129241886b1fa14ceb43a4b2a2a4c136811a7a763b03ee086"
+        },
+        "baseline_log": {
+          "bytes": 3091,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/fp8-arithmetic-source-replay.log",
+          "sha256": "c815dfb074c94144440d4f1c5f1218febef1aea2f7c5e382c3765155022e9dc0"
+        },
+        "baseline_replay": {
+          "bytes": 379382,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-ywhiftop/replay.json",
+          "sha256": "5997e84e107e98ff68006d4dfe61249f4dacc952693a7f35b3d1192ca6b0dd36"
+        },
+        "consumer_commit": "5b43d2a147242c012c8742b0fc0c071dd7e48da5",
+        "contract": "docs/fp8_arithmetic.md",
+        "generic_directed_source_probes": [
+          {
+            "bytes": 507,
+            "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-generic-admission/add/native/stderr.log",
+            "sha256": "2722ba3e586e4c5abbd69c9936c6e474fca3fa780fbaecb7b0828770557cfb03"
+          },
+          {
+            "bytes": 508,
+            "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-generic-admission/cast/native/stderr.log",
+            "sha256": "ced3c88ffce1cb0065e1c319fd303f390bf3f1fa264fd7c492f3f7f69c2dc3c8"
+          }
+        ],
+        "limitations": "No universal GPU arithmetic/performance equivalence. FP8 atomic addition and low-precision by-value/return entry adapters remain separate gaps. Newer directed binary-rounding syntax is rejected by the pinned native source parser, not silently interpreted.",
+        "nonsemantic_edit_scope": "Only import wrapping and a compiler-owned exec lint annotation changed after the combined run; both executable ASTs are byte-bound and unchanged.",
+        "oracle_optional_import_equivalence": {
+          "bytes": 156,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-optional-oracle-import.log",
+          "sha256": "bb5cea8899691a7a53e48f44a9476b2c95e85c60a02d6d8fb8c1a3cd6d8d8709"
+        },
+        "oracle_source_before_optional_import_change": {
+          "bytes": 4733,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-word-math-before-optional-import.py",
+          "sha256": "8113c71c9438f8eaf7416af44b44e4dfd79b2ee675cfffe71589940ee288d7c3"
+        },
+        "post_qualification_nonsemantic_edits": {
+          "bytes": 839,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-qualified-source-formatting/evidence.json",
+          "sha256": "82a46eb6771cceca6254e706e2bab1d011b1faaecefd5c21909265571ae58e1d"
+        },
+        "programs": 13,
+        "public_cases": [
+          "tests/test_fp8_arithmetic.py::test_every_fp8_pair_keeps_rounding_control_reuse_and_exchange",
+          "tests/test_fp8_scaled_accumulators.py::test_fp8_c_rounds_at_each_dot_and_keeps_wide_input_products",
+          "tests/test_fp8_word_math.py::test_every_word_and_sign_source_preserves_exact_fp8_encodings",
+          "tests/test_fp8_math_flags.py::test_source_contract_flags_keep_each_fp8_rounding_and_fused_result"
+        ],
+        "public_formats": [
+          "f8E4M3FN",
+          "f8E4M3FNUZ",
+          "f8E5M2",
+          "f8E5M2FNUZ"
+        ],
+        "public_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-generic-qualified.log",
+          "sha256": "c115ff1b55a937de7fa0c0a7b823b3187fb70f640e0f1eaa5f14b36472337e10"
+        },
+        "qualification": "Thirteen native-verified complete public StagedProgram programs; all 65536 FP8 input/sign pairs, exact binary-rational/squared-midpoint arithmetic oracles, source loops/branches and every rounding boundary, wide f16 operands and all 256 original FP8 C words, exact word operations and copies, typed atomic exchange and all old/final values. Changed, ragged/single/empty, disabled and zero-trip replays reuse one library per program. E4M3FNUZ arithmetic uses execution-owned results and checks malformed Boolean storage, Boolean dimension declarations and inconsistent dimensions before invocation. Source contraction permission uses the strict refinement. Compiler staging excludes evaluator arrays and caller inputs remain unchanged.",
+        "release_gate_regression_log": {
+          "bytes": 98,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-release-gates.log",
+          "sha256": "27c1fbe5f9dd7a34e2bfb09388bea7d58aa15f7c3cb1453f83b8543502dc06c3"
+        },
+        "route": "Official arithmetic/math f64 emulation, neutral introduced casts, original FMA operands and exact FP8 cast helpers; separate exact word expansions for negation/absolute value/copy-sign. Existing logical-mx-f64-v1 contraction admits FP8 C/results and narrows at every original dot.",
+        "source_probe_log": {
+          "bytes": 3459,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-generic-first.log",
+          "sha256": "67ac59bbedd423a94b9ea69571b556280140c0a5851d70b0cf409b1fd89b22b3"
+        },
+        "source_version_probe": {
+          "bytes": 456,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-admission/native/stderr.log",
+          "sha256": "15b7a5c9eaebd1d005e55c641c4b2beadfa63ea6c87632ca0c0e64f1635442bf"
+        },
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_library_invocations": 69,
+        "test_sources": [
+          {
+            "bytes": 10071,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_arithmetic.py",
+            "sha256": "ce745ed45a2156d258659f8cf7bd5044584aa7ccc19120746764a9e3c40138cb"
+          },
+          {
+            "bytes": 7770,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_scaled_accumulators.py",
+            "sha256": "81a36a27ae911567ec62065e645d60f7c4defc4e73c97be7da6d79ab6865c834"
+          },
+          {
+            "bytes": 4738,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_word_math.py",
+            "sha256": "4b2f2388a01178bd58e1980e04e92617391bb79f180bf6c04b764a448ad6ea2c"
+          },
+          {
+            "bytes": 3292,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_math_flags.py",
+            "sha256": "e9c535bfff89820cda4dc9d6ec678c17908b269eaf091e2ab354034babd6f166"
+          },
+          {
+            "bytes": 4543,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/examples/fp8_arithmetic_reference.py",
+            "sha256": "fef9c44ed565477a7a71d8d0b8b25ef36c39708b589e8c8072cccf94dc275cf0"
+          }
+        ]
+      },
+      "family": "scalar-numeric",
+      "final_candidate_status": "Focused numeric qualification and source baseline only; final frozen 128-case release and semantic audit remain pending.",
+      "gap_id": "fp8-generic-arithmetic",
+      "related_families": [
+        "contractions",
+        "maps",
+        "combiners",
+        "casts"
+      ]
     }
   ],
   "reviewed_definition_files": [
@@ -2095,7 +2255,6 @@
     "control": "Reuse official CF-to-SCF lifting and actual structured regions; no name-based pattern whitelist or source-loop unrolling.",
     "effects": "Readonly tensor snapshots remain SSA values; live memory, external participants, barriers, atomics and volatile observations need actual effect contracts.",
     "known_gaps": [
-      "fp8-generic-arithmetic",
       "public-value-entry-binding"
     ],
     "numeric_flags": "Preserve actual fastmath, overflow, rounding and comparison predicates. Neutral flags do not imply an alternate arithmetic policy; source poison/undefined domains stay explicit.",

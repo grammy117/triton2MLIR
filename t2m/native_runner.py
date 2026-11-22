@@ -191,7 +191,21 @@ def main(work):
             namespace["_cas_suspend"](module)
             restore_atomics = namespace["_cas_restore"]
         has_bfloat = any("bf16" in str(value.type) for op in operations(module.operation) for value in (*op.operands, *op.results))
-        from fp8_math import requires_widening,requires_narrowing
+        from fp8_math import requires_widening,requires_narrowing,requires_emulation as fp8_emulation
+        if fp8_emulation(operations(module.operation)):
+            root = os.environ.get("T2M_MERLIN_ROOT")
+            if not root:
+                raise ValueError("native FP8 math requires the explicit T2M_MERLIN_ROOT compiler support path")
+            sys.path.insert(0,str(Path(root).resolve() / "src"))
+            from merlin.compiler.lower.options import fp8_elementwise
+            scope = {"ir":ir}
+            # Compiler-owned helper source is pinned below; no input supplies Python.
+            exec(fp8_elementwise.SUPPORT,scope)  # noqa: S102
+            count = scope["_fp8_elementwise"](module)
+            import hashlib
+            adapters.append({"name":"merlin-fp8-elementwise","scalar_operations":count,
+                "support_sha256":hashlib.sha256(fp8_elementwise.SUPPORT.encode()).hexdigest(),
+                "numeric_contract":"f64-compute; exact-FP8-RTNE-after-each-source-operation"})
         if requires_narrowing(operations(module.operation)):
             root = os.environ.get("T2M_MERLIN_ROOT")
             if not root:

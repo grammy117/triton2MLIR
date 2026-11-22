@@ -1,5 +1,15 @@
 # Package contract and explicit model2MLIR differences
 
+[FP8 arithmetic](fp8_arithmetic.md) retains standard typed math and source
+rounding boundaries in portable MLIR. The native consumer adds f64 emulation
+with exact FP8 casts; word operations retain their original encodings. FP8
+scaled-dot results extend the existing logical MX profile while retaining C,
+wide inputs and per-dot narrowing. Generated compatibility metadata records
+these consumer requirements and native cost differences; public schemas stay
+unchanged. Named Boolean controls also work with execution-owned results;
+dimension sources still require non-Boolean integers. This adds no FP8 atomic
+addition or low-precision by-value entry scalar adapter.
+
 [Unpacked i4 cells](atomic_memory.md#unpacked-four-bit-integer-cells) use
 `TensorBuffer(dtype="i4")` with canonical uint8 archive/descriptor cells 0..15,
 one value per byte. Executable MLIR keeps logical i4 arithmetic and atomics.

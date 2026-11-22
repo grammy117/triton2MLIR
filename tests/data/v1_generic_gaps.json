@@ -533,20 +533,122 @@
           "source_sha256": "280d527bb3d60c8692a5a76ec7358e75f10b680b8bff26b596b1f1a7b69dc1cb"
         }
       ]
-    }
-  ],
-  "definitions": {
-    "bytes": 50703,
-    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
-    "release": "v3.7.1",
-    "repository": "https://github.com/triton-lang/triton",
-    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
-  },
-  "gaps": [
+    },
     {
       "id": "fp8-generic-arithmetic",
       "kind": "missing-generic-numeric-legalization",
+      "resolution": {
+        "affected_regression_log": {
+          "bytes": 181,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-arithmetic-regressions.log",
+          "sha256": "3c764969791cbbf129241886b1fa14ceb43a4b2a2a4c136811a7a763b03ee086"
+        },
+        "baseline_log": {
+          "bytes": 3091,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/fp8-arithmetic-source-replay.log",
+          "sha256": "c815dfb074c94144440d4f1c5f1218febef1aea2f7c5e382c3765155022e9dc0"
+        },
+        "baseline_replay": {
+          "bytes": 379382,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-ywhiftop/replay.json",
+          "sha256": "5997e84e107e98ff68006d4dfe61249f4dacc952693a7f35b3d1192ca6b0dd36"
+        },
+        "consumer_commit": "5b43d2a147242c012c8742b0fc0c071dd7e48da5",
+        "contract": "docs/fp8_arithmetic.md",
+        "generic_directed_source_probes": [
+          {
+            "bytes": 507,
+            "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-generic-admission/add/native/stderr.log",
+            "sha256": "2722ba3e586e4c5abbd69c9936c6e474fca3fa780fbaecb7b0828770557cfb03"
+          },
+          {
+            "bytes": 508,
+            "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-generic-admission/cast/native/stderr.log",
+            "sha256": "ced3c88ffce1cb0065e1c319fd303f390bf3f1fa264fd7c492f3f7f69c2dc3c8"
+          }
+        ],
+        "limitations": "No universal GPU arithmetic/performance equivalence. FP8 atomic addition and low-precision by-value/return entry adapters remain separate gaps. Newer directed binary-rounding syntax is rejected by the pinned native source parser, not silently interpreted.",
+        "nonsemantic_edit_scope": "Only import wrapping and a compiler-owned exec lint annotation changed after the combined run; both executable ASTs are byte-bound and unchanged.",
+        "oracle_optional_import_equivalence": {
+          "bytes": 156,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-optional-oracle-import.log",
+          "sha256": "bb5cea8899691a7a53e48f44a9476b2c95e85c60a02d6d8fb8c1a3cd6d8d8709"
+        },
+        "oracle_source_before_optional_import_change": {
+          "bytes": 4733,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-word-math-before-optional-import.py",
+          "sha256": "8113c71c9438f8eaf7416af44b44e4dfd79b2ee675cfffe71589940ee288d7c3"
+        },
+        "post_qualification_nonsemantic_edits": {
+          "bytes": 839,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-qualified-source-formatting/evidence.json",
+          "sha256": "82a46eb6771cceca6254e706e2bab1d011b1faaecefd5c21909265571ae58e1d"
+        },
+        "programs": 13,
+        "public_cases": [
+          "tests/test_fp8_arithmetic.py::test_every_fp8_pair_keeps_rounding_control_reuse_and_exchange",
+          "tests/test_fp8_scaled_accumulators.py::test_fp8_c_rounds_at_each_dot_and_keeps_wide_input_products",
+          "tests/test_fp8_word_math.py::test_every_word_and_sign_source_preserves_exact_fp8_encodings",
+          "tests/test_fp8_math_flags.py::test_source_contract_flags_keep_each_fp8_rounding_and_fused_result"
+        ],
+        "public_formats": [
+          "f8E4M3FN",
+          "f8E4M3FNUZ",
+          "f8E5M2",
+          "f8E5M2FNUZ"
+        ],
+        "public_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-generic-qualified.log",
+          "sha256": "c115ff1b55a937de7fa0c0a7b823b3187fb70f640e0f1eaa5f14b36472337e10"
+        },
+        "qualification": "Thirteen native-verified complete public StagedProgram programs; all 65536 FP8 input/sign pairs, exact binary-rational/squared-midpoint arithmetic oracles, source loops/branches and every rounding boundary, wide f16 operands and all 256 original FP8 C words, exact word operations and copies, typed atomic exchange and all old/final values. Changed, ragged/single/empty, disabled and zero-trip replays reuse one library per program. E4M3FNUZ arithmetic uses execution-owned results and checks malformed Boolean storage, Boolean dimension declarations and inconsistent dimensions before invocation. Source contraction permission uses the strict refinement. Compiler staging excludes evaluator arrays and caller inputs remain unchanged.",
+        "release_gate_regression_log": {
+          "bytes": 98,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-release-gates.log",
+          "sha256": "27c1fbe5f9dd7a34e2bfb09388bea7d58aa15f7c3cb1453f83b8543502dc06c3"
+        },
+        "route": "Official arithmetic/math f64 emulation, neutral introduced casts, original FMA operands and exact FP8 cast helpers; separate exact word expansions for negation/absolute value/copy-sign. Existing logical-mx-f64-v1 contraction admits FP8 C/results and narrows at every original dot.",
+        "source_probe_log": {
+          "bytes": 3459,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-generic-first.log",
+          "sha256": "67ac59bbedd423a94b9ea69571b556280140c0a5851d70b0cf409b1fd89b22b3"
+        },
+        "source_version_probe": {
+          "bytes": 456,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/fp8-directed-admission/native/stderr.log",
+          "sha256": "15b7a5c9eaebd1d005e55c641c4b2beadfa63ea6c87632ca0c0e64f1635442bf"
+        },
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_library_invocations": 69,
+        "test_sources": [
+          {
+            "bytes": 10071,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_arithmetic.py",
+            "sha256": "ce745ed45a2156d258659f8cf7bd5044584aa7ccc19120746764a9e3c40138cb"
+          },
+          {
+            "bytes": 7770,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_scaled_accumulators.py",
+            "sha256": "81a36a27ae911567ec62065e645d60f7c4defc4e73c97be7da6d79ab6865c834"
+          },
+          {
+            "bytes": 4738,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_word_math.py",
+            "sha256": "4b2f2388a01178bd58e1980e04e92617391bb79f180bf6c04b764a448ad6ea2c"
+          },
+          {
+            "bytes": 3292,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_fp8_math_flags.py",
+            "sha256": "e9c535bfff89820cda4dc9d6ec678c17908b269eaf091e2ab354034babd6f166"
+          },
+          {
+            "bytes": 4543,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/examples/fp8_arithmetic_reference.py",
+            "sha256": "fef9c44ed565477a7a71d8d0b8b25ef36c39708b589e8c8072cccf94dc275cf0"
+          }
+        ]
+      },
       "route": "Reuse exact FP8 casts and the existing low-precision native emulation seam. Keep actual operations, source boundaries and contraction C; widen computation only under a named numeric profile, then narrow at each source operation. Add missing legal scaled accumulator admission with the same explicit policy.",
       "stopping_decision": "One bounded generic emulation/cast integration and correction cycle. If unresolved, preserve exact unsupported tuples and a user-authored explicitly promoted alternative; report incomplete generic closure.",
       "why_used": "Imported or hand-authored FP8 scalar math, reductions/maps with FP8 arithmetic, or scaled dot retaining an FP8 accumulator/result. Normal Python kernels commonly promote to f16/f32, but these typed TTIR forms are native-valid.",
@@ -707,7 +809,17 @@
           "source_sha256": "786807d761b0feea042231c6c35b21313a3afdae2b2cadbeefb0622cafa34e80"
         }
       ]
-    },
+    }
+  ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "gaps": [
     {
       "id": "fp8-atomic-addition",
       "kind": "missing-generic-numeric-effect-profile",

@@ -20,15 +20,16 @@ name nor native verification establishes that every type or composition works.
 The admission checkpoint identified **five named work items and eight exact
 native-verified witnesses** in the [generic-gap ledger](../tests/data/v1_generic_gaps.json).
 Low-precision diagnostics qualify through four complete public programs and
-unpacked i4 storage qualifies through both public result ABIs;
-**three work items and five witnesses remain open**. These are generic
+unpacked i4 storage qualifies through both public result ABIs. FP8 arithmetic
+and scaled-dot accumulators now qualify through thirteen public programs;
+**two work items and three witnesses remain open**. These are generic
 computation/interface failures. They cannot be removed by
 classifying them as GPU instructions or by counting their refusals as support.
 
 | Work item | Demonstrated failure | Existing material and bounded next action | Attempt ceiling |
 | --- | --- | --- | --- |
 | Public i4 storage — qualified | The original direct i4 atomic-add ABI refusal remains in the resolved ledger. | Both public result ABIs now keep actual i4 updates and all old/final values using one canonical uint8 cell per value, checked as 0..15. Nineteen replays per library include all words, tails and empty inputs; invalid padding fails before invocation. Packed pairs and by-value scalars remain separate. | Closed within the 3-hour attempt |
-| FP8 arithmetic and accumulator profiles | A legal clamp/div/sqrt chain emits standard MLIR, then native legalization fails on FP8 `math.sqrt`. A legal FP8 `dot_scaled` accumulator is rejected by frontend admission. | Reuse exact FP8 widening/narrowing and the low-precision native emulation seam. Keep every source rounding boundary, original C and contraction reuse. Do not narrow the operands before their original product or widen the entire recurrence without rounding back. | 4 hours |
+| FP8 arithmetic and accumulator profiles — qualified | Both original native-valid failures remain in the resolved ledger. | Thirteen public programs qualify all four formats, exhaustive binary/sign-source pairs, exact words, per-operation/per-dot rounding, original C and wider inputs. Official f64 emulation and exact casts retain source control/reuse. Caller and execution-owned paths pass, including strict owned-control/dimension guards. See [the exact scope](fp8_arithmetic.md). | Closed within the 4-hour attempt |
 | FP8 atomic addition | Native-valid `tt.atomic_rmw fadd` on FP8 is refused without an implemented update policy. | Reuse half/BF16 per-event numeric profiles and checked integer/byte-CAS helpers. Implement actual FP8 rounding, overflow and NaN behavior; retain every old word. | 4 hours |
 | Low-precision diagnostic values — qualified | The original internal i4/FP8 print refusals remain in the resolved ledger. | Existing logical formatting and exact widening now preserve all words, streams, signedness, source control and both outputs through four public libraries. The native pure tensor carrier is also qualified. General FP8 arithmetic remains separate. | Closed within the 1-hour attempt |
 | Entry value bindings | A selected value-returning i32 entry is refused. A void entry with a by-value f16 input cannot construct its runtime scalar binding. | Extend the existing checked source wrapper/allocation interface with explicit scalar-storage inputs and returned-value output ports. Reuse actual helper bodies, native inlining and the existing tensor ABI; avoid assuming a low-precision native by-value ABI. | 3 hours |

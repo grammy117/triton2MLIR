@@ -14,7 +14,7 @@ else:
     from consumer_features import COMPILER_FEATURES, select_features
 
 
-def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, fp8_narrowing=False, literal_diagnostics=False, scalar_diagnostics=False):
+def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions=False, bfloat=False, bfloat_elementwise=False, fp8_widening=False, fp8_narrowing=False, fp8_elementwise=False, literal_diagnostics=False, scalar_diagnostics=False):
     # Reuse Merlin's real scalar pipeline, including allocation ownership.
     # The adapter adds logical-grid serialization at this selected host backend
     # and allows bufferized loop results. Checked destination reuse runs after
@@ -60,6 +60,11 @@ def tensor_pipeline(*, compare_exchange=False, word_views=False, integer_regions
     if fp8_narrowing:
         from merlin.compiler.lower.options.fp8_narrowing import edit_pipeline as edit_fp8_narrowing
         passes = edit_fp8_narrowing(passes)
+    if fp8_elementwise:
+        from merlin.compiler.lower.options.fp8_elementwise import (
+            edit_pipeline as edit_fp8_elementwise,
+        )
+        passes = edit_fp8_elementwise(passes)
     result = _splice(passes)
     if adapted != 1 or "ownership-based-buffer-deallocation" not in result:
         raise ValueError("Merlin scalar pipeline lacks the qualified loop/ownership boundary")
@@ -109,6 +114,7 @@ def compile_model(staged, work):
         bfloat="preserve_bfloat_transport" in features, bfloat_elementwise=bfloat_math in features,
         fp8_widening="lower_fp8_widening" in features,
         fp8_narrowing="lower_fp8_narrowing" in features,
+        fp8_elementwise="emulate_fp8_elementwise" in features,
         literal_diagnostics="lower_length_aware_diagnostics" in features,
         scalar_diagnostics="lower_scalar_diagnostics" in features)
     llvm = lower_to_llvm_ir(prepared, workdir=work / "lowering", pipeline=pipeline,

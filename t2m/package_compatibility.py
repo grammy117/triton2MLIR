@@ -13,6 +13,17 @@ from .standard_floats import FP8_TYPE_NAMES
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("opcode", "").startswith(("arith.", "math."))
+           and any(fmt in type_ for type_ in (*row.get("input_types", []), *row.get("output_types", []))
+                   for fmt in FP8_TYPE_NAMES) for row in trace.get("source_operations", [])):
+        differences.append(
+            "portable FP8 computation retains its standard typed operations, source tiles and control; "
+            "the selected native host requires exact FP8 casts and, for arithmetic, upstream f64 emulation "
+            "with narrowing after every source result; source fast-math permissions can use a strict "
+            "refinement, while negation/absolute-value/copy-sign retain exact words and FNUZ rules; "
+            "this software expansion changes native instruction cost, not the public ABI or receipt schema; "
+            "it grants no missing atomic-addition policy or exact agreement with arbitrary GPU arithmetic"
+        )
     if any(row.get("dtype") == "i4" for row in trace.get("spec", {}).get("buffers", [])):
         differences.append(
             "logical i4 tensors use one unpacked canonical uint8 cell per value in public archives and "

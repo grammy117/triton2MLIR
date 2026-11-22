@@ -34,9 +34,15 @@ The profile decodes/scales operands into f64, extends source C before the
 contraction, computes f64 products/accumulation, then rounds once to the
 declared result format. The selected host reduces in ascending logical K;
 provenance grants no reassociation or alternate accelerator precision.
-F16/BF16/f32/f64 accumulator/result formats are retained. BF16 extension uses
+F16/BF16/f32/f64 and the four pinned FP8 accumulator/result formats are retained. BF16 extension uses
 its exact f32 bridge. F64-to-16-bit results reuse the existing round-to-odd
 bridge to avoid double rounding and unavailable runtime helpers.
+
+[FP8 result qualification](fp8_arithmetic.md) additionally checks all 256
+original C words, two contractions per source loop iteration and narrowing at
+each dot before feedback. Original f16 operands retain their wider values;
+they are not quantized to the result type before multiplication. This adds
+no new hardware accumulation mode to the existing logical profile.
 
 This is an explicit implementation choice within MX's numeric boundary. It
 does not reproduce Triton's target-dependent f16/BF16 software emulation or
