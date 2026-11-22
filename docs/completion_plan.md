@@ -28,7 +28,7 @@ from the original full-generic-coverage requirement.
 | Source inventory | All 50 pinned TTIR definitions have policy entries: 49 generic and optional assembly. | Finish the typed/profile review and join it to actual source-to-Merlin evidence. A policy entry is not support evidence. |
 | Frozen integration selection | 94 cases selected. Latest whole-selection attempt: 69 passed, then three stale-layout fixture setup errors; 22 cases were not run. The fixture correction subsequently passed six focused host/serial checks. | Retain the original 94 cases, add only missing generic-family witnesses, then run the complete final selection. These partial results are not a release pass. |
 | Known numeric regression | Signaling-NaN min/max correction passed all 12 scalar format/memory-profile checks and the Merlin replay: 2,600 passed, two pre-existing prerequisite skips. | Qualify the final public Python transport; keep separately selected stock-CLI transport outside this claim. |
-| Release checker | A local draft and five negative/reader checks exist; it is not yet committed or a completed release audit. | Finish the existing checker and populate real evidence. Do not build another proof or reporting framework. |
+| Release checker | Implemented CLI with six reader/refusal checks. It rejects incomplete execution, absent semantic review and missing baseline custody. | Populate actual final evidence and complete the source/profile review. The checker is not itself a completed release audit. |
 
 The demo is two small complete single-head inference blocks, without dropout
 or a causal mask. It is an integration/correctness demonstration, not a GPU
@@ -239,8 +239,8 @@ add at most 34 expanded cases to cover the finite evidence gap, for a hard
 maximum of 128. Review and record every fixture/selection change before the
 final run. No growing dtype/shape Cartesian product.
 
-Finish the existing `scripts/check_v1_closure.py` draft; do not create a second
-release tool. Generated run records belong under `out/v1-closure/<run>/`.
+Use `scripts/check_v1_closure.py`; do not create a second release tool.
+Generated run records belong under `out/v1-closure/<run>/`.
 Do not infer a release pass from a manifest or operation-name counts.
 
 | Checkpoint | Remaining effort | Concrete output and exit |
@@ -319,8 +319,8 @@ A new required-case skip cannot hide behind those historical exceptions.
 
 ## Release check and handoff
 
-Finish the small policy validator/report around existing `product-coverage`,
-`package-coverage` and public staging tests. Its local draft is not final
+The policy validator joins existing `product-coverage`, `package-coverage`
+and public staging evidence. Its successful reader tests are not compiler
 qualification. Do not call a package observation count a closure result. The
 validator and final source/profile review must establish:
 
@@ -340,6 +340,27 @@ validator and final source/profile review must establish:
 5. Required baseline regressions and bounded serial smoke pass, or a predeclared
    unrelated/prerequisite exception is independently reported. Unsupported and
    optional target counts are visible beside portable counts.
+
+Run the checker in the frontend environment with the existing consumer roots
+configured, after producing the final evidence directory:
+
+```bash
+python scripts/check_v1_closure.py \
+  --run out/v1-closure/final \
+  --merlin-replay /path/to/merlin-replay/replay.json \
+  --output out/v1-closure/final/closure.json
+```
+
+It reads the run's exact `manifest.json`, `command.json`, `process.json`,
+`pytest.xml` and `semantic-audit.json`; the replay path is a real Merlin replay
+record, not a handwritten success label. Exit zero requires all four machine
+gates; a missing/failed/skipped required case, stale fixture or absent audit
+keeps the result open. The source/profile review binds policy, limitations,
+implementation bytes and all 49 generic entries to actual verified packages,
+qualified case IDs and Merlin execution. It must describe precise profiles and
+remaining forms truthfully. The checker verifies this evidence's custody and
+joins; it does not prove arbitrary source equivalence from an author's label
+or turn an operation-name observation into semantic coverage.
 
 The final report states **v1 scope closed** only if all five gates pass. It also
 lists unsupported/backend-required profiles, requested user contracts, fallback

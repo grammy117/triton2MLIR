@@ -8,7 +8,8 @@ Do not restart the roadmap, expand the demo or begin another compiler framework.
 The latest fixed release attempt is retained under
 `out/v1-closure/acceptance-number-minmax/`: 69 passed, three stale-layout
 owned-result fixture setup errors, then stop. The other 22 cases were not run.
-The local fixture correction passed six focused host/serial checks; the complete
+The fixture correction is committed as `a2c0fac` and passed six focused
+host/serial checks; the complete
 94-case selection still needs a successful run. The earlier signaling-NaN
 clamp failure has a generic Merlin fix, twelve scalar dtype/memory-profile
 passes and a 2,600-pass/two-prerequisite-skip Merlin replay. See
@@ -37,8 +38,9 @@ fresh artifact-only publication selection passes separately in
 model from only declared public artifacts with both outputs on three inputs.
 [Limitations](limitations.md) explain their uses, causes and remedies. The C0
 policy and 94-case manifest exist; their semantic evidence audit and complete
-release execution remain open. The local checker and five reader/refusal
-checks are drafted, not a completed closure verdict.
+release execution remain open. `scripts/check_v1_closure.py` and six
+reader/refusal checks now enforce complete execution and source/package
+custody; they do not supply the missing semantic review or closure verdict.
 
 Start with the [finite v1 closure plan](completion_plan.md). The user now permits
 checked extra information, qualified fallbacks and explicit non-support to bound
