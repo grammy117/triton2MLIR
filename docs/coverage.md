@@ -4,8 +4,14 @@
 
 The [v1 policy](v1_policy.json) records all 50 pinned definitions, with all 49
 generic operations mandatory and assembly optional. Its final semantic audit
-is open. The [fixed acceptance roster](../tests/data/v1_acceptance.json) collects
-94 cases and freezes fixture hashes; collection is not execution evidence.
+is open. The [fixed acceptance roster](../tests/data/v1_acceptance.json) now
+contains 107 cases and hashes 33 fixture files, retaining all original 94 cases.
+The thirteen added existing checks pass. Their combined verified package
+selection has 67 unique packages, 59 standalone qualifications and all 49
+generic names in Merlin-executed packages; see
+`out/v1-closure/family-witnesses/package-observations.json`.
+These are source-operation observations, not universal typed/composition
+coverage or a complete successful acceptance run.
 The [two-transformer workflow](transformer_demo.md) has independent native and
 public host evidence, including ragged and artifact-only publication checks.
 

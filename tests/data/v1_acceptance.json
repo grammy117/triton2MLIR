@@ -1,5 +1,5 @@
 {
-  "case_count": 94,
+  "case_count": 107,
   "cases": [
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[tensor]",
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[buffer]",
@@ -94,12 +94,27 @@
     "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[identity]",
     "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[missing]",
     "tests/test_model_binding.py::test_mismatched_model_call_contract_cannot_select_an_implementation[ambiguous]",
-    "tests/test_compact_model_target.py::test_actual_model_package_preserves_all_original_results_on_target"
+    "tests/test_compact_model_target.py::test_actual_model_package_preserves_all_original_results_on_target",
+    "tests/test_product_corpus.py::test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_gaps",
+    "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[gather-f32-zero]",
+    "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[scatter-i32-zero]",
+    "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-i32-False]",
+    "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-f32-False]",
+    "tests/test_external_descriptors.py::test_external_descriptor_cli_uses_a_real_source_signature[store]",
+    "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[tensor-rtz-f64-f16]",
+    "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[guarded-buffer-rtne-f16-bf16]",
+    "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs0-scales0-e2m1-e2m1]",
+    "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs3-scales3-bf16-fp16]",
+    "tests/test_atomic_word_cas.py::test_word_cas_preserves_success_failure_old_bits_and_storage_abi[False-32]",
+    "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]",
+    "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]"
   ],
   "closure_authority": "passing this selection alone is not generic semantic/type/attribute closure; final policy/source/consumer audit is required",
   "fixture_sources": {
     "tests/test_allocation_word_model.py": "fb1fb7caa40844be37d00b1a241db0acb59cfa7e5d105f6dcb2d457906b72eaf",
+    "tests/test_atomic_memory.py": "7fcdebbf9eb835ecc6b1deb5311ba64f0dd932f32244c395a914fe418894e5d1",
     "tests/test_atomic_volatile.py": "24a249caed179b40661be81d31451be91b4fd9c2356925c7796f5282f83bb3c7",
+    "tests/test_atomic_word_cas.py": "1b9f537e44ebed816f11cd91ea0466af314065ac0402bc9de7be04d0350a5b61",
     "tests/test_attention.py": "ee23328c3bcf6829ef1655dd7594c84afee7115b9cbe12d6a5bc4705fbb3be37",
     "tests/test_automatic_transformer.py": "8ecdf24c0d7ee84a649e66757ebda8fb33f7fe49a17d52f97ba26b814d61c61a",
     "tests/test_cfg_model.py": "fb63f41d9dfb8052da0851fcbf34ed623cc1a50ea38df2e167408442f8fdfa64",
@@ -108,17 +123,22 @@
     "tests/test_dynamic_shapes.py": "e7b65d9ae87a89e17d4c5161264c3fc71b912845d446722c58aa4a52ac833297",
     "tests/test_external_descriptors.py": "9db09209081d62e66b3168ded9ceb7bd95bb1dbb8d33e73ac62c2e03df5e6eec",
     "tests/test_external_math.py": "fb3bf8e1ce27d31f303a02c98ec9e3d88223c81ee959017d6e55de4bef43d9b1",
+    "tests/test_float_casts.py": "8dc5243d15aef340891c296d2488618d3d3a0419eaa8b0c995fc8e989792ca56",
     "tests/test_grouped_maps.py": "6f1a838e29f8ad42b0b005fa337fef92d7a08521d19657df9efec01cd0335dde",
+    "tests/test_indexed_descriptors.py": "2b2468a135fc04a36a24234236646d104adf0920bfd0179eecdb08ed6d9fc7f4",
     "tests/test_indexed_gather.py": "92c30e36dee8f1b3361982ec63bc2cf699746e2b3f54b5ada321ba7891786992",
     "tests/test_lifted_bfloat_models.py": "0a1dd21d661ab8283a28438111cac89eb2afde022464e43cdad21044c1a80735",
     "tests/test_mixed_effects.py": "c34d88c685942564449254b3eb66ba2addef5dbee61b1e5e068c1daa1b69d649",
     "tests/test_model_binding.py": "c2163be584378f1d824e2a022039312057edd69313d717daa8de643b368049ff",
     "tests/test_model_bundle.py": "c326fdb6038c2a94b37f0b475f850f4f170d75b6abd983703f7d4fb2c1cdb5ce",
+    "tests/test_pointer_unsplat.py": "d5b82ab76dc124680b70b53efcad81b26d8a3a19642008c4393a8828fe37390c",
+    "tests/test_product_corpus.py": "31749be8239452a462b05d5e4d9dcb44ee98b87077cd37ea7dc19c8f8f980a40",
     "tests/test_public_kernel_staging.py": "6477fa78c0e0f53aab4682115b86c111b8a8b8a79e9c5bb97962769b769288f1",
     "tests/test_ragged_tiles.py": "6ab29a69e72a4cb46c4b0eb0e7a0816f3ece9928470f9cc9fa083357424e8adf",
     "tests/test_runtime_headers.py": "db92ab1828f105a3eb11df605cfe848e983a774a4fed2cb1a08abfa3628346e4",
     "tests/test_runtime_state_loops.py": "1881de6d8ee9c5a6ac0c3db35be5d59b7677bef35249a8a79ce7eeec57cdbda8",
     "tests/test_scalar_math.py": "e99d2f684cf43f705a76bbc7f4e96d8fcc52ce156c671c417c9f312c943cb1fe",
+    "tests/test_scaled_dot.py": "93b88595d44546c04a0d0c290e65a6adc647fa60a6f5ac661ee797e205673851",
     "tests/test_scans.py": "024d14f42dc2f9d818550e358c5bad8a4868df87a043eeaee6e802aff5e20e96",
     "tests/test_shared_tensor.py": "5bafeee3ff3463c41d79f6b64ab76c45d409b5b7990843cb2e8315361a20acfe",
     "tests/test_source_assembly.py": "0badde00f2cae20501c771adb58511c37a275cc6f66b63fb9403d4ae96503ea6",
@@ -150,6 +170,28 @@
       "reason": "repository-layout source/C runtime owner migration; strengthen custody to actual hashes; exact 94-case roster unchanged"
     }
   ],
+  "reviewed_selection_updates": [
+    {
+      "added_cases": [
+        "tests/test_product_corpus.py::test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_gaps",
+        "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[gather-f32-zero]",
+        "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[scatter-i32-zero]",
+        "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-i32-False]",
+        "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-f32-False]",
+        "tests/test_external_descriptors.py::test_external_descriptor_cli_uses_a_real_source_signature[store]",
+        "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[tensor-rtz-f64-f16]",
+        "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[guarded-buffer-rtne-f16-bf16]",
+        "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs0-scales0-e2m1-e2m1]",
+        "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs3-scales3-bf16-fp16]",
+        "tests/test_atomic_word_cas.py::test_word_cas_preserves_success_failure_old_bits_and_storage_abi[False-32]",
+        "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]",
+        "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]"
+      ],
+      "previous_case_count": 94,
+      "qualification": "13 selected checks passed serially; 67 verified package observations include all 49 generic definitions. This is not full semantic or whole-selection qualification.",
+      "reason": "Preserve all original cases and add existing original-TTIR to Merlin witnesses for the twenty missing generic definitions. The product corpus keeps two expected refusals separate from portable support."
+    }
+  ],
   "schema": "t2m.release-acceptance.v1",
   "selection": "fixed collected integration/boundary tests; separate baseline regressions remain required",
   "source_definitions": "docs/v1_policy.json",
@@ -174,7 +216,9 @@
       "tests/test_atomic_volatile.py::test_mixed_effects_keep_native_old_values_and_unused_volatile_observations[True-f64]",
       "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[tensor]",
       "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[buffer]",
-      "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[guarded-buffer]"
+      "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[guarded-buffer]",
+      "tests/test_atomic_word_cas.py::test_word_cas_preserves_success_failure_old_bits_and_storage_abi[False-32]",
+      "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]"
     ],
     "K12": [
       "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[owned]",
@@ -197,7 +241,8 @@
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-0]",
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-1]",
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-0]",
-      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-1]"
+      "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-1]",
+      "tests/test_product_corpus.py::test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_gaps"
     ],
     "K5": [
       "tests/test_indexed_gather.py::test_indexed_gather_has_working_merlin_consumer_with_unchanged_reference",
@@ -206,7 +251,8 @@
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled2]",
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled3]",
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled4]",
-      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled5]"
+      "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled5]",
+      "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]"
     ],
     "K6": [
       "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[False]",
@@ -217,7 +263,12 @@
     ],
     "K8": [
       "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[f32]",
-      "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[bf16]"
+      "tests/test_external_descriptors.py::test_two_external_descriptors_retain_tiled_k_reuse_and_original_c[bf16]",
+      "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[gather-f32-zero]",
+      "tests/test_indexed_descriptors.py::test_indexed_transfer_preserves_padding_words_and_conflicts[scatter-i32-zero]",
+      "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-i32-False]",
+      "tests/test_indexed_descriptors.py::test_reducing_descriptors_retain_collisions_recurrence_and_initial_state[add-f32-False]",
+      "tests/test_external_descriptors.py::test_external_descriptor_cli_uses_a_real_source_signature[store]"
     ],
     "K9": [
       "tests/test_scalar_math.py::test_all_standard_ttir_float_types_keep_exact_rounding_and_exception_classes[f16-tensor]",
@@ -237,7 +288,11 @@
       "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f32-guarded-buffer]",
       "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-tensor]",
       "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-buffer]",
-      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-guarded-buffer]"
+      "tests/test_external_math.py::test_all_math_results_and_runtime_regions_reach_reused_merlin_library[f64-guarded-buffer]",
+      "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[tensor-rtz-f64-f16]",
+      "tests/test_float_casts.py::test_rounding_and_format_casts_reach_reused_merlin_interface[guarded-buffer-rtne-f16-bf16]",
+      "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs0-scales0-e2m1-e2m1]",
+      "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs3-scales3-bf16-fp16]"
     ],
     "M1": [
       "tests/test_model_bundle.py::test_actual_triton_op_model_binds_parameters_and_merlin_interface[exact-tiles]",

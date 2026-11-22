@@ -9,18 +9,21 @@ The latest fixed release attempt is retained under
 `out/v1-closure/acceptance-number-minmax/`: 69 passed, three stale-layout
 owned-result fixture setup errors, then stop. The other 22 cases were not run.
 The fixture correction is committed as `a2c0fac` and passed six focused
-host/serial checks; the complete
-94-case selection still needs a successful run. The earlier signaling-NaN
+host/serial checks; the expanded
+107-case selection still needs a successful run. The earlier signaling-NaN
 clamp failure has a generic Merlin fix, twelve scalar dtype/memory-profile
 passes and a 2,600-pass/two-prerequisite-skip Merlin replay. See
 [scalar math](scalar_math.md) for the transport scope and retained first failure.
 
-The partial-run package audit has 29 generic original-TTIR names in
-Merlin-qualified packages, with 20 missing witnesses in that selection.
-[The finite gap table](completion_plan.md#the-finite-evidence-gap) names all 20
-and existing fixtures to reuse. These counts are observations, not semantic
-coverage or proof that 20 implementations are missing. Preserve the existing
-94 cases and add at most 34 missing-family cases before final qualification.
+All twenty missing original-TTIR witnesses have now been recovered from existing
+implementations. The maintained corpus passes one aggregate check, and twelve
+targeted descriptor/cast/scaled-dot/atomic/pointer checks pass separately. The
+combined verified selection has 67 unique packages, 59 standalone qualifications
+and all 49 generic names in Merlin-executed packages, recorded in
+`out/v1-closure/family-witnesses/package-observations.json`. These counts do not
+establish semantic profile closure. The acceptance manifest now freezes 107
+cases and 33 fixture files, retaining all original 94 cases. The hard cap stays
+128; do not expand variants without an actual uncovered requirement.
 
 New user requirements keep every generic/useful computation mandatory; hardware
 and assembly observations may be limitations. Do not use the older finite-plan
@@ -37,7 +40,7 @@ fresh artifact-only publication selection passes separately in
 `.scratch/automatic-transformer-publication.log`. The latter runs the 13-token
 model from only declared public artifacts with both outputs on three inputs.
 [Limitations](limitations.md) explain their uses, causes and remedies. The C0
-policy and 94-case manifest exist; their semantic evidence audit and complete
+policy and 107-case manifest exist; their semantic evidence audit and complete
 release execution remain open. `scripts/check_v1_closure.py` and six
 reader/refusal checks now enforce complete execution and source/package
 custody; they do not supply the missing semantic review or closure verdict.
