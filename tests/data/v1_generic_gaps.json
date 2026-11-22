@@ -1145,20 +1145,71 @@
           "source_sha256": "7f74a5fecf29576b1274f903f213195eaf09e89e7b3a6f73e1c7fd6062caf170"
         }
       ]
-    }
-  ],
-  "definitions": {
-    "bytes": 50703,
-    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
-    "release": "v3.7.1",
-    "repository": "https://github.com/triton-lang/triton",
-    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
-  },
-  "gaps": [
+    },
     {
       "id": "source-noinline-hints",
       "kind": "generic-call-body-lowering-with-source-performance-hint",
+      "resolution": {
+        "baseline_replay": {
+          "bytes": 379643,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-y3727ubm/replay.json",
+          "sha256": "0cd6ccaf73fcc5692e779420a3b901717c815f3182f4a586b6831fe7a4d24750"
+        },
+        "consumer_commit": "cd2fe16bb61c62b929255b3a5fc4f67691b789df",
+        "contract": "docs/call_intent.md",
+        "contract_checks": 7,
+        "focused_and_affected_checks_passed": 60,
+        "focused_and_affected_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-final.log",
+          "sha256": "bb870d07ddacf62a7236d9d8e5efc10a649b9d72daa27405f98e1264a432c968"
+        },
+        "limitations": "Physical call boundary, code size and register pressure may change; downstream outlining requires independent legality. Missing bodies/external semantics/recursive control do not gain an implementation. Final 128-case qualification and semantic evidence join remain open.",
+        "lint_delta": {
+          "bytes": 289,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-lint-delta.log",
+          "sha256": "700b370c27a88f8bc462a5d2c0ef3eb1b6f5c1faaf5e34832bad7a7115e87ebc"
+        },
+        "producer_sources": [
+          {
+            "bytes": 2156,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/call_intent.py",
+            "sha256": "9e2b22426aacab3057e743a7f43ac9ebe2f909df23692ddb2b0ff5a7b8711f2e"
+          },
+          {
+            "bytes": 161249,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/shared_tensor.py",
+            "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
+          },
+          {
+            "bytes": 81516,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/package_compatibility.py",
+            "sha256": "155e7b566e527838acbc3511ddfbbe11f905d9bbc4b2df79c7b47944933e0cbf"
+          }
+        ],
+        "public_programs": 5,
+        "public_test_sources": [
+          {
+            "bytes": 6234,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_call_intent.py",
+            "sha256": "a6519a8cf227284008ba94e76ad3b563f3eeb575bd382f08664f45f484386b0a"
+          },
+          {
+            "bytes": 3083,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_call_intent_contract.py",
+            "sha256": "0b3ecf85c56283b6d6b85335677df735bd93c8237b05d39a166e98047dc4c14a"
+          }
+        ],
+        "qualification": "Original native-valid witness through tensor, buffer and guarded-buffer routes; repeated stateful calls retaining every old/final value; FP8 storage-backed arguments/results and owned replay; changed values, negative/zero updates, tails and empty grids. Exact original attribute survives source inventory.",
+        "route": "Validate native Boolean hint and defined body before mutation; move true grouping intent to non-authoritative source provenance and reuse the existing upstream inliner. No separate inliner or ABI change.",
+        "source_custody": {
+          "bytes": 2098,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-public-source-custody.json",
+          "sha256": "593bb5204dab9a1fd88e59fefc7c8fddf21d39ae68462a087e277f178c48ffa9"
+        },
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_public_invocations": 18
+      },
       "route": "Preserve the original typed Boolean hint, function identity, source IDs and grouping in provenance; expose the actual body through the existing upstream inliner. Disclose changed call-boundary/code-size/register-pressure choices, without discarding tiling, reuse, values or effects.",
       "stopping_decision": "One bounded correction in the existing shared five-hour reserve, within the original forty-hour cap; no new interprocedural compiler subsystem. Otherwise retain exact non-support and report incomplete closure.",
       "why_used": "Real Triton JIT private helpers can use noinline to control code size, physical call grouping and register pressure. The body still contains defined portable computation.",
@@ -1240,6 +1291,15 @@
       ]
     }
   ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "gaps": [],
   "meaning": "These are native-verified sources with demonstrated ABI, conversion or native-legalization failures, not supported operations or hardware exclusions. Removing an item requires an implemented route, qualified evidence and a reviewed source/profile audit.",
   "schema": "t2m.confirmed-generic-gaps.v1"
 }

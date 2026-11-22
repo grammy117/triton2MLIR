@@ -1757,6 +1757,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         assembly_reports = expand_source_assembly(parsed, _source_ids, provider=assembly_provider,
             tensor_carrier="arith")
     cfg_artifacts, cfg_report = {}, None
+    from .call_intent import expose_defined_helpers
+    call_intent_reports = expose_defined_helpers(parsed, _source_ids)
     annotated = work / "annotated.ttir"
     # Name locations survive the upstream rewrite infrastructure; attributes on
     # replaced source ops generally do not. Preserve the exact original too.
@@ -2021,6 +2023,7 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
             report["source_ids"] = ids
             print_reports.append(report)
     transformations = _restore_accumulators(lowered, records)
+    transformations.extend(call_intent_reports)
     transformations.extend(source_range_reports)
     if residual_pointer_stage is not None:
         transformations.append({"kind": "native-structured-memory-residual",
@@ -2201,6 +2204,8 @@ def convert_shared(source, abi, work, *, optimizer=None, memory_profile="tensor"
         next(iter(result.ops)).attributes["prov.program_barriers"] = StringAttr(json.dumps(
             [report["contract"] for report in barrier_reports], sort_keys=True))
     source_names = {r["id"]: r["opcode"] for r in records}
+    if call_intent_reports:
+        result.attributes["prov.source_call_intent"] = StringAttr(json.dumps(call_intent_reports, sort_keys=True))
     contractions = {record["id"]: {**record["dot_numeric"], "intake_accumulator_value":record["inputs"][2]}
         for record in records if "dot_numeric" in record}
     scaled_contractions = {record["id"]: {**record["scaled_dot_numeric"], "intake_accumulator_value":record["inputs"][2]}

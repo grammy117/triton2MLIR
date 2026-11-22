@@ -25,10 +25,11 @@ and scaled-dot accumulators now qualify through thirteen public programs;
 [FP8 atomic addition](fp8_atomics.md) now qualifies eight public programs and
 36 invocations. [Entry value ports](entry_values.md) now qualify nineteen public
 programs and both original witnesses, with 87 public calls and 35 contract checks.
-**All five original items are focused-qualified.** The final review found a
-native-valid private `noinline` helper that still fails conversion; it remains
-a generic release finding in the existing five-hour correction reserve. They cannot be removed by
-classifying them as GPU instructions or by counting their refusals as support.
+**All five original items are focused-qualified.** The additional native-valid private `noinline` finding now qualifies through
+five public programs and eighteen invocations; seven contract checks retain
+strict hint/body validation. See [call intent and its performance cost](call_intent.md).
+The original failures remain in the resolved ledger. Generic failures cannot be
+removed by classifying them as GPU instructions or counting refusals as support.
 
 | Work item | Demonstrated failure | Existing material and bounded next action | Attempt ceiling |
 | --- | --- | --- | --- |

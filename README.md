@@ -20,8 +20,8 @@ closure. Low-precision printing and unpacked i4 storage are now qualified;
 FP8 arithmetic/accumulators now also qualify through thirteen public programs;
 [FP8 atomic addition](docs/fp8_atomics.md) now qualifies through eight public programs;
 [Entry value ports](docs/entry_values.md) also qualify nineteen public programs.
-All five original named items are implemented and focused-qualified. A native-valid
-`noinline` helper finding is now tracked in the existing correction reserve;
+All five original named items are implemented and focused-qualified. [Defined `noinline` helpers](docs/call_intent.md) now qualify five public programs
+and eighteen invocations, preserving the original grouping intent as provenance;
 final acceptance and semantic qualification remain open.
 The measurements below describe delivered capabilities; the release is not
 closed yet.

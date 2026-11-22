@@ -32,9 +32,7 @@
     "unmeasured": "An untested typed/composition form is unmeasured; neighboring operation-name evidence is insufficient. No claim of universal Cartesian coverage follows.",
     "valid_generic_failure": "An unimplemented defined computation or ABI/native transport remains a generic gap; try broader standard computation and retain the exact reproducer."
   },
-  "confirmed_generic_gap_ids": [
-    "source-noinline-hints"
-  ],
+  "confirmed_generic_gap_ids": [],
   "definitions": {
     "bytes": 50703,
     "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
@@ -57,7 +55,7 @@
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
         }
       ],
       "unresolved_generic_forms": []
@@ -114,7 +112,7 @@
         "K9",
         "M5"
       ],
-      "complement": "Unknown rounding/overflow semantics require a selected implemented profile; no global default may overwrite source per-cast choices. Pointer casts require actual storage/address contracts. Public i4 tensor/scalar transport remains unimplemented although internal i4 casts are available. Reader type admission alone grants no arithmetic or by-value low-precision ABI.",
+      "complement": "Unknown rounding/overflow semantics require a selected implemented profile; no global default may overwrite source per-cast choices. Pointer casts require actual storage/address contracts. Public i4 tensors now use qualified unpacked canonical uint8 cells; numeric value ports use the explicit v3 storage wrapper rather than a native by-value i4 ABI. Reader type admission alone grants no arithmetic or by-value low-precision ABI.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -198,7 +196,7 @@
         },
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
         },
         {
           "path": "t2m/scaled_dot.py",
@@ -251,7 +249,7 @@
         "K12",
         "M6"
       ],
-      "complement": "Physical pointer printing requires an actual address contract. Device printf varargs replication/order remains outside the declared logical-element profile. Unknown effects/messages cannot disappear or be inferred from an expected stream. Internal i4 printing does not grant public i4 pointer storage or a by-value native ABI.",
+      "complement": "Physical pointer printing requires an actual address contract. Device printf varargs replication/order remains outside the declared logical-element profile. Unknown effects/messages cannot disappear or be inferred from an expected stream. I4 public storage is separately qualified as unpacked canonical uint8 cells; printing grants no packed storage or native by-value ABI.",
       "evidence_status": "source-admission-reviewed; focused low-precision public qualification passed; final whole-candidate qualification pending",
       "reviewed_sources": [
         {
@@ -272,7 +270,7 @@
         },
         {
           "path": "t2m/package_compatibility.py",
-          "sha256": "8d550188cfa4011fe490515c59318b4d1f6c0bfb3198e797ad4aac41aa548054"
+          "sha256": "155e7b566e527838acbc3511ddfbbe11f905d9bbc4b2df79c7b47944933e0cbf"
         }
       ],
       "unresolved_generic_forms": []
@@ -301,7 +299,7 @@
       "unresolved_generic_forms": []
     },
     "functions": {
-      "admission": "One selected source entry with complete caller bindings; original numeric scalar/static-tile value arguments and returns use the qualified v3 storage wrapper. Source bodies/private helpers inline before memory analysis; original types, result order, source control and actual effects remain. Writable roots and return ports become explicit tensor results; effect-only wrappers remain void.",
+      "admission": "One selected source entry with complete caller bindings; original numeric scalar/static-tile value arguments and returns use the qualified v3 storage wrapper. Source bodies/private helpers inline before memory analysis; original types, result order, source control and actual effects remain. Writable roots and return ports become explicit tensor results; effect-only wrappers remain void. Native Boolean noinline hints on defined helpers retain original grouping intent as descriptive provenance before the existing upstream inliner exposes their actual bodies.",
       "caller_contracts": [
         "TensorABI entry, complete source-order pointer/runtime/specialized bindings",
         "Existing explicit allocation/view/result bindings for model mutation",
@@ -316,12 +314,12 @@
         "M4",
         "M7"
       ],
-      "complement": "The native-valid Boolean noinline helper hint currently prevents source-body exposure and remains a tracked generic finding. Additional public library entries require per-entry source modules; raw pointer/descriptor value interfaces need actual logical root/offset/field contracts. Unknown effects/external implementations and source control not accepted by existing normalization remain explicit limits; numeric ports grant no missing implementation or alias permission.",
+      "complement": "Physical call boundaries, code size and register pressure may change after exposing noinline helper bodies; provenance grants no outlining or numeric/effect permission. Additional public library entries require per-entry source modules; raw pointer/descriptor value interfaces need actual logical root/offset/field contracts. Unknown effects/external implementations and source control not accepted by existing normalization remain explicit limits; numeric ports grant no missing implementation or alias permission.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
         },
         {
           "path": "t2m/frontend.py",
@@ -350,11 +348,13 @@
         {
           "path": "t2m/source_capsule.py",
           "sha256": "9d2e8309f9b999347fe876e91ffa664bf771075f1704e231639766fc5a0b1016"
+        },
+        {
+          "path": "t2m/call_intent.py",
+          "sha256": "9e2b22426aacab3057e743a7f43ac9ebe2f909df23692ddb2b0ff5a7b8711f2e"
         }
       ],
-      "unresolved_generic_forms": [
-        "source-noinline-hints"
-      ]
+      "unresolved_generic_forms": []
     },
     "gather": {
       "admission": "Matching static positive numeric source/result and legal TT integer indices, equal non-axis dimensions and exact axis. Use standard indexed tensor extraction with source-signed active bounds; i1 true sign-extends to -1. Captured lookup tensors retain their original SSA snapshot.",
@@ -366,7 +366,7 @@
         "K4",
         "K5"
       ],
-      "complement": "Out-of-range active indices abort under the guarded profile. Malformed shapes/axes fail the pinned verifier; the prose-only smaller non-axis shape is not native-valid. Pointer gathers need pointer-state/memory normalization. Internal i4 indices work; direct public i4 arrays remain the shared storage gap.",
+      "complement": "Out-of-range active indices abort under the guarded profile. Malformed shapes/axes fail the pinned verifier; the prose-only smaller non-axis shape is not native-valid. Pointer gathers need pointer-state/memory normalization. Internal i4 indices and public unpacked canonical uint8 i4 arrays have separately qualified routes; no packed-nibble mapping is inferred.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -389,7 +389,7 @@
       "candidate_workflows": [
         "K4"
       ],
-      "complement": "Invalid ranks/types/geometry fail native verification or explicit admission. Out-of-range samples contribute nothing; masked padding has no contribution. Global histogram accumulation needs the actual separate atomic/effect profile. Internal narrow widths qualify; public i4 storage remains shared ABI work.",
+      "complement": "Invalid ranks/types/geometry fail native verification or explicit admission. Out-of-range samples contribute nothing; masked padding has no contribution. Global histogram accumulation needs the actual separate atomic/effect profile. Internal narrow widths and the public unpacked canonical uint8 i4 carrier are separately qualified; histogram results still retain their actual source width.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
@@ -451,7 +451,7 @@
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
         },
         {
           "path": "t2m/guarded_memory.py",
@@ -566,12 +566,12 @@
         "K4",
         "M7"
       ],
-      "complement": "Invalid dimensions/axes/prototypes fail native verification. Source encoding/device-layout requirements need a supported earlier IR or explicit grouping facts; no hardware placement is invented. Unknown numeric/effectful compositions use their own admission and remain gaps when valid generic computation is missing. Internal i4 does not establish public i4 storage.",
+      "complement": "Invalid dimensions/axes/prototypes fail native verification. Source encoding/device-layout requirements need a supported earlier IR or explicit grouping facts; no hardware placement is invented. Unknown numeric/effectful compositions use their own admission and remain gaps when valid generic computation is missing. Public i4 storage is separately qualified with canonical unpacked uint8 cells; shape transforms do not infer packed-nibble mapping.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
         },
         {
           "path": "t2m/frontend.py",
@@ -2470,6 +2470,77 @@
         "scalar-numeric",
         "tile-shapes"
       ]
+    },
+    {
+      "consumer_commit": "cd2fe16bb61c62b929255b3a5fc4f67691b789df",
+      "evidence": {
+        "baseline_replay": {
+          "bytes": 379643,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-y3727ubm/replay.json",
+          "sha256": "0cd6ccaf73fcc5692e779420a3b901717c815f3182f4a586b6831fe7a4d24750"
+        },
+        "consumer_commit": "cd2fe16bb61c62b929255b3a5fc4f67691b789df",
+        "contract": "docs/call_intent.md",
+        "contract_checks": 7,
+        "focused_and_affected_checks_passed": 60,
+        "focused_and_affected_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-final.log",
+          "sha256": "bb870d07ddacf62a7236d9d8e5efc10a649b9d72daa27405f98e1264a432c968"
+        },
+        "limitations": "Physical call boundary, code size and register pressure may change; downstream outlining requires independent legality. Missing bodies/external semantics/recursive control do not gain an implementation. Final 128-case qualification and semantic evidence join remain open.",
+        "lint_delta": {
+          "bytes": 289,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-lint-delta.log",
+          "sha256": "700b370c27a88f8bc462a5d2c0ef3eb1b6f5c1faaf5e34832bad7a7115e87ebc"
+        },
+        "producer_sources": [
+          {
+            "bytes": 2156,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/call_intent.py",
+            "sha256": "9e2b22426aacab3057e743a7f43ac9ebe2f909df23692ddb2b0ff5a7b8711f2e"
+          },
+          {
+            "bytes": 161249,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/shared_tensor.py",
+            "sha256": "4abffc5b7a0cbacf76f57dad3a95ffa1c6920d3ed9f24e15c7d5dbd746faa8f1"
+          },
+          {
+            "bytes": 81516,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/package_compatibility.py",
+            "sha256": "155e7b566e527838acbc3511ddfbbe11f905d9bbc4b2df79c7b47944933e0cbf"
+          }
+        ],
+        "public_programs": 5,
+        "public_test_sources": [
+          {
+            "bytes": 6234,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_call_intent.py",
+            "sha256": "a6519a8cf227284008ba94e76ad3b563f3eeb575bd382f08664f45f484386b0a"
+          },
+          {
+            "bytes": 3083,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_call_intent_contract.py",
+            "sha256": "0b3ecf85c56283b6d6b85335677df735bd93c8237b05d39a166e98047dc4c14a"
+          }
+        ],
+        "qualification": "Original native-valid witness through tensor, buffer and guarded-buffer routes; repeated stateful calls retaining every old/final value; FP8 storage-backed arguments/results and owned replay; changed values, negative/zero updates, tails and empty grids. Exact original attribute survives source inventory.",
+        "route": "Validate native Boolean hint and defined body before mutation; move true grouping intent to non-authoritative source provenance and reuse the existing upstream inliner. No separate inliner or ABI change.",
+        "source_custody": {
+          "bytes": 2098,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/call-intent-public-source-custody.json",
+          "sha256": "593bb5204dab9a1fd88e59fefc7c8fddf21d39ae68462a087e277f178c48ffa9"
+        },
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_public_invocations": 18
+      },
+      "family": "functions",
+      "final_candidate_status": "Focused qualification only; final frozen 128-case execution and semantic evidence join remain open.",
+      "gap_id": "source-noinline-hints",
+      "related_families": [
+        "logical-memory",
+        "scalar-numeric"
+      ]
     }
   ],
   "reviewed_definition_files": [
@@ -2494,7 +2565,7 @@
     }
   ],
   "schema": "t2m.source-profile-review.v1",
-  "status": "source-admission-reviewed; generic gaps and final qualification open",
+  "status": "source-admission-reviewed; all demonstrated gaps focused-qualified; final qualification open",
   "supporting_dialects": {
     "control": "Reuse official CF-to-SCF lifting and actual structured regions; no name-based pattern whitelist or source-loop unrolling.",
     "effects": "Readonly tensor snapshots remain SSA values; live memory, external participants, barriers, atomics and volatile observations need actual effect contracts.",

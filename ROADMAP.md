@@ -29,8 +29,9 @@ qualify thirteen public programs with 69 library replays.
 [FP8 atomic addition](docs/fp8_atomics.md) now qualifies eight public programs
 and 36 public invocations. [Entry value ports](docs/entry_values.md) qualify
 nineteen public programs, 87 public invocations and 35 contract checks. The five
-original items are focused-qualified. A source `noinline` helper finding remains
-in the existing bounded correction reserve.
+original items are focused-qualified. [Defined `noinline` helpers](docs/call_intent.md) also qualify five public
+programs and eighteen invocations using the existing upstream inliner, with
+original call intent and performance costs retained explicitly.
 Final semantic qualification and full closure remain open.
 Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
 format regressions with exact old/new words. Boolean atomics now pass a full

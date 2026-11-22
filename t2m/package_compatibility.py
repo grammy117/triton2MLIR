@@ -13,6 +13,17 @@ from .standard_floats import FP8_TYPE_NAMES
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("kind") == "source-call-grouping-intent"
+           for row in trace.get("transformations", [])):
+        differences.append(
+            "defined source helpers marked noinline expose their complete typed bodies through the "
+            "existing upstream inliner; original Boolean call-grouping intent and body source IDs "
+            "remain descriptive provenance with grants_semantics=false; actual values, effects, "
+            "tiles and control stay executable; physical call boundaries, code size and register "
+            "pressure may change, and downstream outlining requires its own legality checks; "
+            "no missing external implementation, hardware placement or numeric/effect permission "
+            "is inferred; public ABI and receipt schemas are unchanged"
+        )
     if any(row.get("opcode", "").startswith(("arith.", "math."))
            and any(fmt in type_ for type_ in (*row.get("input_types", []), *row.get("output_types", []))
                    for fmt in FP8_TYPE_NAMES) for row in trace.get("source_operations", [])):

@@ -35,8 +35,9 @@ now pass thirteen public programs and 69 library replays.
 pairs, constant zero updates and 36 public invocations. The two original entry-value witnesses now also run publicly: nineteen
 [value-port programs](entry_values.md), 87 public invocations and 35 contract
 checks qualify numeric arguments/results, tensor tiles and descriptor composition.
-The five named items are focused-qualified. A native-valid `noinline` helper
-finding remains tracked in the existing correction reserve.
+The five named items are focused-qualified. [Defined `noinline` helpers](call_intent.md) also pass five public programs
+and eighteen invocations. Original call intent remains provenance; physical
+call boundaries, code size and register pressure may change.
 See the exact boundaries and remedies in
 [limitations](limitations.md).
 These are source-operation observations, not universal typed/composition
