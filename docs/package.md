@@ -1215,7 +1215,7 @@ consumer revision qualified with the package, not an assumed schema-only match.
 
 `--effect-profile typed-atomics` selects the separate
 `private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
-bitwise f32/f64 exchange, IEEE f64 atomic addition, integer word RMWs on equal-width f16/f32/f64 storage and integer word CAS on f16/f32/f64 storage
+bitwise exchange on all eight pinned TTIR float formats, IEEE f64 atomic addition, integer word RMWs on equal-width f16/f32/f64 storage and integer word CAS on f16/f32/f64 storage
 to integer RMW/CAS while retaining the same public
 tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
 value dtype and an operation-specific numeric contract in source/access/payload declarations.
@@ -1238,6 +1238,11 @@ index ABI; each complete internal CAS retry helper is restored before lifetime
 checks. Portable MLIR has no native helper or LLVM operations. Core artifacts,
 receipt schemas and tensor/scalar ABI are unchanged. Other floating arithmetic
 needs separate numeric policies.
+Direct f16/BF16/FP8 exchange retains standard assignment atomics and exact
+old/new words. Selected native legalization transports only integer bits
+across private helper calls, preserving the original storage format, source
+mask and all body/ownership checks. This additive capability requires the
+qualified consumer revision; it changes no public ABI or receipt schema.
 Compatibility metadata names these
 differences for standalone and model packages. Word events additionally bind
 storage/value types and unchanged element address units in per-event `word_view`

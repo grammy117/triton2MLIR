@@ -9,6 +9,16 @@ the frontend package or a source-language implementation.
 COMPILER_FEATURES = frozenset({"reuse_loop_tensor_destinations"})
 
 
+def requires_atomic_word_views(operations):
+    """Select typed word legalization from actual scalar atomic operations."""
+    low = ("f16", "bf16", "f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
+    return any(
+        op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in (*low, "f32", "f64")
+        or op.name == "memref.atomic_rmw" and str(op.results[0].type) in low
+        for op in operations
+    )
+
+
 def select_features(module):
     if __package__:
         from .bfloat_math import requires_emulation
@@ -38,7 +48,7 @@ def select_features(module):
         from merlin.compiler.lower.options.atomic_integer_regions import ensure_registered
         ensure_registered()
         features.add("lower_integer_atomic_regions")
-    if any(str(op.results[0].type) in ("f16", "bf16", "f32", "f64") for op in regions):
+    if requires_atomic_word_views(module.walk()):
         features.add("lower_atomic_word_views")
     elif regions and not integer_regions:
         features.add("lower_integer_compare_exchange")

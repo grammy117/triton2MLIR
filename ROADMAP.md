@@ -19,6 +19,9 @@ and three atomic programs;
 the hard cap remains 128. The preceding 107-case selection passed in full.
 All twenty missing operation witnesses have been recovered, with all 49 generic
 names in Merlin-executed packages. Semantic/profile closure remains open.
+Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
+format regressions with exact old/new words. Subbyte atomics and the remaining
+typed/storage review are open; the frozen acceptance roster stays at 128.
 At the effort cap, deliver either a
 qualified release or an explicitly incomplete gap handoff; do not silently
 extend the effort or count excluded generic forms as support. New accelerator

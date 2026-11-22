@@ -7,7 +7,8 @@ ABI remain intact; native helpers use integer half call transport. Four real
 libraries and two complete models qualify through native/Merlin host/Spike.
 
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
-and the separately selected typed profile with bitwise f32/f64 exchange and
+and the separately selected typed profile with bitwise exchange on all eight
+pinned floating formats and
 integer-word RMWs on f16/f32/f64 storage (including Triton floating min/max),
 integer-word CAS on f16/f32/f64 storage, IEEE f64 addition and explicitly
 selected IEEE/FTZ f32 addition.
@@ -49,6 +50,49 @@ half-storage bits and untouched trailing bytes. Forty-one affected existing
 CAS, half-addition, byte-order and evidence-integrity checks also pass.
 These results qualify private invocation state; external publication and
 hardware-specific observations still need their own execution contract.
+
+## Low-precision floating exchange
+
+Direct `tt.atomic_rmw exch` now also admits f16, BF16, f8E4M3FN,
+f8E4M3FNUZ, f8E5M2 and f8E5M2FNUZ under `typed-atomics`. Together with the
+existing f32/f64 path, this covers every pinned TTIR floating storage format
+for exchange. It performs no floating arithmetic: old and new words, including
+signaling NaNs, payloads, signed zeros and noncanonical numeric encodings,
+remain exact. This does not add a floating-addition policy.
+
+Meta's existing element-typed converter emits standard `memref.atomic_rmw
+assign`; the exported package retains it, source masks, tiled loops and every
+result. The native atomic-word feature independently checks the actual type,
+operation, default memory space and rank-one identity layout. A static memref
+may cast to its dynamic helper ABI. The allocation-free helper performs one
+integer i8/i16 exchange and returns the old integer bits, with bitcasts at the
+caller. Exact outside-value and constant assignment regions use the same
+mechanism. No half/BF16/FP8 value crosses a floating helper-call ABI. Complete
+body/declaration checks and borrowing/lifetime gates remain mandatory.
+
+MemRef's pinned xDSL definitions captured the original float union before FP8
+registration in the consumer worker. Both readers now extend that full float
+union consistently; restricted numeric subsets stay restricted. Registration
+alone grants neither an arithmetic implementation nor an atomic effect profile.
+The native and public workers share capability selection from actual operations
+and types. They never infer an atomic implementation from provenance alone.
+
+Six complete scalar/tiled programs pass actual public Merlin staging and host
+execution, preserving all four results and caller inputs on changed, ragged,
+single-element and empty domains. Two full-domain invocations rotate active
+masks so every one of the 256 FP8 words or 65,536 half/BF16 words participates
+as both an old and a new tiled value. Active bad indices abort; inactive bad
+addresses have no effect. One library per format is reused without evaluator
+arrays in compiler staging. Three additional native programs qualify standard,
+outside-value and constant exchanges, exact signaling-NaN constants, and refusal
+of a helper whose address calculation changes. These are representation tests,
+not GPU execution or accelerator performance measurements.
+
+The native API keeps BF16/FP8's existing uint16/uint8 array carriers; MLIR and
+source contracts retain the actual float format. The public ABI, receipt and
+admission schemas are unchanged, while older consumers may reject the newly
+qualified source forms. Integer pointer views through BF16/FP8 storage and
+subbyte atomics remain outside this extension. See [limitations](limitations.md).
 
 ## Source-backed boundary
 

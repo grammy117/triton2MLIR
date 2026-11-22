@@ -165,7 +165,9 @@ def main(work):
                 for block in region.blocks:
                     for item in block.operations:
                         yield from operations(item.operation)
-        if any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation)):
+        from consumer_features import requires_atomic_word_views
+        word_views = requires_atomic_word_views(operations(module.operation))
+        if word_views or any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation)):
             root = os.environ.get("T2M_MERLIN_ROOT")
             if not root:
                 raise ValueError("native generic atomics require the explicit T2M_MERLIN_ROOT compiler support path")
@@ -173,8 +175,6 @@ def main(work):
             from merlin.compiler.lower.options import atomic_compare_exchange
             namespace = {"ir": ir, "print": compiler_diagnostic}
             exec(atomic_compare_exchange.SUPPORT, namespace)
-            word_views = any(op.name == "memref.generic_atomic_rmw" and str(op.results[0].type) in ("f16", "bf16", "f32", "f64")
-                for op in operations(module.operation))
             count = namespace["_cas_rewrite"](context, module, word_views=word_views, integer_regions=integer_regions)
             prepared = work / ("prepared-integer-atomic-regions.mlir" if integer_regions else "prepared-atomic-word-views.mlir" if word_views else "prepared-compare-exchange.mlir")
             prepared.write_text(str(module))

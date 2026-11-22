@@ -127,7 +127,8 @@ def test_float_contract_is_explicit_and_operation_specific():
                 continue
             with pytest.raises(ConversionError, match="qualified"):
                 contract(source(element, kind), lambda _: ["source"], typed=True)
-        for op, typed in ((source(element), False), (source(element, cas=True), True), (source(builtin.f16), True)):
+        # Half exchange is now qualified; it still requires the typed profile.
+        for op, typed in ((source(element), False), (source(element, cas=True), True), (source(builtin.f16), False)):
             with pytest.raises(ConversionError, match="qualified"):
                 contract(op, lambda _: ["source"], typed=typed)
     legacy = contract(source(builtin.i32), lambda _: ["source"])

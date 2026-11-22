@@ -1,4 +1,173 @@
 {
+  "closed_gaps": [
+    {
+      "id": "low-precision-bitwise-atomic-exchange",
+      "kind": "missing-generic-storage-transport",
+      "resolution": {
+        "evidence": [
+          ".scratch/low-precision-exchange-all.log (f16/BF16 passed; retained initial FP8 reader failures)",
+          ".scratch/low-precision-exchange-fp8.log (all four FP8 formats passed after reader repair)",
+          "Merlin out/build/low-precision-exchange-native-constant.log (five native checks passed, including three floating formats)"
+        ],
+        "interpretation": "Exhaustive tiled old/new words, ordered scalar old values, changed/empty replay, invalid-index aborts and current helper-body checks. Final release selection and full semantic audit remain pending.",
+        "public_formats": [
+          "f16",
+          "bf16",
+          "f8E4M3FN",
+          "f8E4M3FNUZ",
+          "f8E5M2",
+          "f8E5M2FNUZ"
+        ],
+        "public_test": "tests/test_low_precision_exchange.py::test_every_low_precision_word_survives_scalar_and_tiled_exchange",
+        "route": "Existing Meta element-typed assignment atomics plus checked integer i8/i16 native transport; MemRef FP8 type-registration repair.",
+        "status": "implemented-and-focused-qualification-passed",
+        "test_source_sha256": "67dc579cac5d756957f477915bfa7eadd4aac5bc5fa9309963f2eef36c17c76a"
+      },
+      "route": "Reuse integer word/byte atomic transport, preserving original float storage and all old/new bits. An arithmetic rounding contract alone cannot supply bitwise exchange transport.",
+      "stopping_decision": "One bounded implementation and corrective attempt. Otherwise retain a located refusal, document exact excluded forms and report incomplete full-generic closure.",
+      "why_used": "Replace low-precision floating state while returning the exact old word; exchange performs no floating arithmetic.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f16",
+                "effect": "readwrite",
+                "name": "state",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f16",
+                "effect": "read",
+                "name": "value",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f16",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "narrow"
+          },
+          "native_verification": {
+            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
+            "returncode": 0
+          },
+          "observed_at_triton2mlir_commit": "061ae3f32b92d5065ab4fd570e35e98e6d15734f",
+          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract",
+          "operation": "tt.atomic_rmw",
+          "selection": {
+            "address_policy": "source-words",
+            "effect_profile": "typed-atomics",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @narrow(%state:!tt.ptr<f16>,%value:!tt.ptr<f16>,%out:!tt.ptr<f16>) {\n      %v=tt.load %value:!tt.ptr<f16>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<f16>,f16)->f16\n      tt.store %out,%old:!tt.ptr<f16>\n      tt.return\n    }}",
+          "source_dtype": "f16",
+          "source_sha256": "7f41aa14b18aafc197345b2e6a58cc0654bf577029ad390721a6cfcba4a86619"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "bf16",
+                "effect": "readwrite",
+                "name": "state",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "bf16",
+                "effect": "read",
+                "name": "value",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "bf16",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "narrow"
+          },
+          "native_verification": {
+            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
+            "returncode": 0
+          },
+          "observed_at_triton2mlir_commit": "061ae3f32b92d5065ab4fd570e35e98e6d15734f",
+          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract",
+          "operation": "tt.atomic_rmw",
+          "selection": {
+            "address_policy": "source-words",
+            "effect_profile": "typed-atomics",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @narrow(%state:!tt.ptr<bf16>,%value:!tt.ptr<bf16>,%out:!tt.ptr<bf16>) {\n      %v=tt.load %value:!tt.ptr<bf16>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<bf16>,bf16)->bf16\n      tt.store %out,%old:!tt.ptr<bf16>\n      tt.return\n    }}",
+          "source_dtype": "bf16",
+          "source_sha256": "8f419d2e5e94deaeb4c3bdb2076eb3dded4ac8c67a357340153f09378497cc29"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "readwrite",
+                "name": "state",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "value",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "narrow"
+          },
+          "native_verification": {
+            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
+            "returncode": 0
+          },
+          "observed_at_triton2mlir_commit": "061ae3f32b92d5065ab4fd570e35e98e6d15734f",
+          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): atomic RMW needs a byte-sized integer i8/i16/i32/i64 numeric profile",
+          "operation": "tt.atomic_rmw",
+          "selection": {
+            "address_policy": "source-words",
+            "effect_profile": "typed-atomics",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @narrow(%state:!tt.ptr<f8E4M3FN>,%value:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n      %v=tt.load %value:!tt.ptr<f8E4M3FN>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<f8E4M3FN>,f8E4M3FN)->f8E4M3FN\n      tt.store %out,%old:!tt.ptr<f8E4M3FN>\n      tt.return\n    }}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "0bed9146494b6bf494e93c005b37f62878338907b341a61d6ba45493fa0115d7"
+        }
+      ]
+    }
+  ],
   "definitions": {
     "bytes": 50703,
     "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
@@ -49,6 +218,7 @@
             "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
             "returncode": 0
           },
+          "observed_at_triton2mlir_commit": "061ae3f32b92d5065ab4fd570e35e98e6d15734f",
           "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): atomic RMW needs a byte-sized integer i8/i16/i32/i64 numeric profile",
           "operation": "tt.atomic_rmw",
           "selection": {
@@ -94,6 +264,7 @@
             "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
             "returncode": 0
           },
+          "observed_at_triton2mlir_commit": "061ae3f32b92d5065ab4fd570e35e98e6d15734f",
           "observed_refusal": "tensor buffers require a supported dtype and read/write/readwrite effect",
           "operation": "tt.atomic_rmw",
           "selection": {
@@ -104,150 +275,6 @@
           "source": "module {tt.func public @narrow(%state:!tt.ptr<i4>,%value:!tt.ptr<i4>,%out:!tt.ptr<i4>) {\n      %v=tt.load %value:!tt.ptr<i4>\n      %old=tt.atomic_rmw add, relaxed, gpu, %state, %v:(!tt.ptr<i4>,i4)->i4\n      tt.store %out,%old:!tt.ptr<i4>\n      tt.return\n    }}",
           "source_dtype": "i4",
           "source_sha256": "c234791d438b37ad9d8ddf3116f95bdac462ea51e689b3afe804e16ec4523951"
-        }
-      ]
-    },
-    {
-      "id": "low-precision-bitwise-atomic-exchange",
-      "kind": "missing-generic-storage-transport",
-      "route": "Reuse integer word/byte atomic transport, preserving original float storage and all old/new bits. An arithmetic rounding contract alone cannot supply bitwise exchange transport.",
-      "stopping_decision": "One bounded implementation and corrective attempt. Otherwise retain a located refusal, document exact excluded forms and report incomplete full-generic closure.",
-      "why_used": "Replace low-precision floating state while returning the exact old word; exchange performs no floating arithmetic.",
-      "witnesses": [
-        {
-          "bindings": {
-            "buffers": [
-              {
-                "dtype": "f16",
-                "effect": "readwrite",
-                "name": "state",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "f16",
-                "effect": "read",
-                "name": "value",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "f16",
-                "effect": "write",
-                "name": "out",
-                "shape": [
-                  1
-                ]
-              }
-            ],
-            "entry": "narrow"
-          },
-          "native_verification": {
-            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
-            "returncode": 0
-          },
-          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract",
-          "operation": "tt.atomic_rmw",
-          "selection": {
-            "address_policy": "source-words",
-            "effect_profile": "typed-atomics",
-            "memory_profile": "guarded-buffer"
-          },
-          "source": "module {tt.func public @narrow(%state:!tt.ptr<f16>,%value:!tt.ptr<f16>,%out:!tt.ptr<f16>) {\n      %v=tt.load %value:!tt.ptr<f16>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<f16>,f16)->f16\n      tt.store %out,%old:!tt.ptr<f16>\n      tt.return\n    }}",
-          "source_dtype": "f16",
-          "source_sha256": "7f41aa14b18aafc197345b2e6a58cc0654bf577029ad390721a6cfcba4a86619"
-        },
-        {
-          "bindings": {
-            "buffers": [
-              {
-                "dtype": "bf16",
-                "effect": "readwrite",
-                "name": "state",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "bf16",
-                "effect": "read",
-                "name": "value",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "bf16",
-                "effect": "write",
-                "name": "out",
-                "shape": [
-                  1
-                ]
-              }
-            ],
-            "entry": "narrow"
-          },
-          "native_verification": {
-            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
-            "returncode": 0
-          },
-          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract",
-          "operation": "tt.atomic_rmw",
-          "selection": {
-            "address_policy": "source-words",
-            "effect_profile": "typed-atomics",
-            "memory_profile": "guarded-buffer"
-          },
-          "source": "module {tt.func public @narrow(%state:!tt.ptr<bf16>,%value:!tt.ptr<bf16>,%out:!tt.ptr<bf16>) {\n      %v=tt.load %value:!tt.ptr<bf16>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<bf16>,bf16)->bf16\n      tt.store %out,%old:!tt.ptr<bf16>\n      tt.return\n    }}",
-          "source_dtype": "bf16",
-          "source_sha256": "8f419d2e5e94deaeb4c3bdb2076eb3dded4ac8c67a357340153f09378497cc29"
-        },
-        {
-          "bindings": {
-            "buffers": [
-              {
-                "dtype": "f8E4M3FN",
-                "effect": "readwrite",
-                "name": "state",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "f8E4M3FN",
-                "effect": "read",
-                "name": "value",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "f8E4M3FN",
-                "effect": "write",
-                "name": "out",
-                "shape": [
-                  1
-                ]
-              }
-            ],
-            "entry": "narrow"
-          },
-          "native_verification": {
-            "optimizer_sha256": "2af44b4536b2dffbdb90b877b04e97cd2b10fe333020606fa4a1814b3c34926d",
-            "returncode": 0
-          },
-          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): atomic RMW needs a byte-sized integer i8/i16/i32/i64 numeric profile",
-          "operation": "tt.atomic_rmw",
-          "selection": {
-            "address_policy": "source-words",
-            "effect_profile": "typed-atomics",
-            "memory_profile": "guarded-buffer"
-          },
-          "source": "module {tt.func public @narrow(%state:!tt.ptr<f8E4M3FN>,%value:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n      %v=tt.load %value:!tt.ptr<f8E4M3FN>\n      %old=tt.atomic_rmw exch, relaxed, gpu, %state, %v:(!tt.ptr<f8E4M3FN>,f8E4M3FN)->f8E4M3FN\n      tt.store %out,%old:!tt.ptr<f8E4M3FN>\n      tt.return\n    }}",
-          "source_dtype": "f8E4M3FN",
-          "source_sha256": "0bed9146494b6bf494e93c005b37f62878338907b341a61d6ba45493fa0115d7"
         }
       ]
     }

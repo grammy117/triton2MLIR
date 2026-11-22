@@ -179,6 +179,7 @@ def register_fp8_float_constraints():
         "xdsl.printer",
         "xdsl.dialects.arith",
         "xdsl.dialects.math",
+        "xdsl.dialects.memref",
         "xdsl.dialects.linalg.ops",
         "xdsl.dialects.linalg.abstract_ops",
     ):
@@ -233,6 +234,7 @@ def register_fp8_float_constraints():
         ("builtin", "Builtin"),
         ("arith", "Arith"),
         ("math", "Math"),
+        ("memref", "MemRef"),
         ("linalg", "Linalg"),
     ):
         dialect = getattr(import_module("xdsl.dialects." + module_name), dialect_name)

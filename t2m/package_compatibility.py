@@ -298,13 +298,23 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("explicit private-invocation integer atomics use standard memref RMW operations and original old values; v3 thirty-bit owner fragments permit atomic collisions while rejecting ordinary races; source scope/order are retained with stronger standard acq_rel semantics; inactive undefined old values refine to zero; tensor/scalar ABI is unchanged")
     if trace.get("memory", {}).get("effect_profile") == "private-invocation-typed-atomics-v2":
         differences.append("explicit private-invocation typed atomics retain integer RMW/CAS, bitwise f32/f64 exchange and IEEE f64 round-to-nearest-even addition with subnormals preserved and unspecified arithmetic NaN payloads; v4 memory admission retains v3 thirty-bit ownership, initialization and guard costs; floating exchange preserves all old/new bits without arithmetic or rounding; source scope/order use stronger standard acq_rel semantics; inactive undefined old values refine to typed zero; tensor/scalar ABI is unchanged")
-    if any(event.get("word_bits") in (8, 16) and event.get("operation") != "fadd"
+    if any(event.get("word_bits") in (8, 16) and "value_dtype" not in event
            for event in trace.get("memory", {}).get("atomic_payload", [])):
         differences.append(
             "byte-sized integer atomic words retain per-update modular arithmetic, signed/unsigned comparisons "
             "and every returned old word; i16 word views keep active alignment and explicit byte-order checks; "
             "the private native half-storage helper transports integer bits; public ABI, receipt and admission "
             "schemas are unchanged, but older consumers may refuse these newly qualified widths"
+        )
+    if any(event.get("numeric_contract") == "bitwise-exchange" and event.get("value_dtype") in (
+            "f16", "bf16", "f8E4M3FN", "f8E4M3FNUZ", "f8E5M2", "f8E5M2FNUZ")
+            for event in trace.get("memory", {}).get("atomic_payload", [])):
+        differences.append(
+            "direct low-precision floating exchange retains its original storage format and every old/new bit "
+            "through standard memref assignment atomics; checked native helpers use integer argument/return "
+            "transport without floating arithmetic or NaN quieting; public tensor/scalar ABI, receipts and "
+            "admission schemas are unchanged, but older consumers may refuse these types; this grants no "
+            "additional floating arithmetic or external publication semantics"
         )
     numeric = {event.get("numeric_contract") for event in trace.get("memory", {}).get("atomic_payload", [])}
     if numeric & {"ieee-f16-rne-add-quiet-nans", "ieee-bf16-rne-add-quiet-nans"}:

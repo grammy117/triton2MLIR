@@ -73,18 +73,23 @@ retains all nine integer RMW kinds, successful/failed CAS, every old/final word,
 guards and source scope/order for byte-sized integer words. Three complete
 public-interface programs qualify raw i8/i16 and mixed f16/byte-backed i16
 views; 41 affected regressions pass. See [the exact scope](atomic_memory.md#byte-sized-integer-source-words).
-Five additional native-verified source forms still refuse: i1/i4 integer atomic
-add and f16/BF16/f8E4M3FN bitwise atomic exchange. Exact sources, verifier
-results, tool hash and located refusals are retained under
-`.scratch/atomic-profile-review/`; the [tracked gap ledger](../tests/data/v1_generic_gaps.json)
-retains the exact source, requested ABI/profile and located refusal for each.
-These reduce to two named gaps: subbyte
-atomic storage legalization and additional bitwise floating storage transport.
-They are generic gaps, not GPU exclusions. Reuse existing typed integer/byte
-atomic regions before considering another mechanism. A missing storage
-encoding may require a checked caller contract; provenance cannot implement
-an update. If they remain unresolved at the effort cap, publish their exact
-non-support and say full generic closure was not achieved.
+The direct floating-exchange gap is now implemented and qualified for f16,
+BF16 and all four pinned FP8 formats. Six complete public-interface programs
+preserve exact words through tiled/scalar effects, runtime control, changed
+and empty inputs and bounds failures. Three native format cases additionally
+check constant signaling-NaN exchange and reject altered helper address math.
+See [the qualification scope](atomic_memory.md#low-precision-floating-exchange).
+The original refusals and their resolution remain in the
+[tracked gap ledger](../tests/data/v1_generic_gaps.json).
+
+Two recorded source forms still refuse: i1/i4 integer atomic add. Their exact
+source, requested ABI/profile, native verifier pin and observations remain in
+the ledger. This is generic subbyte storage/atomic legalization, not a GPU
+exclusion. Reuse existing integer atomic regions and checked storage carriers;
+a caller contract may be needed for i4 representation. A final cast cannot
+replace per-update source-width arithmetic. Other typed storage/view and
+composition profiles still need the planned source review. If unresolved at
+the effort cap, publish exact non-support and report incomplete full closure.
 
 The final whole-selection run and remaining semantic/profile review are still
 open. This closes a demonstrated gap; it is not a universal atomic claim.

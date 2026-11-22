@@ -27,7 +27,9 @@ SCOPES = {1: "gpu", 2: "cta", 3: "sys"}
 FLOAT_CONTRACTS = {("exch", "f32"): ("bitwise-exchange",), ("exch", "f64"): ("bitwise-exchange",),
                    ("fadd", "f64"): (F64_CONTRACT, "ieee-f64-rne-add"), ("fadd", "f32"): ("ieee-f32-rne-add", F32_ADD_CONTRACT)}
 FLOAT_CONTRACTS.update({("fadd", dtype): (contract,) for dtype, contract in HALF_CONTRACTS.items()})
-FLOAT_WIDTHS = {"f16": 16, "bf16": 16, "f32": 32, "f64": 64}
+FLOAT_WIDTHS = {"f16": 16, "bf16": 16, "f32": 32, "f64": 64,
+                "f8E4M3FN": 8, "f8E4M3FNUZ": 8, "f8E5M2": 8, "f8E5M2FNUZ": 8}
+FLOAT_CONTRACTS.update({("exch", dtype): ("bitwise-exchange",) for dtype in FLOAT_WIDTHS})
 
 
 def payload(info):
@@ -112,7 +114,7 @@ def validate_evidence(admission, memory, records, buffers):
                     and (admission.get("f32_atomic_add") != memory.get("f32_atomic_add")
                          or info.get("numeric_contract") != {"ieee": "ieee-f32-rne-add", "ftz": F32_ADD_CONTRACT}.get(admission.get("f32_atomic_add")))
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
-                or info.get("word_bits") not in ((16, 32, 64) if floating else INTEGER_WIDTHS)
+                or info.get("word_bits") not in INTEGER_WIDTHS
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
                 or access.get("opcode") != ("tt.atomic_cas" if info["operation"] == "cas" else "tts.unstructured_atomic_rmw")
                 or any(opcodes[s] != ("tt.atomic_cas" if info["operation"] == "cas" else "tt.atomic_rmw") for s in access["source_ids"] if s in source)
@@ -140,11 +142,11 @@ def contract(op, source_ids, *, typed=False, f32_atomic_add=None):
     type_ = op.results[0].type if len(op.results) == 1 else None
     element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
     cas = opcode(op) in ("tt.atomic_cas", "tts.atomic_cas")
-    floating = element in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
+    floating = str(element) in FLOAT_WIDTHS
     if not (typed and floating and not cas) and element not in INTEGER_WORDS:
         if cas:
-            refuse("atomic CAS needs a byte-sized integer i8/i16/i32/i64 numeric profile")
-        refuse("atomic RMW needs a byte-sized integer i8/i16/i32/i64 numeric profile")
+            refuse("atomic CAS needs a qualified byte-sized integer i8/i16/i32/i64 numeric profile")
+        refuse("atomic RMW needs a qualified byte-sized integer i8/i16/i32/i64 numeric profile")
     values = [None] if cas else []
     for name, allowed in ((("atomic_rmw_op", RMW),) if not cas else ()) + (("sem", ORDERS), ("scope", SCOPES)):
         value = op.properties.get(name, op.attributes.get(name))
