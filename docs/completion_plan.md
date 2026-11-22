@@ -25,7 +25,7 @@ from the original full-generic-coverage requirement.
 | --- | --- | --- |
 | Public Merlin interface | Kernel and bound-model staging, preparation and whole-body host execution exist. | Qualify the final selected packages from final revisions; retain explicit model2MLIR package differences. |
 | Required two-transformer demo | Implemented: ordinary PyTorch block followed by one real Triton block, actual launch discovered automatically. Native/public host and artifact-only ragged replay have passed. | Include the existing demo in final acceptance and publish its reproduction command, source, MLIR and limitations. No new model architecture is required. |
-| Source/profile inventory | All 50 pinned definitions have admission, semantic fields, caller contracts and complement rules in the reviewed ledger. Low-precision printing, unpacked i4 storage, FP8 arithmetic/accumulators and FP8 atomic addition are qualified. One generic work item with two native-verified witnesses remains. | Close the remaining named items and join final typed/profile evidence to actual source-to-Merlin packages/results. The reviewed ledger is not an execution or universal coverage verdict. |
+| Source/profile inventory | All 50 pinned definitions have admission, semantic fields, caller contracts and complement rules in the reviewed ledger. Low-precision printing, unpacked i4 storage, FP8 arithmetic/accumulators and FP8 atomic addition are qualified. All five named items are focused-qualified. One new native-valid noinline-helper finding remains in the existing correction reserve. | Close the remaining named items and join final typed/profile evidence to actual source-to-Merlin packages/results. The reviewed ledger is not an execution or universal coverage verdict. |
 | Frozen integration selection | All 107 preceding cases passed together with no skips/failures at `2290fb5`; retained under `out/v1-closure/acceptance-107/`. The source review then found narrow histogram/gather admission gaps. Their fix passed eighteen new public-interface checks and ten affected regressions. | The updated compiler and 128-case selection still need final whole-selection qualification after the profile audit. Retain the 107-case result as the preceding baseline, not the final candidate verdict. |
 | Known numeric regression | Signaling-NaN min/max correction passed all 12 scalar format/memory-profile checks and the Merlin replay: 2,600 passed, two pre-existing prerequisite skips. | Qualify the final public Python transport; keep separately selected stock-CLI transport outside this claim. |
 | Release checker | Implemented CLI with six reader/refusal checks. It rejects incomplete execution, absent semantic qualification and missing baseline custody. | Populate actual final evidence and complete semantic qualification. The checker is not itself a completed release audit. |
@@ -95,8 +95,10 @@ entry value bindings. Low-precision diagnostics now pass four complete public
 programs with exact values, words and streams. Unpacked i4 storage now passes
 both public result ABIs. FP8 arithmetic/accumulators additionally pass thirteen
 public programs with 69 successful library replays. FP8 atomic addition now
-qualifies eight public programs with 36 invocations; entry-value bindings remain
-the final named implementation item. The
+qualifies eight public programs with 36 invocations. Entry value ports now
+qualify nineteen public programs, 87 public calls and 35 contract checks. The
+five original items are focused-qualified; a native-valid noinline-helper
+finding is tracked in the existing correction reserve. The
 [review and attempt ceilings](semantic_profiles.md) retain the original eight
 native-verified witnesses, current contracts and concrete reuse paths. Exact
 sources, bindings, verifier identities and failures remain in the
@@ -107,6 +109,23 @@ publish exact non-support and report incomplete full closure.
 
 The final whole-selection run and semantic qualification are still open. The
 admission review is complete; it is not a universal atomic or composition claim.
+
+### Current correction-reserve finding
+
+The five original items are implemented and focused-qualified. The source review
+then verified a private helper with `noinline=true` that fails the native
+TTIR-to-linalg continuation after its call remains uninlined. This is defined
+portable computation with a source performance hint, not an allowed GPU/assembly
+exclusion. Its exact source, native verifier evidence and failure remain in the
+same gap ledger as `source-noinline-hints`.
+
+Use the existing five-hour shared correction reserve: preserve original Boolean
+call-grouping intent and source identity, expose the real body through the
+existing upstream inliner, and qualify values/effects plus explicit provenance.
+Disclose call-boundary, code-size and register-pressure changes. No new
+interprocedural compiler subsystem, backend or corpus expansion is authorized
+by this finding. The original forty-hour cap and final 128-case roster remain
+unchanged. If unresolved, retain exact non-support and report incomplete closure.
 
 ## What we will finish
 
@@ -304,7 +323,7 @@ gap ledger, even if all acceptance cases pass or an audit claims closure.
 
 | Checkpoint | Remaining effort | Concrete output and exit |
 | --- | --- | --- |
-| 1. Finish the inventory and freeze | Day 1 | Admission review, layout correction and all twenty missing operation witnesses are done; 128 cases are frozen. The finite backlog began with five named items/eight witnesses; printing, unpacked i4 storage, FP8 arithmetic/accumulators and FP8 atomic addition are qualified. Entry-value bindings remain: one item/two witnesses. Final evidence joins remain open; no speculative new analyses. |
+| 1. Finish the inventory and freeze | Day 1 | Admission review, layout correction and all twenty missing operation witnesses are done; 128 cases are frozen. The finite backlog began with five named items/eight witnesses; printing, unpacked i4 storage, FP8 arithmetic/accumulators and FP8 atomic addition are qualified. Entry value ports now qualify as well. All five original items are focused-qualified; one new native-valid noinline-helper finding uses the existing correction reserve. Final evidence joins remain open; no speculative new analyses. |
 | 2. Close only named gaps | Days 2-3 | Use the per-item ceilings in the reviewed backlog, existing analysis, checked caller contracts or broader standard MLIR. Add a valid and violating case when introducing a contract. Retain immutable parameters, live state, all results and useful tiling/reuse. Resolve hardware/unknown-source cases by explicit disposition. |
 | 3. Run final qualification | Day 4 | Run every final acceptance case, the relevant baseline regression selection and the fixed serial smoke from recorded revisions. Reopen the two-transformer publication without evaluator files; compare both outputs on original, changed and zero inputs using one library. Record every failure, skip, fallback and refusal separately. |
 | 4. Correct once and deliver | Day 5 | Fix only release findings within the remaining budget. Rerun affected checks; rerun the full frozen selection if compiler/fixture changes invalidate its evidence. Publish the release check, gap/limitation inventory, packages and reproduction instructions. Deliver a closed release or an explicitly incomplete handoff, then stop expanding this roadmap. |

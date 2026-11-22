@@ -113,6 +113,7 @@ def validate(trace, artifacts, source):
         not in (
             "t2m.source-allocation-arguments.v1",
             "t2m.source-allocation-arguments.v2",
+            "t2m.source-allocation-arguments.v3",
         )
         or arguments.get("source_entry") != binding.get("source_entry")
         or not isinstance(arguments.get("arguments"), list)
@@ -121,10 +122,23 @@ def validate(trace, artifacts, source):
             "source capsule argument roster differs from its declared entry"
         )
     descriptor = binding.get("descriptor_bindings")
+    if arguments["schema"] == "t2m.source-allocation-arguments.v3":
+        from dataclasses import asdict
+
+        from .allocation_bindings import entry_arguments_from_dict
+        from .entry_values import ValueArgument
+        _, configured, results = entry_arguments_from_dict(arguments)
+        requested = [asdict(arg) for arg in configured if isinstance(arg, ValueArgument)]
+        actual = [{key: value for key, value in arg.items() if key not in ("kind", "source_type")}
+                  for arg in binding.get("bindings", []) if arg.get("kind") == "value"]
+        returned = [{key: value for key, value in arg.items() if key != "source_type"}
+                    for arg in binding.get("result_bindings", [])]
+        if requested != actual or returned != [asdict(result) for result in results]:
+            raise ValueError("entry value argument/result configuration differs from the bound source roster")
     if descriptor is not None and (
         not capsule["normalized"]
-        or arguments["schema"] != "t2m.source-allocation-arguments.v2"
-        or descriptor.get("schema") != arguments["schema"]
+        or arguments["schema"] not in ("t2m.source-allocation-arguments.v2", "t2m.source-allocation-arguments.v3")
+        or descriptor.get("schema") != "t2m.source-allocation-arguments.v2"
         or descriptor.get("grants_semantics") is not False
         or descriptor.get("source_entry") != binding["source_entry"]
         or descriptor.get("allocation_entry") != binding["allocation_entry"]

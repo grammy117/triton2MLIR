@@ -946,20 +946,96 @@
           "source_sha256": "fac5b83ded8c8d149ee14963c28b3ac6c90d9a470876e7c6c78c559dafaf3073"
         }
       ]
-    }
-  ],
-  "definitions": {
-    "bytes": 50703,
-    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
-    "release": "v3.7.1",
-    "repository": "https://github.com/triton-lang/triton",
-    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
-  },
-  "gaps": [
+    },
     {
       "id": "public-value-entry-binding",
       "kind": "missing-generic-entry-value-abi",
+      "resolution": {
+        "affected_regression_log": {
+          "bytes": 190,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/entry-value-regressions.log",
+          "sha256": "7c8e0b678826645a16cb3b8128dd65f60bb8abd781ec713dc970a33945ede081"
+        },
+        "baseline_replay": {
+          "bytes": 379643,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-y3727ubm/replay.json",
+          "sha256": "0cd6ccaf73fcc5692e779420a3b901717c815f3182f4a586b6831fe7a4d24750"
+        },
+        "consumer_commit": "cd2fe16bb61c62b929255b3a5fc4f67691b789df",
+        "contract": "docs/entry_values.md",
+        "contract_checks": 35,
+        "limitations": "Value roots stay separate from mutable pointer state and result ports; each result needs a distinct root apart from source pointer state. Scalars use one-cell/per-program tensors, without a low-precision native scalar ABI. Static source tiles, declared grids/origins and i64 address domains are required. Raw pointer/descriptor values need logical root/offset/field contracts. Native software/transport costs do not establish GPU equivalence. Final acceptance/semantic audit and the newly observed noinline-helper finding remain open.",
+        "producer_sources": [
+          {
+            "bytes": 5787,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/entry_values.py",
+            "sha256": "4d273d0212b7e005ad716df688b279262057c495fc7c2ef48e1ce383ba37b936"
+          },
+          {
+            "bytes": 26084,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/allocation_bindings.py",
+            "sha256": "580db29bd6fdc08eef6baae33ff26e3cd25a56f97a1113c3afba68acd8439526"
+          },
+          {
+            "bytes": 160936,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/shared_tensor.py",
+            "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+          },
+          {
+            "bytes": 9910,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/source_capsule.py",
+            "sha256": "9d2e8309f9b999347fe876e91ffa664bf771075f1704e231639766fc5a0b1016"
+          },
+          {
+            "bytes": 60922,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/cli.py",
+            "sha256": "dc37aca7a9cc8747e0e256cd1ee4d5f8cc6f5bebeb9d332fb295da23f148c6f0"
+          },
+          {
+            "bytes": 18820,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/product_corpus.py",
+            "sha256": "8ec0a1f5d750d2fb74772064882d18d3640c315dc83571203a7901c4d8d985cb"
+          },
+          {
+            "bytes": 80697,
+            "path": "/scratch/grammy/blast/triton2MLIR/t2m/package_compatibility.py",
+            "sha256": "8d550188cfa4011fe490515c59318b4d1f6c0bfb3198e797ad4aac41aa548054"
+          }
+        ],
+        "public_cases": [
+          "tests/test_entry_values.py::test_scalar_value_inputs_multiple_results_keep_every_storage_word",
+          "tests/test_entry_values.py::test_tensor_value_arguments_and_differently_shaped_results_keep_tiles",
+          "tests/test_entry_values.py::test_original_native_verified_entry_counterexamples_execute_publicly",
+          "tests/test_entry_values.py::test_descriptor_arguments_compose_with_stored_values_and_returned_tiles"
+        ],
+        "public_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/entry-value-final.log",
+          "sha256": "2e999690b72b5e96da6382e7c573b05c208a71eca5ec62d985230b8d6789d298"
+        },
+        "public_programs": 19,
+        "public_source_custody": {
+          "bytes": 7045,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/entry-value-public-source-custody.json",
+          "sha256": "40fbe9d81b499901ba5052d7791a72c6cff67b0fe1432167b0759c99bb73accb"
+        },
+        "public_test_sources": [
+          {
+            "bytes": 13708,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_entry_values.py",
+            "sha256": "c681fe4dd74fa74de1846c90da88c928f2ba02ac76d4ad482d450568890394ab"
+          },
+          {
+            "bytes": 7466,
+            "path": "/scratch/grammy/blast/triton2MLIR/tests/test_entry_value_contract.py",
+            "sha256": "946d41e1cf4873bf5e4f0539a239a1881938fb1a36b08a14ad6a16fd62289f60"
+          }
+        ],
+        "qualification": "All fourteen numeric types; every word through sixteen bits and wider edge patterns; private calls, multiple results and source control; changed/single/empty reusable libraries, exact original/computed words, runtime origins and bounds rejection. Static tensor arguments and differently shaped results carry x/y/z coordinate tags across dynamic three-dimensional grids. Both original native witnesses run publicly; saved CLI result bindings are checked. Descriptor/value/returned-tile composition qualifies. I4/E4M3FNUZ use execution-owned results; compiler staging excludes evaluator data and caller arrays remain unchanged.",
+        "route": "Existing allocation wrapper with typed storage loads, real source call and complete result stores before upstream inlining. Explicit v3 argument configuration and independent consumer original-type/storage/effect/roster checks; public tensor ABI and capsule artifact roster unchanged.",
+        "status": "implemented-and-focused-qualification-passed",
+        "successful_public_invocations": 87
+      },
       "route": "Extend the existing checked source wrapper/allocation binding interface with actual scalar-storage input and returned-value output bindings. Load/store real SSA values in a typed wrapper and reuse native helper inlining and the existing public tensor interface; avoid low-precision by-value native calls.",
       "stopping_decision": "One bounded checked wrapper adapter and correction cycle. If unresolved, document exact unsupported entry shapes and a user-supplied ordinary void wrapper with explicit tensor ports as a workaround; preserve original source and report incomplete generic closure.",
       "why_used": "Extracting a value-returning helper as a standalone TTIR program, or importing a kernel with a by-value f16/BF16/FP8/i4 parameter. Ordinary Python kernel entries normally return void; low-precision by-value parameters still need an explicit portable ABI.",
@@ -1067,6 +1143,99 @@
           "source": "module {tt.func public @half_value(%alpha:f16,%out:!tt.ptr<f16>) {\n %r=arith.addf %alpha,%alpha:f16\n tt.store %out,%r:!tt.ptr<f16>\n tt.return\n}}",
           "source_dtype": "f16",
           "source_sha256": "7f74a5fecf29576b1274f903f213195eaf09e89e7b3a6f73e1c7fd6062caf170"
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "gaps": [
+    {
+      "id": "source-noinline-hints",
+      "kind": "generic-call-body-lowering-with-source-performance-hint",
+      "route": "Preserve the original typed Boolean hint, function identity, source IDs and grouping in provenance; expose the actual body through the existing upstream inliner. Disclose changed call-boundary/code-size/register-pressure choices, without discarding tiling, reuse, values or effects.",
+      "stopping_decision": "One bounded correction in the existing shared five-hour reserve, within the original forty-hour cap; no new interprocedural compiler subsystem. Otherwise retain exact non-support and report incomplete closure.",
+      "why_used": "Real Triton JIT private helpers can use noinline to control code size, physical call grouping and register pressure. The body still contains defined portable computation.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "i32",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "i32",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "kernel"
+          },
+          "native_verification": {
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "failure_log": {
+              "bytes": 2210,
+              "path": "/scratch/grammy/blast/triton2MLIR/.scratch/noinline-source-probe.log",
+              "sha256": "252ece101844d4e9e78215c09446b7e636071edf5f1a2c4189ba3ba90442640b"
+            },
+            "implementation": {
+              "binary_bytes": 461559216,
+              "binary_sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "printer_options": "MLIR-registerAsmPrinterCLOptions; LLVM-C-LLVMParseCommandLineOptions",
+              "source_reference_is_build_receipt": false,
+              "source_reference_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad"
+            },
+            "inventory": {
+              "bytes": 3848,
+              "path": "/scratch/grammy/blast/triton2MLIR/.scratch/noinline-source-probe/native/inventory.json",
+              "sha256": "a664335a4f553ade2ad7f18b62745fb95776915709f8440ac502a1408f501f9a"
+            },
+            "native_generic_roundtrip_verified": true,
+            "native_print_receipt": {
+              "bytes": 923,
+              "path": "/scratch/grammy/blast/triton2MLIR/.scratch/noinline-source-probe/native-print/print.json",
+              "sha256": "707aaa08aa8f4e0fb7ccd63980556ae3b13f19c45fa3167c617f62d4868c98b1"
+            },
+            "returncode": 0,
+            "triton_version": "3.7.1"
+          },
+          "observed_at_triton2mlir_commit": "c3b70f201553a1136ce9c469407518c8df6bcb93",
+          "observed_refusal": "upstream func.call helper does not reference a valid function after noinline survives source inlining",
+          "observed_stage": "source-word tensor conversion",
+          "operation": "tt.call",
+          "producer_sources": [
+            {
+              "bytes": 160936,
+              "path": "/scratch/grammy/blast/triton2MLIR/t2m/shared_tensor.py",
+              "sha256": "32df26344b16c9f8516a1d0746003a4ae376fed8dc70a1efbde3d16142422f01"
+            },
+            {
+              "bytes": 11994,
+              "path": "/scratch/grammy/blast/triton2MLIR/t2m/upstream.py",
+              "sha256": "2bf5743b63a2b3434ff91d25e589742ce8607d98d18d133fbb617feeca9c80dc"
+            }
+          ],
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {\n tt.func private @helper(%x:i32)->i32 attributes {noinline=true} {\n %one=arith.constant 1:i32\n %r=arith.addi %x,%one:i32\n tt.return %r:i32\n }\n tt.func public @kernel(%x:!tt.ptr<i32>,%out:!tt.ptr<i32>) {\n %v=tt.load %x:!tt.ptr<i32>\n %r=tt.call @helper(%v):(i32)->i32\n tt.store %out,%r:!tt.ptr<i32>\n tt.return\n }}",
+          "source_sha256": "053cf179b5166d0ea1a26eb5f7f1d85936ae30be1ab3ec99ce00dafbb68f3bf9",
+          "working_tree_dirty": true
         }
       ]
     }

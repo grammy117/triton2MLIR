@@ -23,8 +23,11 @@ Low-precision diagnostics qualify through four complete public programs and
 unpacked i4 storage qualifies through both public result ABIs. FP8 arithmetic
 and scaled-dot accumulators now qualify through thirteen public programs;
 [FP8 atomic addition](fp8_atomics.md) now qualifies eight public programs and
-36 invocations; **one work item and two witnesses remain open**. These are generic
-computation/interface failures. They cannot be removed by
+36 invocations. [Entry value ports](entry_values.md) now qualify nineteen public
+programs and both original witnesses, with 87 public calls and 35 contract checks.
+**All five original items are focused-qualified.** The final review found a
+native-valid private `noinline` helper that still fails conversion; it remains
+a generic release finding in the existing five-hour correction reserve. They cannot be removed by
 classifying them as GPU instructions or by counting their refusals as support.
 
 | Work item | Demonstrated failure | Existing material and bounded next action | Attempt ceiling |
@@ -33,7 +36,7 @@ classifying them as GPU instructions or by counting their refusals as support.
 | FP8 arithmetic and accumulator profiles — qualified | Both original native-valid failures remain in the resolved ledger. | Thirteen public programs qualify all four formats, exhaustive binary/sign-source pairs, exact words, per-operation/per-dot rounding, original C and wider inputs. Official f64 emulation and exact casts retain source control/reuse. Caller and execution-owned paths pass, including strict owned-control/dimension guards. See [the exact scope](fp8_arithmetic.md). | Closed within the 4-hour attempt |
 | FP8 atomic addition — qualified | The original native-valid FP8 `fadd` refusal remains in the resolved ledger. | Eight native/public programs qualify all four formats, all input pairs, source masks/scopes/orders, old/final words, constant zeros, collision histories and both result ABIs. Exact f64 operands plus per-event FP8 rounding use checked byte-CAS helpers; 56 helper checks retain full-body ownership validation. See [the scope and cost](fp8_atomics.md). | Closed within the 4-hour attempt |
 | Low-precision diagnostic values — qualified | The original internal i4/FP8 print refusals remain in the resolved ledger. | Existing logical formatting and exact widening now preserve all words, streams, signedness, source control and both outputs through four public libraries. The native pure tensor carrier is also qualified. General FP8 arithmetic remains separate. | Closed within the 1-hour attempt |
-| Entry value bindings | A selected value-returning i32 entry is refused. A void entry with a by-value f16 input cannot construct its runtime scalar binding. | Extend the existing checked source wrapper/allocation interface with explicit scalar-storage inputs and returned-value output ports. Reuse actual helper bodies, native inlining and the existing tensor ABI; avoid assuming a low-precision native by-value ABI. | 3 hours |
+| Entry value bindings — qualified | Both original native-valid failures remain in the resolved ledger. | Explicit v3 storage-backed arguments/results preserve actual source bodies before inlining. Nineteen public programs qualify all fourteen numeric types, multiple results, runtime origins, tensor tiles, dynamic 3D grids, descriptor composition and both result ABIs. Independent typed roster/effect checks and guards reject bad contracts. See [the exact contract](entry_values.md). | Closed within the 3-hour attempt |
 
 These are ceilings within the original forty-hour budget, not new budgets or
 promised completion times. The five attempts total at most fifteen hours.

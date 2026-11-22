@@ -89,11 +89,14 @@ def _case(root, declaration, work, *, optimizer, python, merlin_root, merlin_pyt
         row["numeric_policy"] = {"rtol": rtol, "atol": atol}
         stage = "conversion"
         if "allocation_bindings" in declaration:
-            from .allocation_bindings import arguments_from_dict, convert_allocations
+            from .allocation_bindings import (
+                convert_allocations,
+                entry_arguments_from_dict,
+            )
             allocation = _configuration(root, declaration["allocation_bindings"], work / "input/allocation.json", artifacts)
-            entry, arguments = arguments_from_dict(allocation)
+            entry, arguments, returned = entry_arguments_from_dict(allocation)
             result = convert_allocations(source, abi, arguments, work / "conversion", source_entry=entry,
-                                         optimizer=optimizer, **options)
+                                         optimizer=optimizer, result_bindings=returned, **options)
         else:
             result = convert_shared(source, abi, work / "conversion", optimizer=optimizer, **options)
         stages[stage] = "passed"

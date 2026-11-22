@@ -32,8 +32,11 @@ ABIs, with all sixteen words and nineteen replays per library. The ledger
 retains the resolved witnesses. [FP8 arithmetic/accumulators](fp8_arithmetic.md)
 now pass thirteen public programs and 69 library replays.
 [FP8 atomic addition](fp8_atomics.md) qualifies eight public programs, all operand
-pairs, constant zero updates and 36 public invocations. One named item with two
-witnesses remains open: entry-value bindings.
+pairs, constant zero updates and 36 public invocations. The two original entry-value witnesses now also run publicly: nineteen
+[value-port programs](entry_values.md), 87 public invocations and 35 contract
+checks qualify numeric arguments/results, tensor tiles and descriptor composition.
+The five named items are focused-qualified. A native-valid `noinline` helper
+finding remains tracked in the existing correction reserve.
 See the exact boundaries and remedies in
 [limitations](limitations.md).
 These are source-operation observations, not universal typed/composition

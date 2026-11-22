@@ -118,5 +118,6 @@ retained separately. Existing explicit FP8 cast rounding/overflow profiles
 remain available. Unknown semantic fields, external implementations and
 post-layout vector/device forms retain their own admission requirements.
 [FP8 atomic addition](fp8_atomics.md) now has its separate qualified numeric
-and effect profile. Low-precision public scalar/return entry adapters remain
-an open work item; scalar arithmetic alone supplies no entry ABI.
+and effect profile. [Entry value ports](entry_values.md) now separately carry numeric scalar/tile
+arguments and results through typed storage. Scalar arithmetic alone supplies
+no native by-value entry ABI.

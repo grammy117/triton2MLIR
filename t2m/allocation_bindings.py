@@ -17,6 +17,8 @@ from xdsl.printer import Printer
 
 from .descriptor_bindings import DescriptorArgument, ExtendScalar
 from .diagnostics import ConversionError
+from .entry_values import ARGUMENTS_SCHEMA as VALUE_ARGUMENTS_SCHEMA
+from .entry_values import Ports, ResultBinding, ValueArgument, checked_type
 from .shared_tensor import SharedParser, convert_shared, opcode, parse_shared
 from .upstream import inspect_optimizer, lower_with_shared
 
@@ -43,10 +45,12 @@ class ScalarArgument:
             raise ValueError("scalar argument requires a declared identifier")
 
 
-def arguments_from_dict(value):
+def entry_arguments_from_dict(value):
     """Read the strict source-order argument configuration used by the CLI."""
-    if (not isinstance(value,dict) or set(value) != {"schema","source_entry","arguments"}
-            or value["schema"] not in (ARGUMENTS_SCHEMA, "t2m.source-allocation-arguments.v2") or type(value["source_entry"]) is not str
+    if (not isinstance(value,dict)
+            or set(value) != ({"schema","source_entry","arguments","results"}
+                if value.get("schema") == VALUE_ARGUMENTS_SCHEMA else {"schema","source_entry","arguments"})
+            or value["schema"] not in (ARGUMENTS_SCHEMA, "t2m.source-allocation-arguments.v2", VALUE_ARGUMENTS_SCHEMA) or type(value["source_entry"]) is not str
             or not value["source_entry"] or not isinstance(value["arguments"],list)):
         raise ValueError("source allocation arguments require their explicit schema, entry and complete roster")
     bindings = []
@@ -60,33 +64,63 @@ def arguments_from_dict(value):
             binding = ScalarArgument(argument["name"])
         elif kind == "constant" and set(argument) == {"kind","value"} and type(argument["value"]) is int:
             binding = argument["value"]
-        elif (kind == "descriptor" and value["schema"] == "t2m.source-allocation-arguments.v2"
+        elif (kind == "value" and value["schema"] == VALUE_ARGUMENTS_SCHEMA
+              and {"kind", "allocation"} <= set(argument)
+              and set(argument) <= {"kind", "allocation", "offset", "per_program"}):
+            binding = ValueArgument(**{key: item for key, item in argument.items() if key != "kind"})
+        elif (kind == "descriptor" and value["schema"] in ("t2m.source-allocation-arguments.v2", VALUE_ARGUMENTS_SCHEMA)
               and {"kind", "allocation", "shape", "strides"} <= set(argument)
               and set(argument) <= {"kind", "allocation", "shape", "strides", "offset", "padding_nan", "round_f32_to_tf32"}):
             binding = DescriptorArgument(**{key: item for key, item in argument.items() if key != "kind"})
         else:
             raise ValueError("unknown or incomplete source allocation argument record")
         bindings.append(binding)
-    if (value["schema"] == "t2m.source-allocation-arguments.v2") != any(isinstance(binding, DescriptorArgument) for binding in bindings):
+    if (value["schema"] != VALUE_ARGUMENTS_SCHEMA and
+            (value["schema"] == "t2m.source-allocation-arguments.v2") != any(isinstance(binding, DescriptorArgument) for binding in bindings)):
         raise ValueError("descriptor source arguments require their explicit v2 schema")
-    return value["source_entry"],tuple(bindings)
+    results = []
+    if value["schema"] == VALUE_ARGUMENTS_SCHEMA:
+        if not isinstance(value["results"], list):
+            raise ValueError("entry result bindings require their complete source-order list")
+        for result in value["results"]:
+            if (not isinstance(result, dict) or not {"allocation"} <= set(result)
+                    or set(result) - {"allocation", "offset", "per_program"}):
+                raise ValueError("unknown or incomplete entry result binding")
+            results.append(ResultBinding(**result))
+        if not results and not any(isinstance(binding, ValueArgument) for binding in bindings):
+            raise ValueError("entry value schema requires actual value inputs or results")
+    return value["source_entry"],tuple(bindings),tuple(results)
 
 
-def arguments_as_dict(source_entry, bindings):
+def arguments_from_dict(value):
+    """Legacy argument-only reader; never silently discard result ports."""
+    entry, bindings, results = entry_arguments_from_dict(value)
+    if results:
+        raise ValueError("result ports require entry_arguments_from_dict and result_bindings=")
+    return entry, bindings
+
+
+def arguments_as_dict(source_entry, bindings, *, result_bindings=()):
     records = []
     for binding in bindings:
-        if isinstance(binding, (PointerArgument, ScalarArgument, DescriptorArgument)):
-            kind = "pointer" if isinstance(binding, PointerArgument) else "scalar" if isinstance(binding, ScalarArgument) else "descriptor"
+        if isinstance(binding, (PointerArgument, ScalarArgument, DescriptorArgument, ValueArgument)):
+            kind = ("pointer" if isinstance(binding, PointerArgument) else "scalar" if isinstance(binding, ScalarArgument)
+                    else "value" if isinstance(binding, ValueArgument) else "descriptor")
             records.append({"kind": kind, **asdict(binding)})
         elif type(binding) is int:
             records.append({"kind": "constant", "value": binding})
         else:
             raise ValueError("unknown original source allocation argument")
+    if result_bindings or any(isinstance(binding, ValueArgument) for binding in bindings):
+        if any(not isinstance(binding, ResultBinding) for binding in result_bindings):
+            raise ValueError("entry results require explicit typed result bindings")
+        return {"schema": VALUE_ARGUMENTS_SCHEMA, "source_entry": source_entry, "arguments": records,
+                "results": [asdict(binding) for binding in result_bindings]}
     return {"schema": "t2m.source-allocation-arguments.v2" if any(isinstance(binding, DescriptorArgument) for binding in bindings) else ARGUMENTS_SCHEMA,
             "source_entry": source_entry, "arguments": records}
 
 
-def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
+def bind_module(module, source_entry, abi, bindings, *, byte_order=None, result_bindings=()):
     """Return a cloned source module with an explicit public allocation entry."""
     if byte_order is not None and byte_order not in ("little", "big"):
         raise ValueError("byte-buffer bindings require explicit little or big byte order")
@@ -102,9 +136,12 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
         raise ConversionError("allocation binding requires a nonempty source function region")
     arguments = next(iter(source.regions[0].blocks)).args
     signature = source.properties["function_type"]
-    if (signature.outputs or tuple(signature.inputs) != tuple(arg.type for arg in arguments)
+    if (tuple(signature.inputs) != tuple(arg.type for arg in arguments)
             or len(bindings) != len(arguments)):
-        raise ConversionError("allocation binding requires the complete void source signature")
+        kind = "value" if signature.outputs else "void"
+        raise ConversionError(f"allocation binding requires the complete {kind} source signature")
+    if len(result_bindings) != len(signature.outputs) or any(not isinstance(binding, ResultBinding) for binding in result_bindings):
+        raise ConversionError("source return values require a complete typed result binding roster")
     if any(op is not source and op.properties.get("sym_visibility") != builtin.StringAttr("private")
            for op in functions):
         raise ConversionError("allocation binding cannot hide another public source entry")
@@ -145,6 +182,10 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
             if scalar is None or arg.type != scalar.type:
                 raise ConversionError("source scalar binding requires its exact declared wrapper type")
             records.append({"kind":"scalar",**asdict(binding)})
+        elif isinstance(binding, ValueArgument):
+            checked_type(arg.type, binding, roots, scalars)
+            used_roots.add(binding.allocation)
+            records.append({"kind": "value", **asdict(binding), "source_type": str(arg.type)})
         elif isinstance(binding, ExtendScalar):
             scalar = scalars.get(binding.name)
             if scalar is None or scalar.dtype != "i32" or arg.type != builtin.i64:
@@ -157,12 +198,25 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
             records.append({"kind":"constant","value":binding,"type":str(arg.type)})
         else:
             raise ConversionError("source argument needs an explicit typed allocation/scalar binding")
+    pointer_roots = {binding.allocation for binding in bindings if isinstance(binding, PointerArgument)}
+    value_roots = {binding.allocation for binding in bindings if isinstance(binding, ValueArgument)}
+    mutable_roots = {name for name in pointer_roots if roots[name].effect != "read"}
+    if value_roots & (mutable_roots | {binding.allocation for binding in result_bindings}):
+        raise ConversionError("entry value inputs need storage separate from mutable pointer state and result ports")
+    if len({binding.allocation for binding in result_bindings}) != len(result_bindings):
+        raise ConversionError("each source result needs a distinct allocation to retain every value")
+    for type_, binding in zip(signature.outputs, result_bindings, strict=True):
+        checked_type(type_, binding, roots, scalars, result=True)
+        if binding.allocation in pointer_roots:
+            raise ConversionError("result ports need separate storage from original source pointer state")
+        used_roots.add(binding.allocation)
     if used_roots != set(roots):
         raise ConversionError("every declared allocation must bind at least one source pointer")
     types = [pointer_types[value.name] if kind == "buffer" else value.type for kind,value in abi.source_bindings]
     block = Block(arg_types=types)
     values = {value.name:arg for arg,(kind,value) in zip(block.args,abi.source_bindings,strict=True)}
     operands = []
+    ports = Ports(block, abi, values)
     for arg,binding in zip(arguments,bindings,strict=True):
         if isinstance(binding,PointerArgument):
             value = values[binding.allocation]
@@ -185,6 +239,8 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
             operands.append(value)
         elif isinstance(binding,ScalarArgument):
             operands.append(values[binding.name])
+        elif isinstance(binding, ValueArgument):
+            operands.append(ports.load(binding, arg.type))
         elif isinstance(binding, ExtendScalar):
             extended = arith.ExtSIOp(values[binding.name], builtin.i64)
             block.add_op(extended)
@@ -193,12 +249,18 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
             constant = arith.ConstantOp.from_int_and_width(binding,arg.type)
             block.add_op(constant)
             operands.append(constant.result)
-    block.add_op(builtin.UnregisteredOp.with_name("tt.call").create(operands=operands,
-        properties={"callee":builtin.SymbolRefAttr(source_entry)}))
+    call = builtin.UnregisteredOp.with_name("tt.call").create(operands=operands,
+        result_types=list(signature.outputs), properties={"callee":builtin.SymbolRefAttr(source_entry)})
+    block.add_op(call)
+    for binding, value in zip(result_bindings, call.results, strict=True):
+        ports.store(binding, value)
     block.add_op(builtin.UnregisteredOp.with_name("tt.return").create())
     report = {"schema":PROFILE,"source_entry":source_entry,"allocation_entry":abi.entry,
               "bindings":records,"grants_semantics":False,
               "representation":"executable-tt-call-before-upstream-inlining"}
+    if result_bindings:
+        report["result_bindings"] = [{**asdict(binding), "source_type": str(type_)}
+            for binding, type_ in zip(result_bindings, signature.outputs, strict=True)]
     wrapper = builtin.UnregisteredOp.with_name("tt.func").create(
         properties={"sym_name":builtin.StringAttr(abi.entry),"sym_visibility":builtin.StringAttr("public"),
                     "function_type":builtin.FunctionType.from_lists(types,[])},
@@ -212,7 +274,7 @@ def bind_module(module, source_entry, abi, bindings, *, byte_order=None):
     return module,report
 
 
-def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=None, **options):
+def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=None, result_bindings=(), **options):
     """Compile a source kernel with an explicit allocation-state calling ABI.
 
     The package source is the executable bound program. Its portable source
@@ -225,7 +287,8 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     saved = work / "original.ttir"
     saved.write_bytes(original)
     bindings = tuple(bindings)
-    configuration = arguments_as_dict(source_entry, bindings)
+    result_bindings = tuple(result_bindings)
+    configuration = arguments_as_dict(source_entry, bindings, result_bindings=result_bindings)
     normalized, intake, inventory = None, None, None
     normalization_source, protected_artifacts = saved, {}
     protect_source = options.get("fp8_overflow") is not None or options.get("assembly_provider") is not None
@@ -261,7 +324,7 @@ def convert_allocations(source, abi, bindings, work, *, source_entry, optimizer=
     module = parse_shared(generic)
     from .descriptor_bindings import expand
     flat, descriptor_bindings = expand(bindings, intake.get("descriptor_argument_expansion") if intake else None, source_entry, abi)
-    module,report = bind_module(module,source_entry,abi,flat,byte_order=options.get("byte_order"))
+    module,report = bind_module(module,source_entry,abi,flat,byte_order=options.get("byte_order"), result_bindings=result_bindings)
     stream = StringIO()
     Printer(stream=stream,print_generic_format=True,print_debuginfo=True).print_op(module)
     bound = work / "bound.ttir"

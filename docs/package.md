@@ -12,7 +12,13 @@ dimension sources still require non-Boolean integers.
 numeric/effect profile, exact integer old-word transport and checked byte-CAS
 helpers. Folded wide constants retain f64; generated compatibility metadata
 records its source-width rounding and possible native throughput cost. Public
-schemas stay unchanged. Low-precision by-value entry adapters remain separate.
+schemas stay unchanged. [Entry value ports](entry_values.md) separately carry
+exact numeric scalar/static-tile arguments and results using v3 source allocation
+configuration. Actual bodies inline before memory analysis; original/bound
+source and typed port custody stay in the existing capsule. Value inputs,
+mutable pointer state and distinct result ports use separate roots. Scalars
+are exposed as one-cell/per-program tensors; the native scalar ABI and public
+receipt schemas stay unchanged. Older capsule readers refuse v3.
 
 [Unpacked i4 cells](atomic_memory.md#unpacked-four-bit-integer-cells) use
 `TensorBuffer(dtype="i4")` with canonical uint8 archive/descriptor cells 0..15,

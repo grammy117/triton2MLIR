@@ -312,7 +312,7 @@ def _preflight(module, abi=None, *, source_entry=None, id_prefix="ttir.op.", ato
     if len(entries) != 1 or len(list(module.ops)) != len(functions):
         raise ConversionError("expected the declared TTIR entry and optional private helpers")
     function = entries[0]
-    if function.properties["function_type"].outputs:
+    if abi is not None and function.properties["function_type"].outputs:
         raise ConversionError("kernel entry return values need an explicit ABI binding")
     if any(op is not function and op.properties.get("sym_visibility") != StringAttr("private") for op in functions):
         raise ConversionError("additional public entry functions are unsupported")

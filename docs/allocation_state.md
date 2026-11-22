@@ -66,8 +66,11 @@ then preserves one state version with register casts at each source event.
 Explicit [byte-buffer bindings](byte_aliases.md) also admit wider source
 arguments from i8 roots with declared byte order. Typed-root byte packing,
 sub-byte representations and automatic recovery of arbitrary NumPy view
-ownership remain open. The source entry must be void, contain one block and be accepted
-by the installed shared source reader. Original helpers remain subject to complete inlining and
+ownership remain open. [Typed value ports](entry_values.md) additionally bind
+numeric scalar/static-tile arguments and source returns through the existing
+wrapper, with an explicit v3 argument configuration. Original source control
+must be accepted by the installed native reader/inlining/CFG normalization.
+Original helpers remain subject to complete inlining and
 operation/effect checks. Kernel/model view adapters and applicable target
 materialization remain separate completion gates.
 

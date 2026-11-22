@@ -491,7 +491,7 @@ def main(argv=None):
     tensor = commands.add_parser("shared-tensor", help="adapt shared tensor computation and structured memory into functional tensors")
     tensor.add_argument("ttir", type=Path)
     tensor.add_argument("--abi", type=Path, required=True)
-    tensor.add_argument("--allocation-bindings",type=Path,help="explicit source-order pointer/scalar bindings into the owning allocation ABI")
+    tensor.add_argument("--allocation-bindings",type=Path,help="explicit source-order pointer/value/scalar inputs and result ports in the allocation ABI")
     tensor.add_argument("--out", type=Path, required=True)
     tensor.add_argument("--optimizer", type=Path)
     tensor.add_argument("--memory-profile", choices=("tensor", "buffer", "guarded-buffer", "auto"), default="tensor",
@@ -658,11 +658,11 @@ def main(argv=None):
                     options["source_layout"] = item["source_layout"]
                 allocation = None
                 if "allocation_bindings" in item:
-                    from .allocation_bindings import arguments_from_dict,convert_allocations
+                    from .allocation_bindings import convert_allocations,entry_arguments_from_dict
                     allocation = item["allocation_bindings"]
                     if isinstance(allocation,str):
                         allocation = json.loads((args.bindings.parent / allocation).read_text())
-                    entry,arguments = arguments_from_dict(allocation)
+                    entry,arguments,returned = entry_arguments_from_dict(allocation)
                 source = args.bindings.parent / item["ttir"]
                 spec = TensorABI.from_dict(abi)
                 source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
@@ -670,7 +670,7 @@ def main(argv=None):
                        json.dumps(options,sort_keys=True,default=str),json.dumps(allocation,sort_keys=True))
                 if key not in implementations:
                     if allocation is not None:
-                        implementation = convert_allocations(source,spec,arguments,work / f"kernel-{i}",source_entry=entry,**options)
+                        implementation = convert_allocations(source,spec,arguments,work / f"kernel-{i}",source_entry=entry,result_bindings=returned,**options)
                     else:
                         implementation = convert_shared(source,spec,work / f"kernel-{i}",**options)
                     original = implementation.trace.get("source_argument_binding",{}).get("original_source_sha256",implementation.trace["source_sha256"])
@@ -751,9 +751,9 @@ def main(argv=None):
             if args.source_layout:
                 options["source_layout"] = json.loads(args.source_layout.read_text())
             if args.allocation_bindings:
-                from .allocation_bindings import arguments_from_dict,convert_allocations
-                entry,bindings = arguments_from_dict(json.loads(args.allocation_bindings.read_text()))
-                result = convert_allocations(args.ttir,abi,bindings,work / "translation",source_entry=entry,**options)
+                from .allocation_bindings import convert_allocations,entry_arguments_from_dict
+                entry,bindings,returned = entry_arguments_from_dict(json.loads(args.allocation_bindings.read_text()))
+                result = convert_allocations(args.ttir,abi,bindings,work / "translation",source_entry=entry,result_bindings=returned,**options)
             else:
                 result = convert_shared(args.ttir,abi,work / "translation",**options)
             if args.effect_reference:
