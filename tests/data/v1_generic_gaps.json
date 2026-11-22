@@ -166,23 +166,17 @@
           "source_sha256": "0bed9146494b6bf494e93c005b37f62878338907b341a61d6ba45493fa0115d7"
         }
       ]
-    }
-  ],
-  "definitions": {
-    "bytes": 50703,
-    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
-    "release": "v3.7.1",
-    "repository": "https://github.com/triton-lang/triton",
-    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
-  },
-  "gaps": [
+    },
     {
-      "id": "subbyte-atomic-storage",
-      "kind": "missing-generic-storage-legalization",
-      "route": "Reuse byte-sized integer atomic regions/CAS loops with source-width updates. i4 additionally requires an explicit public carrier/packing contract; widening only the final result is insufficient.",
-      "stopping_decision": "If no checked storage contract and qualified executable route is available within the shared effort cap, declare these exact forms unsupported and report incomplete full-generic closure.",
-      "why_used": "Boolean flags and low-bit state or counters in imported/hand-authored TTIR; source APIs may otherwise promote these widths.",
+      "id": "boolean-atomic-storage",
+      "kind": "qualified-generic-atomic-legalization",
+      "resolution": {
+        "contract": "docs/atomic_memory.md#boolean-integer-source-words",
+        "native_log": "../merlin-graph-proof-intake/out/build/subbyte-atomic-native-carrier.log",
+        "public_check": "tests/test_boolean_atomics.py::test_boolean_atomics_keep_source_width_old_values_and_guards",
+        "public_log": ".scratch/boolean-atoms.log",
+        "route": "Existing canonical Boolean tensor carrier and standard i1 memref atomics; checked native byte-CAS loop invokes actual i1 updates on each attempt and retains every old/final value. No packed-bit address interpretation."
+      },
       "witnesses": [
         {
           "bindings": {
@@ -229,7 +223,27 @@
           "source": "module {tt.func public @narrow(%state:!tt.ptr<i1>,%value:!tt.ptr<i1>,%out:!tt.ptr<i1>) {\n      %v=tt.load %value:!tt.ptr<i1>\n      %old=tt.atomic_rmw add, relaxed, gpu, %state, %v:(!tt.ptr<i1>,i1)->i1\n      tt.store %out,%old:!tt.ptr<i1>\n      tt.return\n    }}",
           "source_dtype": "i1",
           "source_sha256": "c962f4b775bbb10a16e694b2c7dc6d6e8f2a01fe57337ef479b5ff345565f962"
-        },
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "gaps": [
+    {
+      "id": "subbyte-atomic-storage",
+      "kind": "missing-generic-storage-legalization",
+      "native_progress": "Native i1/i4 source-width updates and CAS pass exhaustive finite-domain programs, including adjacent cells and explicit carrier normalization. Public i4 storage/ABI remains unimplemented.",
+      "route": "Reuse byte-sized integer atomic regions/CAS loops with source-width updates. i4 additionally requires an explicit public carrier/packing contract; widening only the final result is insufficient.",
+      "stopping_decision": "If no checked storage contract and qualified executable route is available within the shared effort cap, declare these exact forms unsupported and report incomplete full-generic closure.",
+      "why_used": "Boolean flags and low-bit state or counters in imported/hand-authored TTIR; source APIs may otherwise promote these widths.",
+      "witnesses": [
         {
           "bindings": {
             "buffers": [

@@ -82,12 +82,17 @@ See [the qualification scope](atomic_memory.md#low-precision-floating-exchange).
 The original refusals and their resolution remain in the
 [tracked gap ledger](../tests/data/v1_generic_gaps.json).
 
-Two recorded source forms still refuse: i1/i4 integer atomic add. Their exact
+The i1 form now passes a complete public Merlin program with all nine RMW
+kinds, both CAS outcomes, every old/final value and changed/empty/bounds replays.
+The existing byte-CAS mechanism preserves logical width at every event. Native
+i4 updates also pass; this does not establish a public i4 storage contract.
+
+One recorded source form still refuses: i4 integer atomic add. Its exact
 source, requested ABI/profile, native verifier pin and observations remain in
-the ledger. This is generic subbyte storage/atomic legalization, not a GPU
-exclusion. Reuse existing integer atomic regions and checked storage carriers;
-a caller contract may be needed for i4 representation. A final cast cannot
-replace per-update source-width arithmetic. Other typed storage/view and
+the ledger. This is a generic storage/ABI gap, not a GPU exclusion. Reuse the
+qualified integer update and supply a checked public cell/carrier contract;
+do not guess packed-nibble addressing. A final cast cannot replace per-update
+source-width arithmetic. Other typed storage/view and
 composition profiles still need the planned source review. If unresolved at
 the effort cap, publish exact non-support and report incomplete full closure.
 

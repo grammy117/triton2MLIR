@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Boolean atomics](atomic_memory.md#boolean-integer-source-words) retain the
+existing canonical Boolean tensor carrier and logical i1 updates in standard
+memref computation. Native consumers need the checked byte-CAS/pure-integer
+callback legalization; older consumers can refuse the newly admitted width.
+This adds no packed-bit address mapping or external participant semantics.
+Receipt, tensor/scalar ABI and memory-admission schemas stay unchanged.
+
 [Automatic model launch discovery](transformer_demo.md) adds the preprocessing
 record `t2m.discovered-launches.v1` and an `automatic_launch` provenance field.
 They describe actual fake launch graphs, file-backed JIT source identity and

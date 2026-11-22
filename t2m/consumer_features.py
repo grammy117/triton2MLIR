@@ -19,6 +19,11 @@ def requires_atomic_word_views(operations):
     )
 
 
+def requires_subbyte_atomics(operations):
+    return any(op.name in ("memref.atomic_rmw", "memref.generic_atomic_rmw")
+               and str(op.results[0].type) in ("i1", "i4") for op in operations)
+
+
 def select_features(module):
     if __package__:
         from .bfloat_math import requires_emulation
@@ -50,6 +55,6 @@ def select_features(module):
         features.add("lower_integer_atomic_regions")
     if requires_atomic_word_views(module.walk()):
         features.add("lower_atomic_word_views")
-    elif regions and not integer_regions:
+    elif regions and not integer_regions or requires_subbyte_atomics(module.walk()):
         features.add("lower_integer_compare_exchange")
     return frozenset(features)

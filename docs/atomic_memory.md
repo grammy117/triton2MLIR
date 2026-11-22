@@ -30,7 +30,8 @@ width at every event: add wraps modulo the word width, signed and unsigned
 min/max keep their distinct interpretation, and each old result is the actual
 pre-update word. The typed profile additionally admits all nine integer RMW
 kinds through f16/f32/f64 storage and explicitly ordered 16/32/64-bit byte
-views. Subbyte integer storage is not admitted by this extension.
+views. The Boolean extension is described below; public i4 storage is not
+admitted by these extensions.
 
 The source review found verified i8/i16 sources rejected by width checks in
 both producers and consumer intake. This extension reuses Meta's existing
@@ -50,6 +51,34 @@ half-storage bits and untouched trailing bytes. Forty-one affected existing
 CAS, half-addition, byte-order and evidence-integrity checks also pass.
 These results qualify private invocation state; external publication and
 hardware-specific observations still need their own execution contract.
+
+## Boolean integer source words
+
+The integer profile also admits i1 RMW and CAS using the existing canonical
+NumPy Boolean tensor carrier, one logical cell per byte. Each operation retains
+its actual i1 arithmetic: add wraps modulo two, signed min/max interpret true
+as -1, unsigned min/max interpret it as one, and returned old values precede
+the update. This is not packed-bit addressing or a physical GPU memory claim.
+
+Meta's element-typed converter still emits standard memref atomics. At the
+native consumer boundary, a checked allocation-free byte-CAS loop truncates
+the current byte to i1 before invoking the actual pure integer update, then
+zero-extends the replacement to i8. CAS comparison and selection execute at
+the logical width. The whole helper and pure callback are independently
+reconstructed for borrowing/lifetime admission; source order, private scope,
+bounds, masks and every old/final result remain checked.
+
+`tests/test_boolean_atomics.py` passes a complete public Merlin program with
+all nine RMW kinds, successful and failed CAS, all twelve outputs and five
+original/changed/ragged/single/empty replays on one library. Active negative and
+out-of-range indices abort; inactive invalid indices have no effect. Compiler
+staging excludes evaluator arrays and caller inputs remain unchanged. Merlin's
+two native subbyte programs additionally exhaust the one-/four-bit integer
+input domain through the same nine updates and CAS outcomes, checking adjacent
+cells and normalization from explicit byte carriers. This establishes native
+i4 arithmetic, not a public i4 tensor ABI. Public i4 storage remains an open
+generic gap; the existing interface does not silently guess packed nibbles or
+admit arbitrary padding as a valid non-byte scalar load.
 
 ## Low-precision floating exchange
 
@@ -92,7 +121,7 @@ The native API keeps BF16/FP8's existing uint16/uint8 array carriers; MLIR and
 source contracts retain the actual float format. The public ABI, receipt and
 admission schemas are unchanged, while older consumers may reject the newly
 qualified source forms. Integer pointer views through BF16/FP8 storage and
-subbyte atomics remain outside this extension. See [limitations](limitations.md).
+public i4 atomics remain outside this extension. See [limitations](limitations.md).
 
 ## Source-backed boundary
 

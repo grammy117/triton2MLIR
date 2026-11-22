@@ -165,9 +165,13 @@ def main(work):
                 for block in region.blocks:
                     for item in block.operations:
                         yield from operations(item.operation)
-        from consumer_features import requires_atomic_word_views
+        from consumer_features import (
+            requires_atomic_word_views,
+            requires_subbyte_atomics,
+        )
         word_views = requires_atomic_word_views(operations(module.operation))
-        if word_views or any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation)):
+        if (word_views or requires_subbyte_atomics(operations(module.operation))
+                or any(op.name == "memref.generic_atomic_rmw" for op in operations(module.operation))):
             root = os.environ.get("T2M_MERLIN_ROOT")
             if not root:
                 raise ValueError("native generic atomics require the explicit T2M_MERLIN_ROOT compiler support path")

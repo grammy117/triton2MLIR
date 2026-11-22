@@ -316,6 +316,14 @@ def kernel_representation_differences(trace, *, dynamic=False):
             "admission schemas are unchanged, but older consumers may refuse these types; this grants no "
             "additional floating arithmetic or external publication semantics"
         )
+    if any(event.get("word_bits") == 1 for event in trace.get("memory", {}).get("atomic_payload", [])):
+        differences.append(
+            "Boolean atomics keep logical i1 arithmetic, signed/unsigned comparisons and every old value "
+            "in standard memref atomics; the native consumer requires checked byte-CAS legalization "
+            "which truncates before each update and zero-extends the replacement, retaining adjacent cells; "
+            "the existing canonical Boolean tensor carrier and public schemas are unchanged; this supplies "
+            "no packed-bit address mapping or external publication semantics"
+        )
     numeric = {event.get("numeric_contract") for event in trace.get("memory", {}).get("atomic_payload", [])}
     if numeric & {"ieee-f16-rne-add-quiet-nans", "ieee-bf16-rne-add-quiet-nans"}:
         differences.append("IEEE f16/BF16 atomic addition retains two-byte storage, nearest-even updates, gradual underflow, explicit result NaN quieting and exact old words in standard generic atomic regions; computed NaN payload/sign is unspecified; BF16 updates extend exactly to f32, add and narrow once per event; the checked native atomic-word feature uses integer input/old-result helper transport and retains complete internal load/CAS retry bodies through ownership/lifetime checks; public tensor/scalar ABI and receipt schemas are unchanged; private invocation state supplies no external publication or accelerator equivalence")
