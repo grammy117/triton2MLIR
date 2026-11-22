@@ -86,14 +86,15 @@ def expand_tile_gathers(module, source_ids):
             or index_type.get_shape() != shape
             or len(src_type.get_shape()) != len(shape)
             or any(n <= 0 for t in types for n in t.get_shape())
-            or index_type.element_type not in (builtin.i32, builtin.i64)
+            or not isinstance(index_type.element_type, builtin.IntegerType)
+            or index_type.element_type.width.data not in (1, 4, 8, 16, 32, 64)
             or result_type.element_type != src_type.element_type
             or not isinstance(
                 src_type.element_type, (builtin.IntegerType, builtin.AnyFloat)
             )
         ):
             refuse(
-                "tile gather requires static numeric tensors, matching result/indices and i32/i64 indices; pointer tensors need source-word normalization"
+                "tile gather requires static numeric tensors, matching result/indices and legal Triton integer indices; pointer tensors need source-word normalization"
             )
         axis = axis.value.data
         if any(

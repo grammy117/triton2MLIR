@@ -29,12 +29,15 @@ def expand_histograms(module, source_ids):
         if len(op.operands) not in (1, 2) or len(op.results) != 1:
             refuse("histogram requires one source, an optional mask and one result")
         source, result_type = op.operands[0], op.results[0].type
+        def integer_word(element):
+            return isinstance(element, builtin.IntegerType) and element.width.data in (1, 4, 8, 16, 32, 64)
+
         if (not isinstance(source.type, TensorType) or not isinstance(result_type, TensorType)
                 or len(source.type.get_shape()) != 1 or len(result_type.get_shape()) != 1
                 or source.type.get_shape()[0] <= 0 or result_type.get_shape()[0] <= 0
-                or source.type.element_type not in (builtin.i32, builtin.i64)
-                or result_type.element_type not in (builtin.i32, builtin.i64)):
-            refuse("histogram requires positive rank-one i32/i64 source and counter tensors")
+                or not integer_word(source.type.element_type)
+                or not integer_word(result_type.element_type)):
+            refuse("histogram requires positive rank-one legal Triton integer source and counter tensors")
         mask = op.operands[1] if len(op.operands) == 2 else None
         if mask is not None and mask.type != TensorType(builtin.i1, source.type.get_shape()):
             refuse("histogram mask must match the source shape")
@@ -59,7 +62,10 @@ def expand_histograms(module, source_ids):
         def update(block):
             value = add(block, tensor.ExtractOp(source, [iv], source.type.element_type))
             if value.type != builtin.i64:
-                value = add(block, arith.ExtSIOp(value, builtin.i64))
+                # Boolean samples denote 0/1. Other integer samples retain the
+                # established signed range rule; never narrow before indexing.
+                cast = arith.ExtUIOp if value.type == builtin.i1 else arith.ExtSIOp
+                value = add(block, cast(value, builtin.i64))
             low = add(block, arith.ConstantOp.from_int_and_width(0, builtin.i64))
             high = add(block, arith.ConstantOp.from_int_and_width(bins, builtin.i64))
             above = add(block, arith.CmpiOp(value, low, "sge"))

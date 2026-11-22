@@ -1,9 +1,9 @@
 # Logical tile histograms through Merlin
 
 `tt.histogram` now has an executable standard expansion with original source
-correspondence. The adapter accepts positive static rank-one i32/i64 source and
-counter tensors, with an optional matching i1 mask. Maintained execution cases
-use i32 counters and both source widths. Public tensor/scalar ABI schemas remain
+correspondence. The adapter accepts positive static rank-one source and counter
+tensors using the six pinned Triton integer widths: 1, 4, 8, 16, 32 and 64,
+with an optional matching i1 mask. Public tensor/scalar ABI schemas remain
 unchanged, including named runtime allocation and logical-grid dimensions.
 
 The expansion initializes a bins tensor once, then carries it through one
@@ -13,6 +13,12 @@ before inspecting an element; masked lanes contribute nothing. Negative and
 above-range values contribute nothing. Without a histogram mask, source padding
 values are ordinary elements and remain observable in the counts. No atomic
 memory effect is invented for this tile-local value operation.
+
+Boolean samples denote zero/one. Wider samples keep the existing signed
+interpretation and are extended before checking the bin interval. Counter
+increments retain the declared integer width and modular word arithmetic.
+The public Triton language creates i32 counters; other legal counter widths
+are supported in verified TTIR without inventing a by-value subbyte ABI.
 
 This is O(elements + bins) logical work and does not unroll a bins-by-elements
 comparison matrix. The source tile and unmapped logical grid remain intact.
@@ -67,5 +73,37 @@ One compiled library per source width/mask/profile/layout handles changing input
 and program counts, empty inputs/results, surplus tiles, tails, repeated bins,
 negative and extreme values, and exact masked versus unmasked padding counts.
 Inputs and library bytes remain unchanged. Global atomic accumulation of tile
-histograms, broader source/counter types and every device implementation are
+histograms and every device implementation are
 separate capabilities; tile-local histogram support does not certify them.
+
+## Narrow integer source review
+
+The generic-operation audit found that a real captured i8 histogram and local
+i8 gather were refused by unnecessary i32/i64-only admission checks. The
+existing indexed expansions now accept all six `TT_Int` widths from pinned
+[TritonTypes.td](https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/include/triton/Dialect/Triton/IR/TritonTypes.td).
+They keep the same tensor state, source masks, original IDs and guards.
+
+The gather route retains Meta's indexed `linalg.generic`/`tensor.extract`
+algorithm and signed `arith.index_cast` interpretation, including i1 true
+extending to -1 and failing an active index guard. No physical lane mapping is
+introduced. Reviewed upstream implementation and tests are
+[the converter](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/lib/Conversion/TensorGatherToLinalg/TensorGatherToLinalgPass.cpp)
+and [the end-to-end fixture](https://github.com/facebookincubator/triton-shared/blob/17f0c234ce474bee334af36e351c62eca7852836/test/Conversion/TensorGatherToLinalg/gather-e2e.mlir).
+Although the TTIR prose permits smaller non-axis dimensions, the pinned native
+verifier rejects them; that shape constraint remains unchanged.
+
+`tests/test_narrow_indexed_values.py` exercises internal i1/i4/i8/i16 samples,
+counters and indices through the actual public `StagedProgram` interface.
+Independent integer references check mask exclusion, empty inputs, counter
+wraparound and changed inputs on an unchanged library. Gather failures check
+actual source-domain aborts before a result is published. Separate cases
+capture real i8 Triton histogram/gather kernels. Subbyte values remain internal;
+ordinary declared storage types transport their exact inputs/results.
+
+All eighteen new public-interface cases pass, as do ten selected existing
+i32/i64 histogram/gather and active-index-refusal regressions. Retained logs
+are `.scratch/narrow-index-first.log` and
+`.scratch/narrow-index-regressions.log` in the qualification checkout. The
+separate 107-case baseline passed before this width extension; it is not a
+whole-selection qualification of the new compiler candidate.
