@@ -5,15 +5,29 @@ now caps remaining effort at five focused engineering days, ending in a
 qualified release or an explicitly incomplete handoff. Reuse completed work.
 Do not restart the roadmap, expand the demo or begin another compiler framework.
 
-The latest fixed release attempt is retained under
-`out/v1-closure/acceptance-number-minmax/`: 69 passed, three stale-layout
-owned-result fixture setup errors, then stop. The other 22 cases were not run.
-The fixture correction is committed as `a2c0fac` and passed six focused
-host/serial checks; the expanded
-107-case selection still needs a successful run. The earlier signaling-NaN
-clamp failure has a generic Merlin fix, twelve scalar dtype/memory-profile
-passes and a 2,600-pass/two-prerequisite-skip Merlin replay. See
-[scalar math](scalar_math.md) for the transport scope and retained first failure.
+The frozen 107-case selection **passed in full**, without skips/failures,
+at triton2MLIR `2290fb5` and Merlin `27d84489e`. Retained under
+`out/v1-closure/acceptance-107/`: command, copied manifest, JUnit, process and
+actual implementation records, including the pre-existing model2MLIR whitespace
+edit. The closure checker passed policy/fixture, complete-execution and Merlin
+baseline-source gates, leaving the missing semantic/profile audit open.
+
+The source review then reproduced valid captured i8 histogram/gather refusals.
+`05fc23d` extends the existing indexed expansions to all six pinned integer
+widths. Eighteen new cases pass actual public Merlin compilation/replay,
+including real captured kernels, and ten affected i32/i64/guard regressions pass.
+Logs are `.scratch/narrow-index-first.log` and
+`.scratch/narrow-index-regressions.log`; detailed artifacts remain in the clean
+qualification worktree `.scratch/narrow-index-worktree/`. Main received the
+tested commit by fast-forward only after the original run finished.
+
+The manifest now freezes 125 cases and 34 fixture files. **Do not label the
+107-case pass a final verdict for this newer compiler/selection.** Finish the
+49-entry source/profile review before a final full rerun; do not keep widening
+the corpus without a demonstrated missing requirement. The fixture correction
+is `a2c0fac`; earlier failed runs remain in their original directories.
+The signaling-NaN fix has twelve scalar format/profile passes and the
+2,600-pass/two-prerequisite-skip Merlin replay. See [scalar math](scalar_math.md).
 
 All twenty missing original-TTIR witnesses have now been recovered from existing
 implementations. The maintained corpus passes one aggregate check, and twelve
@@ -21,8 +35,8 @@ targeted descriptor/cast/scaled-dot/atomic/pointer checks pass separately. The
 combined verified selection has 67 unique packages, 59 standalone qualifications
 and all 49 generic names in Merlin-executed packages, recorded in
 `out/v1-closure/family-witnesses/package-observations.json`. These counts do not
-establish semantic profile closure. The acceptance manifest now freezes 107
-cases and 33 fixture files, retaining all original 94 cases. The hard cap stays
+establish semantic profile closure. The acceptance manifest now freezes 125
+cases and 34 fixture files, retaining all original 94 cases. The hard cap stays
 128; do not expand variants without an actual uncovered requirement.
 
 New user requirements keep every generic/useful computation mandatory; hardware
@@ -40,8 +54,8 @@ fresh artifact-only publication selection passes separately in
 `.scratch/automatic-transformer-publication.log`. The latter runs the 13-token
 model from only declared public artifacts with both outputs on three inputs.
 [Limitations](limitations.md) explain their uses, causes and remedies. The C0
-policy and 107-case manifest exist; their semantic evidence audit and complete
-release execution remain open. `scripts/check_v1_closure.py` and six
+policy and 125-case manifest exist; their semantic evidence audit and final
+candidate qualification remain open. `scripts/check_v1_closure.py` and six
 reader/refusal checks now enforce complete execution and source/package
 custody; they do not supply the missing semantic review or closure verdict.
 

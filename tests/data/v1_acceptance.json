@@ -1,5 +1,5 @@
 {
-  "case_count": 107,
+  "case_count": 125,
   "cases": [
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[tensor]",
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[buffer]",
@@ -107,7 +107,25 @@
     "tests/test_scaled_dot.py::test_real_source_merlin_package[tensor-packs3-scales3-bf16-fp16]",
     "tests/test_atomic_word_cas.py::test_word_cas_preserves_success_failure_old_bits_and_storage_abi[False-32]",
     "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]",
-    "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]"
+    "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-tensor]",
+    "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-guarded-buffer]",
+    "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[histogram]",
+    "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[gather]"
   ],
   "closure_authority": "passing this selection alone is not generic semantic/type/attribute closure; final policy/source/consumer audit is required",
   "fixture_sources": {
@@ -131,6 +149,7 @@
     "tests/test_mixed_effects.py": "c34d88c685942564449254b3eb66ba2addef5dbee61b1e5e068c1daa1b69d649",
     "tests/test_model_binding.py": "c2163be584378f1d824e2a022039312057edd69313d717daa8de643b368049ff",
     "tests/test_model_bundle.py": "c326fdb6038c2a94b37f0b475f850f4f170d75b6abd983703f7d4fb2c1cdb5ce",
+    "tests/test_narrow_indexed_values.py": "acfebffd7b92c8b6887d627e2f811316a2026411f9c5cd6cb524cb2b07ff7e06",
     "tests/test_pointer_unsplat.py": "d5b82ab76dc124680b70b53efcad81b26d8a3a19642008c4393a8828fe37390c",
     "tests/test_product_corpus.py": "31749be8239452a462b05d5e4d9dcb44ee98b87077cd37ea7dc19c8f8f980a40",
     "tests/test_public_kernel_staging.py": "6477fa78c0e0f53aab4682115b86c111b8a8b8a79e9c5bb97962769b769288f1",
@@ -190,6 +209,31 @@
       "previous_case_count": 94,
       "qualification": "13 selected checks passed serially; 67 verified package observations include all 49 generic definitions. This is not full semantic or whole-selection qualification.",
       "reason": "Preserve all original cases and add existing original-TTIR to Merlin witnesses for the twenty missing generic definitions. The product corpus keeps two expected refusals separate from portable support."
+    },
+    {
+      "added_cases": [
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-tensor]",
+        "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-guarded-buffer]",
+        "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[histogram]",
+        "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[gather]"
+      ],
+      "previous_case_count": 107,
+      "qualification": "18 public-interface checks and 10 affected i32/i64 regressions passed. The preceding frozen 107-case selection passed before this compiler extension; the final 125-case selection has not run as a whole.",
+      "reason": "Actual captured i8 histogram/gather kernels exposed generic width-admission gaps during the source/profile audit. Qualify legal internal i1/i4/i8/i16 forms through public Merlin, preserving masks, counter words and invalid-index aborts."
     }
   ],
   "schema": "t2m.release-acceptance.v1",
@@ -242,7 +286,16 @@
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[False-1]",
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-0]",
       "tests/test_scans.py::test_tuple_scan_preserves_noncommutative_combiner_order_on_each_axis[True-1]",
-      "tests/test_product_corpus.py::test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_gaps"
+      "tests/test_product_corpus.py::test_maintained_missing_family_corpus_qualifies_actual_packages_and_keeps_gaps",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-1-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-4-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-8-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[histogram-16-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[histogram]"
     ],
     "K5": [
       "tests/test_indexed_gather.py::test_indexed_gather_has_working_merlin_consumer_with_unchanged_reference",
@@ -252,7 +305,16 @@
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled3]",
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled4]",
       "tests/test_runtime_headers.py::test_one_merlin_library_retains_every_actual_runtime_header[compiled5]",
-      "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]"
+      "tests/test_pointer_unsplat.py::test_one_merlin_library_retains_scalarized_selected_pointer[lane-select]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-1-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-4-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-8-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-tensor]",
+      "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-guarded-buffer]",
+      "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[gather]"
     ],
     "K6": [
       "tests/test_allocation_word_model.py::test_real_word_model_preserves_weights_alias_recurrence_and_all_results[False]",

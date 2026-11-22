@@ -5,13 +5,20 @@
 The [v1 policy](v1_policy.json) records all 50 pinned definitions, with all 49
 generic operations mandatory and assembly optional. Its final semantic audit
 is open. The [fixed acceptance roster](../tests/data/v1_acceptance.json) now
-contains 107 cases and hashes 33 fixture files, retaining all original 94 cases.
-The thirteen added existing checks pass. Their combined verified package
+contains 125 cases and hashes 34 fixture files, retaining all original 94 cases.
+The preceding 107-case selection passed together without skips/failures;
+`out/v1-closure/acceptance-107/` retains its command, JUnit and implementation
+records. The source/profile review then exposed narrow histogram/gather gaps.
+The [integer-width extension](histogram.md#narrow-integer-source-review) passes
+eighteen public-interface checks and ten affected regressions. All 125 still
+need final qualification together after the profile review.
+
+The thirteen earlier missing-family checks' combined verified package
 selection has 67 unique packages, 59 standalone qualifications and all 49
 generic names in Merlin-executed packages; see
 `out/v1-closure/family-witnesses/package-observations.json`.
 These are source-operation observations, not universal typed/composition
-coverage or a complete successful acceptance run.
+coverage or a successful run of the updated 125-case candidate.
 The [two-transformer workflow](transformer_demo.md) has independent native and
 public host evidence, including ragged and artifact-only publication checks.
 
