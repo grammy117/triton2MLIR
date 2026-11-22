@@ -1,5 +1,21 @@
 # Review handoff — updated 2026-11-21
 
+Start with the [finite v1 closure plan](completion_plan.md). The user now permits
+checked extra information, qualified fallbacks and explicit non-support to bound
+the work. Its C0-C4 sequence replaces this file's historical instructions to
+keep extending every remaining family. Release closure and universal portable
+kernel support are different claims; the latter is not established.
+
+The committed frontend baseline is `b579ada9675aa7d7f0f2033c5fd03568274e24c1`.
+Its narrow integer word recipe has native/host qualification recorded in
+[the source contract](source_assembly.md#narrow-integer-register-groups).
+Four local code/test files additionally contain an uncommitted packet-sharing
+extension. Native packet execution works in selected probes, but its dynamic
+recurrence currently fails Merlin's post-deallocation lifetime verifier. It is
+not release-qualified. C1 must fix that proof or retain the qualified scalar
+default with an explicit sharing/performance limitation; never bypass the gate.
+This plan-only update preserves those local edits.
+
 Merlin `28e4d702f` now replays derived-model source/constant relationships and
 prepares exact immutable parameters plus explicit runtime BUFFER ports. The
 public host adapter compiles the actual prepared body, reconstructs source-word

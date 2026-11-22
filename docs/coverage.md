@@ -2,9 +2,13 @@
 
 ## Active semantic boundary ledger
 
-The fifty-name inventory below is an operation denominator, not the remaining
-completion denominator. Keep these boundaries open until their full applicable
-source/type/attribute/composition and consumer requirements are established.
+The [finite v1 plan](completion_plan.md) governs release closure. The fifty-name
+inventory is an operation denominator; portable support, contract-dependent
+support, qualified fallbacks and explicit exclusions have separate counters.
+The following broad boundaries describe engineering limits and historical
+evidence. They must receive a release disposition, rather than automatically
+requiring universal implementation. Required accepted cases still need complete
+source/type/attribute/composition and consumer evidence.
 
 | Boundary | Current evidence | Remaining execution work |
 | --- | --- | --- |
@@ -15,9 +19,9 @@ source/type/attribute/composition and consumer requirements are established.
 | Staged materialization | Actual reusable host libraries and complete serial target images, with payload and source custody. | Applicable accelerator scheduling, materialization, correctness and separately measured performance; host/serial results supply no accelerator verdict. |
 | Coverage closure | Pinned complete TTIR definitions, original typed source inventories, product successes and located refusals. | Reopen the complete semantic/consumer ledger against committed producers. No valid refused, unknown or unmeasured family counts as complete. |
 
-The current plan starts with the reproduced root/control failures, then advances
-numeric/effect and runtime/target families alongside remaining memory work.
-See [the execution sequence](completion_plan.md#remaining-execution-sequence).
+The execution order is now scope freeze, safe public defaults, checked contracts,
+numeric/effect disposition and final qualification. See
+[the bounded sequence](completion_plan.md#remaining-execution-sequence).
 
 [Public standalone Merlin staging](repository_layout.md) now reconstructs the
 complete compiler projection before generic loading/preparation. The production

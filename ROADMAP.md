@@ -1,5 +1,18 @@
 # Roadmap: Triton kernel to a Merlin capture package
 
+## Governing v1 closure plan
+
+Follow the [finite completion plan](docs/completion_plan.md), updated 2026-11-21.
+It defines a pinned support domain, five work packages, checked user contracts,
+qualified fallbacks, explicit exclusions and a release exit test. New accelerator
+campaigns and arbitrary hardware observations are separate scope. A refused
+profile is never counted as portable support, but an explicitly excluded profile
+no longer creates an endless v1 implementation obligation.
+
+The milestone history below retains its original measurements and long-term
+ambitions. Its older "all kernels" and "immediate next work" statements are
+superseded as execution instructions by the finite plan.
+
 [Public model and kernel staging](docs/repository_layout.md) replays the same
 source/ABI/effect builder in Merlin's generic loader and preserves complete
 programs through public preparation/compilation. The host adapter reuses the

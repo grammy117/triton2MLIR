@@ -1,936 +1,259 @@
-# Completion plan: all TTIR kernels through the Merlin interface
+# Finite closure plan: portable TTIR to the Merlin interface
 
-[Conditional runtime strides](conditional_runtime_strides.md) close selected
-scalar/pointer/nested and boolean-step compositions while retaining actual
-branches, tile axes, reuse and every observation. Actual dataflow distinguishes
-loop invariance from grid uniformity; varying coordinates grant no ownership.
-Kernel/model host and serial qualification retain all results. Continue general
-base selection, while/nonlinear state, alias/dynamic-root/write-image proofs,
-shared/async and applicable target correctness/performance.
+Updated 2026-11-21. This is the governing v1 release plan. It replaces the
+previous requirement that every valid refusal and every possible target must
+be eliminated before finishing. Historical measurements in the roadmap,
+coverage and handoff documents retain their original scope; they are evidence,
+not an automatically expanding backlog.
 
-[Independent runtime memory strides](invariant_runtime_strides.md) close the
-reproduced separate-scalar stride refusal while retaining signed/zero logical
-progress, original controls and body-local non-speculated arithmetic. Kernel
-and complete-model host/serial qualification retain every observation. Continue
-conditional/while pointer state, varying increments, alias ownership, dynamic
-roots, variable-step complete writes, shared/async and applicable target closure.
+## What we will finish
 
-[Actual iteration ordinals](iteration_ordinals.md) close the reproduced
-constant-per-execution pointer refusal and compose constant/mixed streams with
-body memory, pure word state, complete models and actual serial execution.
-Keep all source controls and observations. Continue unrelated invariant runtime
-strides, conditional/while pointer state, alias ownership, dynamic roots,
-variable-step complete writes, shared/async and applicable target closure.
+Ship a versioned, usable TTIR frontend that preserves useful tensor tiles,
+fusion, reuse, recurrences and effects through Merlin's public input interface.
+For every source form in its pinned domain, return either a qualified portable
+package or a precise, actionable disposition. Do not promise portable execution
+of arbitrary physical observations or undefined source behavior.
 
-[Pure loop exit coordinates](pure_loop_exits.md) close the reproduced
-final-pointer-only cloning refusal while retaining original numeric loops,
-preloaded tile reuse and every final observation. New and original complete
-models qualify through host/serial execution. General pointer recurrences,
-while/alias ownership, dynamic roots, variable-step write images, shared/async,
-source/numeric compositions and applicable target qualification remain open.
+**Closure means complete accounting plus qualified support for a declared
+profile. It does not mean every kernel becomes portable MLIR.** Unsupported
+forms remain unsupported in the published numbers. The former universal goal
+is a long-term direction, not the v1 exit condition.
 
-[Runtime pointer streams](runtime_pointer_steps.md) now close the reproduced
-variable-header/final-pointer refusal for source-proved step-coupled additive
-streams. Original tile traversal, numeric state and complete model results
-qualify through host and serial execution. Continue conditional/non-step-coupled
-streams, while/alias ownership, variable-step write images and dynamic-root
-projection, alongside shared/async, numeric/source and applicable target closure.
+A successful portable result contains executable standard MLIR, the actual ABI,
+source/emission provenance, numeric/effect policies and required compiler
+members. It reaches the same public `StagedProgram` boundary as model2MLIR and
+executes through Merlin. Any package differences remain explicit in
+[the package contract](package.md). Intent annotations never replace computation.
 
-[Variable source loop headers](runtime_headers.md) now retain actual
-lower/upper/positive-step SSA, row/column tiles and partial-tile recurrences as
-tensor MLIR. Six kernel libraries and a dependent two-call PyTorch model pass
-host replays and fourteen actual serial images, retaining all seven model
-results. General pointer/ownership, effects, source/numeric and accelerator
-closure remains open.
+## Freeze the scope
 
-[Wholly nonexecuting source loops](empty_loop_memory.md) now retain
-complete original initial tuples and incoming tensor versions without body
-read/write credit. Four kernel libraries and a dependent two-call PyTorch model
-pass native/host checks and ten actual serial images, retaining all seven model
-results. Signed shape-derived controls such as `2 - n` now cross model2MLIR as
-checked i64 SSA. General memory/effect/source and accelerator closure remains open.
+| Axis | v1 boundary |
+| --- | --- |
+| Source | Triton 3.7.1, revision `f797708c0626e5f9840ca5b0a98790e2c7cb09ad`; its 50 TableGen `tt` definitions plus explicitly admitted supporting dialect operations. New versions require a separate compatibility change. |
+| Input | Verified pre-layout TTIR or a captured source specialization, with a semantic ABI. Post-layout GPU dialects, GPU binaries and recovering arbitrary Python launchers are excluded. |
+| Kernel domain | Finite logical buffers, explicit input/state/output bindings, declared shape/scalar domains, checked address/initialization/alias rules and named numeric/effect profiles. The classifier specifies admitted types, attributes and compositions; operation names alone grant no support. |
+| Portable consumer | The current public Merlin kernel and bound-model staging/preparation interface, whole-body host lowering and reusable host execution. No retired namespace fallback. |
+| State | Explicit logical roots and functional state/results. Physical alias identity, caller mutation/copyback and externally participating storage are supported only where an existing qualified adapter states that contract; otherwise excluded from v1. |
+| Other targets | Keep existing serial-target results as regression evidence. A fresh bounded serial smoke selection is required. New accelerator scheduling, correctness and performance campaigns are separate releases and cannot block portable-interface v1. |
+| Performance | Preserve and inspect algorithmic tiles, reuse and recurrence on the structured route. Generic fallbacks must disclose lost structure and extra storage. No GPU speedup or backend-equivalence claim is required. |
 
-[Functional regions in tile memory](region_tile_memory.md) now retain reductions,
-coupled tuples, forward/reverse scans and scalar map loops inside actual partial-tile
-dataflow. Seven kernel libraries and a complete dependent-call PyTorch model pass
-native/host and sixteen actual serial images, retaining all seven model results. The
-focused selections pass 38 + 28 + 4; related regressions pass 212. General
-memory/effect/source and accelerator closure remains open.
+Freeze producer revisions, tool hashes, policy rules and the expanded acceptance
+manifest in C0 below. Starting observations are triton2MLIR `b579ada9675aa7d7f0f2033c5fd03568274e24c1`,
+Merlin `28e4d702fa1d384a4c6c66cac0ebced9ed7108c6` and model2MLIR
+`f3f0de1ae130faebbd27bd36374d11e1e211daa2` on their existing branches.
+Final evidence names the actual final commits, installed tools
+and artifact bytes. Freeze dependencies used by that run; building a universal
+supply-chain/equivalence proof system is outside this release.
 
-[Loop-carried partial tiles](loop_tiles.md) now retain original loop bounds, numeric
-recurrences and selected-path observations as tensor computation. Actual source
-fallback writes preserve nonpositive-trip paths without narrowing entry domains. Five
-kernel libraries and a complete two-call model qualify native/host execution and
-twelve actual serial images, retaining all seven model results. The related regression
-selection passes 221 checks. General memory/effect/source and accelerator closure
-remains open.
+## Dispositions and honest counters
 
-The wholly nonexecuting declared trip domain now has independent
-[empty-edge qualification](empty_loop_memory.md). Its original failed probes
-remain retained in [the loop contract](loop_tiles.md#historical-source-boundary-probes).
-The reproduced pure-reduction composition also has separate functional-region
-qualification. General while/alias ownership, pointer recurrences,
-variable-step store images, shared/async and applicable target requirements remain.
+Each classified source form has one route and separate evidence status. These
+are the planned release-policy values, not new implemented CLI/schema claims.
 
-The original [runtime-header probe](empty_loop_memory.md#next-concrete-representation-boundary)
-now has [tensor-level qualification](runtime_headers.md), including source-width
-induction enclosures and readonly row/column tile extraction. Source SSA controls,
-partial-tile state and complete model results remain. Continue general pointer
-recurrences, while/alias ownership and variable-step store images, plus dynamic
-root projection, effects and applicable targets. Count bounds still grant no
-complete writes or loop replacement.
+| Route | Meaning | Counts as portable support? |
+| --- | --- | --- |
+| `portable` | Qualified structured tensor/standard MLIR path. | Yes, within its exact profile. |
+| `portable-with-contract` | The same, with explicit extra caller information and enforced preconditions. | Yes, conditional on that contract. |
+| `portable-fallback` | A disclosed, qualified generic standard-MLIR implementation with the same observable semantics. | Yes; report fallback use separately. |
+| `backend-required` | Behavior needs a physical device/runtime or an unavailable implementation. Report the requirements; do not emit an opaque successful portable package. | No. No new original-GPU execution runtime is required for v1. |
+| `unsupported` | A valid source form explicitly excluded from this release, with a reason and remediation. | No. |
+| `invalid-source` | The pinned verifier rejects it. | No. |
 
-[Branch-completed tiles](branch_tiles.md) now close the reproduced scalar-if
-refusal with actual source-path coverage and non-speculated arithmetic.
-Prefix observations, nested/absent-else paths and a complete two-call model
-qualify. Native numeric-data interface selection keeps ordinary memory visible
-and declines pointer/mask dependencies. General loops, aliases, effects,
-source/numeric versions and applicable target qualification remain full-goal work.
+Evidence is independently `qualified`, `expected-refusal`, `failed` or
+`not-run`. A selected positive case with `failed`/`not-run` blocks release.
+A missing dependency is `not-run`, not a pass or an exclusion. Count all 50
+operation policy entries, admitted typed profiles, portable cases, contract
+cases, fallback cases and exclusions separately. Never report refusal coverage
+as portable op coverage.
 
-[Interleaved fresh tiles](interleaved_tiles.md) now close the reproduced
-distinct-output refusal using actual functional fresh-root facts. Cross-output
-data/control observations and ordinary input-state order survive complete model
-execution. Continue pointer/region dependencies, shared/async participation,
-source/numeric closure and applicable targets; the full endpoint remains open.
+A malformed/contradictory ABI is an invalid-contract diagnostic, not evidence
+that the underlying TTIR is invalid. A missing required contract produces an
+actionable request for the named bindings; it does not count as a portable pass.
 
-[Fresh tile partitions](tile_partitions.md) now re-raise same-address masked
-writes and intermediate observations before native pointer conversion. Actual
-Boolean coverage preserves source order and active tails without an incoming
-output read. Parallel tiles and complete two-call model execution qualify.
-Continue groups across other memory events/regions, broader dependencies,
-shared/async participation and applicable targets; full coverage remains open.
+Every op entry needs a predicate for admitted forms and an explicit complement
+rule. Supporting operations, types, semantic attributes, regions and their
+compositions need the same admission checks. Unknown names or unavailable
+attribute evidence cannot inherit a neighboring form's success. For arbitrary
+new kernels outside the frozen corpus, the default is a located refusal; finite
+tests do not prove universal translation or classification correctness.
 
-[Source branch/mask partitions](source_partitions.md) now close actual
-both-arm full-output and complementary-mask read gaps while retaining every
-source choice, write order and observation. Nested row/column reuse and complete
-model host/serial execution qualify. Continue vector-lane and numeric predicate
-relations, while/ownership invariants, irregular parallel dependencies,
-shared/async effects and applicable target closure.
+## Decide the hard boundaries now
 
-[Partial source initialization](partial_initialization.md) now proves active
-scalar membership in actual completed source-store images. Row/column/plane
-observations and reread recurrences preserve the original algorithm through a
-complete two-call model and actual serial execution. Continue vector-lane and
-masked/conditional partitions, general while/ownership relations, irregular
-parallel dependencies, shared/async effects and applicable target closure.
+The defaults below are release decisions, rather than invitations to build a
+general solver, alias engine or GPU runtime. Reuse the existing mechanisms.
 
-[Rectangular source-loop coverage](nested_output_coverage.md) now closes the
-reproduced nested/permuted fresh-output refusal, complete branch joins and
-static-empty tensor-port gap. Model2MLIR runtime parameter slices compose with
-both original loop nests through complete model host/serial execution. Continue
-partial row-local and masked/conditional initialization, while/ownership facts,
-irregular parallel dependencies, shared/async effects and target closure.
+| Gap | First route | v1 stopping decision |
+| --- | --- | --- |
+| Irregular/loaded addresses, while-pointer state, nonlinear indexing | Existing structured analysis; otherwise explicit root/extent/stride bindings and guarded logical memory. | Retain bounds, initialization, source order and write-conflict checks. If the existing guard/effect mechanism cannot enforce the needed relationship, require a supported specialization or exclude the form. |
+| Aliases, views and mutation | Explicit storage roots, offsets, layouts, overlap and functional state/results; use existing qualified adapters. | Never assert no-alias to silence a conflict. Unrepresentable physical alias identity or unimplemented copyback is unsupported, with a functional-state adapter as remediation. |
+| Runtime shapes/scalars and value-dependent output sizes | Declared scalar/dimension bindings; reconstruct actual shape dependencies or use existing execution-owned results with finite allocation limits. | No guessed sizes or implicit specialization. Unbindable producer shapes require a supported specialization or explicit exclusion. |
+| Numeric formats, precision, reductions and RNG | Freeze the existing named, qualified profiles and their rounding/order/overflow rules. | Unknown formats/flags, undefined source enumerants and GPU-specific exact-bit claims require an implementation/profile or are excluded. No silent precision relaxation. |
+| Packed maps/assembly | Existing independence/layout proofs and optional typed source provider. A generic expansion may be slower if its semantics are qualified. | General source-coupled packing, partial registers and unimplemented float/ISA forms are excluded unless a qualified standard-MLIR implementation is supplied. Preserve original pack intent and disclose sharing loss. |
+| The current packet recurrence ownership failure | Fix the generic Merlin ownership/destination proof within C1, or keep the packet route opt-in and retain the previously qualified scalar recipe as a disclosed fallback. | Do not enable the failing path by default or weaken lifetime checks. A scalar recipe does not claim packet sharing. |
+| Barriers, atomics, volatile and async | Keep qualified invocation-local phases/effects. Abstract physical scheduling only when actual dependencies and observations permit it. | External participants, general cross-program publication, race-sensitive behavior and device completion need an explicit execution contract/provider; otherwise backend-required. Serialization is not automatically equivalent. |
+| Inline assembly, extern calls and physical address observations | Known source provider or an explicit typed standard-MLIR implementation with its dependencies and trust boundary. | Unknown instructions, hardware clocks/IDs, escaping physical addresses, impure externs and descriptor bytes are backend-required/unsupported. Provenance is not their implementation. |
+| Remaining CFG/function/ABI forms | Existing official normalization and public bindings; source specialization where valid. | Unrepresented entry returns, recursion or unsupported region semantics get a stable diagnostic. No second general-purpose interpreter for v1. |
+| Target scheduling/materialization | Existing Merlin host path and bounded serial smoke cases. | Missing accelerator providers become an explicit target capability limit. Do not expand the frontend project to finish every backend. |
 
-[While-carried word indices](while_word_ranges.md) now close the concrete
-typed-word enclosure gap without inventing an induction/no-wrap premise.
-Original loops and all results survive complete model host/serial execution.
-Continue source-driven relational facts and arithmetic, general initialization,
-resizing/permuted ownership, irregular parallel dependencies, shared/async
-effects and target closure. More finite passing variants do not close those
-remaining semantic requirements.
+A trusted caller declaration and an established source fact remain distinct.
+Contracts express the intended input domain; they never prove arbitrary program
+properties. A false declaration must not allow unchecked memory access.
 
-[Source while memory](while_tensor_memory.md) now preserves original condition
-effects and complete tensor versions through source/native/host/serial paths,
-including a complete two-call PyTorch model. Keep this generic memory-versioning
-contract distinct from the still-required while-carried address/range and
-resizing/permuted ownership proofs. General partial initialization, irregular
-parallel dependencies, shared/async effects, source/numeric compositions and
-applicable accelerator execution remain full-goal work.
+## Extra information users can supply
 
-[Branch-local source ranges](branch_source_ranges.md) now retain actual
-fixed-width comparison constraints and necessary boolean implications through
-native/host/serial execution, including full signed i32 controls. Source width,
-initialization, ownership and successful structured tile proofs remain. Continue
-relations between varying values, disjunctive/while domains, partial/nested
-initialization, irregular parallel ownership and general source/effect/target
-closure. This selected kernel qualification does not close the full endpoint.
+Extend the current ABI/binding mechanisms rather than introduce a parallel API.
+C2 freezes the exact supported fields and package differences. Required forms:
 
-[Source loop-body ranges](source_scope_ranges.md) now close the concrete
-rank-three quotient/remainder refusal while retaining empty entry domains and
-original-definition overflow/poison checks. Continue conditional/while range
-relations, partial/nested initialization and irregular parallel ownership,
-alongside the remaining source/numeric/effect and consumer families below.
+- **Storage:** allocation roots and byte extents; element types/byte order;
+  offsets/strides; overlap relationships; readonly/readwrite roles; initial and
+  final state ports. Guards must dominate affected memory operations.
+- **Runtime domain:** dimension/scalar sources, finite ranges, logical grid,
+  layout constraints and output-allocation limits. Shape functions must use
+  declared available inputs; input-word reads still need bounds checks.
+- **Numeric intent:** selection of an already implemented rounding/precision,
+  reduction/atomic or RNG profile. Changed semantics require an explicit new
+  profile and new evidence, not an annotation claiming equivalence.
+- **Missing source implementation:** a typed portable MLIR implementation and
+  its effect/dependency contract, or a selected existing provider. Bind it to the
+  source operation and implementation bytes. Qualify it against an independent
+  reference; label source equivalence as provider-supplied where it is trusted,
+  rather than universally proved by tests or by the caller's assertion.
 
-[CFG program phases](cfg_program_phases.md) now close the reproduced scalar
-early-return/barrier and complete-void allocation-wrapper refusals. Original
-typed CFG edges and phase payload remain independently checked; the official
-CFG lifter supplies the structured form. General shared/async participation,
-broader control/effect compositions and applicable targets remain open.
+For example, a loaded-index gather can use a declared logical root and checked
+extents instead of discovering a symbolic closed form for every index. A
+value-sized compaction result can use execution-owned bounded allocation instead
+of predicting its length from a sample. Unknown assembly needs an implementation;
+adding `pure=true` does not supply one.
 
-[Actual word-source effect admission](word_source_effects.md) now closes the
-legacy-stage primitive-selection gap with independent actual-source checks.
-Continue general shared/asynchronous participation and the composition/target
-closure below; the full endpoint remains active and incomplete.
+## Fallback policy
 
-[Composed atomic/volatile effects](atomic_volatile_effects.md) now preserve
-both primitive contracts, numeric policy and ownership through original
-allocation sources and complete i64/f32 models. All thirteen results survive
-host/serial execution; the public binder retains explicit policy overrides.
-Continue remaining memory/numeric/storage composition and general
-shared/asynchronous participation.
+Try structured tensor MLIR first. If its proof does not apply, select an existing
+qualified generic tensor or guarded logical-memory expansion only when its
+preconditions hold. It may keep explicit serial control where source semantics
+permit it; it cannot invent a deterministic order for an externally observable
+race. An optional semantic provider must emit actual supported computation.
+Otherwise return backend-required or unsupported.
 
-[Volatile program phases](volatile_program_phases.md) now retain unused and
-cross-lane observations through protected source, reusable host and complete
-i64/f32 models on serial targets. Original phases, all nine results, snapshots
-and source/conflict guards remain. Continue mixed atomic, numeric/storage/effect
-composition and general external/shared/async participation.
-
-[Volatile reads](volatile_reads.md) now retain actual private observations
-through native/host/serial execution, with independently checked source effects,
-descriptor recipes and normalization protection. Original allocation wrappers
-and complete i64/f32 models now retain every result through host replays and
-actual serial images. Continue program phases and remaining numeric/storage/
-effect composition; general external/shared/async scope remains.
-
-[Atomic program phases](atomic_program_phases.md) now retain selected atomic
-old values and synchronized observations through direct/protected allocation
-conversion, reusable Merlin host and complete dependent i64/f32 models on actual
-serial target images. Independent source/effect/model refusal checks and original
-source-domain guards remain. Continue general shared/async effects, participation
-scopes and remaining source/consumer compositions.
-
-[Synchronous program barriers](program_barriers.md) now preserve complete
-standard memory phases for ordinary single-CTA pre-layout source. The real
-runtime-loop tile exchange passes native, reusable host and serial target
-checks without changing the logical grid. Protected allocation source and real
-three-call models now retain original phase custody and independent consumer
-checks. Continue with general shared/async/atomic effects and participation scopes.
+Record the selected route, reason, preconditions, numeric/effect policy and
+structural impact beside source provenance. A fallback must not silently
+materialize a dense attention score matrix, discard source recurrence, round in
+a different place or erase an effect. Document any supported slower alternative
+as a separate profile. External runtime fallback is a distinct target-dependent
+product, not portable lowering and not required to finish v1.
 
 ## Remaining execution sequence
 
-The repository-layout integration is now Merlin `dd7b62801` with consumer
-adapter `56409ce`. Resume the full goal against those owners. Execute the
-following concrete sequence, keeping the later work open when an earlier item
-passes:
-
-1. Conditional progress is committed as `04ba1dc` and revalidated against
-   the merged compiler: 144 checks pass without skips, including original widths,
-   grid ownership, unsafe definitions and real kernel/model host/serial execution.
-2. Replace the opcode-name summary as the planning denominator with an explicit
-   boundary ledger: original typed source and attributes, control/memory/root
-   relationships, numeric/effect policy, runtime ABI, Merlin lowering and target
-   execution. Record the current failing witness and next action for each open
-   family; preserve unknown and unmeasured scope.
-3. Close general memory/control boundaries using upstream structured and residual
-   pointer analyses together. Start with different-root pointer selection and
-   while-carried address state, then dynamic root/view/alias projections and
-   variable-step initialization/write images. Preserve successful tensor tiles,
-   actual control, masks, reuse and width checks through every extension.
-   The first three selected-root/while witnesses now have
-   [checked continuation qualification](checked_memory_continuation.md), including
-   symbolic kernels and complete dependent-call models. General relations,
-   projections, aliases and write images remain open; continue the other families
-   rather than counting this selection as their closure.
-4. Advance numeric/effect families alongside memory: remaining packed/read map
-   forms and contractions, actual external implementations, publication and
-   asynchronous completion/participation. Give required behavior executable
-   semantics and retain explicit dependencies instead of opaque success markers.
-   All legal `tt.mulhiui` widths now have native/host/serial qualification;
-   next close packed assembly register groups, broader numeric/effect forms
-   and remaining runtime/public-stage admission. Descriptor origins already
-   have a checked allocation-wrapper route; general mixed-type projections stay open.
-   Full-width packed assembly now has the shared slot-independence abstraction
-   and a checked multidimensional-to-flat store projection. The retained
-   `packed-byte-frontier` probe verifies the original i8 source but still refuses
-   conversion. Execute that upstream subword fixture with actual register
-   pack/unpack semantics; retain cross-slot/source-layout and asynchronous/
-   external effect requirements.
-5. Carry these same forms through runtime shapes/scalars, complete PyTorch
-   packages and staged target materialization. Generic transport belongs in
-   Merlin; target mapping and implementations belong to the selected OOT provider.
-   Verify complete results/effects, source correspondence and useful structure.
-   The reproduced standalone `public-stage-frontier` now has a shared replay
-   projection, typed generic loader and public `StagedProgram` preparation.
-   `MerlinHostBackend` delegates public compilation to the existing whole-body
-   Merlin pipeline; actual scalar/dynamic, source-word, atomic, execution-owned
-   and void-effect programs qualify, including a real source assertion abort.
-   Bound models now also replay parent/kernel/constant relationships, embed
-   immutable parameters and preserve explicit runtime BUFFER ports. The public
-   host adapter compiles the actual prepared body with remapped input-axis/word
-   coordinates while retaining original staged source/ABI separately. Continue
-   initializer-dependent shape materialization, broader state/storage forms and
-   applicable target providers. Preserve the full family beyond these examples.
-6. Reopen the complete ledger and corpus against committed producers. Every
-   valid supported form needs all applicable gates below. Any missing family,
-   refused valid kernel or unqualified consumer/target keeps the full goal open.
-
-The full endpoint still requires every supported kernel's observable computation
-and effects to reach the Merlin interface with applicable execution evidence.
-The following order closes semantic families and their actual integration gates;
-more variants of a passing example do not close an unrelated requirement.
-
-| Work | Required result and evidence |
-|---|---|
-| Actual effect selection across stage versions | Delivered for actual word-source primitives: both readers parse before legacy early returns, rehashed unsupported effects refuse, and the retained historical audit passes. Broader source/effect compositions still require their own contracts and execution. |
-| Program phases through source/model intake | Retain original and bound graphs separately; preserve complete phases, snapshots, runtime dimensions and all results. Protected allocation/model integration is now delivered; the linked contract records its finite scope. |
-| Shared and asynchronous effects | Represent participation, publication, completion and memory dependencies explicitly. Reuse upstream analyses and standard operations; retain useful overlap/reuse. Qualify real execution rather than deleting difficult operations or accepting opaque calls. |
-| General memory/state composition | Extend actual root, view, index, alias, ownership and control proofs through remaining valid compositions. Keep source-width arithmetic, masks, complete initialization and conflict/lifetime checks. |
-| Numeric/source-version closure | Track types, attributes, regions and supporting dialects across pinned versions, including interactions with effects. The historical fifty-name `tt` inventory is not this denominator. |
-| Consumer and target closure | Complete remaining branch/while/permuted ownership and executor materialization paths. Qualify each applicable target with actual images, complete results and separately measured performance. |
-
-Hardware-dependent observations need an explicit source/effect contract and a
-working consumer implementation. Provenance records original intent and checked
-facts; it cannot supply an omitted effect. Any package/interface differences
-remain explicit in [package.md](package.md). The full goal remains active.
-
-[Shared mutable views](mutating_views.md) now connect source-regenerated geometry,
-complete cloned bases, actual coordinate SSA and independently checked TTIR
-pointer bindings through real two-call models. Automatic memory admission avoids
-unnecessary source-word lowering. General storage layouts, optional/list/metadata
-state, broader coordinate/effect/numeric combinations and targets remain open.
-
-[Functional mutation](functional_mutation.md) now carries distinct whole bases,
-ordinary observations and public input/buffer state ports through complete actual
-Triton packages, independent readwrite-tie checks and host/Spike execution.
-Continue with nontrivial mutated views/shared bases, optional/list state, public
-physical aliases/caller copyback, source-version/numeric/effect compositions and
-applicable accelerator materialization. The full arbitrary-kernel goal stays open.
-
-[Rank-reducing views](rank_reduced_source_views.md) now retain exact selected
-axes, distinct unit strides and scalar results through complete learned-state
-models. Continue with general reshape/stride-generation, physical/mutating
-views, ownership/effect/numeric/source compositions and applicable targets.
-
-[Runtime source views](runtime_source_views.md) close the reproduced dynamic
-transpose/slice coordinate refusal for rank-preserving positive slices. Complete
-i64/f32 models retain original roots, loops, snapshots and all nine results;
-independent source reconstruction and executable guards remain mandatory.
-Continue with general view/ownership/effect/source and applicable target closure.
-
-[Executed source grouping](executed_source_layouts.md) connects the established
-captured source-layout contracts to v4. The combined packed-state/compaction model
-retains its reproduced default allocation-work refusal; explicit bounded resource
-policy v2 supplies a checked selection. Continue with runtime non-dense coordinates,
-result-axis information, general ownership/effects and applicable targets.
-
-[Runtime dense views](runtime_tensor_views.md) now retain actual dimension
-operands, checked index products and standard reshapes through execution-owned
-models. A real dynamic-matrix count/scan/scatter model preserves all seven
-results across host replays and three actual target images. Runtime non-dense
-coordinates, remaining result-axis/source-layout bindings and broader effects
-and accelerators remain open.
-
-Updated 2026-11-19. **The full goal is active and incomplete.** Every valid
-kernel in each pinned supported TTIR version must reach a working Merlin
-compiler interface with its observable computation/effects represented, useful
-algorithm retained, and applicable execution evidence. Host-only support,
-accepting opaque calls, or counting parsed operations does not meet that goal.
-
-This document records current requirements and the next execution order.
-
-[Executed call views](executed_call_views.md) now connect the established dense
-and static source-coordinate proofs to execution-owned results and complete
-combined view-update/count/scan/scatter models. Every original result and
-snapshot remains retained. Fully runtime coordinates, physical/mutating views,
-source-layout options and broader ownership/effect/target families remain.
-
-[Runtime returned-loop ownership](runtime_loop_ownership.md) now separately
-proves fresh generations for runtime/zero-trip serial bounds, complete initial
-lifetimes, actual zero-trip copies and tuple return coordinates. Native/saved/C
-and target execution retain changing/empty results and source guards. The
-independent lifetime checker remains active. General branch/while/permuted
-ownership, dynamic steps, retained aliases and other final consumers remain.
-
-The [execution-owned target package](execution_owned_target_packages.md) now
-closes the selected v6 staging/build/readback boundary. The real three-kernel
-model passes four actual whole-model Spike qualifications with all 28 results;
-source-domain/reference failures cannot publish success. Retained verification
-replays independent source staging and complete input/driver/wire/reference
-checks. The combined frontend selection passes 57 with one optional legacy
-capture skip; Merlin's separate selection passes all 142 checks.
-
-Next close the remaining source-driven composition gates: general branch/while/
-alias ownership through ordinary native lifetime checks; runtime non-dense or
-physical/mutating view adapters with independent source correspondence; broader
-numeric/effect and source-version compositions; and additional applicable
-executor/device support.
-Retain algorithms, source guards, complete results and explicit unsupported
-options throughout. These are semantic/compiler requirements, not a request
-to substitute more passing variants for the missing contracts.
-
-[Checked generated-C result calls](checked_c_results.md) now implement complete
-descriptor/allocation validation and independent copies, with actual seven-result
-TTIR compaction execution and source guards. Shared lowering, explicit target
-context/layout, v6 staging and complete readback now have the separate serial
-target qualification above; broader source/executor scope remains.
-
-The [execution-sized target plan](execution_result_targets.md) records the
-original compaction-to-Spike refusal and the delivered generated-C/lowering/
-staging/readback integration. New target success comes from actual image
-execution and complete independent references, rather than host qualification.
-
-[Real Triton compaction](compaction.md) now extends the selected host-owned
-package to count, parallel scan, masked scatter and dependent consumption.
-Source-only automatic admission chooses tensor count/copy and guarded
-source-word packing. Selected v6 target materialization now works. Continue
-with stronger scan-dependent range proofs, general views and resizing ownership;
-guarded admission does not establish arbitrary source/target closure.
-
-[Internal computed sizes](executed_model_binding.md) now pass package creation,
-independent source/body/adapter reconstruction, signature v6 staging and actual
-host qualification/replay for the count-producing model in all three memory
-profiles. Receipt v2 names the Merlin host backend, preserves all original
-parent data and prevents publication after a failed reference comparison.
-Continue with separate native/target harnesses, v4 views/layouts, runtime
-resizing ownership and the complete source/numeric/effect scope.
-
-[Execution-sized results](execution_owned_results.md) now have source-checked
-signature v6 staging and reusable Merlin host execution of complete two-call
-models in all three memory profiles, retaining every result and original input
-restriction. Standard-MLIR content-derived compaction also executes after
-staging/reopening. Next extend actual producer/binding shapes and normal
-qualification/native/target evaluators. Fresh returned runtime/zero-trip resizing
-now has the separate proof above; broader ownership forms remain. The historical
-inventory is unchanged.
-
-[Runtime input-word shapes](input_word_shapes.md) now close the reproduced
-`count.item()` allocation boundary with executable reads/guards, independent
-source proofs and explicit signature v5. General data-dependent vector/scalar
-computation, runtime bounds/views, resizing, effects and applicable targets
-remain active completion requirements.
-
-[Derived model dimensions](derived_model_shapes.md) now close the reproduced
-shared-axis broadcast/stepped-slice integration through native, Merlin host and
-Spike in all three memory profiles. Source-proved typed programs and explicit
-signature v4 preserve allocation relationships. Continue with runtime bounds,
-views/resizing state, data-dependent shapes, arbitrary effects and targets.
-
-Detailed historical evidence remains in [coverage.md](coverage.md), the linked
-capability contracts and Git history; earlier open items are superseded only
-by explicitly qualified implementations.
-
-## Accepted architecture
-
-- Parse pre-layout TTIR and reuse actual supported Triton/triton-shared passes.
-  Keep original source inventory separate from normalized graphs.
-- Emit tile-first standard `linalg`/`tensor`/`scf`/`arith`/`math`/`cf`, with an
-  explicit executable memory/effect profile where functional tensors alone
-  cannot represent the source. Preserve useful tiling, K reuse, accumulators,
-  masks, structured control and online recurrence.
-- Carry source intent, recovered structure and established facts separately.
-  Provenance never authorizes omitted arithmetic, effects, aliases or order.
-- Keep the logical grid independent of warps, cores and physical placement.
-  Abstract implementation-only mappings after checking dependencies. Physical
-  observations require concrete semantics and consumer support.
-- Supply a model2MLIR-like package with executable MLIR, weights/constants,
-  semantic ABI, inputs, independent references, original source/correspondence
-  and byte-bound receipts. Keep [package differences](package.md) explicit.
-- Retain complete payload accounting and native ownership/lifetime gates.
-  A successful reader or runtime generator is insufficient execution evidence.
-
-The source-backed [reuse map](triton_shared.md) records Meta/shared, archived
-Microsoft and Triton boundaries. Use the existing pinned tools; no implicit
-Triton/LLVM rebuild or Triton-CPU dependency.
-
-## Current delivery state
-
-[Symbolic model intake](symbolic_models.md) now retains genuine dynamic public
-types and executable entry-domain checks after correcting backed-symbol
-specialization in model2MLIR. Five real channel-reduction configurations pass
-fifteen valid native invocations and fifteen compiled guard aborts. Scalar
-unsigned index casts retain high source bits through native execution; actual
-integer ranges/relations precede model arithmetic without choosing index width.
-A fresh guarded real Triton copy capture now passes index-conversion planning
-using [dominating source assertion proofs](checked_index_arguments.md).
-[Symbolic tensor relationships](symbolic_tensor_bindings.md) now preserve both
-calls and all three dynamic results through twelve native invocations in the
-three memory profiles; three invalid lengths abort through original guards.
-Complete [dynamic model packages](symbolic_model_packages.md) now additionally
-qualify copy/weighted variants in all three memory profiles through native,
-Merlin host and Spike. Explicit input-axis compiler signatures, source-bound
-scratch and reusable host invocation preserve dynamic public types. The
-surrounding addition/empty-slice integration now also qualifies all three
-profiles through the [complete consumer](dynamic_surrounding.md). Continue
-with conditional/derived dimensions, dynamic intermediate/view relationships, model
-composition/effects and applicable target implementations.
-Earlier static-model receipts retain their original source-version scope.
-
-[Live runtime arguments](live_runtime_arguments.md) now retain original scalar
-SSA, singleton controls and exported dimension operands alongside captured
-attributes. Eleven complete models pass native/Merlin host/Spike with 57 exact
-results, 32 further host invocations and two actual range aborts. Original-parent
-facts are fixed before inlining and independently checked by Merlin. General
-symbolic public model signatures, physical/mutating views, arbitrary effects
-and applicable target qualification remain completion requirements.
-The current `out/live-runtime-model-inventory/coverage.json` reopens 352
-packages, 278 standalone qualifications and fourteen product cases, retaining
-all fifty observed names under selected native/Merlin-host profiles.
-
-[Region-local pointer seeds](integer_address_regions.md#pointer-seeds-defined-inside-a-region)
-now recover actual outer roots and byte recipes before region fixed points,
-preserving original narrow arithmetic and control/effects. Per-seed retention
-keeps an independently checked unaligned pointer representation available
-without disabling another required recovery. Ten native-verified saved-TTIR
-libraries/Spike images retain fourteen exact results, 48 host replays and four
-bounds aborts. The combined inventory reopens 341 packages and 278 standalone
-qualifications. General root/alias/effect/source, dynamic public model and
-applicable target closure remains required.
-
-[Integer-address region state](integer_address_regions.md) now carries closed
-logical pointer/byte pairs across original for/while/if edges, including changing
-roots and ordinary numeric state. Sixteen libraries and actual Spike images
-retain 32 exact-word results with eighty further host invocations. Complete
-source-use, bit-divisibility, scope and memory checks remain mandatory; mixed
-or physically observing states still refuse. Next close remaining correlated
-root/region/alias forms and complete model/runtime/effect/target compositions
-through the same package, without granting semantics through provenance.
-The additional independent-port while fixture and four actual bounds aborts
-bring the new selection to 17 libraries/Spike images, 33 exact results and 83
-host replays. The combined ledger reopens 327 packages and 268 standalone
-qualifications; arbitrary-kernel and applicable-target closure remains open.
-Four complete i32/i64 model configurations additionally retain all 44 original
-results through native/Merlin host/Spike with saved parameters, dependent state,
-earlier snapshots, empty data and zero trips. Parent archives and public model
-ABI are unchanged; general mutation/dynamic signatures remain completion work.
-The latest combined inventory reopens 331 packages and 268 standalone qualifications.
-
-[Local tensor regions](tensor_regions.md) now retain checked tensor
-intermediates, actual for/while state and mixed nested maps/reductions/scans.
-Eighteen real source libraries and Spike images retain all 18 results as exact
-words and 72 additional host invocations. The combined inventory reopens 255
-packages and 210 standalone qualifications. Six complete model configurations
-additionally retain parameters, dependent calls, empty outputs and original
-snapshots through native/Merlin host/Spike with all 42 results exact. The latest
-combined inventory reopens 261 packages and 210 standalone qualifications.
-This closes the reproduced local
-tensor-state slice; remaining tensor operations/dynamic intermediates, effects,
-broader model bindings and applicable targets remain full-goal work.
-
-[Captured tensor lookups](scalar_tile_reads.md) now preserve immutable table
-captures across source mutation and runtime recurrence in reductions/scans.
-Twenty-four libraries pass native/Merlin host/Spike with 48 exact-word results
-and 96 additional host invocations. That earlier combined inventory reopens
-237 packages and 192 standalone qualifications. Further tensor operations,
-numeric/capture/packing forms, direct memory/effectful combiners,
-runtime/alias/source-version combinations and applicable accelerators remain open.
-The [November 12 review handoff](handoff.md) records that earlier review boundary.
-
-[Scalar region composition](scalar_regions.md) now applies checked scalar
-shared mappings and exact rounding/high-product expansions before container
-admission. Twenty-four further libraries pass native/Merlin host/Spike with all
-24 results checked and 96 additional unchanged-library host invocations.
-That earlier combined inventory reopens 213 packages and 168 standalone
-qualifications. Remaining region/builtin/effect, runtime/alias/source-version
-and applicable target closure stay required.
-
-[General reductions](reductions.md) now retain coupled tuples, first actual
-source-element initialization and complete scalar structured bodies in standard
-Linalg. Twenty-four libraries and four models compare 80 exact-word target
-results through native/Merlin host/Spike, with 96 further host invocations.
-The combined inventory reopens 189 packages and 144 standalone qualifications.
-Remaining scalar TTIR builtin/region compositions, memory/external effects,
-runtime/alias/source-version and applicable target closure remain open.
-
-[Exact IEEE source literals](ieee_literals.md) now preserve f16/BF16/f32/f64
-NaN sign, payload and signaling bits through standard constants and bitcasts,
-protected allocation sources and complete enclosing models. Sixteen libraries
-and four models compare 56 exact-word results through native/Merlin host/Spike,
-with 48 additional unchanged-library host runtime invocations. That earlier
-inventory reopens 161 packages and 120 standalone qualifications. Computed-NaN,
-broader numeric/effect/shared-state and accelerator closure remains open.
-
-[Structured scan combiners](scans.md#structured-combiner-qualification) now
-retain pure scalar branches and for/while state, including complete learned-state
-model composition. Ten libraries and two models compare thirty exact-word target
-results through native/Merlin host/Spike. The combined inventory reopens 141
-packages and 104 standalone qualifications. Memory/effectful combiners and
-broader numeric/alias/source-version/accelerator closure remain open.
-
-[IEEE f16/BF16 atomic addition](half_atomics.md) now retains exact old words,
-gradual underflow, per-event nearest-even rounding and explicit computed-NaN
-quieting through native/Merlin host/Spike. Four libraries and two complete models
-retain twenty target results; all twelve model results match exact words.
-The combined inventory now reopens 129 packages and 94 standalone qualifications.
-Broader numeric/effect/shared-state/alias and accelerator closure remains open.
-
-The [overall status](status.md) groups progress by end-goal milestones rather
-than the most recent fixture. The pipeline and model interface work end to end;
-full source/type/attribute/composition and applicable target coverage do not.
-[Original CFG intake](cfg_intake.md) now reuses official LLVM structuralization
-through equivalent typed function interfaces. Original early returns and numeric
-backedges/phi values retain source block/successor records, mandatory actual ABI
-validation and compiler-only custody in Merlin, including complete model binding.
-Remaining CFG forms, public value-returning entries and effect/alias/target
-compositions remain unqualified.
-[Closed pointer-integer displacement expressions](pointer_addresses.md) now
-recover actual logical bases and paired modular offsets through four typed
-native/Merlin host/Spike kernels. Scalar gather/scatter reuses the existing
-unit carrier in all memory profiles. Seven libraries replay 25 further domains;
-the combined inventory reopens 113 packages and 81 standalone qualifications,
-retaining all fifty observed names and the existing refusal denominator.
-Escaping physical observations and arbitrary integer-valued region/alias/effect
-compositions remain further work.
-Decoded descriptor arithmetic now retains six standalone kernels and two
-complete i32/i64 models through native/Merlin host/Spike, with all fourteen
-results exact and 26 additional host replays. The complete original audit now
-precedes every native source-parser fallback, so helper folding cannot hide
-unimplemented source effects. Broader source implementations/effects and
-runtime/alias/target combinations remain required.
-
-[Per-cast FP8 contracts](per_cast_fp8.md) now permit independent selected
-overflow/infinity policies in one kernel, expanded before helper inlining or
-folding. Eight format/mode cases retain 32 complete results through native,
-Merlin host and Spike, with 24 additional host-library replays. Merlin's source
-feature edits preserve narrowing before widening. Protected composite-dot
-normalization additionally retains a complete original graph and independently
-preflighted partial contractions. Mixed cast policies qualify with BF16x3/x6
-and logical TF32/x3 through memory profiles and native/Merlin host/Spike.
-The complete native source reader additionally retains all fields before initial
-pointer/local-descriptor normalization; six mixed-policy cases qualify across
-the memory profiles through native/Merlin/Spike. Broader source versions,
-broader binding/model compositions and backend/accelerator correspondence
-remain required. Direct original external descriptor parameters
-now qualify for rank-one/two mixed-policy kernels through native/Merlin host/
-Spike, with six additional host replays. A source-only audit grants no ABI
-permission; actual field binding and normalized full preflight remain mandatory.
-Allocation binding now expands contracts before initial normalization and
-retains an explicit original/generic/protected/normalized chain in source capsule
-v2. Pointer and descriptor recurrences pass native/Merlin host/Spike and eight
-host replays. A complete model retains learned weights, dependent calls, an
-empty result and its live original snapshot across all four results through
-those execution boundaries. Broader contraction/numeric/effect/binding closure
-and applicable targets remain required. Allocated mixed FP8/composite contractions
-now also qualify pointer/descriptor BF16x3/x6 and TF32x3 libraries through native,
-Merlin host and Spike, with 24 unchanged-library runtime replays. Two complete
-models preserve ragged logical GEMM, padded owning inputs, dependent/zero-K calls
-and all eight results as exact words through those execution boundaries.
-Pre-wrapper precision and cast intent remain separate from bound/normalized
-graphs on the entry and named contractions. Broader typed/alias, external
-implementation, packed/effectful and applicable target compositions remain open.
-
-[Source model views](model_source_views.md) now bind static transposed/stepped
-tensor operands to owning state after independent parent-SSA and captured
-coordinate checks. Three complete i64/f32/BF16 models preserve all 21 results
-as exact words through native, Merlin host and actual Spike execution. The
-explicit v3 binding/profile retains the unchanged public model ABI. General
-physical alias/mutation, dynamic model interfaces and broader view/typed/kernel
-compositions remain completion requirements.
-
-[Source-effect target execution](target_effects.md) now retains real void and
-asserting entries, diagnostics and all mixed tensor results through actual
-Merlin/Spike images. Explicit call/outcome markers distinguish source assertions
-from traps and setup failures. Decimal NaN signs retain source words; formatting
-and half transport have independent checks. Physical/external effects and
-broader target scope remain required.
-
-[Standalone runtime target ABI](standalone_target.md) now reuses unchanged
-typed kernel MLIR across dynamic shapes and all seven native scalar types.
-Ten actual Spike images retain eighteen complete exact-word results, including
-empty domains, signaling NaNs and BF16 storage. Runtime descriptor/scalar
-transport is checked separately; each image harness embeds its invocation.
-This finite target selection is additional to the package inventory below.
-General model-view/effect and arbitrary typed/composition/target closure remain
-required.
-
-| Boundary | Established capability | Remaining completion requirement |
-|---|---|---|
-| Frontend and portable dataflow | Real shared conversion, logical grids, structured loops/branches, tiled contractions, reductions/scans and qualified shape/index operations. | Complete types/attributes/compositions and source versions; no generic arbitrary-kernel claim. |
-| Merlin compiler boundary | Standalone and bound-model compiler-only staging, actual whole-body host lowering/reusable libraries, and selected complete RISC-V images executed on Spike. | Broader applicable target scheduling/materialization/execution and every retained operation/effect accounted for there. |
-| Package and model interface | Typed bindings, learned/lifted constants, all tuple results, outcome/effect references, runtime kernel scalars, explicit dense value reshapes and checked static transposed/stepped source views. | General physical/mutating model views, broader view/dynamic ABI forms, general value-returning TTIR entries/CFGs and runtime/alias compositions. |
-| Memory and state | Gather/scatter profiles, active masks/bounds, runtime signed strides, selected pointers, descriptors, writable allocation roots, typed/byte aliases and integer atomics. | Remaining conflicting/shared/external effects, physical descriptors, independently strided accumulators and arbitrary dependency compositions. |
-| Numeric and effects | Qualified standard/FP8 casts, mixed per-cast/composite-dot profiles, low-precision/scaled contractions, selected math/RNG, assertions/prints, integer and selected typed floating atomic profiles. | Remaining arithmetic/rounding policies, broader cast/normalizer/model compositions, effectful combiners, valid mapped reads, arbitrary external implementations, address observations and synchronization. |
-| Coverage evidence | Complete pinned 50-definition inventory, upstream-stage measurements, receipt-bound package registry and maintained product/refusal driver with actual Merlin libraries. | Complete type/attribute/kernel-composition matrix and per-form applicable target evidence. |
-
-The current `out/tensor-region-model-inventory/coverage.json` selection reopens
-**261 packages, 210 standalone qualifications and fourteen maintained product
-cases**. It observes **50/50 source definition names**, with **all 50 represented
-in native- and Merlin-host-qualified captures under selected profiles**. The
-optional corpus provides twelve actual libraries and retains two refusals:
-assembly without a selected source implementation and asymmetric packing.
-The [source assembly adapter](source_assembly.md) qualifies checked integer
-programs; broader instructions/effects/packing remain open. Mapped reads qualify through the
-explicit guarded source-word profile. These are composition observations, not a completion
-percentage or per-operation execution measurement. The [product corpus](product_corpus.md)
-and [coverage v2](package_coverage.md) keep source/refusal/execution limits
-machine-readable. The older byte-atomic selection retains its 34/50 source,
-30 host-definition measurements.
-
-The corpus also exposed guarded softmax's rejected rank-zero tensor allocations.
-The [allocation admission fix](guarded_reductions.md) preserves the actual fresh
-allocation and native lifetime semantics; four real Merlin libraries and the
-39-case allocation/guarded-memory suite pass. Nineteen corpus/registry checks
-exercise actual success/refusal/failure, effects, reuse and changed evidence.
-
-Implemented [byte-backed atomic words](byte_atomic_words.md) retain
-all nine i32/i64 RMW kinds and i16/i32/i64 CAS, both logical byte orders,
-whole-word bounds/alignment, per-byte guards and old values through Merlin.
-Selected roots and for/while pointer state qualify in 40 cases. Old-value tensor
-recurrences add 20 cases; different-width typed roots add eight. Each recurrence
-library replays five domains. Four real model captures retain learned state and
-all seven results; typed CAS also passes the public model CLI. Merlin's nested
-snapshot/destination/integer-body suite passes 119 checks with lifetime gates
-retained. This closes the previously failing nested CAS recurrence slice, not
-the remaining numeric/effect/target work.
-
-[Mapped reads](memory_maps.md) now retain source pointer/block edges, scalar
-branches and for/while reads through Merlin. Seven libraries preserve the basic
-map and five-result snapshots around ordinary kernel writes across i32/i64/f32.
-Thirty-four map/memory regression checks and the refreshed maintained corpus
-pass. The pinned verifier forbids writes inside maps; source reads and ordinary
-writes outside those maps retain their actual effects and guard gates.
-Twelve further libraries now carry selected logical roots across map arguments,
-pointer results and mixed pointer/numeric results; 34 existing selector
-regressions pass. Two real i64/f32 model captures retain learned state and all
-fourteen results through Merlin; the i64 model also qualifies via public CLI.
-The [complete map contract](memory_maps.md) records the exact composition scope.
-
-[Layout-independent packed DAGs](packed_maps.md) now additionally qualify when
-typed SSA establishes identical slot-local functions. Eight actual libraries
-retain pack two/four, i32/i64/f32, rank-one/two tiles and runtime recurrences,
-with four additional domains per library. Actual dependencies and arithmetic
-attributes are checked independently of provenance. Coupled/asymmetric slots,
-packed regions/reads, source assembly and applicable targets remain open.
-
-[Optional source-language implementations](source_assembly.md) now decode
-complete checked integer assembly into portable scalar/tensor computation.
-ISA decoding stays in a separate package; the core checks closed standard
-payloads and retains original source/provider identities. Sixteen word-program
-libraries, the public scalar CLI and the maintained optional corpus qualify.
-Seventy relevant checks pass. These finite profiles do not establish universal
-source equivalence, arbitrary hardware observations or target execution.
-
-Two real i32/i64 source-assembly models additionally preserve learned weights,
-typed shift state and all six results through native/Merlin execution, including
-dependent calls and empty values. The i64 public model CLI also passes. Their
-consumer extension retains computed tensor reads under the existing complete
-producer proof and lifetime gates; 107 destination and 34 ownership checks pass.
-
-[Functional target qualification](target_execution.md) now carries complete
-i32/i64 six-result models and a lifted-BF16 tiled contraction through actual
-Merlin RISC-V build/link and Spike execution. The retained wire bytes reopen
-against every original result and readonly argument. Empty output readback,
-native implicit named-region casts and attributed buffer-view printing now
-retain their real semantics. This closes the previous no-target-execution gap
-for these models; broad target, numeric/effect and runtime coverage remains open.
-
-Source-derived consumer capability selection now serves both native host and
-target workers. Mapped-memory fourteen-result, descriptor-state and mixed
-integer/floating RMW64/CAS16 models also pass on Spike after fixing the default
-atomic/destination pipeline composition. The byte-backed recurrence lifetime
-failure was traced to dropped execute-region attributes in the custom reader.
-Preserving original `no_inline` and provenance closes that failure with all
-ownership/lifetime gates retained. Four byte-backed RMW/CAS models additionally
-execute through Spike with all seven results each. The eight state-model
-integrations compare all 51 results as exact words and reject changed wire/input
-observations. Broader effect, ABI and applicable target scope remains open.
-The prior tuple/contraction target cases also pass exact words: eleven models
-now cover 64 complete results. The default BF16 transport feature includes its
-upstream arithmetic cast expansion rather than depending on an adapter-only
-pipeline. Remaining numeric contracts and target scope stay unqualified.
-Public BF16 runtime inputs now also follow the same checked source-word contract
-as host execution. A real canonical-NaN legacy archive projection exposed a
-target-only loss of input bits; a runtime-only exact embedding closes that gap.
-Three complete model integrations retain thirteen results, covering exceptional
-observations, finite legacy recovery and a BF16-input contraction. The source
-package and compiler staging remain intact; general dynamic/alias/effect and
-target completion requirements above remain active.
-Mixed storage/computed result tuples can now record per-result exact-word
-comparison. The exceptional BF16 model pins both stored BF16 results and their
-integer observations while retaining the computed F32 NaN policy. This is an
-evaluation contract, not a change to source arithmetic or target lowering.
-
-Packed scalar maps now extend their checked slot-independent arithmetic proof
-to structured branches and for/while state. Fourteen native/Merlin libraries
-retain per-element loaded trip counts and runtime scalars, with 56 further
-runtime replays. Eleven direct proof checks retain hidden capture/guard,
-lexical-binder, result-order, attribute and termination boundaries. Coupled or
-asymmetric slots still need source-backed logical grouping facts; packed memory,
-unretained control execution and applicable targets remain separate work.
-Two real packed-control models now additionally retain learned weights, loaded
-trip counts, dependent calls and all four results each through native/Merlin
-host and actual Spike execution. All eight target results match exact words;
-the separate selection is `out/spike-packed-control-models/summary.json`.
-This is finite CPU composition evidence. The 88-package inventory keeps broader
-type/attribute/composition and per-operation/target execution unestablished.
-
-Coupled/asymmetric packed maps now also reach standard tensor dataflow and
-Merlin under an explicit initial source-layout specialization. Actual native
-Triton conversion/linear-layout APIs supply the facts, whose inverse and pure
-parallel row updates are checked structurally. Seven libraries cover source
-geometries, numeric types, all memory profiles and coupled scalar control;
-24 additional domains replay unchanged libraries. This does not qualify
-replicated layouts, packed source memory or final GPU layout correspondence.
-Three real model captures now additionally retain the explicit semantic source
-selection, learned weights, dependent calls and all twelve results through
-native/Merlin host and actual Spike execution. All target results match exact
-words; bundle verification and consumer staging independently reopen the
-original typed source-option attributes. Broader targets stay open. See
-[the source contract](source_grouping.md).
-
-[Packed source reads and pointer results](grouped_memory.md) now additionally
-retain original scalar regions once per logical group, selected-root tags per
-slot, for/while observations and mutation snapshots. Six actual libraries run
-five domains each; invalid active bounds and unselected source grouping refuse.
-Two actual model captures now additionally preserve learned matrix state,
-three calls, original snapshots kept live across dependent mutation, and all
-fifteen results each through native/Merlin host and actual Spike execution.
-All thirty target results match exact words, including five empty results per
-model. Pointer-result model/target compositions, general physical/mutating views
-and broader target/effect families remain open.
-
-## Required evidence for every supported form
-
-Keep these gates separate for each opcode/type/attribute/composition:
-
-1. Original native-verified source inventory and disposition, including helper
-   regions and exact source bytes. Normalized IDs remain a separate graph.
-2. Executable tensor or explicitly declared effectful MLIR expansion. Unknown
-   behavior must remain a located refusal until implemented, never a successful
-   opaque fallback. Refusal is incomplete coverage, not goal completion.
-3. ABI/package compatibility: tensors, shapes, runtime scalars, parameters,
-   alias/mutation/result order, dependencies and explicit schema differences.
-4. Compiler-only Merlin staging with byte-bound source correspondence and no
-   evaluator inputs/goldens supplied to compilation.
-5. Payload-preserving consumer lowering with every retained operation accounted
-   for. Reading a signature or generating a C harness does not prove this gate.
-6. Native and applicable target materialization/execution against independent
-   numeric/effect references, with original algorithm structure and provenance
-   checked separately from numerical agreement.
-
-Byte custody, recipe validation, runtime guards, numeric tests and independent
-source equivalence are different evidence. Existing custody records do not
-establish universal source equivalence or `source_closure_verified`.
-
-## Remaining work and execution order
-
-The [same-base difference extension](pointer_addresses.md#same-base-byte-differences)
-now closes a reproduced runtime-memory refusal: pointer integers can expose
-ordinary byte deltas only after actual SSA proves a cancelling base and matching
-lane paths. It preserves source-width increments, modular arithmetic and all
-memory guards. Seven real libraries/Spike images retain eleven exact-word
-results, with 32 further host replays and four observed bounds aborts. Continue
-with broader integer-address region state, alias/shared-state and runtime/model
-bindings; cross-root and physical observations still require real semantics.
-Four further source-pointer widths now qualify overflowing i32 increment
-computation before byte scaling. Two complete i32/i64 models retain all twenty
-original results as exact words through native/Merlin host/Spike, preserving
-parameters, dependent/empty/zero-trip calls and snapshots. Public model shapes
-remain static. The next reproduced gap carries `ptr_to_int` address state into
-`scf.for`, then casts/loads/advances it inside the loop. Extend the established
-pointer-control edge/fixed-point analysis to paired integer-address base/offset
-state across for/while/if, preserving source operations and all refusal/effect
-checks; qualify the actual consumer rather than serializing or deleting it.
-
-The [local tensor-region extension](tensor_regions.md) now closes the previously
-reproduced make-range/tensor-state/nested-reduction refusal for real bitset source
-combiners and nested maps; six complete model configurations now qualify those
-forms through all memory profiles and the actual consumer. The
-[numeric region extension](numeric_regions.md) now closes the reproduced mapped
-histogram and nonzero-accumulator dot refusals using the existing converters and
-original contracts. Thirty native/Merlin-host/Spike configurations retain actual
-histogram state, contraction accumulators, local gather and mapped math; nested
-logical queries capture the actual runtime grid without changing surrounding
-control/effects. All thirty complete results match their declared policies and
-120 further host invocations reuse the libraries. The implementation retains
-shared shape conversion and supplies
-independent captured destinations only at native materialization. Continue with
-remaining tensor operations/dynamic intermediates, source effects, broader
-bindings and applicable targets; these functional cases do not close that scope.
-Six complete f32/i64 model configurations additionally retain all 39 original
-results through native/Merlin host/Spike with exact words. This closes their
-saved-parameter/dependent-call/empty/snapshot binding slice; public model shapes
-remain static and broader mutation/effect/runtime interfaces remain required.
-
-Finish coherent source-to-consumer slices and commit each. Keep the full
-workstreams below active; do not indefinitely extend one already-qualified
-memory fixture while leaving the missing families unexamined.
-
-1. **Expand the maintained coverage/refusal matrix.** All 50 definitions are
-   now observed across explicit retained packages and current product cases;
-   all 50 occur in host-qualified captures under selected profiles. Continue
-   with type/attribute and kernel compositions, source dispositions and actual
-   failures by stage. Preserve implemented-but-unqualified forms and precise
-   refusals in the denominator.
-   A scalar map or reversible pointer cast does not cover arbitrary packing,
-   memory effects or physical address observations. Keep upstream-only pass
-   successes separate from actual package/consumer execution.
-2. **Close numeric and effect families.** Use the matrix to select actual
-   implementation gaps in remaining region/builtin forms and tensor intermediates/captures,
-   numeric contracts, valid memory/external effects and physical observations.
-   Checked scalar mappings now compose before map/reduction/scan admission;
-   their source types, policies and actual controls remain executable. Pinned
-   TTIR forbids map writes, atomics and volatile loads; preserve their native
-   invalid-source refusals rather than bypassing the verifier.
-   Protected mixed FP8/composite-dot normalization now qualifies through the
-   consumer. Complete verified native source serialization now also handles
-   original block-pointer/local-descriptor forms before cast expansion and
-   normalization. Source capsule v2 additionally protects allocation wrappers;
-   selected pointer/descriptor recurrences and a complete enclosing model now
-   qualify. Allocated BF16x3/x6 and TF32x3 contractions and two complete models
-   now additionally pass with original C, runtime tails and source intent retained.
-   Decoded pure word programs now also compose with original external descriptors,
-   allocation wrappers and complete learned-state models through actual Spike.
-   Unknown hardware observations refuse before normalization on both default
-   and selected implementation paths. This closes that normalization gap;
-   remaining source instructions, effects and packing require real semantics.
-   Continue typed/byte alias, external implementation, packed/effectful and
-   broader contraction combinations across that boundary, plus source versions;
-   finite pointer/precision/loop/model cases do not close those compositions.
-   Reuse official expansions where their semantics agree; preserve source
-   width, rounding boundaries, accumulator order and recurrence. Implement
-   unsupported behavior rather than hiding it behind provenance.
-3. **Complete runtime and shared-state bindings.** Extend existing logical
-   allocation roots to physical/non-dense/mutating model views, independently
-   strided C and remaining alias/layout/shape compositions. Keep original
-   pointer units, untouched words, zero/tail domains and actual guard failures.
-   Live model scalar operands now retain real runtime control and independently
-   checked static dimension facts. Next carry symbolic dimensions through the
-   public model ABI, source binding, scratch admission and actual reusable
-   consumer invocation; successful dynamic export with a specialized public
-   type does not close this requirement.
-4. **Qualify applicable Merlin targets alongside frontend work.** Carry the
-   same standard payload into scheduling/materialization, preserving tile/reuse
-   intent and effect dependencies. Implement missing generic consumer lowering
-   in Merlin; target-specific legality, kernels, mapping and ABI belong in the
-   target OOT support package. Record actual target compile/execution evidence;
-   a host result or backend binary hidden behind a call is insufficient.
-
-## Workstream acceptance requirements
-
-| Workstream | Required behavior and evidence |
-|---|---|
-| A. Compiler boundary | Preserve Torch capture and derived Triton receipt/source paths; reject corrupted/stale correspondence; exclude evaluator inputs; lower the entire body; compare every result/effect. See [consumer](merlin_consumer.md), [model binding](model_integration.md). |
-| B. Irregular memory | Loaded/repeated/negative indices, arbitrary inactive out-of-bounds lanes, exact fills, multidimensional gathers, initialization, partial output, conflicting scatter and logical-grid dependencies. Retain real state or explicit effects. See [indexed memory](indexed_memory.md), [allocation state](allocation_state.md), [byte aliases](byte_aliases.md), [descriptors](external_descriptors.md). |
-| C. Runtime ABI | Reuse compiled code across valid shapes/scalars/strides/grids, including empty/tail domains; reject overflow and mismatched bindings; preserve aliases/mutation and all results. Distinguish dynamic kernel ABI from static public model capture. See [runtime ABI](runtime_abi.md), [model scalars](runtime_model_arguments.md), [value views](model_tensor_views.md). |
-| D. Control/index structure | Preserve general logical div/rem/grouped traversal, pointer state, branches/while, bijective/conflicting grids, zero/nonzero C and ragged attention's online state without materializing a dense score replacement. |
-| E. Numeric closure | Types/signedness, rounding/ties/NaN/zero/overflow, reductions/arg rules, mixed-precision dot/scaled dot, external math and RNG dependencies. Qualify per-step rounding and reuse. See [casts](float_casts.md), [precision](dot_precision.md), [scaled dot](scaled_dot.md), [external math](external_math.md). |
-| F. Effects/hardware boundary | Returned-old atomic values, collisions, order/scope/publication, external participants, volatile observations, async wait/barrier lifetimes and exact diagnostic outcomes. Physical address/assembly observations require actual semantics/dependencies. Preserve every effect and qualify its consumer implementation. See [atomics](atomic_memory.md), [effect ABI](effect_abi.md), [mixed effects](mixed_effects.md). |
-| G. Maintained coverage | Pin source/tool identities and the complete operation definitions; record all source dispositions, exact typed forms, successful packages and located refusals. Reproduce kernel corpus, integrity and applicable target checks. Never equate observed opcode names with universal support. See [inventory](ttir_operations.md), [measurements](coverage.md). |
-
-## Unresolved architectural boundaries
-
-- **Pure dataflow versus effects:** private invocation atomics can retain
-  executable state and old values, but that does not model external participants
-  or publication. Synchronization may disappear only after dependency proofs;
-  difficult effects cannot simply be erased.
-- **Logical versus physical addresses/descriptors:** ordinary logical views
-  and external descriptor fields work today. Closed byte-displacement pointer
-  integers now re-raise without physical identity under checked use/divisibility
-  analysis. Raw descriptor bytes, escaping pointer integers or hardware
-  observations need an explicit compatible address/state
-  contract and real consumer implementation.
-- **Numeric backend contracts:** selected IEEE/FTZ/low-precision and per-cast
-  profiles are explicit. Protected mixed-cast/composite-dot qualifications do
-  not establish arbitrary source-version/backend equivalence. Reserved source enumerants with no defined
-  format must remain identified rather than assigned invented semantics.
-- **Abstraction and performance:** preserve algorithmic tiling/reuse/recurrence
-  even when physical placement is postponed. Do not serialize useful parallel
-  computation or replace a kernel with a coarse opaque name just to pass.
-- **Tool provenance:** installed Triton, shared source checkout and the actual
-  optimizer binary have separately recorded identities. Unverified source/binary
-  correspondence must remain explicit; do not claim an unperformed native build.
-
-## Completion and working rules
-
-The goal is complete only when the full pinned valid operation/type/attribute
-and kernel-composition scope passes every applicable gate above, with explicit
-package differences and target dependencies. Unsupported/refused cases stay in
-the denominator. A green selected suite or an acceptance-only package does not
-satisfy arbitrary-kernel coverage.
-
-Use bounded serial native work on the shared VM and the existing toolchains.
-Follow repository contribution/identity rules, commit tested capabilities
-frequently and push the authorized branches: Triton `main`, Merlin and
-model2MLIR `ttir-experiment-grammy`. Do not rename branches, publish PRs, rewrite
-published history, or alter unrelated user work. Keep current evidence and
-remaining requirements here; keep detailed measurements in capability docs.
+Five bounded work packages replace the previous open-ended sequence. The effort
+ceilings below are planning limits for one implementer, not promised calendar
+dates or a request for a long compute campaign. **Ten focused engineering days
+is the proposed implementation ceiling.** Each package ends in a reviewable
+commit, updated dispositions and exact evidence. Do not start a sixth package
+by finding another interesting variant.
+
+Planned authored deliverables are `docs/v1_policy.json` (profile/route rules),
+`tests/data/v1_acceptance.json` (exact case and invocation roster) and
+`scripts/check_v1_closure.py` (the release gate). Generated run records belong
+under `out/v1-closure/<run>/`, including `summary.json`. These files are C0/C4
+implementation work, not artifacts already supplied by this planning update.
+
+| Package | Ceiling | Concrete output and exit |
+| --- | --- | --- |
+| C0: freeze | 1 day | A tracked policy ledger covering all 50 `tt` definitions and admitted supporting forms, plus a fixed expanded manifest selected from existing fixtures. Each row has profile predicates, route, owner, evidence/counterexample and a reason for exclusion. Freeze the baseline tests and consumer/tool pins. No untriaged row. |
+| C1: safe default/public interface | 2 days | Resolve the uncommitted packet path safely; qualify default kernel and full-model staging, immutable weights, live buffer/scalar ports, every result and artifact-only execution. Explicitly record any slower fallback. No lifetime, alias or payload-accounting bypass. |
+| C2: contracts and memory/runtime escape routes | 2 days | Document/enforce the existing supported root/view/scalar/shape contracts; add only missing adapters needed by the frozen accepted cases. Check a good and a violating contract, dynamic replay, empty/zero-trip paths and allocation limits. Classify other relationships now. |
+| C3: numeric/effect/provider disposition | 2 days | Close the finite admitted profile list using existing conversions/providers; test their boundaries. Freeze backend-required/unsupported profiles for shared/async/physical/unknown-source behavior. No new ISA family, math library or theorem-prover project. |
+| C4: release qualification | 3 days | Run the frozen acceptance selection and relevant baseline regressions from final commits; publish complete counts, logs, package differences, limitations and reproduction instructions. Host execution plus bounded fresh serial smoke; independently report unavailable optional targets. |
+
+A work item gets one bounded implementation attempt and one corrective attempt.
+If it exceeds its ceiling, choose a supported contract, qualified fallback or
+explicit exclusion **for a new/unclaimed profile**. A regression in previously
+qualified baseline behavior cannot be relabeled unsupported to get a green
+report. Fix it, retain the prior qualified default, or stop with a concrete
+release blocker and ask for an explicit scope/time decision. Do not silently
+extend the deadline or claim success.
+
+New kernels found after C0 are new-version requests unless they demonstrate a
+bug in an already-admitted profile. Existing regression suites remain required;
+the fixed release manifest limits new acceptance development, not regression
+obligations. A real accepted-profile bug may block release, but it must not
+restart an unlimited semantic-coverage campaign.
+
+## Frozen acceptance selection
+
+C0 maps these obligations to exact existing fixtures and reference archives.
+Prefer existing captures/tests. Freeze at most 128 expanded release cases,
+including contract/refusal cases; freeze additional invocation values too.
+The full regression snapshot stays separate. If all 50 policy entries need more
+inventory-only records, record those separately without claiming execution.
+
+| ID | Required workflow |
+| --- | --- |
+| K1 | Pointwise/masked and strided tiles: exact fills, untouched output, inactive out-of-bounds lanes. |
+| K2 | Tiled GEMM: original nonzero C, runtime K loop, reused tiles, empty K and ragged M/N/K. |
+| K3 | Online-softmax attention: carried accumulator/max/normalizer and bounded tiles; no dense-score replacement. |
+| K4 | Tuple reduce/scan/histogram and nested maps: actual combiner, source ordering and loaded-value snapshots. |
+| K5 | Indexed/selected/while memory: checked active indices, root selection and a defined conflict policy. |
+| K6 | Logical storage/views/state: supported offsets/strides/byte aliases, preserved initial words and all final state. |
+| K7 | Runtime control/CFG: if/for/while, negative/zero trips, nontrivial final state and source-width arithmetic. |
+| K8 | Block pointers and logical descriptors: original descriptor inventory, runtime origins/fields and masked edges. |
+| K9 | Named numeric profiles: casts/low precision/scaled dot, exceptional values and explicit tolerances/word rules. |
+| K10 | Packed maps/source assembly: admitted provider/proof, retained structure or disclosed scalar fallback, refusal of unimplemented groups. |
+| K11 | Local effects: atomic old/final values, volatile observations, barrier phases and exact print/assert outcomes. |
+| K12 | Public ABI: dynamic shapes/scalars/grid, execution-owned and void outputs; unsupported entry forms refuse explicitly. |
+| M1 | Learned immutable parameters and dependent kernel calls; every tuple result and snapshots. |
+| M2 | Symbolic shapes plus live scalar controls; one compiled artifact reused on changed and empty inputs. |
+| M3 | Internally sized/bounded execution-owned results, including empty outputs and an actual allocation-domain rejection. |
+| M4 | Functional buffer/user state and admitted view/alias bindings; all state observations retained. |
+| M5 | Mixed numeric/tiled model composition, including lifted constants and source precision/reuse. |
+| M6 | Mixed tensor/effect or void model: exact normal/failing outcome and all returning results. |
+
+For each positive workflow, require independent whole-result/effect comparison,
+changed-input replay, source/payload accounting and actual public Merlin staging
+and host execution. Exercise boundary values relevant to its profile; do not
+expand every workflow into an unbounded Cartesian product. Integers/storage are
+exact; floats use the named source policy. Compiler inputs exclude evaluator
+arrays/goldens. A numerical comparison alone does not establish useful structure.
+
+Negative cases must cover bad bounds/shape/scalar bindings, invalid alias or
+initialization claims, allocation overflow, an unknown numeric/source profile,
+physical/external behavior and changed source/ABI/policy/artifact bytes.
+Check located diagnostics and remediation, not just a nonzero exit code.
+Baseline accepted forms may not be reclassified to avoid a failing test.
+
+Serial smoke selects existing supported integer-memory, contraction and
+owned-result/model cases; it is a separate result. The existing source replay's
+two prerequisite skips and incoming unrelated Merlin gate debt remain explicit.
+A new required-case skip cannot hide behind those historical exceptions.
+
+## Release check and handoff
+
+C0/C4 will add a small policy validator/report around existing
+`product-coverage`, `package-coverage` and public staging tests. These commands
+already exist; a release-policy validator does not exist yet. Do not call the
+old package observation count a closure result. The validator must check:
+
+1. The pinned definition set exactly equals the 50 policy entries; admitted
+   supporting forms, attribute predicates and default exclusions are explicit.
+2. Every frozen case has its expected route and final evidence. No unresolved,
+   failed or not-run required case; no implicit skipped family or sample-based
+   shape specialization.
+3. Every claimed portable route has original verified source, complete standard
+   payload, ABI/shape/effect checks, provenance, compiler-only staging, whole-body
+   lowering and all required host results. Provider trust and numeric policies
+   remain visible. Expected refusals produce no successful portable artifact.
+4. Default portable artifacts reopen from only their declared publication
+   members and required installed dependencies. Final producer/consumer commits,
+   tool identities, source rosters, policy/manifest hashes and package differences
+   are recorded. This is reproducibility evidence, not universal equivalence.
+5. Required baseline regressions and bounded serial smoke pass, or a predeclared
+   unrelated/prerequisite exception is independently reported. Unsupported and
+   optional target counts are visible beside portable counts.
+
+The final report states **v1 scope closed** only if all five gates pass. It also
+lists unsupported/backend-required profiles, requested user contracts, fallback
+costs and later target work. Then stop this roadmap. No implicit requirement to
+support new source releases, arbitrary physical semantics, every composition or
+every accelerator remains attached to v1.
+
+Until those gates pass, the release is open. This document changes the completion
+contract and execution order; it does not itself complete the implementation.

@@ -1,5 +1,12 @@
 # Progress toward arbitrary TTIR kernels reaching Merlin
 
+The [finite v1 plan](completion_plan.md) now defines the completion boundary.
+The arbitrary-kernel ambition remains a long-term direction. V1 requires a
+pinned, qualified support domain and explicit dispositions for the rest, rather
+than implementing every hardware observation and target. The capability history
+and broad gaps below are evidence; older next-step instructions are superseded.
+No new qualification or release completion is claimed by this planning change.
+
 [Public Merlin staging](repository_layout.md) reconstructs the
 same source/ABI/effect checks during generic loading and preserves complete
 programs through `StagedProgram`. The production `MerlinHostBackend` passes 35
