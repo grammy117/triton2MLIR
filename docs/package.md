@@ -1,11 +1,20 @@
 # Package contract and explicit model2MLIR differences
 
+[Unpacked i4 cells](atomic_memory.md#unpacked-four-bit-integer-cells) use
+`TensorBuffer(dtype="i4")` with canonical uint8 archive/descriptor cells 0..15,
+one value per byte. Executable MLIR keeps logical i4 arithmetic and atomics.
+Inputs and results are checked under both caller and execution-owned result
+ABIs; owned footprint budgets count one byte per cell. Generated compatibility
+metadata states this additive storage contract. Receipts and ABI schemas remain
+unchanged; older consumers may refuse i4. Paired packed nibbles and by-value i4
+entry scalars are not supplied by this tensor carrier.
+
 [Low-precision logical printing](logical_prints.md#low-precision-values-and-exact-word-transport)
 adds i4 signedness and exact FP8/i4 words to the existing diagnostic profile.
 FP8 decimal uses exact widening and defined source NaN signs; FNUZ's unique
 unsigned NaN prints `nan`. Native consumers need pure tensor-value transport
 in the existing FP8 widening feature. Public ABI and receipt schemas remain
-unchanged; this supplies neither a public i4 pointer ABI nor general FP8 math.
+unchanged; printing itself supplies no tensor ABI or general FP8 math.
 
 [Boolean atomics](atomic_memory.md#boolean-integer-source-words) retain the
 existing canonical Boolean tensor carrier and logical i1 updates in standard

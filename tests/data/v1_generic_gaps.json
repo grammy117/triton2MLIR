@@ -361,21 +361,62 @@
           "source_sha256": "b9f585dbe6c578bfb80581230d2b76f6c254977532f323a42146527dfe65c4fe"
         }
       ]
-    }
-  ],
-  "definitions": {
-    "bytes": 50703,
-    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
-    "release": "v3.7.1",
-    "repository": "https://github.com/triton-lang/triton",
-    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
-  },
-  "gaps": [
+    },
     {
       "id": "subbyte-atomic-storage",
       "kind": "missing-generic-storage-legalization",
-      "native_progress": "Native i1/i4 source-width updates and CAS pass exhaustive finite-domain programs, including adjacent cells and explicit carrier normalization. Public i4 storage/ABI remains unimplemented.",
+      "native_progress": "Native i1/i4 updates and CAS retain their exhaustive finite-domain evidence. Public unpacked i4 storage now qualifies both result ABIs with checked canonical byte cells.",
+      "resolution": {
+        "affected_frontend_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-regressions.log",
+          "sha256": "ef1b63f4fa637a0bf716ed353b6a5cd437917c305b19c344f222a7ece6276f4f"
+        },
+        "closed_address_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/subbyte-address-qualified.log",
+          "sha256": "b08900aacd4779aef86dc2fa6f01ff63782f27100798aba352084574a3a86142"
+        },
+        "closed_address_test_source_sha256": "1daafac26b9f30cbe6d8024d531dd8e65a0254b3cb53eeca29968fd4d0580712",
+        "consumer_baseline_log": {
+          "bytes": 3091,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/i4-storage-source-replay.log",
+          "sha256": "6ac40c5994e53fdb6331b62045b4da8d61da0a8ec7b2622989fd27b793dac045"
+        },
+        "consumer_baseline_replay": {
+          "bytes": 379254,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-28b1609t/replay.json",
+          "sha256": "0e99ffc18de3c9e10207eca8693148af9f25c3bdf7cd71d81015d82435332d35"
+        },
+        "consumer_baseline_result": "2600 passed, 2 pre-existing prerequisite skips; clean consumer commit, 2770 source hashes and unchanged reviewed replay adapter.",
+        "consumer_commit": "3573abdf594c7e148ca4772a5cdb46ea1ee1c9d6",
+        "contract": "docs/atomic_memory.md#unpacked-four-bit-integer-cells",
+        "limitations": "No paired packed-nibble mapping, by-value i4 scalar ABI, physical alias/copyback or external participant semantics. Packed bytes require actual byte-storage/unpack/effect semantics, not a false i4 carrier declaration.",
+        "original_closed_address_refusal_log": {
+          "bytes": 8070,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/subbyte-address-original.log",
+          "sha256": "fa6b8208f618e6e53b7642453ffc5a2277b7993f69212b890e62e67393f3dd08"
+        },
+        "public_case": "tests/test_i4_storage.py::test_i4_cells_keep_source_updates_old_values_and_checked_transport",
+        "public_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-qualified.log",
+          "sha256": "f608f3d0c83c49681e4ebe80c2adbdf6369fa2d65e704b9cadc8316c981966f8"
+        },
+        "public_result_modes": [
+          "caller-owned",
+          "execution-owned"
+        ],
+        "qualification": "Two complete public atomic StagedProgram programs, nineteen invocations per library covering all sixteen raw words, nine RMW kinds, both CAS outcomes and all twelve exact old/final outputs. Two additional Boolean/i4 public address programs qualify closed round trips, byte steps, same-base differences and changed/bounds replays. Existing view/alignment/physical-escape/region refusal checks remain intact. Active invalid indices abort; carrier bytes 16/255 fail before invocation. Bad capture and direct native inputs fail. Caller inputs remain unchanged and evaluator arrays are absent from compiler staging.",
+        "release_gate_regression_log": {
+          "bytes": 98,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-release-gates-pinned.log",
+          "sha256": "bef8623b25b25ab880ba85efeef2d92c7d65627f885fe3b9c983593ce2c4795b"
+        },
+        "route": "Existing Meta element-typed conversion, actual logical i4 standard computation and checked byte-CAS/pure-integer callbacks; one canonical uint8 cell per value, restricted to 0..15, through both public result ABIs.",
+        "status": "implemented-and-focused-qualification-passed",
+        "test_source_sha256": "81e0dc1b8e65a7f7c3c773935cef4d5433bd93d5a92e5d7148c8ecdb084a57a1"
+      },
       "route": "Reuse the qualified native i4 byte-CAS updates and checked storage carriers with an explicit public cell/packing contract. Widening only the final result is insufficient.",
       "stopping_decision": "If no checked storage contract and qualified executable route is available within the shared effort cap, declare these exact forms unsupported and report incomplete full-generic closure.",
       "why_used": "Four-bit state/counters or imported integer pointer storage in hand-authored/imported TTIR; ordinary source APIs may promote these widths.",
@@ -425,9 +466,84 @@
           "source": "module {tt.func public @narrow(%state:!tt.ptr<i4>,%value:!tt.ptr<i4>,%out:!tt.ptr<i4>) {\n      %v=tt.load %value:!tt.ptr<i4>\n      %old=tt.atomic_rmw add, relaxed, gpu, %state, %v:(!tt.ptr<i4>,i4)->i4\n      tt.store %out,%old:!tt.ptr<i4>\n      tt.return\n    }}",
           "source_dtype": "i4",
           "source_sha256": "c234791d438b37ad9d8ddf3116f95bdac462ea51e689b3afe804e16ec4523951"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "i4",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  8
+                ]
+              },
+              {
+                "dtype": "i4",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  2
+                ]
+              },
+              {
+                "dtype": "i64",
+                "effect": "write",
+                "name": "distance",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "cells",
+            "runtime_scalars": [
+              {
+                "argument": 3,
+                "bounds": [
+                  -1,
+                  8
+                ],
+                "dtype": "i32",
+                "name": "index"
+              }
+            ]
+          },
+          "native_verification": {
+            "inventory": {
+              "bytes": 6706,
+              "path": "/scratch/grammy/blast/triton2MLIR/.scratch/subbyte-address-original/test_unpacked_cells_keep_close0/original-verification/inventory.json",
+              "sha256": "0eb041f3bdedfdd90f5bcd53cb52a70e29e7df6cae7e721349b12aa015354ec5"
+            },
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / versioned native Triton bindings"
+          },
+          "observation": "Additional bounded cell-footprint composition reviewed during the public storage extension; exact original source and refusal retained.",
+          "observation_context": "The unpublished public i4 carrier extension was present, admitting the ABI before the original closed-address width check. The parent commit alone does not reproduce that intermediate admission order.",
+          "observed_at_triton2mlir_commit": "a08766a7956a4d05542b1b30cd2055ebe9036b2b",
+          "observed_refusal": "ttir.op.0002 (tt.ptr_to_int): pointer integers require a logical byte-aligned pointer type",
+          "observed_worktree_dirty": true,
+          "operation": "tt.ptr_to_int",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @cells(%x:!tt.ptr<i4>,%out:!tt.ptr<i4>,\n        %distance:!tt.ptr<i64>,%index:i32) {\n        %p=tt.addptr %x,%index:!tt.ptr<i4>,i32\n        %base=tt.ptr_to_int %x:!tt.ptr<i4>->i64\n        %address=tt.ptr_to_int %p:!tt.ptr<i4>->i64\n        %delta=arith.subi %address,%base:i64\n        tt.store %distance,%delta:!tt.ptr<i64>\n        %back=tt.int_to_ptr %address:i64->!tt.ptr<i4>\n        %value=tt.load %back:!tt.ptr<i4>\n        tt.store %out,%value:!tt.ptr<i4>\n        %one=arith.constant 1:i64\n        %next=arith.addi %address,%one:i64\n        %nextptr=tt.int_to_ptr %next:i64->!tt.ptr<i4>\n        %nextvalue=tt.load %nextptr:!tt.ptr<i4>\n        %second=tt.addptr %out,%one:!tt.ptr<i4>,i64\n        tt.store %second,%nextvalue:!tt.ptr<i4>\n        tt.return\n    }}",
+          "source_dtype": "i4",
+          "source_sha256": "280d527bb3d60c8692a5a76ec7358e75f10b680b8bff26b596b1f1a7b69dc1cb"
         }
       ]
-    },
+    }
+  ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "gaps": [
     {
       "id": "fp8-generic-arithmetic",
       "kind": "missing-generic-numeric-legalization",

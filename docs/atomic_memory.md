@@ -30,8 +30,7 @@ width at every event: add wraps modulo the word width, signed and unsigned
 min/max keep their distinct interpretation, and each old result is the actual
 pre-update word. The typed profile additionally admits all nine integer RMW
 kinds through f16/f32/f64 storage and explicitly ordered 16/32/64-bit byte
-views. The Boolean extension is described below; public i4 storage is not
-admitted by these extensions.
+views. The Boolean and unpacked i4 extensions are described below.
 
 The source review found verified i8/i16 sources rejected by width checks in
 both producers and consumer intake. This extension reuses Meta's existing
@@ -76,9 +75,48 @@ staging excludes evaluator arrays and caller inputs remain unchanged. Merlin's
 two native subbyte programs additionally exhaust the one-/four-bit integer
 input domain through the same nine updates and CAS outcomes, checking adjacent
 cells and normalization from explicit byte carriers. This establishes native
-i4 arithmetic, not a public i4 tensor ABI. Public i4 storage remains an open
-generic gap; the existing interface does not silently guess packed nibbles or
-admit arbitrary padding as a valid non-byte scalar load.
+i4 arithmetic independently of the public i4 extension below. Neither route
+guesses packed bits or admits arbitrary padding as a non-byte scalar load.
+
+## Unpacked four-bit integer cells
+
+`TensorBuffer(dtype="i4")` selects one logical value per uint8 carrier cell,
+restricted to raw words 0..15. Standard MLIR retains `i4`; source operations
+determine signedness. Add wraps modulo sixteen at each update, signed min/max
+interpret words 8..15 as -8..-1, and unsigned min/max retain their distinct
+meaning. This is not widening the state and truncating its final result.
+
+This reuses Meta's element-typed atomic conversion and Merlin's existing
+checked byte-CAS/pure-integer callback. Input/capture checks reject noncanonical
+bytes before invocation; result checks reject them before publication. Native
+descriptors, caller-owned results and execution-owned results use one byte per
+cell. Owned allocation footprint checks use that same byte width. Old words,
+source masks/order/scope, bounds and private ownership remain independently
+checked. Existing package/result schemas are unchanged; generated compatibility
+metadata states the carrier contract and older consumers may refuse it.
+
+The two complete public programs in `tests/test_i4_storage.py` qualify both
+result ABIs. Each reuses one library for nineteen invocations covering all
+sixteen carrier words, changed values, ragged/single/empty inputs, nine RMW
+kinds, both CAS outcomes and all twelve exact old/final outputs. Active bad
+indices abort; inactive invalid addresses have no effect. Carrier bytes 16 and
+255 fail before actual invocation and publish no result. Invalid capture and
+direct native inputs also fail; caller inputs stay unchanged and compiler
+staging contains no evaluator arrays.
+
+Two separately qualified Boolean/i4 address programs retain closed pointer
+round trips, byte steps and same-base differences using the actual one-byte
+cell footprint. They preserve exact changed-input outputs and active bounds
+failures. The original native-valid pointer-integer refusal is retained with
+the focused logs; this grants no absolute physical address observation.
+
+This contract fits explicit low-bit logical state/counters in imported TTIR.
+Two packed nibbles per byte need an actual byte-storage/unpack implementation
+and explicit shared-byte effect semantics; selecting i4 does not invent that
+mapping. Use i8 storage and source bit operations where appropriate, disclosing
+the different representation and any atomic sharing cost. By-value i4 entry
+scalars still need the separate entry-binding adapter. External participants
+and GPU-specific publication remain outside private invocation semantics.
 
 ## Low-precision floating exchange
 
@@ -121,7 +159,8 @@ The native API keeps BF16/FP8's existing uint16/uint8 array carriers; MLIR and
 source contracts retain the actual float format. The public ABI, receipt and
 admission schemas are unchanged, while older consumers may reject the newly
 qualified source forms. Integer pointer views through BF16/FP8 storage and
-public i4 atomics remain outside this extension. See [limitations](limitations.md).
+paired packed-nibble atomics remain outside this extension. Unpacked i4 cells
+have their own contract above. See [limitations](limitations.md).
 
 ## Source-backed boundary
 

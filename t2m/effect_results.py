@@ -12,7 +12,7 @@ import zipfile
 import numpy as np
 
 from .runtime_shapes import resolve_shapes
-from .tensor_storage import DTYPES,FLOAT_FORMATS,FP8_NUMPY_NAMES,assert_tensor_close,assert_ieee_words
+from .tensor_storage import DTYPES,FLOAT_FORMATS,FP8_NUMPY_NAMES,assert_tensor_close,assert_ieee_words,validate_carrier
 
 ARCHIVE = "reference.npz"
 LIMIT = 64*1024*1024
@@ -84,6 +84,7 @@ def validate_results(spec,inputs,arrays,comparisons):
     shapes = resolve_shapes(spec.runtime_shapes(),inputs) if spec.dynamic else tuple(value.shape for value in spec.outputs)
     for index,(array,value,shape,policy) in enumerate(zip(arrays,spec.outputs,shapes,comparisons,strict=True)):
         array = np.asarray(array)
+        validate_carrier(array, value.dtype)
         if array.dtype != DTYPES[value.dtype] or tuple(array.shape) != tuple(shape):
             raise ValueError(f"result out{index} differs from the actual typed runtime shape/ABI")
         if value.dtype == "i1" and np.any(array.view(np.uint8) > 1):

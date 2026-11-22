@@ -23,13 +23,14 @@ now records all definitions, actual semantic fields, caller contracts and
 complement rules. Eight native-verified witnesses freeze five bounded work
 items: public i4 storage, FP8 arithmetic/accumulators, FP8 atomic addition,
 low-precision diagnostics and entry value bindings. Low-precision diagnostics
-are now qualified through four public programs; four items remain open.
+are now qualified through four public programs. Unpacked i4 storage qualifies
+both public result ABIs; three items remain open.
 Final semantic qualification and full closure remain open.
 Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
 format regressions with exact old/new words. Boolean atomics now pass a full
 public-interface program with nine updates and both CAS outcomes. Native i4
-arithmetic passes, while its public storage contract and final typed/storage
-qualification are open; the frozen acceptance roster stays at 128.
+arithmetic and the explicit unpacked public carrier pass; final typed/storage
+qualification remains open and the frozen acceptance roster stays at 128.
 At the effort cap, deliver either a
 qualified release or an explicitly incomplete gap handoff; do not silently
 extend the effort or count excluded generic forms as support. New accelerator

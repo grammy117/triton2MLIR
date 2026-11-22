@@ -48,8 +48,15 @@ def test_execution_reader_cannot_count_partial_skipped_failed_or_different_cases
         CHECKER.acceptance(tmp_path, manifest)
 
 
-def test_even_a_complete_case_ledger_cannot_replace_semantic_audit_and_source_replay(tmp_path):
+def test_even_a_complete_case_ledger_cannot_replace_semantic_audit_and_source_replay(tmp_path, monkeypatch):
     manifest = ledger(tmp_path)
+    # Keep the reader's unresolved-gap obligation independent of which real
+    # compiler capability is next to close. This is no execution evidence.
+    read = CHECKER.read
+    gap_path = ROOT / "tests/data/v1_generic_gaps.json"
+    fixture = read(gap_path)
+    fixture["gaps"] = [next(row for row in fixture["closed_gaps"] if row["id"] == "subbyte-atomic-storage")]
+    monkeypatch.setattr(CHECKER, "read", lambda path: fixture if Path(path) == gap_path else read(path))
     (tmp_path / "semantic-audit.json").write_text(json.dumps({"closure_status": "closed"}))
     result = CHECKER.check(tmp_path)
     assert result["passed_cases"] == len(manifest["cases"])

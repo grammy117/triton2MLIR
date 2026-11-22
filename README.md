@@ -16,7 +16,8 @@ Assembly/hardware behavior has explicit exclusions. The
 generic work items with exact reproducers and per-item attempt ceilings, all
 within the original forty-hour cap. Those work items do not replace the full
 generic-computation requirement: unresolved generic forms mean incomplete
-closure. Low-precision printing is now qualified; four named items remain open.
+closure. Low-precision printing and unpacked i4 storage are now qualified;
+three named items remain open.
 The measurements below describe delivered capabilities; the release is not
 closed yet.
 

@@ -17,7 +17,7 @@ from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT, HALF_C
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
 ATOMIC_SCHEMAS = ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
-INTEGER_WORDS = (builtin.i1, builtin.i8, builtin.i16, builtin.i32, builtin.i64)
+INTEGER_WORDS = (builtin.i1, builtin.IntegerType(4), builtin.i8, builtin.i16, builtin.i32, builtin.i64)
 INTEGER_WIDTHS = tuple(word.bitwidth for word in INTEGER_WORDS)
 # Source enum -> source name, standard arith::AtomicRMWKind.
 RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1), 5: ("fadd", 0),
@@ -145,8 +145,8 @@ def contract(op, source_ids, *, typed=False, f32_atomic_add=None):
     floating = str(element) in FLOAT_WIDTHS
     if not (typed and floating and not cas) and element not in INTEGER_WORDS:
         if cas:
-            refuse("atomic CAS needs a qualified integer i1/i8/i16/i32/i64 numeric profile")
-        refuse("atomic RMW needs a qualified integer i1/i8/i16/i32/i64 numeric profile")
+            refuse("atomic CAS needs a qualified integer i1/i4/i8/i16/i32/i64 numeric profile")
+        refuse("atomic RMW needs a qualified integer i1/i4/i8/i16/i32/i64 numeric profile")
     values = [None] if cas else []
     for name, allowed in ((("atomic_rmw_op", RMW),) if not cas else ()) + (("sem", ORDERS), ("scope", SCOPES)):
         value = op.properties.get(name, op.attributes.get(name))

@@ -17,7 +17,7 @@ from .cfg_intake import FILES as CFG_FILES
 from .memory_contract import BUFFER_PROFILE, GUARDED_PROFILES, PROFILE_FILES, TENSOR_PROFILE, validate_memory_evidence
 from .runtime_shapes import resolve_shapes
 from .package_compatibility import kernel_representation_differences
-from .tensor_storage import DTYPES, assert_tensor_close
+from .tensor_storage import DTYPES, assert_tensor_close, validate_carrier
 from .effect_reference import validate_inputs
 
 REQUIRED = {"model.mlir", "weights.safetensors", "weights.safetensors.manifest.json",
@@ -142,6 +142,7 @@ def verify_shared_bundle(out):
             raise ValueError("incomplete packaged inputs")
         result_shapes = resolve_shapes(spec.runtime_shapes(), [data[f"in{i}"] for i in range(len(spec.inputs))]) if spec.dynamic else tuple(b.shape for b in spec.outputs)
         for i, buffer in enumerate(spec.inputs):
+            validate_carrier(data[f"in{i}"], buffer.dtype)
             if data[f"in{i}"].dtype != DTYPES[buffer.dtype]:
                 raise ValueError("packaged input storage dtype differs from the ABI")
             if not spec.dynamic and tuple(data[f"in{i}"].shape) != buffer.shape:
@@ -153,6 +154,7 @@ def verify_shared_bundle(out):
                     raise ValueError("packaged runtime scalar dtype differs from the ABI")
     results = spec.outputs
     primary = np.load(out / "golden.npy", allow_pickle=False)
+    validate_carrier(primary, results[0].dtype)
     if primary.dtype != DTYPES[results[0].dtype]:
         raise ValueError("primary golden storage dtype differs from the ABI")
     if tuple(primary.shape) != result_shapes[0]:
@@ -161,6 +163,7 @@ def verify_shared_bundle(out):
         if set(extra.files) != {f"out{i}" for i in range(1, len(results))}:
             raise ValueError("incomplete additional references")
         for i, buffer in enumerate(results[1:], 1):
+            validate_carrier(extra[f"out{i}"], buffer.dtype)
             if extra[f"out{i}"].dtype != DTYPES[buffer.dtype]:
                 raise ValueError("additional reference storage dtype differs from the ABI")
             if tuple(extra[f"out{i}"].shape) != result_shapes[i]:

@@ -137,6 +137,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     from merlin.compiler.lower.model.oracle import HostModel, ScalarArg
     from runtime_shapes import resolve_shapes
     from tensor_storage import DTYPES as dtypes
+    from tensor_storage import validate_carrier
 
     signature = json.loads((staged / "signature.json").read_text())
     manifest = json.loads((staged / "compile-inputs.json").read_text())
@@ -171,6 +172,7 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
     else:
         raise ValueError("unsupported Merlin invocation signature")
     for array, declared in zip(arrays, signature["inputs"], strict=True):
+        validate_carrier(array, declared["dtype"])
         if (signature["schema"] == "merlin.compile-signature.v1" and list(array.shape) != declared["shape"]
                 or len(array.shape) != len(declared["shape"]) or any(type(n) is int and n != actual for n, actual in zip(declared["shape"], array.shape))
                 or array.dtype != dtypes[declared["dtype"]]):
@@ -214,6 +216,8 @@ def execute_model(staged, work, arguments, *, evaluation=None, observed=False):
         if first is not None and first != observed:
             raise ValueError("Merlin repeated invocation has stateful or incomplete output publication")
         first = observed
+    for array, declared in zip(outputs, signature["outputs"], strict=True):
+        validate_carrier(array, declared["dtype"])
     np.savez(evaluation / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
     (evaluation / "evaluation.json").write_text(json.dumps({"schema": "t2m.merlin-host-evaluation.v1",
         "invocations": invocations, "functional_inputs_preserved": True, "outputs": record(evaluation / "outputs.npz"),

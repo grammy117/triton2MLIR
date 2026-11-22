@@ -35,7 +35,7 @@ and selection between two closed pointer/displacement pairs. Source integer
 computation, signed extension and wrap remain executable. A selection retains
 both its pointer base and matching displacement.
 
-Conversion back to a pointer of byte width `W` requires structural evidence
+Conversion back to a pointer with public logical cell footprint `W` requires structural evidence
 that every displacement lane is divisible by `W`. A bounded low-zero-bit analysis
 handles constants, arithmetic, bitwise masks, fixed valid shifts and shape/select
 edges. It never interprets example inputs or caller alignment annotations as
@@ -45,6 +45,15 @@ byte address is identical modulo 2^64, including negative and wrapped
 displacements. No root address, base alignment or absence of unsigned address
 wrap is assumed by this identity. Actual access bounds, initialization, view
 compatibility and ownership still require the existing memory gates.
+
+Canonical Boolean and i4 public tensors use one unpacked byte per cell, so
+their closed pointer steps and same-base differences use `W=1`. Logical word
+width remains one/four bits; this footprint is not packed-bit or paired-nibble
+addressing. `tests/test_subbyte_addresses.py` qualifies actual native-verified
+source through public Merlin host libraries: source pointer round trips,
+one-byte integer steps, exact same-base differences, changed inputs and active
+bounds aborts. Absolute addresses and cross-width packed views retain their
+existing refusals. See [the i4 carrier contract](atomic_memory.md#unpacked-four-bit-integer-cells).
 
 The whole address-use closure is validated before mutation. Escaping absolute integers,
 address comparisons/diagnostics, mixed integer/address selection, arbitrary

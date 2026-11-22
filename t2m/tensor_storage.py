@@ -4,6 +4,8 @@ BF16 tensors retain bf16 in MLIR. NumPy carries their raw two-byte words as
 uint16, matching Merlin's host descriptor storage. Decode only for numerical
 comparison; never reinterpret those words as integer source arithmetic.
 FP8 tensors similarly retain their format and use raw uint8 archive words.
+I4 tensors use one canonical uint8 cell per value, with only its low nibble
+set. This is an unpacked public carrier, not paired packed-nibble storage.
 """
 
 import numpy as np
@@ -13,9 +15,16 @@ DTYPES = {"f16": np.float16, "bf16": np.uint16, "f32": np.float32, "f64": np.flo
 FP8_NUMPY_NAMES = {"f8E4M3FN":"float8_e4m3fn", "f8E4M3FNUZ":"float8_e4m3fnuz",
                    "f8E5M2":"float8_e5m2", "f8E5M2FNUZ":"float8_e5m2fnuz"}
 DTYPES.update({name: np.uint8 for name in FP8_NUMPY_NAMES})
+DTYPES["i4"] = np.uint8
 
 # Standard binary interchange formats, independent of any execution target.
 FLOAT_FORMATS = {"f16":(5,10),"bf16":(8,7),"f32":(8,23),"f64":(11,52)}
+
+
+def validate_carrier(array, dtype):
+    """Reject a noncanonical subbyte carrier before typed memory is observed."""
+    if dtype == "i4" and (np.asarray(array).dtype != np.uint8 or np.any(np.asarray(array) > 15)):
+        raise ValueError("i4 storage requires unpacked canonical uint8 cells in 0..15")
 
 
 def comparison_values(array, dtype):
@@ -34,6 +43,8 @@ def comparison_values(array, dtype):
 
 def assert_tensor_close(actual, expected, dtype, *, rtol=0, atol=0):
     """Compare exact integer values without NumPy's lossy floating promotion."""
+    validate_carrier(actual, dtype)
+    validate_carrier(expected, dtype)
     left, right = comparison_values(actual, dtype), comparison_values(expected, dtype)
     if dtype.startswith("i") and rtol == 0 and atol == 0:
         np.testing.assert_array_equal(left, right)

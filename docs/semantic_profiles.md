@@ -19,14 +19,15 @@ name nor native verification establishes that every type or composition works.
 
 The admission checkpoint identified **five named work items and eight exact
 native-verified witnesses** in the [generic-gap ledger](../tests/data/v1_generic_gaps.json).
-Low-precision diagnostics are now qualified through four complete public programs;
-**four work items and six witnesses remain open**. These are generic
+Low-precision diagnostics qualify through four complete public programs and
+unpacked i4 storage qualifies through both public result ABIs;
+**three work items and five witnesses remain open**. These are generic
 computation/interface failures. They cannot be removed by
 classifying them as GPU instructions or by counting their refusals as support.
 
 | Work item | Demonstrated failure | Existing material and bounded next action | Attempt ceiling |
 | --- | --- | --- | --- |
-| Public i4 storage | Direct i4 atomic add cannot construct its public tensor ABI. Native i4 updates/CAS and adjacent cells already pass. | Reuse byte carriers, checked tensor storage and the existing source-width byte-CAS loop. Declare cell versus packed-nibble representation explicitly, guard its domain and qualify actual public execution. | 3 hours |
+| Public i4 storage — qualified | The original direct i4 atomic-add ABI refusal remains in the resolved ledger. | Both public result ABIs now keep actual i4 updates and all old/final values using one canonical uint8 cell per value, checked as 0..15. Nineteen replays per library include all words, tails and empty inputs; invalid padding fails before invocation. Packed pairs and by-value scalars remain separate. | Closed within the 3-hour attempt |
 | FP8 arithmetic and accumulator profiles | A legal clamp/div/sqrt chain emits standard MLIR, then native legalization fails on FP8 `math.sqrt`. A legal FP8 `dot_scaled` accumulator is rejected by frontend admission. | Reuse exact FP8 widening/narrowing and the low-precision native emulation seam. Keep every source rounding boundary, original C and contraction reuse. Do not narrow the operands before their original product or widen the entire recurrence without rounding back. | 4 hours |
 | FP8 atomic addition | Native-valid `tt.atomic_rmw fadd` on FP8 is refused without an implemented update policy. | Reuse half/BF16 per-event numeric profiles and checked integer/byte-CAS helpers. Implement actual FP8 rounding, overflow and NaN behavior; retain every old word. | 4 hours |
 | Low-precision diagnostic values — qualified | The original internal i4/FP8 print refusals remain in the resolved ledger. | Existing logical formatting and exact widening now preserve all words, streams, signedness, source control and both outputs through four public libraries. The native pure tensor carrier is also qualified. General FP8 arithmetic remains separate. | Closed within the 1-hour attempt |
@@ -59,11 +60,12 @@ The existing interfaces already accept the following information:
 | Numeric behavior | Existing FP8 overflow/per-cast, dot/scaled-dot and atomic profile options | Implemented arithmetic, original source attributes and independently checked payloads. A new policy label alone grants no implementation. |
 | Optional assembly semantics | Existing selected source-language provider contract | Actual emitted standard computation, types, effects, dependencies and stated provider trust. Missing assembly semantics remain an explicit limitation. |
 
-Public i4 carriers and general scalar-storage/result entry bindings in the first
-table are **proposed extensions**, not existing fields users can pass today.
-The source/profile ledger keeps that distinction explicit. By-value f16/BF16/FP8/
-i4 input gaps do not imply that those values are unsupported inside private
-helpers or ordinary tensor computation.
+Public i4 carriers now use the existing `TensorBuffer` dtype field with the
+explicit [unpacked cell contract](atomic_memory.md#unpacked-four-bit-integer-cells).
+General scalar-storage/result entry bindings remain a **proposed extension**,
+not existing fields users can pass today. The source/profile ledger keeps that
+distinction explicit. By-value f16/BF16/FP8/i4 input gaps do not imply that those
+values are unsupported inside private helpers or ordinary tensor computation.
 
 ## Qualification and stopping rule
 

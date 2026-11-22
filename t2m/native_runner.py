@@ -12,7 +12,7 @@ import sys
 import numpy as np
 from torch_mlir import execution_engine, ir, passmanager, runtime
 from runtime_shapes import resolve_shapes
-from tensor_storage import DTYPES
+from tensor_storage import DTYPES, validate_carrier
 
 SCALAR_CTYPES = {"f32": ctypes.c_float, "f64": ctypes.c_double, "i8": ctypes.c_int8,
                  "i16": ctypes.c_int16, "i32": ctypes.c_int32, "i64": ctypes.c_int64, "i1": ctypes.c_bool}
@@ -66,6 +66,7 @@ def main(work):
             if (len(array.shape) != len(shape) or any(n >= 0 and n != actual for n, actual in zip(shape, array.shape))
                     or array.dtype != dtype or contract is None and any(n < 0 for n in shape)):
                 raise ValueError("native input shape/dtype differs from the tensor ABI")
+            validate_carrier(array, str(tensor.element_type) if isinstance(type_, ir.RankedTensorType) else str(type_))
         shapes = tuple(tuple(ir.RankedTensorType(t).shape) for t in signature.results)
         if contract is not None:
             if len(contract["outputs"]) != len(shapes) or len(resolved) != len(shapes):
@@ -344,6 +345,8 @@ def main(work):
             raise ValueError("native functional entry mutated a readonly input")
         if callback_errors:
             raise ValueError("native runtime copy failed: " + "; ".join(callback_errors))
+    for array, type_ in zip(outputs, signature.results, strict=True):
+        validate_carrier(array, str(ir.RankedTensorType(type_).element_type))
     np.savez(work / "outputs.npz", **{f"out{i}": a for i, a in enumerate(outputs)})
     (work / "execution.json").write_text(json.dumps({"schema": "t2m.native-execution.v1",
         "native_mlir_verified": True, "llvm_lowering_verified": True,

@@ -168,7 +168,7 @@ def normalize_pointer_addresses(module, source_ids):
 
 def _normalize_pointer_addresses(module, source_ids, *, regions=None):
     """Validate the whole address-use closure before committing any mutation."""
-    from .pointer_views import element
+    from .pointer_views import cell_element as element
     from .shared_tensor import opcode
 
     states, plans, reports = dict(regions.pairs) if regions else {}, [], []
@@ -226,7 +226,7 @@ def _normalize_pointer_addresses(module, source_ids, *, regions=None):
                 except (ValueError, ParseError):
                     refuse(
                         op,
-                        "pointer integers require a logical byte-aligned pointer type",
+                        "pointer integers require a supported logical cell pointer type",
                     )
                 zero = _constant(op.results[0].type, 0)
                 emitted.append(zero)
@@ -245,11 +245,13 @@ def _normalize_pointer_addresses(module, source_ids, *, regions=None):
                     )
                 address = states[op.operands[0]]
                 try:
-                    width = element(op.results[0].type).bitwidth // 8
+                    from .pointer_views import element_bytes
+
+                    width = element_bytes(op.results[0].type)
                 except (ValueError, ParseError):
                     refuse(
                         op,
-                        "integer-derived pointers require a logical byte-aligned pointer type",
+                        "integer-derived pointers require a supported logical cell pointer type",
                     )
                 try:
                     low_zeros = _low_zeros(address.displacement, divisibility)

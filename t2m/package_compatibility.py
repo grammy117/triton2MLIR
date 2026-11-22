@@ -13,6 +13,15 @@ from .standard_floats import FP8_TYPE_NAMES
 def kernel_representation_differences(trace, *, dynamic=False):
     profile = trace.get("profile", TENSOR_PROFILE)
     differences = []
+    if any(row.get("dtype") == "i4" for row in trace.get("spec", {}).get("buffers", [])):
+        differences.append(
+            "logical i4 tensors use one unpacked canonical uint8 cell per value in public archives and "
+            "host descriptors, with raw words restricted to 0..15; executable MLIR keeps i4 arithmetic "
+            "and source-width atomic updates, while input and output transport checks reject noncanonical "
+            "padding; receipt and result ABI schemas are unchanged, but older consumers may refuse this "
+            "storage type; this supplies no paired packed-nibble mapping, by-value i4 scalar ABI or "
+            "external publication semantics"
+        )
     if any(row.get("kind") == "native-structured-memory-residual"
            and row.get("native_stage", {}).get("stage_completed") is False
            for row in trace.get("transformations", [])):

@@ -8,7 +8,7 @@ import numpy as np
 
 from .process_outcome import record
 from .runtime_shapes import resolve_shapes
-from .tensor_storage import DTYPES
+from .tensor_storage import DTYPES, validate_carrier
 from .effect_results import validate_policy,compare_results
 
 
@@ -41,6 +41,7 @@ def validate_inputs(spec, arrays):
     if spec.dynamic:
         resolve_shapes(spec.runtime_shapes(),arrays)
     for array,value in zip(arrays,spec.inputs,strict=True):
+        validate_carrier(array, value.dtype)
         if array.dtype != DTYPES[value.dtype] or not spec.dynamic and tuple(array.shape) != value.shape:
             raise ValueError("effect argument differs from its declared tensor/scalar type")
         if value in spec.runtime_scalars and value.bounds is not None and not value.bounds[0] <= array.item() <= value.bounds[1]:

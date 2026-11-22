@@ -41,9 +41,9 @@ def offset_type(type_):
 
 def lower_offsets(state):
     """Shared source-word conversion for single- and selected-base state."""
+    from .pointer_views import element_bytes
     from .shared_tensor import opcode
-    from .pointer_views import element
-    scales = {op: element(state.types[op.operands[0]]).bitwidth // 8
+    scales = {op: element_bytes(state.types[op.operands[0]])
               for op in state.operations if opcode(op) == "tt.addptr"
               and state.byte_roots.intersection(state.bases[op.operands[0]])}
     bitcasts = {op for op in state.operations if opcode(op) == "tt.bitcast"
@@ -84,9 +84,11 @@ def lower_offsets(state):
 
 
 def normalize_pointer_control(module, source_ids, *, isolate_memory=False, typed_atomics=False, byte_order=None, _inspect_roots=False, byte_atomics=False):
+    from .pointer_views import compatible
+    from .pointer_views import element as pointer_element
+    from .pointer_views import normalize as normalize_word_views
     from .shared_tensor import _pointer_type, opcode
     from .word_events import MEMORY_EVENTS, same_type
-    from .pointer_views import compatible, element as pointer_element, normalize as normalize_word_views
     if byte_order is not None and byte_order not in ("little", "big"):
         raise ValueError("byte-buffer views require explicit little or big byte order")
     if byte_atomics and (not typed_atomics or byte_order is None):

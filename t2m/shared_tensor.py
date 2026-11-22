@@ -48,6 +48,7 @@ from .float_literals import LiteralParser, materialize as materialize_literal_wo
 DTYPES = {name: getattr(builtin, name) for name in
           ("f16", "bf16", "f32", "f64", "i1", "i8", "i16", "i32", "i64")}
 DTYPES.update(_FP8_BY_NAME)
+DTYPES["i4"] = builtin.IntegerType(4)
 
 
 class SharedParser(LiteralParser):

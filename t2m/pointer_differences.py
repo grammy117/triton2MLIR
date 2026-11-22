@@ -9,7 +9,8 @@ bytes. This analysis supplies no physical address or cross-allocation relation.
 from xdsl.dialects import arith, builtin
 
 from .pointer_addresses import SHAPES, _constant, _like, _scalar
-from .pointer_views import element
+from .pointer_views import cell_element as element
+from .pointer_views import element_bytes
 
 
 def pointer_offsets(emit, source_ids, *, shape_anchors=False):
@@ -55,7 +56,7 @@ def pointer_offsets(emit, source_ids, *, shape_anchors=False):
                 raise ValueError("pointer difference needs same-shaped source integer increments up to i64")
             if increment.type != type_:
                 increment = emit(arith.ExtSIOp(increment, type_))
-            width = element(operation.operands[0].type).bitwidth // 8
+            width = element_bytes(operation.operands[0].type)
             if width != 1:
                 increment = emit(arith.MuliOp(increment, emit(_constant(type_, width))))
             result = base, emit(arith.AddiOp(previous, increment)), uniform

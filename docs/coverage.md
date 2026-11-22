@@ -27,8 +27,10 @@ fifty definitions, exact semantic fields and complement rules. Eight
 native-verified witnesses freeze five generic work items: public i4 storage,
 FP8 arithmetic/accumulators, FP8 atomic addition, low-precision diagnostics
 and entry value bindings. Low-precision diagnostics now pass four complete
-public programs and the ledger retains their resolved witnesses; four items
-remain open. See the exact boundaries and remedies in
+public programs. Unpacked i4 storage also qualifies through both public result
+ABIs, with all sixteen words and nineteen replays per library. The ledger
+retains the resolved witnesses; three items with five witnesses remain open.
+See the exact boundaries and remedies in
 [limitations](limitations.md).
 These are source-operation observations, not universal typed/composition
 coverage or a successful run of the updated 128-case candidate.

@@ -22,7 +22,7 @@
     "qualification": "Source admission, standard MLIR conversion, native legalization, complete execution and accelerator performance are distinct evidence statuses.",
     "resources": "Finite declared domains and budgets are enforced, rather than specializing from evaluator data or silently dropping work.",
     "source": "Native-verified pre-layout Triton v3.7.1, original operation inventory retained before normalization. Names alone do not grant types, attributes, effects or implementations.",
-    "storage": "Public tensor carriers cover all pinned numeric formats except i4; internal i4 arithmetic/casts exist. By-value runtime scalars currently cover f32/f64/i1/i8/i16/i32/i64. Low-precision scalar inputs can be supplied as declared one-element storage where the source signature permits it; no implicit ABI rewrite is claimed.",
+    "storage": "Public tensor carriers cover all pinned numeric formats. I4 explicitly selects one unpacked canonical uint8 cell per value, restricted to 0..15; packed pairs are not inferred. By-value runtime scalars still cover only f32/f64/i1/i8/i16/i32/i64. Low-precision scalar-storage/return entry adapters remain a separate generic gap.",
     "structure": "Keep logical launch/tile/reuse/recurrence/control and actual effects executable. Physical placement, coalescing/cache hints and hardware mappings can remain descriptive only when values/effects do not change."
   },
   "complement_rule": {
@@ -33,7 +33,6 @@
     "valid_generic_failure": "An unimplemented defined computation or ABI/native transport remains a generic gap; try broader standard computation and retain the exact reproducer."
   },
   "confirmed_generic_gap_ids": [
-    "subbyte-atomic-storage",
     "fp8-generic-arithmetic",
     "fp8-atomic-addition",
     "public-value-entry-binding"
@@ -60,17 +59,18 @@
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+          "sha256": "3ba11956f2eaf2390e34cc3cae945740f545b647d30129f1c857d6e7d3dc7662"
         }
       ],
       "unresolved_generic_forms": []
     },
     "atomics": {
-      "admission": "Selected private-invocation i1/i8/i16/i32/i64 nine-kind RMW and CAS retain all old/final values, masks, collisions, source scope/order and source-width arithmetic. Typed exchange covers all eight pinned float formats. Named f16/BF16/f64 and IEEE/FTZ f32 additions retain each update rounding. Existing integer word/ordered-byte views preserve actual owning storage and alignment.",
+      "admission": "Selected private-invocation i1/i4/i8/i16/i32/i64 nine-kind RMW and CAS retain all old/final values, masks, collisions, source scope/order and source-width arithmetic. Typed exchange covers all eight pinned float formats. Named f16/BF16/f64 and IEEE/FTZ f32 additions retain each update rounding. Existing integer word/ordered-byte views preserve actual owning storage and alignment.",
       "caller_contracts": [
         "effect_profile atomics or typed-atomics and actual private invocation ownership",
         "Explicit f32 addition policy; source order/scope; actual state/results",
-        "Explicit byte order/alignment and owning allocation for byte/typed views"
+        "Explicit byte order/alignment and owning allocation for byte/typed views",
+        "TensorBuffer dtype i4 selects unpacked canonical uint8 cells 0..15; input and output transport checks, actual i4 updates and one-byte owned footprints."
       ],
       "candidate_workflows": [
         "K11",
@@ -78,12 +78,12 @@
         "M4",
         "M6"
       ],
-      "complement": "i4 source words lack public storage/admission. FP8 floating addition lacks an implemented named update policy. Both are generic gaps. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
+      "complement": "FP8 floating addition lacks an implemented named update policy. This is a generic gap. Packed pairs of nibbles need actual byte-storage/unpack and shared-byte effect semantics. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
           "path": "t2m/atomic_memory.py",
-          "sha256": "77a59ee5488ab076318c66ed0a005ef3fe48cd102cae9724fbabca5ab1adbcfe"
+          "sha256": "f396b1b8abafa78d002f62d3784f673127ef4616912562ac373d0a94bc925b9b"
         },
         {
           "path": "t2m/atomic_float_add.py",
@@ -103,7 +103,6 @@
         }
       ],
       "unresolved_generic_forms": [
-        "subbyte-atomic-storage",
         "fp8-atomic-addition"
       ]
     },
@@ -132,7 +131,7 @@
         },
         {
           "path": "t2m/pointer_views.py",
-          "sha256": "689c62ec29c288e03636dab091321c307ec3662142de3d430aa4011a94f64fe6"
+          "sha256": "3d6fec7ecebb57d1da0a91fb165d357670018d2b4da6c1e79c40e499da0cc903"
         },
         {
           "path": "t2m/standard_floats.py",
@@ -140,12 +139,10 @@
         },
         {
           "path": "t2m/tensor_storage.py",
-          "sha256": "1afc3c1e92ccaf647413566c7dc36ab73ed2f179620405c0a1c87502a920f357"
+          "sha256": "fa2850729a1d4c9d03ef34d3802614f00ab620565ef157c5d4303f53c7e3ca31"
         }
       ],
-      "unresolved_generic_forms": [
-        "subbyte-atomic-storage"
-      ]
+      "unresolved_generic_forms": []
     },
     "combiners": {
       "admission": "Positive static unencoded numeric source tiles, complete tuple types/results and exact axes. Reductions seed from the first actual source element; scans preserve reverse/forward noncommutative order and parallel stages. Typed scalar arithmetic, captured immutable tensor reads, local tensors and structured value control remain executable.",
@@ -207,7 +204,7 @@
         },
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+          "sha256": "3ba11956f2eaf2390e34cc3cae945740f545b647d30129f1c857d6e7d3dc7662"
         },
         {
           "path": "t2m/scaled_dot.py",
@@ -215,8 +212,7 @@
         }
       ],
       "unresolved_generic_forms": [
-        "fp8-generic-arithmetic",
-        "subbyte-atomic-storage"
+        "fp8-generic-arithmetic"
       ]
     },
     "descriptors": {
@@ -276,7 +272,7 @@
         },
         {
           "path": "t2m/effect_results.py",
-          "sha256": "0c4ee8e996a39a4d29be414dea661613d82e49cd3e0e4fb2717e63a5a60ca020"
+          "sha256": "7961de4a3cb9390548fc5885e796ce65ef89818eab783d31f6f509dc8d104f4e"
         },
         {
           "path": "t2m/diagnostic_runtime.py",
@@ -284,7 +280,7 @@
         },
         {
           "path": "t2m/package_compatibility.py",
-          "sha256": "e3ab34a8c97d063f1c0482e847cd2845105f9d14f2846c4c63cbf34ddb6e70dc"
+          "sha256": "1aba3f631641ca4b19fc4003a4ac3aca140bcc85a2524278b2d698bf624cfb35"
         }
       ],
       "unresolved_generic_forms": []
@@ -332,7 +328,7 @@
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+          "sha256": "3ba11956f2eaf2390e34cc3cae945740f545b647d30129f1c857d6e7d3dc7662"
         },
         {
           "path": "t2m/frontend.py",
@@ -445,12 +441,12 @@
         "M4",
         "M6"
       ],
-      "complement": "Try the existing guarded source-word continuation when structured pointer recovery fails. Missing roots/layout/effect facts require bindings and executable guards; provenance is insufficient. Unimplemented valid generic address/alias/control forms remain bugs/gaps. Escaping numeric physical addresses, physical spaces and external observations need backend semantics. i4 public storage is not admitted. Automatic BF16/FP8 integer-atomic views remain unqualified; explicit raw owning-allocation bindings are a candidate existing route, not yet measured evidence.",
+      "complement": "Try the existing guarded source-word continuation when structured pointer recovery fails. Missing roots/layout/effect facts require bindings and executable guards; provenance is insufficient. Unimplemented valid generic address/alias/control forms remain bugs/gaps. Escaping numeric physical addresses, physical spaces and external observations need backend semantics. I4 public storage is explicitly unpacked canonical uint8 cells 0..15; paired packed nibbles and low-precision by-value scalar ABI are not inferred. Automatic BF16/FP8 integer-atomic views remain unqualified; explicit raw owning-allocation bindings are a candidate existing route, not yet measured evidence.",
       "evidence_status": "source-admission-reviewed; final-revision qualification pending",
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+          "sha256": "3ba11956f2eaf2390e34cc3cae945740f545b647d30129f1c857d6e7d3dc7662"
         },
         {
           "path": "t2m/guarded_memory.py",
@@ -466,20 +462,18 @@
         },
         {
           "path": "t2m/pointer_addresses.py",
-          "sha256": "7bf1f7ba2d7e1e87f9496171299fce5709b5e8f11209f9b1751b76609494dda9"
+          "sha256": "0ba1acb70bcbc375604b47e10136cf95926eb1229de7e0837d2eb57913377c42"
         },
         {
           "path": "t2m/pointer_views.py",
-          "sha256": "689c62ec29c288e03636dab091321c307ec3662142de3d430aa4011a94f64fe6"
+          "sha256": "3d6fec7ecebb57d1da0a91fb165d357670018d2b4da6c1e79c40e499da0cc903"
         },
         {
           "path": "t2m/typed_storage.py",
           "sha256": "ac5d68ce11cfd6ffb7cdd54fcf362209de43f9d7a25b94a436a9c9e6db09ab11"
         }
       ],
-      "unresolved_generic_forms": [
-        "subbyte-atomic-storage"
-      ]
+      "unresolved_generic_forms": []
     },
     "maps": {
       "admission": "Pack-one complete scalar bodies lower to parallel Linalg. Larger packs either prove typed slot independence/congruence or use an actual validated source_layout coordinate map. Scalar/tensor computation, captured reads and structured control stay in the source position with every result.",
@@ -568,7 +562,7 @@
       "reviewed_sources": [
         {
           "path": "t2m/shared_tensor.py",
-          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+          "sha256": "3ba11956f2eaf2390e34cc3cae945740f545b647d30129f1c857d6e7d3dc7662"
         },
         {
           "path": "t2m/frontend.py",
@@ -1964,6 +1958,114 @@
       "family": "diagnostics",
       "final_candidate_status": "not-qualified-by-this-focused-extension",
       "gap_id": "low-precision-diagnostic-values"
+    },
+    {
+      "consumer_commit": "3573abdf594c7e148ca4772a5cdb46ea1ee1c9d6",
+      "consumer_sources": [
+        {
+          "path": "src/merlin/compiler/frontend/intake/execution_result_signature.py",
+          "repository": "merlin",
+          "sha256": "a9b5f845689628d7ba3ca5ce170082d9e12515ee422d80748b2461c99cc2756d"
+        },
+        {
+          "path": "src/merlin/compiler/frontend/intake/kernel_atomic_evidence.py",
+          "repository": "merlin",
+          "sha256": "f0623722a8f47937a646bc9afb8d41c028014c64d7456186fcdaab5697b9dfaf"
+        },
+        {
+          "path": "src/merlin/compiler/lower/c/runtime.py",
+          "repository": "merlin",
+          "sha256": "acd3468c961e6220ab2107802dcc784bdf878526cebe1693bafc4381d3d7c402"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/execution_result_inputs.py",
+          "repository": "merlin",
+          "sha256": "3575d698d9795a4bac61d4695a652983266fa1a78fcc971abff7a03b6c29d7e9"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/owned_result_abi.py",
+          "repository": "merlin",
+          "sha256": "06b14fe54f6d1cdd271d38e2754b2e6d2692f0939393e88ae8a96fbcc039b395"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/owned_result_allocations.py",
+          "repository": "merlin",
+          "sha256": "6d81b646374fc3f3498757ff5bfac92b5a99007b7085932a4b8f607061c3fde8"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/owned_result_c.py",
+          "repository": "merlin",
+          "sha256": "20c8b32ea0ec569db4a51b7e6a7af3db3b8a4887ec39d50ba44ee7ee68a3bf2a"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/owned_results.py",
+          "repository": "merlin",
+          "sha256": "4e97e0cb718b85d70979c4a135dd5e6d81214288d67107e4bf37c13e3c5c4824"
+        },
+        {
+          "path": "src/merlin/compiler/lower/options/runtime_invocation.py",
+          "repository": "merlin",
+          "sha256": "3834f3b0a0dbe4c2ea557a920a7aacbd73ebcc43904c4864b96a0f12e7433d2f"
+        }
+      ],
+      "evidence": {
+        "affected_frontend_log": {
+          "bytes": 111,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-regressions.log",
+          "sha256": "ef1b63f4fa637a0bf716ed353b6a5cd437917c305b19c344f222a7ece6276f4f"
+        },
+        "closed_address_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/subbyte-address-qualified.log",
+          "sha256": "b08900aacd4779aef86dc2fa6f01ff63782f27100798aba352084574a3a86142"
+        },
+        "closed_address_test_source_sha256": "1daafac26b9f30cbe6d8024d531dd8e65a0254b3cb53eeca29968fd4d0580712",
+        "consumer_baseline_log": {
+          "bytes": 3091,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/i4-storage-source-replay.log",
+          "sha256": "6ac40c5994e53fdb6331b62045b4da8d61da0a8ec7b2622989fd27b793dac045"
+        },
+        "consumer_baseline_replay": {
+          "bytes": 379254,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/ttir-replay/layout-28b1609t/replay.json",
+          "sha256": "0e99ffc18de3c9e10207eca8693148af9f25c3bdf7cd71d81015d82435332d35"
+        },
+        "consumer_baseline_result": "2600 passed, 2 pre-existing prerequisite skips; clean consumer commit, 2770 source hashes and unchanged reviewed replay adapter.",
+        "consumer_commit": "3573abdf594c7e148ca4772a5cdb46ea1ee1c9d6",
+        "contract": "docs/atomic_memory.md#unpacked-four-bit-integer-cells",
+        "limitations": "No paired packed-nibble mapping, by-value i4 scalar ABI, physical alias/copyback or external participant semantics. Packed bytes require actual byte-storage/unpack/effect semantics, not a false i4 carrier declaration.",
+        "original_closed_address_refusal_log": {
+          "bytes": 8070,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/subbyte-address-original.log",
+          "sha256": "fa6b8208f618e6e53b7642453ffc5a2277b7993f69212b890e62e67393f3dd08"
+        },
+        "public_case": "tests/test_i4_storage.py::test_i4_cells_keep_source_updates_old_values_and_checked_transport",
+        "public_log": {
+          "bytes": 110,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-qualified.log",
+          "sha256": "f608f3d0c83c49681e4ebe80c2adbdf6369fa2d65e704b9cadc8316c981966f8"
+        },
+        "public_result_modes": [
+          "caller-owned",
+          "execution-owned"
+        ],
+        "qualification": "Two complete public atomic StagedProgram programs, nineteen invocations per library covering all sixteen raw words, nine RMW kinds, both CAS outcomes and all twelve exact old/final outputs. Two additional Boolean/i4 public address programs qualify closed round trips, byte steps, same-base differences and changed/bounds replays. Existing view/alignment/physical-escape/region refusal checks remain intact. Active invalid indices abort; carrier bytes 16/255 fail before invocation. Bad capture and direct native inputs fail. Caller inputs remain unchanged and evaluator arrays are absent from compiler staging.",
+        "release_gate_regression_log": {
+          "bytes": 98,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/i4-storage-release-gates-pinned.log",
+          "sha256": "bef8623b25b25ab880ba85efeef2d92c7d65627f885fe3b9c983593ce2c4795b"
+        },
+        "route": "Existing Meta element-typed conversion, actual logical i4 standard computation and checked byte-CAS/pure-integer callbacks; one canonical uint8 cell per value, restricted to 0..15, through both public result ABIs.",
+        "status": "implemented-and-focused-qualification-passed",
+        "test_source_sha256": "81e0dc1b8e65a7f7c3c773935cef4d5433bd93d5a92e5d7148c8ecdb084a57a1"
+      },
+      "family": "atomics",
+      "final_candidate_status": "Focused evidence only; final 128-case selection and semantic audit remain pending.",
+      "gap_id": "subbyte-atomic-storage",
+      "related_families": [
+        "logical-memory",
+        "casts"
+      ]
     }
   ],
   "reviewed_definition_files": [

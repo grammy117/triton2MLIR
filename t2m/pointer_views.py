@@ -1,11 +1,13 @@
-"""Logical word views of byte-aligned scalar storage, before memory lowering.
+"""Logical scalar cell views and footprints before memory lowering.
 
 Meta 17f0c234 TritonToUnstructuredPass.cpp propagates offsets through pointer
 bitcasts when storage strides agree (bitcast_ptr_unstructured.mlir). Reuse that
 base/offset boundary, but keep our public storage element and bitcast each
 loaded/stored value. This avoids physical pointer casts and whole-buffer copies.
-Sub-byte types and changed strides need a separate address/representation
-contract. Finite selected roots retain their own equal-width storage types.
+Public i1/i4 cells explicitly use one unpacked byte each; this supplies no
+packed-bit or paired-nibble mapping. Changed-width views keep their separate
+byte-aligned representation contract. Finite selected roots retain their own
+equal-width storage types.
 """
 
 from functools import lru_cache
@@ -18,7 +20,7 @@ from .diagnostics import ConversionError
 
 
 @lru_cache(maxsize=128)
-def element(pointer):
+def cell_element(pointer):
     from .ir import context
     from .shared_tensor import DTYPES, SharedParser, _pointer_type
     scalar = pointer.element_type if isinstance(pointer, builtin.TensorType) else pointer
@@ -28,9 +30,22 @@ def element(pointer):
     # attribute body. Parse that type parameter structurally with the same
     # parser; canonical equality also excludes explicit address-space suffixes.
     result = SharedParser(context(), scalar.value.data).parse_type()
-    if result not in DTYPES.values() or scalar.value.data != str(result) or result.bitwidth % 8:
+    if result not in DTYPES.values() or scalar.value.data != str(result):
+        raise ValueError("pointer views require a supported scalar and implicit logical address space")
+    return result
+
+
+def element(pointer):
+    """Word views retain their existing separate byte-aligned admission."""
+    result = cell_element(pointer)
+    if result.bitwidth % 8:
         raise ValueError("pointer views require a supported byte-aligned scalar and implicit logical address space")
     return result
+
+
+def element_bytes(pointer):
+    """Public logical cell footprint; i1/i4 carriers are explicitly unpacked."""
+    return max(1, cell_element(pointer).bitwidth // 8)
 
 
 def compatible(left, right):
