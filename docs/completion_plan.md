@@ -1,6 +1,6 @@
 # Finite closure plan: portable TTIR to the Merlin interface
 
-Updated 2026-11-21. This is the governing v1 release plan. The latest scope
+Updated 2026-11-21. This is the governing v1 release plan. The requested scope
 requires every generic/useful TTIR computation to have an executable lowering;
 exclusions apply to assembly, hardware observations and missing external
 semantics, not to difficult generic computation. Use a broader logical
@@ -11,6 +11,51 @@ This plan separates generic computation closure from arbitrary device semantics
 and qualification of every possible target. Historical measurements in the roadmap,
 coverage and handoff documents retain their original scope; they are evidence,
 not an automatically expanding backlog.
+
+**Execution decision:** use the fixed five-day remaining effort budget below,
+then deliver either a qualified release or an explicitly incomplete handoff.
+Do not keep implementing indefinitely. Checked user contracts, executable
+fallbacks and documented non-support are available decisions. Excluding a
+generic form reduces the delivered scope; it does not satisfy or disappear
+from the original full-generic-coverage requirement.
+
+## Where we are now
+
+| Deliverable | Observed state | What remains |
+| --- | --- | --- |
+| Public Merlin interface | Kernel and bound-model staging, preparation and whole-body host execution exist. | Qualify the final selected packages from final revisions; retain explicit model2MLIR package differences. |
+| Required two-transformer demo | Implemented: ordinary PyTorch block followed by one real Triton block, actual launch discovered automatically. Native/public host and artifact-only ragged replay have passed. | Include the existing demo in final acceptance and publish its reproduction command, source, MLIR and limitations. No new model architecture is required. |
+| Source inventory | All 50 pinned TTIR definitions have policy entries: 49 generic and optional assembly. | Finish the typed/profile review and join it to actual source-to-Merlin evidence. A policy entry is not support evidence. |
+| Frozen integration selection | 94 cases selected. Latest whole-selection attempt: 69 passed, then three stale-layout fixture setup errors; 22 cases were not run. The fixture correction subsequently passed six focused host/serial checks. | Retain the original 94 cases, add only missing generic-family witnesses, then run the complete final selection. These partial results are not a release pass. |
+| Known numeric regression | Signaling-NaN min/max correction passed all 12 scalar format/memory-profile checks and the Merlin replay: 2,600 passed, two pre-existing prerequisite skips. | Qualify the final public Python transport; keep separately selected stock-CLI transport outside this claim. |
+| Release checker | A local draft and five negative/reader checks exist; it is not yet committed or a completed release audit. | Finish the existing checker and populate real evidence. Do not build another proof or reporting framework. |
+
+The demo is two small complete single-head inference blocks, without dropout
+or a causal mask. It is an integration/correctness demonstration, not a GPU
+performance, training or arbitrary-model claim. See [the demo](transformer_demo.md).
+
+### The finite evidence gap
+
+The latest partial-run package audit observed 29 generic TTIR names in
+Merlin-qualified packages. The following 20 names lack such a witness in that
+selection. This is an **evidence gap**, not a finding that all 20 need a new
+implementation. Start with existing tests and the maintained product corpus.
+
+| Family | Missing original-TTIR witnesses | First existing material to reuse |
+| --- | --- | --- |
+| Shape/value transforms | `tt.cat`, `tt.join`, `tt.split`, `tt.unsplat` | `t2m/examples/product_corpus.py`, `tests/test_pointer_unsplat.py` |
+| Arithmetic/formats | `tt.fp_to_fp`, `tt.dot_scaled`, `tt.mulhiui` | `tests/test_float_casts.py`, `tests/test_scaled_dot.py`, `tests/test_integer_products.py` |
+| Logical pointers | `tt.advance`, `tt.make_tensor_ptr`, `tt.ptr_to_int`, `tt.int_to_ptr` | `tests/test_block_pointers.py`, `tests/test_pointer_differences.py` |
+| Logical descriptors | `tt.make_tensor_descriptor`, `tt.descriptor_gather`, `tt.descriptor_scatter`, `tt.descriptor_reduce`, `tt.descriptor_store` | `tests/test_indexed_descriptors.py`, existing descriptor source fixtures |
+| Indexed tensor computation | `tt.gather`, `tt.histogram` | Maintained product corpus, `tests/test_histogram.py` |
+| Logical atomic effects | `tt.atomic_cas`, `tt.atomic_rmw` | `tests/test_atomic_memory.py`, `tests/test_atomic_word_cas.py` |
+
+For each row, record one of: existing implementation qualified; missing caller
+contract; broader fallback needed; missing implementation; or explicit
+non-support. Bind successful evidence to original TTIR, executable payload and
+Merlin results. A normalized operation appearing in a report is insufficient.
+This list is the immediate audit backlog, not a claim that unseen compositions
+are correct. A new counterexample inside an admitted profile remains a bug.
 
 ## What we will finish
 
@@ -96,7 +141,7 @@ general solver, alias engine or GPU runtime. Reuse the existing mechanisms.
 | Runtime shapes/scalars and value-dependent output sizes | Declared scalar/dimension bindings; reconstruct actual shape dependencies or use existing execution-owned results with finite allocation limits. | No guessed sizes or implicit specialization. Supply missing bindings or extend generic runtime allocation/shape transport; valid generic gaps remain open. |
 | Numeric formats, precision, reductions and RNG | Named, qualified profiles with their rounding/order/overflow rules. | Missing defined generic arithmetic needs an executable implementation. Undefined source enumerants and GPU-specific exact-bit claims need actual semantics. No silent precision relaxation. |
 | Packed maps/assembly | Existing independence/layout proofs and optional typed source provider. A generic expansion may be slower if its semantics are qualified. | General source-coupled packing, partial registers and unimplemented float/ISA forms are excluded unless a qualified standard-MLIR implementation is supplied. Preserve original pack intent and disclose sharing loss. |
-| The current packet recurrence ownership failure | Fix the generic Merlin ownership/destination proof within C1, or keep the packet route opt-in and retain the previously qualified scalar recipe as a disclosed fallback. | Do not enable the failing path by default or weaken lifetime checks. A scalar recipe does not claim packet sharing. |
+| The packet recurrence ownership experiment | The failing optional assembly experiment is preserved outside the active frontend; the qualified scalar recipe records its sharing loss explicitly. | No failing path is selected by default and no lifetime check is weakened. Packet preservation is deferred optional optimization, separate from generic map computation. |
 | Barriers, atomics, volatile and async | Keep qualified invocation-local phases/effects. Abstract physical scheduling only when actual dependencies and observations permit it. | External participants, general cross-program publication, race-sensitive behavior and device completion need an explicit execution contract/provider; otherwise backend-required. Serialization is not automatically equivalent. |
 | Inline assembly, extern calls and physical address observations | Known source provider or an explicit typed standard-MLIR implementation with its dependencies and trust boundary. | Unknown instructions, hardware clocks/IDs, escaping physical addresses, impure externs and descriptor bytes are backend-required/unsupported. Provenance is not their implementation. |
 | Remaining CFG/function/ABI forms | Existing official normalization and public bindings, or broader standard func/CF/SSA. | Valid generic entry/control forms require a working ABI/lowering; missing support remains a blocker. Preserve located diagnostics while implementing it. |
@@ -109,7 +154,10 @@ properties. A false declaration must not allow unchecked memory access.
 ## Extra information users can supply
 
 Extend the current ABI/binding mechanisms rather than introduce a parallel API.
-C2 freezes the exact supported fields and package differences. Required forms:
+At the first checkpoint, name the actual supported fields, enforcement sites
+and remaining adapters in the existing contract documentation. The list below
+describes information to express, not a claim that every field combination is
+already a supported API:
 
 - **Storage:** allocation roots and byte extents; element types/byte order;
   offsets/strides; overlap relationships; readonly/readwrite roles; initial and
@@ -148,50 +196,78 @@ a different place or erase an effect. Document any supported slower alternative
 as a separate profile. External runtime fallback is a distinct target-dependent
 product, not portable lowering and not required to finish v1.
 
+Use this decision order for every difficult case, once:
+
+1. Reuse an existing structured lowering or supported upstream normalization.
+2. If information is missing, request the smallest storage/shape/numeric/source
+   contract through the existing interface. Validate it or guard the assumed
+   domain; do not ask users to assert arbitrary safety or equivalence.
+3. If only pattern recovery fails, use broader standard computation: indexed
+   tensor operations, checked logical loads/stores, explicit SSA state or
+   control flow. Keep guards, fills, initial values and effects executable.
+4. If implementation semantics are external, accept an explicit typed provider
+   only under the existing provider contract. Record what is trusted and what
+   was measured. Do not start implementing an ISA or vendor library.
+5. Otherwise issue a located refusal and record the exact unsupported form,
+   affected workloads and remedy. Hardware-specific or unspecified external
+   semantics are release exclusions. An unimplemented generic form is a
+   visible scope reduction/open full-coverage item, never a supported op.
+
+Performance intent is part of the decision. Retain the original tile/reuse/
+recurrence provenance on broader paths and report what structure survived.
+Do not quietly replace online attention with dense scores or change observable
+ordering. If only a materially different algorithm is available, offer it as an
+explicit alternative profile rather than claiming the original was preserved.
+
 ## Remaining execution sequence
 
-Five bounded work packages replace the previous open-ended sequence. The effort
-ceilings below are planning limits for one implementer, not promised calendar
-dates or a request for a long compute campaign. **Ten focused engineering days
-is the proposed implementation ceiling.** Each package ends in a reviewable
-commit, updated dispositions and exact evidence. Do not start a sixth package
-by finding another interesting variant.
+**Cap the remaining work at five focused engineering days (40 hours) for one
+implementer.**
+This replaces the earlier ten-day proposal; it is an effort cap, not a promised
+calendar delivery date or authorization for heavy compute. Preserve work already
+done: do not restart C0-C4 or rebuild the demo. Record actual effort and decisions
+in the release notes; a newly discovered problem does not reset the budget.
 
 The [authored policy ledger](v1_policy.json) now partitions all 50 definitions:
 49 mandatory generic operations and one optional source-assembly operation.
 Its semantic audit remains open; this is not a production allowlist.
-The [frozen acceptance manifest](../tests/data/v1_acceptance.json) names 94
-collected cases across K1-K12, M1-M7, negative boundaries and serial smoke,
-including hashes of its 26 fixture source files. The complete selection has
-not yet been executed. Existing broader regressions remain required.
+The [acceptance manifest](../tests/data/v1_acceptance.json) currently names 94
+cases across K1-K12, M1-M7, negative boundaries and serial smoke, including
+hashes of 26 fixture source files. A complete successful execution is still
+missing. Existing broader regressions remain required. Keep these 94 cases;
+add at most 34 expanded cases to cover the finite evidence gap, for a hard
+maximum of 128. Review and record every fixture/selection change before the
+final run. No growing dtype/shape Cartesian product.
 
-`scripts/check_v1_closure.py` remains planned C4 work. Generated run records
-belong under `out/v1-closure/<run>/`, including `summary.json`. Do not infer a
-release pass from either manifest, collected tests or operation-name counts.
+Finish the existing `scripts/check_v1_closure.py` draft; do not create a second
+release tool. Generated run records belong under `out/v1-closure/<run>/`.
+Do not infer a release pass from a manifest or operation-name counts.
 
-| Package | Ceiling | Concrete output and exit |
+| Checkpoint | Remaining effort | Concrete output and exit |
 | --- | --- | --- |
-| C0: freeze | 1 day | A tracked policy ledger covering all 50 `tt` definitions and admitted supporting forms, plus a fixed expanded manifest selected from existing fixtures. Each row has profile predicates, route, owner, evidence/counterexample and a reason for exclusion. Freeze the baseline tests and consumer/tool pins. No untriaged row. |
-| C1: safe default/public interface | 2 days | Resolve the uncommitted packet path safely; qualify default kernel and full-model staging, immutable weights, live buffer/scalar ports, every result and artifact-only execution. Explicitly record any slower fallback. No lifetime, alias or payload-accounting bypass. |
-| C2: contracts and memory/runtime escape routes | 2 days | Document/enforce the existing supported root/view/scalar/shape contracts; add only missing adapters needed by the frozen accepted cases. Check a good and a violating contract, dynamic replay, empty/zero-trip paths and allocation limits. Classify other relationships now. |
-| C3: numeric/effect/provider disposition | 2 days | Close the finite admitted profile list using existing conversions/providers; test their boundaries. Freeze backend-required/unsupported profiles for shared/async/physical/unknown-source behavior. No new ISA family, math library or theorem-prover project. |
-| C4: release qualification | 3 days | Run the frozen acceptance selection and relevant baseline regressions from final commits; publish complete counts, logs, package differences, limitations and reproduction instructions. Host execution plus bounded fresh serial smoke; independently report unavailable optional targets. |
+| 1. Finish the inventory and freeze | Day 1 | Land the already-tested layout fixture fix. Resolve the 20 missing source witnesses using existing fixtures first. For all 49 generic ops, write the exact supported type/attribute/effect profile, route and evidence or concrete gap. Freeze the final case roster, tool/consumer pins and contract fields. End with a finite gap list; no speculative new analyses. |
+| 2. Close only named gaps | Days 2-3 | Fix demonstrated failures in the frozen generic profiles using existing analysis, checked caller contracts or broader standard MLIR. Add a valid and violating case when introducing a contract. Retain immutable parameters, live state, all results and useful tiling/reuse. Finish the current checker. Resolve hardware/unknown-source cases by explicit disposition. |
+| 3. Run final qualification | Day 4 | Run every final acceptance case, the relevant baseline regression selection and the fixed serial smoke from recorded revisions. Reopen the two-transformer publication without evaluator files; compare both outputs on original, changed and zero inputs using one library. Record every failure, skip, fallback and refusal separately. |
+| 4. Correct once and deliver | Day 5 | Fix only release findings within the remaining budget. Rerun affected checks; rerun the full frozen selection if compiler/fixture changes invalidate its evidence. Publish the release check, gap/limitation inventory, packages and reproduction instructions. Deliver a closed release or an explicitly incomplete handoff, then stop expanding this roadmap. |
 
-A work item gets one bounded implementation attempt and one corrective attempt.
-If it exceeds its ceiling, choose a supported contract, qualified fallback or
-explicit exclusion **for hardware-specific behavior or missing external
-semantics**. Difficult generic computation must use a broader executable
-representation or remain an open blocker. A regression in previously
-qualified baseline behavior cannot be relabeled unsupported to get a green
-report. Fix it, retain the prior qualified default, or stop with a concrete
-release blocker and ask for an explicit scope/time decision. Do not silently
-extend the deadline or claim success.
+These checkpoints finish the existing C0-C4 obligations; they do not introduce
+new implementation tracks. A named gap gets one implementation attempt and one
+corrective attempt, each within the shared budget. If it cannot be closed,
+choose a qualified contract/fallback or explicitly record non-support. Do not
+spend another cycle polishing the same unqualified path.
 
-New kernels found after C0 are new-version requests unless they demonstrate a
-bug in an already-admitted profile. Existing regression suites remain required;
-the fixed release manifest limits new acceptance development, not regression
-obligations. A real accepted-profile bug may block release, but it must not
-restart an unlimited semantic-coverage campaign.
+For a generic gap, non-support must name the exact form and its practical
+impact, and the final report must say full generic closure was **not achieved**.
+This permits a usable bounded deliverable without changing the truth of the
+original goal. A previously qualified regression cannot be relabeled excluded
+to obtain a release pass. Keep its qualified default or report the blocker.
+
+New kernels do not automatically become new acceptance projects. A bug in an
+admitted profile is a release finding and uses the remaining budget; a new
+source version or excluded profile belongs in a separate proposal. Do not
+start a new backend, alias solver, general wrapper tracer, ISA provider or
+performance campaign to finish this release. If budget runs out, report what
+failed and the specific decision needed; do not silently extend the deadline.
 
 ## Frozen acceptance selection
 
@@ -243,10 +319,10 @@ A new required-case skip cannot hide behind those historical exceptions.
 
 ## Release check and handoff
 
-C0/C4 will add a small policy validator/report around existing
-`product-coverage`, `package-coverage` and public staging tests. These commands
-already exist; a release-policy validator does not exist yet. Do not call the
-old package observation count a closure result. The validator must check:
+Finish the small policy validator/report around existing `product-coverage`,
+`package-coverage` and public staging tests. Its local draft is not final
+qualification. Do not call a package observation count a closure result. The
+validator and final source/profile review must establish:
 
 1. The pinned definition set exactly equals the 50 policy entries; admitted
    supporting forms, attribute predicates and default exclusions are explicit.
@@ -271,9 +347,27 @@ costs and later target work. Each limitation explains why the source instruction
 is used, why portable lowering cannot implement it, the workloads where it
 appears and the available remediation. The two-transformer demo must pass
 complete results and changed-input replay through public Merlin compilation.
-Then stop this roadmap. No implicit requirement to
-support new source releases, arbitrary physical semantics or every accelerator
-remains attached to v1. Generic computation requirements remain mandatory.
+Then stop this roadmap. No implicit requirement to support new source releases,
+arbitrary physical semantics or every accelerator remains attached to v1.
+Generic computation requirements remain mandatory for the full-closure claim.
+
+If the effort cap arrives first, deliver the same artifacts with an
+**incomplete** status and a finite remaining-gap table. Do not claim v1 scope
+closed while a required gate fails. Each generic gap needs the source form,
+reproducer, failing stage, last attempt, available workaround, lost capability
+and next bounded action. Any proposal to reduce the original requested scope
+must name those differences explicitly.
+
+The handoff consists of:
+
+- Exact commits/tool pins and one reproducible command for the demo and checks.
+- Original TTIR, standard MLIR, source/intent provenance, ABI and complete
+  compiler-only packages, with model2MLIR differences stated.
+- A per-profile support table: direct, checked contract, fallback, excluded or
+  unfinished; separate execution evidence and counts, with no refusal-as-pass.
+- Complete logs/result summaries and original/changed/empty boundary evidence.
+- The limitation inventory: why used, why unsupported, likely workloads,
+  user-supplied information or workaround, and any performance-structure loss.
 
 Until those gates pass, the release is open. This document changes the completion
 contract and execution order; it does not itself complete the implementation.

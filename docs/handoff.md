@@ -1,12 +1,25 @@
 # Review handoff — updated 2026-11-21
 
-The first fixed release run is retained under
-`out/v1-closure/acceptance-initial/`: 26 pass, three f16 scalar-math failures,
-then stop at the configured failure limit. Do not count the other 65 as run.
-The mismatch was signaling-NaN clamp behavior in Merlin LLVM finalization.
-The generic fix has passed all twelve scalar dtype/memory-profile cases and
-one actual permanent Merlin native min/max program. See [scalar math](scalar_math.md)
-for exact logs and the remaining whole-selection/transport scope.
+The governing [completion plan](completion_plan.md#remaining-execution-sequence)
+now caps remaining effort at five focused engineering days, ending in a
+qualified release or an explicitly incomplete handoff. Reuse completed work.
+Do not restart the roadmap, expand the demo or begin another compiler framework.
+
+The latest fixed release attempt is retained under
+`out/v1-closure/acceptance-number-minmax/`: 69 passed, three stale-layout
+owned-result fixture setup errors, then stop. The other 22 cases were not run.
+The local fixture correction passed six focused host/serial checks; the complete
+94-case selection still needs a successful run. The earlier signaling-NaN
+clamp failure has a generic Merlin fix, twelve scalar dtype/memory-profile
+passes and a 2,600-pass/two-prerequisite-skip Merlin replay. See
+[scalar math](scalar_math.md) for the transport scope and retained first failure.
+
+The partial-run package audit has 29 generic original-TTIR names in
+Merlin-qualified packages, with 20 missing witnesses in that selection.
+[The finite gap table](completion_plan.md#the-finite-evidence-gap) names all 20
+and existing fixtures to reuse. These counts are observations, not semantic
+coverage or proof that 20 implementations are missing. Preserve the existing
+94 cases and add at most 34 missing-family cases before final qualification.
 
 New user requirements keep every generic/useful computation mandatory; hardware
 and assembly observations may be limitations. Do not use the older finite-plan
@@ -22,8 +35,10 @@ ragged/negative checks pass in `.scratch/automatic-transformer-tests.log`; the
 fresh artifact-only publication selection passes separately in
 `.scratch/automatic-transformer-publication.log`. The latter runs the 13-token
 model from only declared public artifacts with both outputs on three inputs.
-[Limitations](limitations.md) explain their uses, causes and remedies. C0 policy
-and acceptance-manifest work, generic gaps and final closure audit remain open.
+[Limitations](limitations.md) explain their uses, causes and remedies. The C0
+policy and 94-case manifest exist; their semantic evidence audit and complete
+release execution remain open. The local checker and five reader/refusal
+checks are drafted, not a completed closure verdict.
 
 Start with the [finite v1 closure plan](completion_plan.md). The user now permits
 checked extra information, qualified fallbacks and explicit non-support to bound

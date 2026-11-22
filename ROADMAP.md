@@ -10,8 +10,13 @@ integration and native/public Merlin host evidence, including ragged sequences
 and an artifact-only publication copy. This does not close the remaining ledger.
 
 Follow the [finite completion plan](docs/completion_plan.md), updated 2026-11-21.
-It defines a pinned support domain, five work packages, checked user contracts,
-qualified fallbacks, explicit exclusions and a release exit test. New accelerator
+It defines a pinned support domain, checked user contracts, qualified fallbacks,
+explicit exclusions and a release exit test. The remaining effort is capped at
+five focused engineering days: freeze the finite gap list; close only those
+gaps; qualify; correct once and deliver. Keep the existing 94 acceptance cases
+and add at most 34 missing-family witnesses. At the cap, deliver either a
+qualified release or an explicitly incomplete gap handoff; do not silently
+extend the effort or count excluded generic forms as support. New accelerator
 campaigns and arbitrary hardware observations are separate scope. A refused
 profile is never counted as portable support, but an explicitly excluded profile
 no longer creates an endless v1 implementation obligation.
