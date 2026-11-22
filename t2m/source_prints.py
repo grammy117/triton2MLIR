@@ -10,6 +10,7 @@ from xdsl.ir import Block, Region
 from xdsl.rewriter import Rewriter
 
 from .diagnostics import ConversionError
+from .standard_floats import _FP8_BY_NAME
 from .standard_vector import literal, scalar
 
 
@@ -27,8 +28,9 @@ def contract(op, source_id):
         type_ = operand.type
         shape = tuple(type_.get_shape()) if isinstance(type_,builtin.TensorType) else ()
         element = type_.element_type if isinstance(type_,builtin.TensorType) else type_
-        if any(n < 0 for n in shape) or element not in (builtin.i1,builtin.i8,builtin.i16,builtin.i32,builtin.i64,
-                                                        builtin.f16,builtin.bf16,builtin.f32,builtin.f64):
+        if any(n < 0 for n in shape) or element not in (
+                *(builtin.IntegerType(n) for n in (1,4,8,16,32,64)),
+                builtin.f16,builtin.bf16,builtin.f32,builtin.f64,*_FP8_BY_NAME.values()):
             refuse("print requires static numeric scalar/tensor values; physical pointers need a logical-address contract")
         shapes.append(list(shape));types.append(str(element))
     return {"source_ids":[source_id],"prefix":prefix.data,"hex":bool(hex_.value.data),
@@ -173,12 +175,23 @@ def expand_prints(module, source_ids, grid_rank, *, logical_pids=None):
                 integer_type = builtin.IntegerType(width)
                 bits = add(where,arith.BitcastOp(value,integer_type))
                 magnitude = add(where,arith.AndIOp(bits,number(where,(1 << (width-1))-1,integer_type)))
-                exponent = {builtin.f16:0x7c00,builtin.bf16:0x7f80,builtin.f32:0x7f800000,
-                            builtin.f64:0x7ff0000000000000}[value.type]
-                is_nan = add(where,arith.CmpiOp(magnitude,number(where,exponent,integer_type),"ugt"))
+                format_ = str(value.type)
+                unsigned_nan = format_.endswith("FNUZ")
+                if unsigned_nan:
+                    # FNUZ formats have a single NaN word where the signed
+                    # zero would have been. Its high bit is not a NaN sign.
+                    is_nan = add(where,arith.CmpiOp(bits,number(where,128,integer_type),"eq"))
+                elif format_ == "f8E4M3FN":
+                    is_nan = add(where,arith.CmpiOp(magnitude,number(where,127,integer_type),"eq"))
+                else:
+                    exponent = {builtin.f16:0x7c00,builtin.bf16:0x7f80,builtin.f32:0x7f800000,
+                                builtin.f64:0x7ff0000000000000,
+                                _FP8_BY_NAME["f8E5M2"]:0x7c}[value.type]
+                    is_nan = add(where,arith.CmpiOp(magnitude,number(where,exponent,integer_type),"ugt"))
                 nan,finite = Block(),Block()
-                negative = add(nan,arith.CmpiOp(bits,number(nan,0,integer_type),"slt"))
-                branch(nan,negative,lambda nested:string(nested,"-"))
+                if not unsigned_nan:
+                    negative = add(nan,arith.CmpiOp(bits,number(nan,0,integer_type),"slt"))
+                    branch(nan,negative,lambda nested:string(nested,"-"))
                 string(nan,"nan")
                 add(nan,scf.YieldOp())
                 if value.type in (builtin.f16,builtin.bf16):

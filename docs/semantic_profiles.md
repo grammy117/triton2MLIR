@@ -17,9 +17,11 @@ name nor native verification establishes that every type or composition works.
 
 ## Remaining implementation work
 
-The admission review produces **five named work items and eight exact
+The admission checkpoint identified **five named work items and eight exact
 native-verified witnesses** in the [generic-gap ledger](../tests/data/v1_generic_gaps.json).
-These are generic computation/interface failures. They cannot be removed by
+Low-precision diagnostics are now qualified through four complete public programs;
+**four work items and six witnesses remain open**. These are generic
+computation/interface failures. They cannot be removed by
 classifying them as GPU instructions or by counting their refusals as support.
 
 | Work item | Demonstrated failure | Existing material and bounded next action | Attempt ceiling |
@@ -27,7 +29,7 @@ classifying them as GPU instructions or by counting their refusals as support.
 | Public i4 storage | Direct i4 atomic add cannot construct its public tensor ABI. Native i4 updates/CAS and adjacent cells already pass. | Reuse byte carriers, checked tensor storage and the existing source-width byte-CAS loop. Declare cell versus packed-nibble representation explicitly, guard its domain and qualify actual public execution. | 3 hours |
 | FP8 arithmetic and accumulator profiles | A legal clamp/div/sqrt chain emits standard MLIR, then native legalization fails on FP8 `math.sqrt`. A legal FP8 `dot_scaled` accumulator is rejected by frontend admission. | Reuse exact FP8 widening/narrowing and the low-precision native emulation seam. Keep every source rounding boundary, original C and contraction reuse. Do not narrow the operands before their original product or widen the entire recurrence without rounding back. | 4 hours |
 | FP8 atomic addition | Native-valid `tt.atomic_rmw fadd` on FP8 is refused without an implemented update policy. | Reuse half/BF16 per-event numeric profiles and checked integer/byte-CAS helpers. Implement actual FP8 rounding, overflow and NaN behavior; retain every old word. | 4 hours |
-| Low-precision diagnostic values | Numeric `tt.print` refuses internal i4 and FP8 values even when public storage already has a supported carrier. | Extend the existing logical formatter from actual type/format facts, preserving typed hex, NaN classification/sign, signedness, source control and complete streams. | 1 hour |
+| Low-precision diagnostic values — qualified | The original internal i4/FP8 print refusals remain in the resolved ledger. | Existing logical formatting and exact widening now preserve all words, streams, signedness, source control and both outputs through four public libraries. The native pure tensor carrier is also qualified. General FP8 arithmetic remains separate. | Closed within the 1-hour attempt |
 | Entry value bindings | A selected value-returning i32 entry is refused. A void entry with a by-value f16 input cannot construct its runtime scalar binding. | Extend the existing checked source wrapper/allocation interface with explicit scalar-storage inputs and returned-value output ports. Reuse actual helper bodies, native inlining and the existing tensor ABI; avoid assuming a low-precision native by-value ABI. | 3 hours |
 
 These are ceilings within the original forty-hour budget, not new budgets or

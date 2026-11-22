@@ -16,8 +16,9 @@ Assembly/hardware behavior has explicit exclusions. The
 generic work items with exact reproducers and per-item attempt ceilings, all
 within the original forty-hour cap. Those work items do not replace the full
 generic-computation requirement: unresolved generic forms mean incomplete
-closure. The measurements below describe delivered capabilities; the release
-is not closed yet.
+closure. Low-precision printing is now qualified; four named items remain open.
+The measurements below describe delivered capabilities; the release is not
+closed yet.
 
 [Public Merlin staging](docs/repository_layout.md) accepts standalone
 tensor/effect packages through `StagedProgram` and `MerlinHostBackend`, retaining

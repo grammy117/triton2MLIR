@@ -25,7 +25,7 @@ from the original full-generic-coverage requirement.
 | --- | --- | --- |
 | Public Merlin interface | Kernel and bound-model staging, preparation and whole-body host execution exist. | Qualify the final selected packages from final revisions; retain explicit model2MLIR package differences. |
 | Required two-transformer demo | Implemented: ordinary PyTorch block followed by one real Triton block, actual launch discovered automatically. Native/public host and artifact-only ragged replay have passed. | Include the existing demo in final acceptance and publish its reproduction command, source, MLIR and limitations. No new model architecture is required. |
-| Source/profile inventory | All 50 pinned definitions have admission, semantic fields, caller contracts and complement rules in the reviewed ledger: 49 generic and optional assembly. Eight native-verified witnesses identify five generic work items. | Close the named items and join final typed/profile evidence to actual source-to-Merlin packages/results. The reviewed ledger is not an execution or universal coverage verdict. |
+| Source/profile inventory | All 50 pinned definitions have admission, semantic fields, caller contracts and complement rules in the reviewed ledger. The five-item backlog has one qualified item: low-precision printing. Four generic work items with six native-verified witnesses remain. | Close the remaining named items and join final typed/profile evidence to actual source-to-Merlin packages/results. The reviewed ledger is not an execution or universal coverage verdict. |
 | Frozen integration selection | All 107 preceding cases passed together with no skips/failures at `2290fb5`; retained under `out/v1-closure/acceptance-107/`. The source review then found narrow histogram/gather admission gaps. Their fix passed eighteen new public-interface checks and ten affected regressions. | The updated compiler and 128-case selection still need final whole-selection qualification after the profile audit. Retain the 107-case result as the preceding baseline, not the final candidate verdict. |
 | Known numeric regression | Signaling-NaN min/max correction passed all 12 scalar format/memory-profile checks and the Merlin replay: 2,600 passed, two pre-existing prerequisite skips. | Qualify the final public Python transport; keep separately selected stock-CLI transport outside this claim. |
 | Release checker | Implemented CLI with six reader/refusal checks. It rejects incomplete execution, absent semantic qualification and missing baseline custody. | Populate actual final evidence and complete semantic qualification. The checker is not itself a completed release audit. |
@@ -89,9 +89,11 @@ i4 updates also pass; this does not establish a public i4 storage contract.
 
 The admission review now records five bounded work items: public i4 storage,
 FP8 arithmetic/accumulators, FP8 atomic addition, low-precision diagnostics and
-entry value bindings. The [review and attempt ceilings](semantic_profiles.md)
-name eight native-verified witnesses, current contracts and concrete reuse
-paths. Exact sources, bindings, verifier identities and failures remain in the
+entry value bindings. Low-precision diagnostics now pass four complete public
+programs with exact values, words and streams; four items remain open. The
+[review and attempt ceilings](semantic_profiles.md) retain the original eight
+native-verified witnesses, current contracts and concrete reuse paths. Exact
+sources, bindings, verifier identities and failures remain in the
 ledger. These are generic numeric/storage/interface gaps, not GPU exclusions.
 Reuse checked carriers and executable expansions; a final cast cannot replace
 per-update source-width arithmetic. If unresolved at the original effort cap,
@@ -296,7 +298,7 @@ gap ledger, even if all acceptance cases pass or an audit claims closure.
 
 | Checkpoint | Remaining effort | Concrete output and exit |
 | --- | --- | --- |
-| 1. Finish the inventory and freeze | Day 1 | Admission review, layout correction and all twenty missing operation witnesses are done; 128 cases are frozen. The finite backlog is five named work items with eight exact native-verified witnesses. Final evidence joins remain open; no speculative new analyses. |
+| 1. Finish the inventory and freeze | Day 1 | Admission review, layout correction and all twenty missing operation witnesses are done; 128 cases are frozen. The finite backlog began with five named items/eight witnesses; low-precision printing is qualified and four items/six witnesses remain open. Final evidence joins remain open; no speculative new analyses. |
 | 2. Close only named gaps | Days 2-3 | Use the per-item ceilings in the reviewed backlog, existing analysis, checked caller contracts or broader standard MLIR. Add a valid and violating case when introducing a contract. Retain immutable parameters, live state, all results and useful tiling/reuse. Resolve hardware/unknown-source cases by explicit disposition. |
 | 3. Run final qualification | Day 4 | Run every final acceptance case, the relevant baseline regression selection and the fixed serial smoke from recorded revisions. Reopen the two-transformer publication without evaluator files; compare both outputs on original, changed and zero inputs using one library. Record every failure, skip, fallback and refusal separately. |
 | 4. Correct once and deliver | Day 5 | Fix only release findings within the remaining budget. Rerun affected checks; rerun the full frozen selection if compiler/fixture changes invalidate its evidence. Publish the release check, gap/limitation inventory, packages and reproduction instructions. Deliver a closed release or an explicitly incomplete handoff, then stop expanding this roadmap. |

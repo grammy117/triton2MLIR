@@ -11,6 +11,36 @@ literal prefixes, source control positions and logical coordinates remain
 executable. `prov.source_prints` and source/emission IDs retain the composite
 intent; removing provenance does not change the output.
 
+## Low-precision values and exact word transport
+
+The logical profile also supports internal i4 and all four pinned FP8 formats.
+I4 decimal uses the source signedness (signed -8..7 or unsigned 0..15); hex
+prints the original nibble. FP8 hex keeps the original byte, including NaNs and
+signed zeros. Decimal formatting classifies the original word before widening
+finite values exactly to f64. E4M3FN/E5M2 NaNs retain their source sign; FNUZ's
+unique unsigned NaN prints `nan`, while its hex word remains `0x80`.
+
+This reuses the existing exact FP8 widening and scalar diagnostic features.
+Merlin additionally accepts native-verified `tensor.from_elements` as pure
+value transport, so a scalar load can form a tensor before an element is
+widened. It preserves original values and grants no general FP8 arithmetic,
+opaque-call or new effect permission. The exported body remains standard MLIR.
+
+Four complete programs in `tests/test_low_precision_prints.py` pass through
+public `StagedProgram` compilation. Each checks all 256 FP8 words, signed and
+unsigned i4 values, exact streams, both complete outputs and caller immutability.
+The loaded value is reused under original loop/branch control. Five original,
+changed, ragged, zero-trip and empty invocations reuse one library per format,
+with evaluator arrays/references excluded from compiler staging. Seventeen
+selected existing diagnostic checks and 67 native FP8 cast/composition checks
+also pass. A separate native program retains dynamic tensor selection, finite
+values, a subnormal and FNUZ's unique NaN. These are host/interface measurements,
+not GPU printf equivalence or accelerator performance.
+
+Public ABI and receipt schemas stay unchanged. FP8 still uses its raw uint8
+archive carrier. Internal i4 printing does not introduce a public i4 pointer or
+native by-value ABI; those remain separate closure work.
+
 ## Reuse and the hardware boundary
 
 Triton `f797708c0626e5f9840ca5b0a98790e2c7cb09ad` supplies the primary semantics:
@@ -56,9 +86,10 @@ Print-before-assert order and zero-trip/untaken source regions remain executable
 Signed integers widen with their source sign. Unsigned64 decimal conversion
 uses bounded modular unsigned division with no float conversion; hex uses
 explicit word bitcasts/shifts and literal digits. Floating hex retains the
-original f16/BF16/f32/f64 words, including NaN payloads and signed zero.
-Decimal f16/BF16/f32 widen to f64; the selected software profile prints six
-fixed decimal places, infinities and signed NaNs in the C numeric locale.
+original words of all eight pinned float formats, including NaN payloads and
+signed zero where defined. Narrower decimal floats widen exactly to f64;
+the selected software profile prints six fixed decimal places, infinities and
+defined NaN signs in the C numeric locale.
 This fixed formatting is an explicit implementation profile of standard
 human-readable `vector.print`; the stock MLIR runner-utils float formatter
 uses a different decimal representation.

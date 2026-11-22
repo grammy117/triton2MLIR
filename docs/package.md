@@ -1,5 +1,12 @@
 # Package contract and explicit model2MLIR differences
 
+[Low-precision logical printing](logical_prints.md#low-precision-values-and-exact-word-transport)
+adds i4 signedness and exact FP8/i4 words to the existing diagnostic profile.
+FP8 decimal uses exact widening and defined source NaN signs; FNUZ's unique
+unsigned NaN prints `nan`. Native consumers need pure tensor-value transport
+in the existing FP8 widening feature. Public ABI and receipt schemas remain
+unchanged; this supplies neither a public i4 pointer ABI nor general FP8 math.
+
 [Boolean atomics](atomic_memory.md#boolean-integer-source-words) retain the
 existing canonical Boolean tensor carrier and logical i1 updates in standard
 memref computation. Native consumers need the checked byte-CAS/pure-integer

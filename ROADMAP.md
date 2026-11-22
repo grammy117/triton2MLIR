@@ -22,8 +22,9 @@ names in Merlin-executed packages. The [source/profile admission review](docs/se
 now records all definitions, actual semantic fields, caller contracts and
 complement rules. Eight native-verified witnesses freeze five bounded work
 items: public i4 storage, FP8 arithmetic/accumulators, FP8 atomic addition,
-low-precision diagnostics and entry value bindings. Semantic qualification
-and full closure remain open.
+low-precision diagnostics and entry value bindings. Low-precision diagnostics
+are now qualified through four public programs; four items remain open.
+Final semantic qualification and full closure remain open.
 Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
 format regressions with exact old/new words. Boolean atomics now pass a full
 public-interface program with nine updates and both CAS outcomes. Native i4

@@ -64,7 +64,7 @@
       "requirement": "Expand logical descriptor fields to checked loads/stores/reductions; retain tiling and declared root/stride/padding. Physical descriptor bytes are separate."
     },
     "diagnostics": {
-      "audit": "source-admission-reviewed-generic-gaps-open",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "effect_abi.md",
       "generic_gaps": "release-blockers",
       "requirement": "Retain complete strings/values, source placement, termination and observable streams under the declared logical profile."

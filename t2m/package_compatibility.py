@@ -7,6 +7,7 @@ from .memory_contract import (
     TENSOR_PROFILE,
     WORD_PROFILE,
 )
+from .standard_floats import FP8_TYPE_NAMES
 
 
 def kernel_representation_differences(trace, *, dynamic=False):
@@ -263,6 +264,16 @@ def kernel_representation_differences(trace, *, dynamic=False):
             differences.append("portable BF16 scalar math retains its source types; the selected host may require Merlin's explicit emulate_bfloat_elementwise feature, upstream scalar arithmetic emulation and BF16 rounding casts, followed by the unchanged word-transport feature; storage and public tensor ABI remain two-byte BF16")
     if any(t.get("kind") == "source-logical-print-events" for t in transformations):
         differences.append("source print events use standard vector.print and SCF value/control flow, once per logical program/operand/element in operand-row-major order; physical thread replicas/interleaving are abstracted; source prefixes are literal data; integer signedness, exact unsigned64 and raw floating/integer hex words remain executable; floating hex is an explicit original-typed-word software profile, without a GPU varargs byte-equivalence claim; the selected software profile uses six fixed decimal places, C numeric locale and Merlin's explicit lower_scalar_diagnostics feature; pointers need a separate logical-address contract and accelerator handling remains unqualified; public tensor/scalar/void ABI is unchanged")
+        if any(type_ in ("i4", *FP8_TYPE_NAMES) for transformation in transformations
+               if transformation.get("kind") == "source-logical-print-events"
+               for event in transformation["prints"] for type_ in event["operand_types"]):
+            differences.append(
+                "low-precision logical prints retain i4 signedness and exact original FP8/i4 hex words; "
+                "decimal FP8 uses exact finite widening, original signed NaN classification where defined, "
+                "and nan for FNUZ's unique unsigned NaN; native consumers require the existing FP8 widening "
+                "feature with pure tensor.from_elements transport; public tensor/scalar ABI and receipt "
+                "schemas are unchanged, and this adds no general FP8 arithmetic or device printf claim"
+            )
     if any(t.get("kind") == "source-fail-stop-assertions" for t in transformations):
         differences.append("source assertions use upstream scalar/lane-wise standard cf.assert at original control positions, with source condition/message IDs retained; failing native invocations print literal diagnostics and abort using the evaluator's libc stdout/setbuf transport; the public tensor/scalar ABI is unchanged")
         if any("\x00" in assertion["message"] for t in transformations if t.get("kind") == "source-fail-stop-assertions"

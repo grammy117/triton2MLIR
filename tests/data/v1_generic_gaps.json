@@ -225,6 +225,142 @@
           "source_sha256": "c962f4b775bbb10a16e694b2c7dc6d6e8f2a01fe57337ef479b5ff345565f962"
         }
       ]
+    },
+    {
+      "id": "low-precision-diagnostic-values",
+      "kind": "missing-generic-diagnostic-formatting",
+      "resolution": {
+        "affected_frontend_log": {
+          "bytes": 115,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/low-precision-print-regressions.log",
+          "sha256": "35b5b52a0caf8b614ec64db7243e2d14b942995d37a22ea782355f65822119e9"
+        },
+        "consumer_commit": "999a13b6620c649bb7513fb105dd737256bee9ef",
+        "contract": "docs/logical_prints.md#low-precision-values-and-exact-word-transport",
+        "native_cast_regression_log": {
+          "bytes": 99,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/fp8-diagnostic-cast-regressions.log",
+          "sha256": "2b24d897dcf8af29cc555e35771a16449f60c4fa78149322821043e87add65e7"
+        },
+        "native_value_transport_log": {
+          "bytes": 98,
+          "path": "/scratch/grammy/blast/merlin-graph-proof-intake/out/build/fp8-value-transport-native.log",
+          "sha256": "b632ba3b5d75d336650a26fbf5403abf707ec37cfb411ae61bc5620f7427d6ca"
+        },
+        "public_case": "tests/test_low_precision_prints.py::test_all_fp8_words_and_internal_i4_keep_exact_streams_and_outputs",
+        "public_formats": [
+          "f8E4M3FN",
+          "f8E4M3FNUZ",
+          "f8E5M2",
+          "f8E5M2FNUZ"
+        ],
+        "public_log": {
+          "bytes": 109,
+          "path": "/scratch/grammy/blast/triton2MLIR/.scratch/low-precision-prints-carriers.log",
+          "sha256": "040ff8b7b347a4a5dd37acb446d9d2bafab163b6f17c897a4eb53fabf5c848b1"
+        },
+        "qualification": "Four complete public StagedProgram programs, all 256 FP8 words, both exact outputs and full streams, five original/changed/ragged/zero-trip/empty invocations per library. Seventeen selected existing frontend checks, 67 native cast/composition checks and one new native program pass. Not a general FP8 arithmetic or GPU printf equivalence claim.",
+        "route": "Existing logical formatter plus exact finite FP8 widening, typed word/NaN classification and pure tensor.from_elements transport. I4 retains source signedness; FP8 FNUZ unique NaN prints nan, other NaNs retain defined source sign. Hex and copied outputs retain exact original words."
+      },
+      "route": "Extend the existing logical-element formatter using actual integer width/float-format facts and exact word classification. Reuse the FP8 widening implementation for finite decimal values; keep original words for hex and NaN classification.",
+      "stopping_decision": "One bounded formatter extension and full-stream qualification. Otherwise list exact refused types and explicit source widening/word-bitcast print workarounds, with the lost typed-format observation stated.",
+      "why_used": "Debugging kernels with internal i4 values or FP8 tensors, especially quantization/packing and low-precision numerical diagnosis. This concerns logical values and words, not device printf thread scheduling.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "i8",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "i8",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "typed_print"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "7252e0eb71e091d7dd2f62d4cf06ece6987ae820be55f037bea0e02451f1a4d2",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0003 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.print",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @typed_print(%x:!tt.ptr<i8>,%out:!tt.ptr<i8>) {\n   %loaded=tt.load %x:!tt.ptr<i8>\n   %v=arith.trunci %loaded:i8 to i4\n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %v:i4\n   tt.store %out,%loaded:!tt.ptr<i8>\n   tt.return\n  }}",
+          "source_dtype": "i4",
+          "source_sha256": "237f943c897b03160e185b63e80d9f751010a2955815d37aa42197b15d1c428d"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "typed_print"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "dcbacb58e965ba69cb7396778c51c62274d94205257eac9fbc981d9a53fcbd17",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0002 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.print",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @typed_print(%x:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n   %loaded=tt.load %x:!tt.ptr<f8E4M3FN>\n   \n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %loaded:f8E4M3FN\n   tt.store %out,%loaded:!tt.ptr<f8E4M3FN>\n   tt.return\n  }}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "b9f585dbe6c578bfb80581230d2b76f6c254977532f323a42146527dfe65c4fe"
+        }
+      ]
     }
   ],
   "definitions": {
@@ -518,109 +654,6 @@
           "source": "module {tt.func public @typed_add(%state:!tt.ptr<f8E4M3FN>,%value:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n   %v=tt.load %value:!tt.ptr<f8E4M3FN>\n   %old=tt.atomic_rmw fadd, relaxed, gpu, %state, %v:(!tt.ptr<f8E4M3FN>,f8E4M3FN)->f8E4M3FN\n   tt.store %out,%old:!tt.ptr<f8E4M3FN>\n   tt.return\n  }}",
           "source_dtype": "f8E4M3FN",
           "source_sha256": "fac5b83ded8c8d149ee14963c28b3ac6c90d9a470876e7c6c78c559dafaf3073"
-        }
-      ]
-    },
-    {
-      "id": "low-precision-diagnostic-values",
-      "kind": "missing-generic-diagnostic-formatting",
-      "route": "Extend the existing logical-element formatter using actual integer width/float-format facts and exact word classification. Reuse the FP8 widening implementation for finite decimal values; keep original words for hex and NaN classification.",
-      "stopping_decision": "One bounded formatter extension and full-stream qualification. Otherwise list exact refused types and explicit source widening/word-bitcast print workarounds, with the lost typed-format observation stated.",
-      "why_used": "Debugging kernels with internal i4 values or FP8 tensors, especially quantization/packing and low-precision numerical diagnosis. This concerns logical values and words, not device printf thread scheduling.",
-      "witnesses": [
-        {
-          "bindings": {
-            "buffers": [
-              {
-                "dtype": "i8",
-                "effect": "read",
-                "name": "x",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "i8",
-                "effect": "write",
-                "name": "out",
-                "shape": [
-                  1
-                ]
-              }
-            ],
-            "entry": "typed_print"
-          },
-          "native_verification": {
-            "binding_binary": {
-              "bytes": 461559216,
-              "distribution_version": "3.7.1",
-              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
-              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
-            },
-            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-            "inventory_sha256": "7252e0eb71e091d7dd2f62d4cf06ece6987ae820be55f037bea0e02451f1a4d2",
-            "returncode": 0,
-            "triton_version": "3.7.1",
-            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
-          },
-          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
-          "observed_refusal": "ttir.op.0003 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
-          "observed_stage": "frontend-admission",
-          "operation": "tt.print",
-          "selection": {
-            "address_policy": "source-words",
-            "memory_profile": "guarded-buffer"
-          },
-          "source": "module {tt.func public @typed_print(%x:!tt.ptr<i8>,%out:!tt.ptr<i8>) {\n   %loaded=tt.load %x:!tt.ptr<i8>\n   %v=arith.trunci %loaded:i8 to i4\n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %v:i4\n   tt.store %out,%loaded:!tt.ptr<i8>\n   tt.return\n  }}",
-          "source_dtype": "i4",
-          "source_sha256": "237f943c897b03160e185b63e80d9f751010a2955815d37aa42197b15d1c428d"
-        },
-        {
-          "bindings": {
-            "buffers": [
-              {
-                "dtype": "f8E4M3FN",
-                "effect": "read",
-                "name": "x",
-                "shape": [
-                  1
-                ]
-              },
-              {
-                "dtype": "f8E4M3FN",
-                "effect": "write",
-                "name": "out",
-                "shape": [
-                  1
-                ]
-              }
-            ],
-            "entry": "typed_print"
-          },
-          "native_verification": {
-            "binding_binary": {
-              "bytes": 461559216,
-              "distribution_version": "3.7.1",
-              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
-              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
-            },
-            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
-            "inventory_sha256": "dcbacb58e965ba69cb7396778c51c62274d94205257eac9fbc981d9a53fcbd17",
-            "returncode": 0,
-            "triton_version": "3.7.1",
-            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
-          },
-          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
-          "observed_refusal": "ttir.op.0002 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
-          "observed_stage": "frontend-admission",
-          "operation": "tt.print",
-          "selection": {
-            "address_policy": "source-words",
-            "memory_profile": "guarded-buffer"
-          },
-          "source": "module {tt.func public @typed_print(%x:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n   %loaded=tt.load %x:!tt.ptr<f8E4M3FN>\n   \n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %loaded:f8E4M3FN\n   tt.store %out,%loaded:!tt.ptr<f8E4M3FN>\n   tt.return\n  }}",
-          "source_dtype": "f8E4M3FN",
-          "source_sha256": "b9f585dbe6c578bfb80581230d2b76f6c254977532f323a42146527dfe65c4fe"
         }
       ]
     },
