@@ -18,12 +18,17 @@ original 94 cases, thirteen family witnesses, eighteen narrow-index checks
 and three atomic programs;
 the hard cap remains 128. The preceding 107-case selection passed in full.
 All twenty missing operation witnesses have been recovered, with all 49 generic
-names in Merlin-executed packages. Semantic/profile closure remains open.
+names in Merlin-executed packages. The [source/profile admission review](docs/semantic_profiles.md)
+now records all definitions, actual semantic fields, caller contracts and
+complement rules. Eight native-verified witnesses freeze five bounded work
+items: public i4 storage, FP8 arithmetic/accumulators, FP8 atomic addition,
+low-precision diagnostics and entry value bindings. Semantic qualification
+and full closure remain open.
 Direct f16/BF16/FP8 exchange additionally passes six focused public-interface
 format regressions with exact old/new words. Boolean atomics now pass a full
 public-interface program with nine updates and both CAS outcomes. Native i4
-arithmetic passes, while its public storage contract and the remaining
-typed/storage review are open; the frozen acceptance roster stays at 128.
+arithmetic passes, while its public storage contract and final typed/storage
+qualification are open; the frozen acceptance roster stays at 128.
 At the effort cap, deliver either a
 qualified release or an explicitly incomplete gap handoff; do not silently
 extend the effort or count excluded generic forms as support. New accelerator

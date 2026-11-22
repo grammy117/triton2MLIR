@@ -11,9 +11,13 @@ automatic-adapter boundaries and the generic work still required for closure.
 The [finite v1 closure plan](docs/completion_plan.md) now governs the remaining
 work: freeze the source/support profile, qualify the public Merlin interface,
 and close generic forms through checked contracts or disclosed fallbacks.
-Assembly/hardware behavior has explicit exclusions. Five bounded work packages
-replace the previous universal coverage requirement. The measurements below describe delivered capabilities;
-they do not expand the v1 backlog. The release is not closed yet.
+Assembly/hardware behavior has explicit exclusions. The
+[source admission review](docs/semantic_profiles.md) now freezes five named
+generic work items with exact reproducers and per-item attempt ceilings, all
+within the original forty-hour cap. Those work items do not replace the full
+generic-computation requirement: unresolved generic forms mean incomplete
+closure. The measurements below describe delivered capabilities; the release
+is not closed yet.
 
 [Public Merlin staging](docs/repository_layout.md) accepts standalone
 tensor/effect packages through `StagedProgram` and `MerlinHostBackend`, retaining

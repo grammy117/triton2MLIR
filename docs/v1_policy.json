@@ -28,97 +28,97 @@
   "generic_gap_ledger": "tests/data/v1_generic_gaps.json",
   "groups": {
     "assembly": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "source_assembly.md",
       "generic_gaps": "release-blockers",
       "requirement": "Assembly is optional. Refuse absent semantics with source location; a selected provider must emit qualified executable computation and explicit effects."
     },
     "atomics": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "atomic_memory.md",
       "generic_gaps": "release-blockers",
       "requirement": "Retain old/final values, collisions and declared scope/order; generic atomics need executable effects. External participants/publication require an execution contract."
     },
     "casts": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "float_casts.md",
       "generic_gaps": "release-blockers",
       "requirement": "Implement defined storage and arithmetic formats with source rounding/overflow/NaN rules; retain exact bits for transport."
     },
     "combiners": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "reductions.md",
       "generic_gaps": "release-blockers",
       "requirement": "Preserve the actual combiner, captures, tuple/result order, initialization and permitted arithmetic order; no invented neutral value."
     },
     "contractions": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "dot_precision.md",
       "generic_gaps": "release-blockers",
       "requirement": "Keep original C, contraction tiles, K reuse, scaling/packing and named numeric policy; use standard software expansions where needed."
     },
     "descriptors": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "external_descriptors.md",
       "generic_gaps": "release-blockers",
       "requirement": "Expand logical descriptor fields to checked loads/stores/reductions; retain tiling and declared root/stride/padding. Physical descriptor bytes are separate."
     },
     "diagnostics": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "effect_abi.md",
       "generic_gaps": "release-blockers",
       "requirement": "Retain complete strings/values, source placement, termination and observable streams under the declared logical profile."
     },
     "external": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "external_math.md",
       "generic_gaps": "release-blockers",
       "requirement": "Implement the generic call with an actual typed function definition/provider. Missing symbol semantics need user implementation; a name is not an arithmetic definition."
     },
     "functions": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "model_integration.md",
       "generic_gaps": "release-blockers",
       "requirement": "Preserve helper calls/returns and complete public value/effect ABI; use standard func/CF where inlining is unsuitable."
     },
     "gather": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "scalar_tile_reads.md",
       "generic_gaps": "release-blockers",
       "requirement": "Use checked tensor extraction for logical queries, retaining loaded-value snapshots and masks."
     },
     "histogram": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "numeric_regions.md",
       "generic_gaps": "release-blockers",
       "requirement": "Implement generic indexed count state and exact masks with the source integer semantics."
     },
     "logical-domain": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "dynamic_shapes.md",
       "generic_gaps": "release-blockers",
       "requirement": "Preserve the logical grid, runtime dimensions and source-width index arithmetic independently of device mapping."
     },
     "logical-memory": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "checked_memory_continuation.md",
       "generic_gaps": "release-blockers",
       "requirement": "Use structured tensors or guarded logical roots/offsets/SSA; masks, fill, initialization and ordered effects remain executable. Physical address escapes need a backend contract."
     },
     "maps": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "packed_maps.md",
       "generic_gaps": "release-blockers",
       "requirement": "Retain complete generic regions and valid source groups, captured reads and control. A hardware layout proof is not needed for independent logical slots."
     },
     "scalar-numeric": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-generic-gaps-open",
       "contract": "scalar_math.md",
       "generic_gaps": "release-blockers",
       "requirement": "Preserve typed value semantics, precision and widths with executable standard arithmetic or qualified software implementation."
     },
     "tile-shapes": {
-      "audit": "pending-final-source-and-consumer-evidence",
+      "audit": "source-admission-reviewed-final-evidence-open",
       "contract": "tensor_regions.md",
       "generic_gaps": "release-blockers",
       "requirement": "Preserve logical coordinates, storage words and all control/region compositions; layouts do not grant physical aliases."
@@ -380,6 +380,7 @@
   "purpose": "Release obligations and evidence ledger; never a production kernel/op allowlist or a coverage proof.",
   "required_demo": "ordinary PyTorch transformer block followed by automatically integrated full Triton transformer block",
   "schema": "t2m.release-policy.v1",
+  "source_profile_review": "semantic_profiles.json",
   "supporting_dialects": {
     "generic_computation": "mandatory within verified pre-layout source; unknown or unimplemented valid generic forms remain gaps",
     "note": "Dialect membership alone grants no operation/type/attribute/effect admission. Use the existing structural verifier and source/effect accounting.",

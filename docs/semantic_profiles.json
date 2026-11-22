@@ -1,0 +1,1953 @@
+{
+  "common_admission": {
+    "composition": "Every descendant and semantic field still needs its actual conversion/effect/numeric contract; a supported parent operation does not admit unknown nested behavior.",
+    "float_types": [
+      "f16",
+      "bf16",
+      "f32",
+      "f64",
+      "f8E4M3FN",
+      "f8E4M3FNUZ",
+      "f8E5M2",
+      "f8E5M2FNUZ"
+    ],
+    "integer_types": [
+      "i1",
+      "i4",
+      "i8",
+      "i16",
+      "i32",
+      "i64"
+    ],
+    "qualification": "Source admission, standard MLIR conversion, native legalization, complete execution and accelerator performance are distinct evidence statuses.",
+    "resources": "Finite declared domains and budgets are enforced, rather than specializing from evaluator data or silently dropping work.",
+    "source": "Native-verified pre-layout Triton v3.7.1, original operation inventory retained before normalization. Names alone do not grant types, attributes, effects or implementations.",
+    "storage": "Public tensor carriers cover all pinned numeric formats except i4; internal i4 arithmetic/casts exist. By-value runtime scalars currently cover f32/f64/i1/i8/i16/i32/i64. Low-precision scalar inputs can be supplied as declared one-element storage where the source signature permits it; no implicit ABI rewrite is claimed.",
+    "structure": "Keep logical launch/tile/reuse/recurrence/control and actual effects executable. Physical placement, coalescing/cache hints and hardware mappings can remain descriptive only when values/effects do not change."
+  },
+  "complement_rule": {
+    "external_or_physical": "Unknown external implementations, inline assembly, physical device/address observations and post-layout instructions require a provider or are explicit limitations.",
+    "invalid_source": "Only a pinned native verifier failure establishes invalid source; a bad ABI is an invalid/missing contract instead.",
+    "missing_information": "Request actual storage/shape/layout/numeric/effect facts through existing bindings, then independently validate them or emit dominating guards.",
+    "unmeasured": "An untested typed/composition form is unmeasured; neighboring operation-name evidence is insufficient. No claim of universal Cartesian coverage follows.",
+    "valid_generic_failure": "An unimplemented defined computation or ABI/native transport remains a generic gap; try broader standard computation and retain the exact reproducer."
+  },
+  "confirmed_generic_gap_ids": [
+    "subbyte-atomic-storage",
+    "fp8-generic-arithmetic",
+    "fp8-atomic-addition",
+    "low-precision-diagnostic-values",
+    "public-value-entry-binding"
+  ],
+  "definitions": {
+    "bytes": 50703,
+    "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+    "release": "v3.7.1",
+    "repository": "https://github.com/triton-lang/triton",
+    "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+    "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+  },
+  "families": {
+    "assembly": {
+      "admission": "Optional separately selected source-language providers must emit actual standard computation with complete source, dependencies, type, packing and effect contracts; default intake refuses original inline assembly.",
+      "caller_contracts": [
+        "Explicit selected semantic provider where available; source layout facts for coupled packing"
+      ],
+      "candidate_workflows": [
+        "K10"
+      ],
+      "complement": "Unknown assembly/device observations and missing provider semantics are explicit allowed exclusions. A purity string, instruction mnemonic or provenance supplies no computation. No ISA implementation is required for generic TTIR closure.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/shared_tensor.py",
+          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "atomics": {
+      "admission": "Selected private-invocation i1/i8/i16/i32/i64 nine-kind RMW and CAS retain all old/final values, masks, collisions, source scope/order and source-width arithmetic. Typed exchange covers all eight pinned float formats. Named f16/BF16/f64 and IEEE/FTZ f32 additions retain each update rounding. Existing integer word/ordered-byte views preserve actual owning storage and alignment.",
+      "caller_contracts": [
+        "effect_profile atomics or typed-atomics and actual private invocation ownership",
+        "Explicit f32 addition policy; source order/scope; actual state/results",
+        "Explicit byte order/alignment and owning allocation for byte/typed views"
+      ],
+      "candidate_workflows": [
+        "K11",
+        "K12",
+        "M4",
+        "M6"
+      ],
+      "complement": "i4 source words lack public storage/admission. FP8 floating addition lacks an implemented named update policy. Both are generic gaps. Automatic integer RMW/CAS on BF16/FP8 owning roots remains unqualified; checked raw owning-allocation bindings are a candidate route. External participants, race-sensitive publication or device completion need an actual execution contract/provider; serialization is not automatically equivalent.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/atomic_memory.py",
+          "sha256": "77a59ee5488ab076318c66ed0a005ef3fe48cd102cae9724fbabca5ab1adbcfe"
+        },
+        {
+          "path": "t2m/atomic_float_add.py",
+          "sha256": "28c89f3a0aa2f20f319d6a563a7fe797196928fde91d4f7af872978660a3c60a"
+        },
+        {
+          "path": "t2m/atomic_word_views.py",
+          "sha256": "22f554daaec1969e5e5d693f806c9a433dcf08c4c8b6e4aef6383432a831c1c6"
+        },
+        {
+          "path": "t2m/byte_atomic_events.py",
+          "sha256": "f7482b5cbded6d5b69620c02f75aad6eaa8549d247b78f34291656e59b8ed422"
+        },
+        {
+          "path": "t2m/consumer_features.py",
+          "sha256": "0f84b96a7979d4be8970ef2d6234eae1569c8e15dcc64aeebdf3fd79ad6d5570"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "subbyte-atomic-storage",
+        "fp8-atomic-addition"
+      ]
+    },
+    "casts": {
+      "admission": "Equal-width numeric bitcasts preserve words. Floating casts retain source/destination formats, explicit RTNE/RTZ narrowing boundaries and executable overflow policy, including same-width FP8 format changes. Pointer casts remain with logical memory and actual storage units.",
+      "caller_contracts": [
+        "fp8_overflow selects ieee, satfinite, satfinite-nan-inf or checked per-cast facts",
+        "Exact archive carriers: BF16 uint16, FP8 uint8, Boolean canonical bool",
+        "Declared byte order for changed-width storage; no physical alias inference"
+      ],
+      "candidate_workflows": [
+        "K6",
+        "K9",
+        "M5"
+      ],
+      "complement": "Unknown rounding/overflow semantics require a selected implemented profile; no global default may overwrite source per-cast choices. Pointer casts require actual storage/address contracts. Public i4 tensor/scalar transport remains unimplemented although internal i4 casts are available. Reader type admission alone grants no arithmetic or by-value low-precision ABI.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/float_casts.py",
+          "sha256": "41c07ee1eeb5a8b128d4093ef55fa56b1731a941353598c750363ea496ef3e35"
+        },
+        {
+          "path": "t2m/fp8_casts.py",
+          "sha256": "52799d0bb69954ee89ab57fd80568a8726b448babd0090994784c7d2a9c6c38e"
+        },
+        {
+          "path": "t2m/pointer_views.py",
+          "sha256": "689c62ec29c288e03636dab091321c307ec3662142de3d430aa4011a94f64fe6"
+        },
+        {
+          "path": "t2m/standard_floats.py",
+          "sha256": "083c246e2c32822b0eccaf3866f07019c459372b7a3d4ab4f71bef96188420c8"
+        },
+        {
+          "path": "t2m/tensor_storage.py",
+          "sha256": "1afc3c1e92ccaf647413566c7dc36ab73ed2f179620405c0a1c87502a920f357"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "subbyte-atomic-storage"
+      ]
+    },
+    "combiners": {
+      "admission": "Positive static unencoded numeric source tiles, complete tuple types/results and exact axes. Reductions seed from the first actual source element; scans preserve reverse/forward noncommutative order and parallel stages. Typed scalar arithmetic, captured immutable tensor reads, local tensors and structured value control remain executable.",
+      "caller_contracts": [
+        "Source associative combiner/scan contract and actual complete scalar body",
+        "Checked logical gather bounds for captured reads; source snapshots remain SSA",
+        "Explicit numeric policy for any format/order-sensitive arithmetic"
+      ],
+      "candidate_workflows": [
+        "K4",
+        "K9",
+        "M5"
+      ],
+      "complement": "Native-invalid geometry/prototypes are invalid source. Unknown effects or direct pointer reads require their real effect contract rather than purity from a parent label. Unsupported valid generic numeric/control bodies are gaps, not silently discarded. FP8 arithmetic and public i4 storage inherit their known numeric/interface gaps.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/reductions.py",
+          "sha256": "746a22948d1c642c25695f6648bc54ca24c07192b4897b7b39fff303c33f4f22"
+        },
+        {
+          "path": "t2m/scans.py",
+          "sha256": "4dc50ecfc9e8d60c1901da046bda8c06502ebde29f6bb5249ea9eaaddfd72e9f"
+        },
+        {
+          "path": "t2m/scalar_tile_reads.py",
+          "sha256": "943456bd3bbb261d0708b362d95eacdedafa1fdf217b913cdd21fdfd7cb9609b"
+        },
+        {
+          "path": "t2m/value_regions.py",
+          "sha256": "030f97937a04f36edeb8f390428a5879303a2d1c89722134edfbc058ef32c0e4"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "fp8-generic-arithmetic"
+      ]
+    },
+    "contractions": {
+      "admission": "Rank-two/batched named contractions retain original C, source M/N/K tiles, K recurrence and operand reuse. Standard/FP8 inputs and implemented mixed/scaled profiles use executable casts, packing, scaling and accumulation. BF16x3/x6 and TF32/x3 use actual pinned normalization with explicit logical numeric profiles.",
+      "caller_contracts": [
+        "Actual inputPrecision/maxNumImpreciseAcc; no implicit precision relaxation",
+        "Named logical dot/FP8 overflow/scaled-dot numeric profile",
+        "Actual scale types/groups and FP4 K versus M/N packing fields"
+      ],
+      "candidate_workflows": [
+        "K2",
+        "K3",
+        "K9",
+        "M1",
+        "M5",
+        "M7"
+      ],
+      "complement": "Reserved FP6 enumerants have no pinned storage/packing semantics; require an implementation contract rather than invent one. A legal source type/shape is not proof that its full numeric tuple is implemented: public i4 and FP8 accumulator/native arithmetic require separate closure. Unspecified device tensor-core rounding/order/FTZ needs a selected explicit profile, not a universal GPU bit-equivalence claim. Rank/attribute/type tuples outside current converters remain generic gaps when defined.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/frontend.py",
+          "sha256": "56f51c1836ba45b4979369496e230eee0fc44ebe9f5772dcf8034b6330c67d04"
+        },
+        {
+          "path": "t2m/shared_tensor.py",
+          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+        },
+        {
+          "path": "t2m/scaled_dot.py",
+          "sha256": "fe7b1a0c11e57b8c42726b65542655f974bd5c4b59c7f0cb6a4c6d9eda44e161"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "fp8-generic-arithmetic",
+        "subbyte-atomic-storage"
+      ]
+    },
+    "descriptors": {
+      "admission": "Official pre-layout tensor-pointer/descriptor normalization retains actual root, block shape, strides, origin, padding, indexing and reducing-store effects. External logical descriptors bind their complete fields to declared allocations/scalars. Indexed transfers retain row-index checks and ownership.",
+      "caller_contracts": [
+        "DescriptorArgument actual allocation, shape, strides, offset, padding_nan and round_f32_to_tf32",
+        "Named runtime descriptor fields with checked scalar domains",
+        "Existing typed atomic/numeric policy for reducing stores"
+      ],
+      "candidate_workflows": [
+        "K8",
+        "M1"
+      ],
+      "complement": "Absent external logical fields require the existing descriptor bindings. Physical descriptor bytes, opaque DMA state and post-layout im2col/device descriptors need their provider. Generic transfer/reduction forms outside current typed profiles remain open until their ordinary-memory/atomic expansion is qualified; an opaque descriptor call is not portable support.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/frontend.py",
+          "sha256": "56f51c1836ba45b4979369496e230eee0fc44ebe9f5772dcf8034b6330c67d04"
+        },
+        {
+          "path": "t2m/descriptor_arguments.py",
+          "sha256": "31ba4fff914106fca5d7237ca70423348ce309b2e7e1ea4a6f69ae0834eb2f1d"
+        },
+        {
+          "path": "t2m/descriptor_bindings.py",
+          "sha256": "35352931c9b7934606ed34366924b8413f5de799cfeee49da58e41949da27af0"
+        },
+        {
+          "path": "t2m/guarded_memory.py",
+          "sha256": "4a9c9cb6966663583e7e80e2b8892197831b458d0b607dc048ce9ce1f2f36ac2"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "diagnostics": {
+      "admission": "Assertions retain original Boolean predicates, complete source message, control placement and termination. Logical print retains full UTF-8 prefixes, signedness, hex words and operand/row-major logical coordinates for i1/i8/i16/i32/i64/f16/BF16/f32/f64. Mixed/void references compare exact streams, termination and every returning tensor.",
+      "caller_contracts": [
+        "Explicit logical-element print profile; GPU thread duplication/order is abstracted",
+        "Independent complete stream/outcome and returning-value reference outside compiler inputs"
+      ],
+      "candidate_workflows": [
+        "K11",
+        "K12",
+        "M6"
+      ],
+      "complement": "Physical pointer printing requires address semantics. i4 and FP8 numeric printing are native-valid but rejected by the current type roster; this is a generic formatting gap. Exact device printf varargs/thread ordering is outside the logical profile. Unknown effects/messages cannot disappear or be inferred from an expected stream.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/source_prints.py",
+          "sha256": "27197c54682dd49c3f425f248bde4daf067b59248ad1f7626f446d54a81152ca"
+        },
+        {
+          "path": "t2m/source_assertions.py",
+          "sha256": "01d4cec898dfca6663a627599921057446099f87445eb88f8deef760ba4685d5"
+        },
+        {
+          "path": "t2m/effect_results.py",
+          "sha256": "0c4ee8e996a39a4d29be414dea661613d82e49cd3e0e4fb2717e63a5a60ca020"
+        },
+        {
+          "path": "t2m/diagnostic_runtime.py",
+          "sha256": "b53adc3bdc702e666b62d70b73b2a92012ca047527191f9ca7d5df2deb961025"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "low-precision-diagnostic-values"
+      ]
+    },
+    "external": {
+      "admission": "The explicit default-library logical math table admits 26 functions in f32/f64 with exact library identity, empty custom path, purity, scalar/static shape and prototype. Standard math/libm supplies actual executable semantics with source control and outputs retained.",
+      "caller_contracts": [
+        "logical-libdevice-standard-math-v1 selected numeric contract",
+        "Typed source implementation and effect/dependency contract for any other external behavior"
+      ],
+      "candidate_workflows": [
+        "K9"
+      ],
+      "complement": "An unknown symbol, custom library path or impure declaration has missing external semantics, not permission to emit an opaque successful portable call. Source names/prototypes do not define device approximations, floating environment or external effects. Such behavior requires an actual implementation/provider or is explicitly backend-required.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/external_math.py",
+          "sha256": "9c42d30d83090bee19e3ddcbe36af20a9461da9764a6bf213e6dd5e01bbfe385"
+        },
+        {
+          "path": "t2m/scalar_builtins.py",
+          "sha256": "c577c16f56f8a7e58ab464e0b4fee6179fdc1f003ec53de4785e2aeb38536800"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "functions": {
+      "admission": "One selected void kernel entry and private typed helpers; native inlining and official CF-to-SCF lifting retain complete source bodies, argument/result ties and control. Functional writable roots become explicit tensor results, including state. Effect-only entries preserve an actual void signature.",
+      "caller_contracts": [
+        "TensorABI entry, complete source-order pointer/runtime/specialized bindings",
+        "Existing explicit allocation/view/result bindings for model mutation",
+        "Automatic model discovery currently requires a static pure single launch and fresh returned outputs"
+      ],
+      "candidate_workflows": [
+        "K7",
+        "K12",
+        "M1",
+        "M2",
+        "M4",
+        "M7"
+      ],
+      "complement": "Invalid prototypes fail native verification. Missing pointer/scalar/state bindings require actual contracts. Additional public functions, value-returning selected entries and low-precision by-value inputs lack automatic entry adapters; they are generic interface gaps, not hardware instructions. Private value-returning helpers are supported. Unknown source effects remain independently checked.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/shared_tensor.py",
+          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+        },
+        {
+          "path": "t2m/frontend.py",
+          "sha256": "56f51c1836ba45b4979369496e230eee0fc44ebe9f5772dcf8034b6330c67d04"
+        },
+        {
+          "path": "t2m/cfg_intake.py",
+          "sha256": "ece5f42962bc89895f26282b153415e27a9267619f9ec137d4babac4d0277422"
+        },
+        {
+          "path": "t2m/model_binding.py",
+          "sha256": "fc64718cd63eecbc0e929dbb19839bfab360cacad9da159101b11029eb0b7e26"
+        },
+        {
+          "path": "t2m/functional_kernels.py",
+          "sha256": "942556b70210ce8daee8bcb94ce7f408c48c7d4ceea3ccd5e894a2fbf87741b4"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "public-value-entry-binding"
+      ]
+    },
+    "gather": {
+      "admission": "Matching static positive numeric source/result and legal TT integer indices, equal non-axis dimensions and exact axis. Use standard indexed tensor extraction with source-signed active bounds; i1 true sign-extends to -1. Captured lookup tensors retain their original SSA snapshot.",
+      "caller_contracts": [
+        "Complete logical tile geometry; public storage formats follow the common ABI",
+        "Existing guarded source-word memory for loaded pointer indices"
+      ],
+      "candidate_workflows": [
+        "K4",
+        "K5"
+      ],
+      "complement": "Out-of-range active indices abort under the guarded profile. Malformed shapes/axes fail the pinned verifier; the prose-only smaller non-axis shape is not native-valid. Pointer gathers need pointer-state/memory normalization. Internal i4 indices work; direct public i4 arrays remain the shared storage gap.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/tile_gather.py",
+          "sha256": "61cc0b7d25dd3f9da80dd5269101f38217c5c121025302b468aeffd73952c489"
+        },
+        {
+          "path": "t2m/scalar_tile_reads.py",
+          "sha256": "943456bd3bbb261d0708b362d95eacdedafa1fdf217b913cdd21fdfd7cb9609b"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "histogram": {
+      "admission": "Positive static rank-one integer source and counters at i1/i4/i8/i16/i32/i64, with optional matching Boolean mask. One indexed tensor-state loop preserves masks, signed range filtering (Boolean samples are 0/1) and modular counter width in O(elements+bins) logical work.",
+      "caller_contracts": [
+        "Actual source/output tile sizes and masks",
+        "Public subbyte transport is separate from internal arithmetic"
+      ],
+      "candidate_workflows": [
+        "K4"
+      ],
+      "complement": "Invalid ranks/types/geometry fail native verification or explicit admission. Out-of-range samples contribute nothing; masked padding has no contribution. Global histogram accumulation needs the actual separate atomic/effect profile. Internal narrow widths qualify; public i4 storage remains shared ABI work.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/histogram.py",
+          "sha256": "dd083349ed395281db20ccf2dbb1570a79b8ba42ae4f9c064253c568ef01ee92"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "logical-domain": {
+      "admission": "Verified source i32 logical IDs/counts and static source ranges; one to three logical launch axes with exact runtime extent expressions and checked source-width arithmetic. Grid remains unmapped forall/standard control.",
+      "caller_contracts": [
+        "Static grid or GridExtent tied to declared bounded scalar/dimension sources",
+        "Actual input-axis/scalar/word shape bindings and finite allocation budgets"
+      ],
+      "candidate_workflows": [
+        "K1",
+        "K2",
+        "M2"
+      ],
+      "complement": "Missing runtime extents/bounds require bindings rather than specialization from examples. Exceeding a selected resource/analysis budget is an explicit limit. Physical lane/core/warp identities and clocks need backend semantics and are not program IDs.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/dynamic_abi.py",
+          "sha256": "7c03dc245623bf696fd8d80693f0a16ac530a96f144b0f49db83af68fd4821b1"
+        },
+        {
+          "path": "t2m/shape_lowering.py",
+          "sha256": "0bbce50ceb1978eb24da95697739a6ce4704e932bef39a980474682a7a2a91a8"
+        },
+        {
+          "path": "t2m/launch_domains.py",
+          "sha256": "dc7f4efcefe214756e38e1d30f74b505cd7d5befbb02be9841d31c080955dd70"
+        },
+        {
+          "path": "t2m/region_launch_queries.py",
+          "sha256": "16866bd28901c00ba900befb5980a8b330d4e8de830c4036df49b94d6e48d43b"
+        }
+      ],
+      "unresolved_generic_forms": []
+    },
+    "logical-memory": {
+      "admission": "Structured tensor slices/updates or guarded source-word memory over actual declared logical roots, offsets and versions. Preserve active masks/fills, definite initialization, read snapshots, source-width address arithmetic, source control, functional mutation and all observable results. Selected aliases use one actual owning allocation. Logical pointer integers retain closed base plus byte displacement.",
+      "caller_contracts": [
+        "Actual owning roots, extents, source offsets/strides, roles and state/result ports",
+        "Explicit byte order and typed-storage/byte-view contracts for changed-width views",
+        "Selected private-invocation volatile/atomic/phase profile when source effects require it"
+      ],
+      "candidate_workflows": [
+        "K5",
+        "K6",
+        "K7",
+        "M4",
+        "M6"
+      ],
+      "complement": "Try the existing guarded source-word continuation when structured pointer recovery fails. Missing roots/layout/effect facts require bindings and executable guards; provenance is insufficient. Unimplemented valid generic address/alias/control forms remain bugs/gaps. Escaping numeric physical addresses, physical spaces and external observations need backend semantics. i4 public storage is not admitted. Automatic BF16/FP8 integer-atomic views remain unqualified; explicit raw owning-allocation bindings are a candidate existing route, not yet measured evidence.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/shared_tensor.py",
+          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+        },
+        {
+          "path": "t2m/guarded_memory.py",
+          "sha256": "4a9c9cb6966663583e7e80e2b8892197831b458d0b607dc048ce9ce1f2f36ac2"
+        },
+        {
+          "path": "t2m/buffer_memory.py",
+          "sha256": "86604ce2f05972bcc561d9269e559fe98aadc8b7a580e7792ba48822a5a8770c"
+        },
+        {
+          "path": "t2m/allocation_bindings.py",
+          "sha256": "bc18812452a48027af50d97d67413f854590583ae8f89d2fd617d54bb9293c2d"
+        },
+        {
+          "path": "t2m/pointer_addresses.py",
+          "sha256": "7bf1f7ba2d7e1e87f9496171299fce5709b5e8f11209f9b1751b76609494dda9"
+        },
+        {
+          "path": "t2m/pointer_views.py",
+          "sha256": "689c62ec29c288e03636dab091321c307ec3662142de3d430aa4011a94f64fe6"
+        },
+        {
+          "path": "t2m/typed_storage.py",
+          "sha256": "ac5d68ce11cfd6ffb7cdd54fcf362209de43f9d7a25b94a436a9c9e6db09ab11"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "subbyte-atomic-storage"
+      ]
+    },
+    "maps": {
+      "admission": "Pack-one complete scalar bodies lower to parallel Linalg. Larger packs either prove typed slot independence/congruence or use an actual validated source_layout coordinate map. Scalar/tensor computation, captured reads and structured control stay in the source position with every result.",
+      "caller_contracts": [
+        "source_layout for source-coupled/asymmetric groups when independence does not hold",
+        "Actual mapped-read roots/bounds/effects; no provenance-only purity or grouping grant"
+      ],
+      "candidate_workflows": [
+        "K4",
+        "K10"
+      ],
+      "complement": "Missing register-group-to-logical-coordinate semantics require the existing explicit source-layout specialization; neighboring tensor elements cannot be guessed. Unknown source effects retain effect admission. Valid pure generic bodies outside current expansion remain gaps. FP8 arithmetic inherits its native-format gap; packet-sharing optimization is separate from executable scalar semantics.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/elementwise_map.py",
+          "sha256": "394a4964b9229b4ba9e3273167dbc6b5904259637128cdfcadf5f960793778ad"
+        },
+        {
+          "path": "t2m/grouped_map.py",
+          "sha256": "86c73951b8cab4e7035653a5ecb2afb13023657af4e435537357e783c99d7c15"
+        },
+        {
+          "path": "t2m/grouped_reads.py",
+          "sha256": "0c6769aa5e10008723a3c16ad08f48d13613fceabeec2361df1538fa37239e9d"
+        },
+        {
+          "path": "t2m/map_layout.py",
+          "sha256": "1e5890fd496edde26a4e9330ed5d063bb1f1e4518332f0c418366edea31988d7"
+        },
+        {
+          "path": "t2m/value_regions.py",
+          "sha256": "030f97937a04f36edeb8f390428a5879303a2d1c89722134edfbc058ef32c0e4"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "fp8-generic-arithmetic"
+      ]
+    },
+    "scalar-numeric": {
+      "admission": "High unsigned products use the standard extended product for all six pinned integer widths. Clamp retains NONE/ALL NaN modes; precise division/sqrt retain standard typed operations. f16/BF16/f32/f64 have exact-rational public qualification, including source-position rounding and signaling-NaN number selection.",
+      "caller_contracts": [
+        "Actual source NaN/rounding/overflow flags and selected normal host floating environment",
+        "Any source-specific approximation or saturation policy must be explicit and implemented"
+      ],
+      "candidate_workflows": [
+        "K9"
+      ],
+      "complement": "A legal FP8 clamp/div/sqrt chain converts to standard MLIR but fails the native math legalization. This is a generic implementation gap requiring compute plus per-operation narrowing, not a GPU exclusion. Source poison/undefined input domains remain distinct from missing implementations. Nonneutral semantic flags must survive or refuse explicitly.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/scalar_builtins.py",
+          "sha256": "c577c16f56f8a7e58ab464e0b4fee6179fdc1f003ec53de4785e2aeb38536800"
+        },
+        {
+          "path": "t2m/integer_products.py",
+          "sha256": "03411f20d11519c9e762222b913c7384edc16d96f2e4abe3b7f1a8ef93945dc3"
+        },
+        {
+          "path": "t2m/consumer_features.py",
+          "sha256": "0f84b96a7979d4be8970ef2d6234eae1569c8e15dcc64aeebdf3fd79ad6d5570"
+        },
+        {
+          "path": "t2m/fp8_math.py",
+          "sha256": "d541616c6b06de9d1339322d4404c4e04527b210a07240b44c223e493852ef77"
+        }
+      ],
+      "unresolved_generic_forms": [
+        "fp8-generic-arithmetic"
+      ]
+    },
+    "tile-shapes": {
+      "admission": "Native-verified shape/axis/element relationships and registered types use upstream tensor/Linalg shape conversions; cat selects a source-permitted operand order. Numeric local tensors and structured value state remain in their original regions. Pointer-valued shapes use the separate pointer-state normalization.",
+      "caller_contracts": [
+        "Complete logical tensor geometry and public storage ABI",
+        "Optional source layout facts only where packed source grouping actually needs them"
+      ],
+      "candidate_workflows": [
+        "K2",
+        "K4",
+        "M7"
+      ],
+      "complement": "Invalid dimensions/axes/prototypes fail native verification. Source encoding/device-layout requirements need a supported earlier IR or explicit grouping facts; no hardware placement is invented. Unknown numeric/effectful compositions use their own admission and remain gaps when valid generic computation is missing. Internal i4 does not establish public i4 storage.",
+      "evidence_status": "source-admission-reviewed; final-revision qualification pending",
+      "reviewed_sources": [
+        {
+          "path": "t2m/shared_tensor.py",
+          "sha256": "c75fc7eb44d6c0909ae553a34d5fc74666621bf1d1d6ad7ecbce07169fa59745"
+        },
+        {
+          "path": "t2m/frontend.py",
+          "sha256": "56f51c1836ba45b4979369496e230eee0fc44ebe9f5772dcf8034b6330c67d04"
+        },
+        {
+          "path": "t2m/value_regions.py",
+          "sha256": "030f97937a04f36edeb8f390428a5879303a2d1c89722134edfbc058ef32c0e4"
+        },
+        {
+          "path": "t2m/region_integer_casts.py",
+          "sha256": "5c70a0a9fcece490faf475a70d57d01bf2e8cda76d9640b5c90ea3bbb1caba7e"
+        }
+      ],
+      "unresolved_generic_forms": []
+    }
+  },
+  "finalization": "Resolve or explicitly retain every tracked generic gap, qualify the final exact revisions/128 cases, and join actual byte-bound packages/results in semantic-audit.json. Do not translate this review into automatic passed labels.",
+  "operations": {
+    "tt.addptr": {
+      "admission": "scalar/shaped pointer plus source integer offsets; logical root units retained",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:193",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-memory",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "TT_PtrLike"
+        },
+        {
+          "kind": "operand",
+          "name": "offset",
+          "tablegen_constraint": "TT_IntLike"
+        }
+      ]
+    },
+    "tt.advance": {
+      "admission": "native tensor-pointer metadata advancement; original shape/order retained",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:208",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "TT_TensorPtr"
+        },
+        {
+          "kind": "operand",
+          "name": "offsets",
+          "tablegen_constraint": "anonymous_634"
+        }
+      ]
+    },
+    "tt.assert": {
+      "admission": "scalar or tensor i1 condition; complete message",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:987",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "diagnostics",
+      "semantic_fields": [
+        "message"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "condition",
+          "tablegen_constraint": "anonymous_711"
+        },
+        {
+          "kind": "attribute",
+          "name": "message",
+          "tablegen_constraint": "StrAttr"
+        }
+      ]
+    },
+    "tt.atomic_cas": {
+      "admission": "exact integer compare/select/update/old value under selected source scope/order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:386",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "atomics",
+      "semantic_fields": [
+        "sem",
+        "scope"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "anonymous_672"
+        },
+        {
+          "kind": "operand",
+          "name": "cmp",
+          "tablegen_constraint": "TT_Type"
+        },
+        {
+          "kind": "operand",
+          "name": "val",
+          "tablegen_constraint": "TT_Type"
+        },
+        {
+          "kind": "attribute",
+          "name": "sem",
+          "tablegen_constraint": "TT_MemSemanticAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "scope",
+          "tablegen_constraint": "TT_MemSyncScopeAttr"
+        }
+      ]
+    },
+    "tt.atomic_rmw": {
+      "admission": "actual pinned RMW enum and source word/float type with selected numeric policy",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:350",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "atomics",
+      "semantic_fields": [
+        "atomic_rmw_op",
+        "sem",
+        "scope"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "atomic_rmw_op",
+          "tablegen_constraint": "TT_AtomicRMWAttr"
+        },
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "anonymous_672"
+        },
+        {
+          "kind": "operand",
+          "name": "val",
+          "tablegen_constraint": "TT_Type"
+        },
+        {
+          "kind": "operand",
+          "name": "mask",
+          "tablegen_constraint": "anonymous_644"
+        },
+        {
+          "kind": "attribute",
+          "name": "sem",
+          "tablegen_constraint": "TT_MemSemanticAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "scope",
+          "tablegen_constraint": "TT_MemSyncScopeAttr"
+        }
+      ]
+    },
+    "tt.bitcast": {
+      "admission": "equal numeric word widths or independently checked logical pointer view",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:67",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "casts",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Type"
+        }
+      ]
+    },
+    "tt.broadcast": {
+      "admission": "native shape-compatible numeric/pointer tile broadcast",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:491",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    },
+    "tt.call": {
+      "admission": "actual private typed helper; complete arguments and returned values",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1083",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "functions",
+      "semantic_fields": [
+        "callee",
+        "arg_attrs",
+        "res_attrs"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "callee",
+          "tablegen_constraint": "FlatSymbolRefAttr"
+        },
+        {
+          "kind": "operand",
+          "name": "operands",
+          "tablegen_constraint": "anonymous_700"
+        },
+        {
+          "kind": "attribute",
+          "name": "arg_attrs",
+          "tablegen_constraint": "anonymous_720"
+        },
+        {
+          "kind": "attribute",
+          "name": "res_attrs",
+          "tablegen_constraint": "anonymous_720"
+        }
+      ]
+    },
+    "tt.cat": {
+      "admission": "native equal-rank/non-concatenated axes; source-permitted original operand order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:514",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "lhs",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "operand",
+          "name": "rhs",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    },
+    "tt.clampf": {
+      "admission": "same-format floating operands/result; NONE or ALL NaN mode",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:111",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "scalar-numeric",
+      "semantic_fields": [
+        "propagateNan"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "x",
+          "tablegen_constraint": "TT_FloatLike"
+        },
+        {
+          "kind": "operand",
+          "name": "min",
+          "tablegen_constraint": "TT_FloatLike"
+        },
+        {
+          "kind": "operand",
+          "name": "max",
+          "tablegen_constraint": "TT_FloatLike"
+        },
+        {
+          "kind": "attribute",
+          "name": "propagateNan",
+          "tablegen_constraint": "TT_PropagateNanAttr"
+        }
+      ]
+    },
+    "tt.descriptor_gather": {
+      "admission": "actual logical descriptor plus loaded row indices; original bounds/padding",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1360",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "desc",
+          "tablegen_constraint": "anonymous_737"
+        },
+        {
+          "kind": "operand",
+          "name": "x_offsets",
+          "tablegen_constraint": "anonymous_739"
+        },
+        {
+          "kind": "operand",
+          "name": "y_offset",
+          "tablegen_constraint": "I32"
+        }
+      ]
+    },
+    "tt.descriptor_load": {
+      "admission": "actual logical descriptor and offsets; original block result and padding",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1291",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [
+        "cache",
+        "evict"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "desc",
+          "tablegen_constraint": "anonymous_737"
+        },
+        {
+          "kind": "operand",
+          "name": "indices",
+          "tablegen_constraint": "anonymous_634"
+        },
+        {
+          "kind": "attribute",
+          "name": "cache",
+          "tablegen_constraint": "anonymous_648"
+        },
+        {
+          "kind": "attribute",
+          "name": "evict",
+          "tablegen_constraint": "anonymous_649"
+        }
+      ]
+    },
+    "tt.descriptor_reduce": {
+      "admission": "actual descriptor reducing store; existing typed numeric/effect contract",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1339",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [
+        "kind"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "kind",
+          "tablegen_constraint": "TT_DescriptorReduceKindAttr"
+        },
+        {
+          "kind": "operand",
+          "name": "desc",
+          "tablegen_constraint": "anonymous_738"
+        },
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "operand",
+          "name": "indices",
+          "tablegen_constraint": "anonymous_634"
+        }
+      ]
+    },
+    "tt.descriptor_scatter": {
+      "admission": "actual logical descriptor plus loaded row indices and exact source tile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1386",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "desc",
+          "tablegen_constraint": "anonymous_738"
+        },
+        {
+          "kind": "operand",
+          "name": "x_offsets",
+          "tablegen_constraint": "anonymous_739"
+        },
+        {
+          "kind": "operand",
+          "name": "y_offset",
+          "tablegen_constraint": "I32"
+        },
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    },
+    "tt.descriptor_store": {
+      "admission": "actual descriptor, logical coordinates and complete source value tile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1319",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "desc",
+          "tablegen_constraint": "anonymous_738"
+        },
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "operand",
+          "name": "indices",
+          "tablegen_constraint": "anonymous_634"
+        }
+      ]
+    },
+    "tt.dot": {
+      "admission": "native legal A/B/C/result tuple, original C and implemented logical precision profile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:658",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "contractions",
+      "semantic_fields": [
+        "inputPrecision",
+        "maxNumImpreciseAcc"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "a",
+          "tablegen_constraint": "TT_FpIntTensor"
+        },
+        {
+          "kind": "operand",
+          "name": "b",
+          "tablegen_constraint": "TT_FpIntTensor"
+        },
+        {
+          "kind": "operand",
+          "name": "c",
+          "tablegen_constraint": "TT_FpIntTensor"
+        },
+        {
+          "kind": "attribute",
+          "name": "inputPrecision",
+          "tablegen_constraint": "anonymous_684"
+        },
+        {
+          "kind": "attribute",
+          "name": "maxNumImpreciseAcc",
+          "tablegen_constraint": "anonymous_685"
+        }
+      ]
+    },
+    "tt.dot_scaled": {
+      "admission": "native legal source tuple, actual scales/group sizes/packing and implemented accumulator profile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:700",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "contractions",
+      "semantic_fields": [
+        "a_elem_type",
+        "b_elem_type",
+        "fastMath",
+        "lhs_k_pack",
+        "rhs_k_pack",
+        "operandSegmentSizes"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "a",
+          "tablegen_constraint": "anonymous_687"
+        },
+        {
+          "kind": "operand",
+          "name": "b",
+          "tablegen_constraint": "anonymous_687"
+        },
+        {
+          "kind": "operand",
+          "name": "c",
+          "tablegen_constraint": "TT_FloatTensor"
+        },
+        {
+          "kind": "operand",
+          "name": "a_scale",
+          "tablegen_constraint": "anonymous_693"
+        },
+        {
+          "kind": "operand",
+          "name": "b_scale",
+          "tablegen_constraint": "anonymous_693"
+        },
+        {
+          "kind": "attribute",
+          "name": "a_elem_type",
+          "tablegen_constraint": "TT_ScaleDotElemTypeAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "b_elem_type",
+          "tablegen_constraint": "TT_ScaleDotElemTypeAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "fastMath",
+          "tablegen_constraint": "BoolAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "lhs_k_pack",
+          "tablegen_constraint": "anonymous_694"
+        },
+        {
+          "kind": "attribute",
+          "name": "rhs_k_pack",
+          "tablegen_constraint": "anonymous_694"
+        }
+      ]
+    },
+    "tt.elementwise_inline_asm": {
+      "admission": "optional explicit source provider; original assembly is refused by default",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:880",
+      "evidence_status": "optional source provider; default refusal is not portable support",
+      "family": "assembly",
+      "semantic_fields": [
+        "asm_string",
+        "constraints",
+        "pure",
+        "packed_element"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "asm_string",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "constraints",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "pure",
+          "tablegen_constraint": "BoolAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "packed_element",
+          "tablegen_constraint": "I32Attr"
+        },
+        {
+          "kind": "operand",
+          "name": "args",
+          "tablegen_constraint": "anonymous_707"
+        }
+      ]
+    },
+    "tt.expand_dims": {
+      "admission": "native rank/axis relationship; numeric or normalized logical pointer tiles",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:451",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [
+        "axis"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "I32Attr"
+        }
+      ]
+    },
+    "tt.extern_elementwise": {
+      "admission": "exact default-library typed pure prototype or supplied actual implementation",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:827",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "external",
+      "semantic_fields": [
+        "libname",
+        "libpath",
+        "symbol",
+        "pure"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "srcs",
+          "tablegen_constraint": "anonymous_696"
+        },
+        {
+          "kind": "attribute",
+          "name": "libname",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "libpath",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "symbol",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "pure",
+          "tablegen_constraint": "BoolAttr"
+        }
+      ]
+    },
+    "tt.fp_to_fp": {
+      "admission": "all eight pinned float formats with exact defined RTNE/RTZ and overflow policy",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:81",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "casts",
+      "semantic_fields": [
+        "rounding"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_FloatLike"
+        },
+        {
+          "kind": "attribute",
+          "name": "rounding",
+          "tablegen_constraint": "anonymous_631"
+        }
+      ]
+    },
+    "tt.func": {
+      "admission": "selected complete entry signature and private helper definitions",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1161",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "functions",
+      "semantic_fields": [
+        "sym_name",
+        "function_type",
+        "sym_visibility",
+        "arg_attrs",
+        "res_attrs"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "sym_name",
+          "tablegen_constraint": "SymbolNameAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "function_type",
+          "tablegen_constraint": "anonymous_727"
+        },
+        {
+          "kind": "attribute",
+          "name": "sym_visibility",
+          "tablegen_constraint": "anonymous_731"
+        },
+        {
+          "kind": "attribute",
+          "name": "arg_attrs",
+          "tablegen_constraint": "anonymous_720"
+        },
+        {
+          "kind": "attribute",
+          "name": "res_attrs",
+          "tablegen_constraint": "anonymous_720"
+        }
+      ]
+    },
+    "tt.gather": {
+      "admission": "native equal non-axis dimensions and exact axis; all six integer index widths",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:931",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "gather",
+      "semantic_fields": [
+        "axis",
+        "efficient_layout"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "operand",
+          "name": "indices",
+          "tablegen_constraint": "TT_IntTensor"
+        },
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "I32Attr"
+        },
+        {
+          "kind": "attribute",
+          "name": "efficient_layout",
+          "tablegen_constraint": "UnitAttr"
+        }
+      ]
+    },
+    "tt.get_num_programs": {
+      "admission": "actual logical extent on pinned axis; source i32 result",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:636",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-domain",
+      "semantic_fields": [
+        "axis"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "TT_ProgramDim"
+        }
+      ]
+    },
+    "tt.get_program_id": {
+      "admission": "unmapped logical coordinate on pinned axis; source i32 result",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:616",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-domain",
+      "semantic_fields": [
+        "axis"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "TT_ProgramDim"
+        }
+      ]
+    },
+    "tt.histogram": {
+      "admission": "rank-one source/counters of any TT integer width, optional matching Boolean mask",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:907",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "histogram",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_IntTensor"
+        },
+        {
+          "kind": "operand",
+          "name": "mask",
+          "tablegen_constraint": "anonymous_644"
+        }
+      ]
+    },
+    "tt.int_to_ptr": {
+      "admission": "closed original logical pointer base plus proved/checked byte displacement",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:40",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-memory",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_I64Like"
+        }
+      ]
+    },
+    "tt.join": {
+      "admission": "native matching inputs and appended two-element axis",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:526",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "lhs",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "operand",
+          "name": "rhs",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    },
+    "tt.load": {
+      "admission": "actual logical root/indices/mask/other and separately selected volatile semantics",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:226",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-memory",
+      "semantic_fields": [
+        "boundaryCheck",
+        "padding",
+        "cache",
+        "evict",
+        "isVolatile",
+        "operandSegmentSizes"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "anonymous_642"
+        },
+        {
+          "kind": "operand",
+          "name": "mask",
+          "tablegen_constraint": "anonymous_644"
+        },
+        {
+          "kind": "operand",
+          "name": "other",
+          "tablegen_constraint": "anonymous_645"
+        },
+        {
+          "kind": "attribute",
+          "name": "boundaryCheck",
+          "tablegen_constraint": "anonymous_646"
+        },
+        {
+          "kind": "attribute",
+          "name": "padding",
+          "tablegen_constraint": "anonymous_647"
+        },
+        {
+          "kind": "attribute",
+          "name": "cache",
+          "tablegen_constraint": "anonymous_648"
+        },
+        {
+          "kind": "attribute",
+          "name": "evict",
+          "tablegen_constraint": "anonymous_649"
+        },
+        {
+          "kind": "attribute",
+          "name": "isVolatile",
+          "tablegen_constraint": "anonymous_650"
+        }
+      ]
+    },
+    "tt.make_range": {
+      "admission": "native static source interval and exact integer source tile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:854",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-domain",
+      "semantic_fields": [
+        "start",
+        "end"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "start",
+          "tablegen_constraint": "I32Attr"
+        },
+        {
+          "kind": "attribute",
+          "name": "end",
+          "tablegen_constraint": "I32Attr"
+        }
+      ]
+    },
+    "tt.make_tensor_descriptor": {
+      "admission": "actual base, shape, strides, block shape and logical format fields",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1043",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [
+        "padding"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "base",
+          "tablegen_constraint": "TT_Ptr"
+        },
+        {
+          "kind": "operand",
+          "name": "shape",
+          "tablegen_constraint": "anonymous_634"
+        },
+        {
+          "kind": "operand",
+          "name": "strides",
+          "tablegen_constraint": "anonymous_715"
+        },
+        {
+          "kind": "attribute",
+          "name": "padding",
+          "tablegen_constraint": "anonymous_717"
+        }
+      ]
+    },
+    "tt.make_tensor_ptr": {
+      "admission": "actual base/shape/strides/offsets and block shape/order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1000",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "descriptors",
+      "semantic_fields": [
+        "order"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "base",
+          "tablegen_constraint": "TT_Ptr"
+        },
+        {
+          "kind": "operand",
+          "name": "shape",
+          "tablegen_constraint": "anonymous_715"
+        },
+        {
+          "kind": "operand",
+          "name": "strides",
+          "tablegen_constraint": "anonymous_715"
+        },
+        {
+          "kind": "operand",
+          "name": "offsets",
+          "tablegen_constraint": "anonymous_634"
+        },
+        {
+          "kind": "attribute",
+          "name": "order",
+          "tablegen_constraint": "DenseI32ArrayAttr"
+        }
+      ]
+    },
+    "tt.map_elementwise": {
+      "admission": "complete numeric scalar body, pack and independence or actual source grouping",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:806",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "maps",
+      "semantic_fields": [
+        "pack"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "srcs",
+          "tablegen_constraint": "anonymous_695"
+        },
+        {
+          "kind": "attribute",
+          "name": "pack",
+          "tablegen_constraint": "I32Attr"
+        }
+      ]
+    },
+    "tt.map_elementwise.return": {
+      "admission": "all exact typed map output slots in original order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:817",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "maps",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "result",
+          "tablegen_constraint": "anonymous_700"
+        }
+      ]
+    },
+    "tt.mulhiui": {
+      "admission": "same-type scalar/tensor unsigned high product for all six TT integer widths",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:174",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "scalar-numeric",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "x",
+          "tablegen_constraint": "TT_IntLike"
+        },
+        {
+          "kind": "operand",
+          "name": "y",
+          "tablegen_constraint": "TT_IntLike"
+        }
+      ]
+    },
+    "tt.precise_divf": {
+      "admission": "same-format floating operands/result; standard division retains source rounding boundary",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:158",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "scalar-numeric",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "x",
+          "tablegen_constraint": "TT_FloatLike"
+        },
+        {
+          "kind": "operand",
+          "name": "y",
+          "tablegen_constraint": "TT_FloatLike"
+        }
+      ]
+    },
+    "tt.precise_sqrt": {
+      "admission": "same-format floating operand/result; standard square root retains source rounding boundary",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:142",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "scalar-numeric",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "x",
+          "tablegen_constraint": "TT_FloatLike"
+        }
+      ]
+    },
+    "tt.print": {
+      "admission": "complete literal prefix, Boolean hex, signedness roster and source numeric values",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:966",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "diagnostics",
+      "semantic_fields": [
+        "prefix",
+        "hex",
+        "isSigned"
+      ],
+      "source_arguments": [
+        {
+          "kind": "attribute",
+          "name": "prefix",
+          "tablegen_constraint": "StrAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "hex",
+          "tablegen_constraint": "BoolAttr"
+        },
+        {
+          "kind": "operand",
+          "name": "args",
+          "tablegen_constraint": "anonymous_707"
+        },
+        {
+          "kind": "attribute",
+          "name": "isSigned",
+          "tablegen_constraint": "DenseI32ArrayAttr"
+        }
+      ]
+    },
+    "tt.ptr_to_int": {
+      "admission": "source i64 scalar/tensor logical pointer expression; no escaping physical numeric address",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:53",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-memory",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_PtrLike"
+        }
+      ]
+    },
+    "tt.reduce": {
+      "admission": "positive static numeric equal source tiles; valid axis and complete pure tuple combiner",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:741",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "combiners",
+      "semantic_fields": [
+        "axis"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "srcs",
+          "tablegen_constraint": "anonymous_695"
+        },
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "I32Attr"
+        }
+      ]
+    },
+    "tt.reduce.return": {
+      "admission": "all reduction tuple components retain actual format and order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:764",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "combiners",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "result",
+          "tablegen_constraint": "anonymous_700"
+        }
+      ]
+    },
+    "tt.reshape": {
+      "admission": "same native element count and source-permitted reorder/layout facts",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:466",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [
+        "allow_reorder",
+        "efficient_layout"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "attribute",
+          "name": "allow_reorder",
+          "tablegen_constraint": "UnitAttr"
+        },
+        {
+          "kind": "attribute",
+          "name": "efficient_layout",
+          "tablegen_constraint": "UnitAttr"
+        }
+      ]
+    },
+    "tt.return": {
+      "admission": "complete private helper value returns; selected entry is currently void",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:1262",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "functions",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "srcs",
+          "tablegen_constraint": "anonymous_700"
+        }
+      ]
+    },
+    "tt.scan": {
+      "admission": "positive static numeric source tiles; exact axis/direction and complete tuple combiner",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:774",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "combiners",
+      "semantic_fields": [
+        "axis",
+        "reverse"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "srcs",
+          "tablegen_constraint": "anonymous_695"
+        },
+        {
+          "kind": "attribute",
+          "name": "axis",
+          "tablegen_constraint": "I32Attr"
+        },
+        {
+          "kind": "attribute",
+          "name": "reverse",
+          "tablegen_constraint": "BoolAttr"
+        }
+      ]
+    },
+    "tt.scan.return": {
+      "admission": "all scan tuple components retain actual format and order",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:796",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "combiners",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "result",
+          "tablegen_constraint": "anonymous_700"
+        }
+      ]
+    },
+    "tt.splat": {
+      "admission": "scalar numeric or normalized pointer value to native static source tile",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:427",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Type"
+        }
+      ]
+    },
+    "tt.split": {
+      "admission": "native final two-element axis and complete ordered result pair",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:546",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    },
+    "tt.store": {
+      "admission": "actual logical root/indices/mask/value with ownership and definite writes",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:301",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "logical-memory",
+      "semantic_fields": [
+        "boundaryCheck",
+        "cache",
+        "evict"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "ptr",
+          "tablegen_constraint": "anonymous_661"
+        },
+        {
+          "kind": "operand",
+          "name": "value",
+          "tablegen_constraint": "TT_Type"
+        },
+        {
+          "kind": "operand",
+          "name": "mask",
+          "tablegen_constraint": "anonymous_644"
+        },
+        {
+          "kind": "attribute",
+          "name": "boundaryCheck",
+          "tablegen_constraint": "anonymous_646"
+        },
+        {
+          "kind": "attribute",
+          "name": "cache",
+          "tablegen_constraint": "anonymous_662"
+        },
+        {
+          "kind": "attribute",
+          "name": "evict",
+          "tablegen_constraint": "anonymous_663"
+        }
+      ]
+    },
+    "tt.trans": {
+      "admission": "native permutation and exact original coordinate correspondence",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:566",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [
+        "order"
+      ],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        },
+        {
+          "kind": "attribute",
+          "name": "order",
+          "tablegen_constraint": "DenseI32ArrayAttr"
+        }
+      ]
+    },
+    "tt.unsplat": {
+      "admission": "native singleton scalar projection; logical pointer singleton uses pointer normalization",
+      "complement": "Inherit common complement and family-specific complement; no neighboring form inherits support.",
+      "definition": "TritonOps.td:441",
+      "evidence_status": "prior selected operation witness exists; final typed/profile qualification pending",
+      "family": "tile-shapes",
+      "semantic_fields": [],
+      "source_arguments": [
+        {
+          "kind": "operand",
+          "name": "src",
+          "tablegen_constraint": "TT_Tensor"
+        }
+      ]
+    }
+  },
+  "prior_observation_report": {
+    "meaning": "49 generic names in selected Merlin-executed packages; this is not semantic/type/composition closure or final-candidate evidence.",
+    "path": "out/v1-closure/family-witnesses/package-observations.json",
+    "sha256": "0c94233d69b8783e9208f9085f0bf5507d76a4eb136c1f407a535937189aa542"
+  },
+  "purpose": "Finite source/profile inventory, not a production allowlist, execution result or universal proof.",
+  "reviewed_consumer_commit": "b77e0233f9ae3a2a0e7ee2d1aaa311c9d7cb60fd",
+  "reviewed_definition_files": [
+    {
+      "path": "include/triton/Dialect/Triton/IR/TritonOps.td",
+      "repository": "https://github.com/triton-lang/triton",
+      "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+      "sha256": "19a7c7c7b16e05ab87072fec5b381efad2ff9809ed8aee46d1173f646453b4ef"
+    },
+    {
+      "path": "include/triton/Dialect/Triton/IR/TritonTypes.td",
+      "repository": "https://github.com/triton-lang/triton",
+      "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+      "sha256": "5a610b3e3c4c83f0d28e6b830f0f375226664060976fb09a5ff4a9eef20b323d"
+    },
+    {
+      "bytes": 54423,
+      "path": "lib/Dialect/Triton/IR/Ops.cpp",
+      "revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+      "sha256": "ac9e5b633e53eddd36a1ffc547c7fce8be5312b2c8ec6f585fb03be20c4ab14a",
+      "url": "https://raw.githubusercontent.com/triton-lang/triton/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/lib/Dialect/Triton/IR/Ops.cpp"
+    }
+  ],
+  "reviewed_producer_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+  "schema": "t2m.source-profile-review.v1",
+  "status": "source-admission-reviewed; generic gaps and final qualification open",
+  "supporting_dialects": {
+    "control": "Reuse official CF-to-SCF lifting and actual structured regions; no name-based pattern whitelist or source-loop unrolling.",
+    "effects": "Readonly tensor snapshots remain SSA values; live memory, external participants, barriers, atomics and volatile observations need actual effect contracts.",
+    "known_gaps": [
+      "fp8-generic-arithmetic",
+      "public-value-entry-binding"
+    ],
+    "numeric_flags": "Preserve actual fastmath, overflow, rounding and comparison predicates. Neutral flags do not imply an alternate arithmetic policy; source poison/undefined domains stay explicit.",
+    "source": "Standard arithmetic/math/SCF/CF/function/tensor supporting forms use structural verification, exact registered semantics and full descendant/effect checks."
+  }
+}

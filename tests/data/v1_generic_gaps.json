@@ -240,9 +240,9 @@
       "id": "subbyte-atomic-storage",
       "kind": "missing-generic-storage-legalization",
       "native_progress": "Native i1/i4 source-width updates and CAS pass exhaustive finite-domain programs, including adjacent cells and explicit carrier normalization. Public i4 storage/ABI remains unimplemented.",
-      "route": "Reuse byte-sized integer atomic regions/CAS loops with source-width updates. i4 additionally requires an explicit public carrier/packing contract; widening only the final result is insufficient.",
+      "route": "Reuse the qualified native i4 byte-CAS updates and checked storage carriers with an explicit public cell/packing contract. Widening only the final result is insufficient.",
       "stopping_decision": "If no checked storage contract and qualified executable route is available within the shared effort cap, declare these exact forms unsupported and report incomplete full-generic closure.",
-      "why_used": "Boolean flags and low-bit state or counters in imported/hand-authored TTIR; source APIs may otherwise promote these widths.",
+      "why_used": "Four-bit state/counters or imported integer pointer storage in hand-authored/imported TTIR; ordinary source APIs may promote these widths.",
       "witnesses": [
         {
           "bindings": {
@@ -291,8 +291,453 @@
           "source_sha256": "c234791d438b37ad9d8ddf3116f95bdac462ea51e689b3afe804e16ec4523951"
         }
       ]
+    },
+    {
+      "id": "fp8-generic-arithmetic",
+      "kind": "missing-generic-numeric-legalization",
+      "route": "Reuse exact FP8 casts and the existing low-precision native emulation seam. Keep actual operations, source boundaries and contraction C; widen computation only under a named numeric profile, then narrow at each source operation. Add missing legal scaled accumulator admission with the same explicit policy.",
+      "stopping_decision": "One bounded generic emulation/cast integration and correction cycle. If unresolved, preserve exact unsupported tuples and a user-authored explicitly promoted alternative; report incomplete generic closure.",
+      "why_used": "Imported or hand-authored FP8 scalar math, reductions/maps with FP8 arithmetic, or scaled dot retaining an FP8 accumulator/result. Normal Python kernels commonly promote to f16/f32, but these typed TTIR forms are native-valid.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "a",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "b",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "lower",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "upper",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "low_math"
+          },
+          "consumer_observation": {
+            "actual_features": [
+              "reuse_loop_tensor_destinations"
+            ],
+            "api": "merlin.compiler.lower.native.pipeline.lower_to_llvm_ir",
+            "commit": "b77e0233f9ae3a2a0e7ee2d1aaa311c9d7cb60fd",
+            "compiler_process_returncode": 1,
+            "diagnostic": "failed to legalize operation 'math.sqrt' on f8E4M3FN after source ownership/lifetime stages",
+            "log": {
+              "bytes": 7855,
+              "path": "out/build/profile-fp8-math-closure.log",
+              "sha256": "24cab2d108b1976ff981da88edf7922a73c213c822e1bfac4f841152b6e4aa1b"
+            },
+            "pipeline": "t2m.consumer_worker.tensor_pipeline()",
+            "repository": "ucb-bar/merlin"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "81322ab14aa419503052d5afb0a7ea22dd979c7e14e32ca27c401d3d17e7e8aa",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "native host execution failed (exit 1): Traceback (most recent call last):\n  File \"/scratch/grammy/blast/triton2MLIR/t2m/native_runner.py\", line 360, in <module>\n    main(sys.argv[1])\n  File \"/scratch/grammy/blast/triton2MLIR/t2m/native_runner.py\", line 265, in main\n    passmanager.PassManager.parse(pipeline).run(module.operation)\ntorch_mlir._mlir_libs._mlir.ir.MLIRError: Failure while executing pass pipeline:\nerror: \"-\":140:14: failed to legalize operation 'math.sqrt' that was explicitly marked illegal: %52 = \"math.sqrt\"(%51) <{fastmath = #arith.fastmath<none>}> {prov.emitted_id = \"mlir.op.0123\", prov.family = \"triton\", prov.op = \"sqrt\", prov.original_ops = [\"tt.precise_sqrt\"], prov.region_id = \"kernel:low_math\", prov.source_ids = [\"ttir.op.0007\"]} : (f8E4M3FN) -> f8E4M3FN\n note: \"-\":140:14: see current operation: %52 = \"math.sqrt\"(%51) <{fastmath = #arith.fastmath<none>}> {prov.emitted_id = \"mlir.op.0123\", prov.family = \"triton\", prov.op = \"sqrt\", prov.original_ops = [\"tt.precise_sqrt\"], prov.region_id = \"kernel:low_math\", prov.source_ids = [\"ttir.op.0007\"]} : (f8E4M3FN) -> f8E4M3FN\n",
+          "observed_stage": "native-legalization",
+          "operation": "tt.precise_sqrt",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @low_math(%a:!tt.ptr<f8E4M3FN>,%b:!tt.ptr<f8E4M3FN>,%lower:!tt.ptr<f8E4M3FN>,%upper:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n %x=tt.load %a:!tt.ptr<f8E4M3FN>\n %y=tt.load %b:!tt.ptr<f8E4M3FN>\n %lo=tt.load %lower:!tt.ptr<f8E4M3FN>\n %hi=tt.load %upper:!tt.ptr<f8E4M3FN>\n %c=tt.clampf %x,%lo,%hi,propagateNan=none:f8E4M3FN\n %d=tt.precise_divf %c,%y:f8E4M3FN\n %s=tt.precise_sqrt %d:f8E4M3FN\n tt.store %out,%s:!tt.ptr<f8E4M3FN>\n tt.return\n}}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "4fdacae2cf581a30aaa2e16854d65463856e9079811d95a3340cdde8128e059f"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f16",
+                "effect": "read",
+                "name": "a",
+                "shape": [
+                  2,
+                  2
+                ]
+              },
+              {
+                "dtype": "f16",
+                "effect": "read",
+                "name": "b",
+                "shape": [
+                  2,
+                  2
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "c",
+                "shape": [
+                  2,
+                  2
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  2,
+                  2
+                ]
+              }
+            ],
+            "entry": "scaled_low"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "057c9cbe90b75da7fe6debcbe33566a25ce81cbfd7483dcce2d294bcf10d9948",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0013 (tt.dot_scaled): scaled dot requires a matching standard floating accumulator/result",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.dot_scaled",
+          "selection": {
+            "address_policy": "source-words",
+            "fp8_overflow": "ieee",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @scaled_low(%a:!tt.ptr<f16>,%b:!tt.ptr<f16>,%c:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n%offset=arith.constant dense<[[0,1],[2,3]]>:tensor<2x2xi32>\n%p_a=tt.splat %a:!tt.ptr<f16>->tensor<2x2x!tt.ptr<f16>>\n%q_a=tt.addptr %p_a,%offset:tensor<2x2x!tt.ptr<f16>>,tensor<2x2xi32>\n%v_a=tt.load %q_a:tensor<2x2x!tt.ptr<f16>>\n%p_b=tt.splat %b:!tt.ptr<f16>->tensor<2x2x!tt.ptr<f16>>\n%q_b=tt.addptr %p_b,%offset:tensor<2x2x!tt.ptr<f16>>,tensor<2x2xi32>\n%v_b=tt.load %q_b:tensor<2x2x!tt.ptr<f16>>\n%p_c=tt.splat %c:!tt.ptr<f8E4M3FN>->tensor<2x2x!tt.ptr<f8E4M3FN>>\n%q_c=tt.addptr %p_c,%offset:tensor<2x2x!tt.ptr<f8E4M3FN>>,tensor<2x2xi32>\n%v_c=tt.load %q_c:tensor<2x2x!tt.ptr<f8E4M3FN>>\n%p_out=tt.splat %out:!tt.ptr<f8E4M3FN>->tensor<2x2x!tt.ptr<f8E4M3FN>>\n%q_out=tt.addptr %p_out,%offset:tensor<2x2x!tt.ptr<f8E4M3FN>>,tensor<2x2xi32>\n%r=\"tt.dot_scaled\"(%v_a,%v_b,%v_c) {a_elem_type=6:i32,b_elem_type=6:i32,fastMath=false,lhs_k_pack=true,rhs_k_pack=true,operandSegmentSizes=array<i32:1,1,1,0,0>}:(tensor<2x2xf16>,tensor<2x2xf16>,tensor<2x2xf8E4M3FN>)->tensor<2x2xf8E4M3FN>\ntt.store %q_out,%r:tensor<2x2x!tt.ptr<f8E4M3FN>>\ntt.return }}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "786807d761b0feea042231c6c35b21313a3afdae2b2cadbeefb0622cafa34e80"
+        }
+      ]
+    },
+    {
+      "id": "fp8-atomic-addition",
+      "kind": "missing-generic-numeric-effect-profile",
+      "route": "Adapt the qualified half/BF16 per-event addition policy and checked byte/integer-CAS machinery. Define actual FP8 rounding/overflow/NaN behavior, preserve every old word and round after every update; do not cast only the final value.",
+      "stopping_decision": "One bounded source-policy plus pure-update/byte-CAS integration and correction. If unresolved, explicitly refuse FP8 addition and describe a separately declared wider-state source alternative; do not count it as full closure.",
+      "why_used": "Low-precision shared counters or accumulating FP8 state in imported/custom TTIR. Triton source APIs often use a wider accumulator, but a native-valid FP8 fadd must not be mistaken for architecture-specific assembly.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "readwrite",
+                "name": "state",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "value",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "typed_add"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "7a4315d526744fee9206c786ab2f776d29376689c675b041c216ec770866ee87",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0002 (tt.atomic_rmw): floating arithmetic atomics need a qualified rounding/subnormal/NaN numeric contract",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.atomic_rmw",
+          "selection": {
+            "address_policy": "source-words",
+            "effect_profile": "typed-atomics",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @typed_add(%state:!tt.ptr<f8E4M3FN>,%value:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n   %v=tt.load %value:!tt.ptr<f8E4M3FN>\n   %old=tt.atomic_rmw fadd, relaxed, gpu, %state, %v:(!tt.ptr<f8E4M3FN>,f8E4M3FN)->f8E4M3FN\n   tt.store %out,%old:!tt.ptr<f8E4M3FN>\n   tt.return\n  }}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "fac5b83ded8c8d149ee14963c28b3ac6c90d9a470876e7c6c78c559dafaf3073"
+        }
+      ]
+    },
+    {
+      "id": "low-precision-diagnostic-values",
+      "kind": "missing-generic-diagnostic-formatting",
+      "route": "Extend the existing logical-element formatter using actual integer width/float-format facts and exact word classification. Reuse the FP8 widening implementation for finite decimal values; keep original words for hex and NaN classification.",
+      "stopping_decision": "One bounded formatter extension and full-stream qualification. Otherwise list exact refused types and explicit source widening/word-bitcast print workarounds, with the lost typed-format observation stated.",
+      "why_used": "Debugging kernels with internal i4 values or FP8 tensors, especially quantization/packing and low-precision numerical diagnosis. This concerns logical values and words, not device printf thread scheduling.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "i8",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "i8",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "typed_print"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "7252e0eb71e091d7dd2f62d4cf06ece6987ae820be55f037bea0e02451f1a4d2",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0003 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.print",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @typed_print(%x:!tt.ptr<i8>,%out:!tt.ptr<i8>) {\n   %loaded=tt.load %x:!tt.ptr<i8>\n   %v=arith.trunci %loaded:i8 to i4\n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %v:i4\n   tt.store %out,%loaded:!tt.ptr<i8>\n   tt.return\n  }}",
+          "source_dtype": "i4",
+          "source_sha256": "237f943c897b03160e185b63e80d9f751010a2955815d37aa42197b15d1c428d"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "f8E4M3FN",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "typed_print"
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "dcbacb58e965ba69cb7396778c51c62274d94205257eac9fbc981d9a53fcbd17",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "ttir.op.0002 (tt.print): print requires static numeric scalar/tensor values; physical pointers need a logical-address contract",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.print",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @typed_print(%x:!tt.ptr<f8E4M3FN>,%out:!tt.ptr<f8E4M3FN>) {\n   %loaded=tt.load %x:!tt.ptr<f8E4M3FN>\n   \n   tt.print \"value \" {hex=false,isSigned=array<i32:1>} : %loaded:f8E4M3FN\n   tt.store %out,%loaded:!tt.ptr<f8E4M3FN>\n   tt.return\n  }}",
+          "source_dtype": "f8E4M3FN",
+          "source_sha256": "b9f585dbe6c578bfb80581230d2b76f6c254977532f323a42146527dfe65c4fe"
+        }
+      ]
+    },
+    {
+      "id": "public-value-entry-binding",
+      "kind": "missing-generic-entry-value-abi",
+      "route": "Extend the existing checked source wrapper/allocation binding interface with actual scalar-storage input and returned-value output bindings. Load/store real SSA values in a typed wrapper and reuse native helper inlining and the existing public tensor interface; avoid low-precision by-value native calls.",
+      "stopping_decision": "One bounded checked wrapper adapter and correction cycle. If unresolved, document exact unsupported entry shapes and a user-supplied ordinary void wrapper with explicit tensor ports as a workaround; preserve original source and report incomplete generic closure.",
+      "why_used": "Extracting a value-returning helper as a standalone TTIR program, or importing a kernel with a by-value f16/BF16/FP8/i4 parameter. Ordinary Python kernel entries normally return void; low-precision by-value parameters still need an explicit portable ABI.",
+      "witnesses": [
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "i32",
+                "effect": "read",
+                "name": "x",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "dtype": "i32",
+                "effect": "write",
+                "name": "result",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "return_value",
+            "requested_entry_values": {
+              "results": [
+                {
+                  "buffer": "result",
+                  "element": 0,
+                  "ordinal": 0
+                }
+              ]
+            }
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "3480d16d191efc33d13e5e6aced181a3603348b4740e1df77f089dc0e7031fd9",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "kernel entry return values need an explicit ABI binding",
+          "observed_stage": "frontend-admission",
+          "operation": "tt.return",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @return_value(%x:!tt.ptr<i32>)->i32 {\n %v=tt.load %x:!tt.ptr<i32>\n %one=arith.constant 1:i32\n %r=arith.addi %v,%one:i32\n tt.return %r:i32\n}}",
+          "source_dtype": "i32",
+          "source_sha256": "ea6b20b7ea776ee80fa8940b69baf7de68b76f6eb7f67db09ae8e53eafbd2b0f"
+        },
+        {
+          "bindings": {
+            "buffers": [
+              {
+                "dtype": "f16",
+                "effect": "write",
+                "name": "out",
+                "shape": [
+                  1
+                ]
+              }
+            ],
+            "entry": "half_value",
+            "requested_entry_values": {
+              "inputs": [
+                {
+                  "dtype": "f16",
+                  "name": "alpha",
+                  "source_arg": 0
+                }
+              ]
+            }
+          },
+          "native_verification": {
+            "binding_binary": {
+              "bytes": 461559216,
+              "distribution_version": "3.7.1",
+              "sha256": "e1e17b42f65d04185099e8512cdedf3989355e7e7d3f429022c5302e4833f3d7",
+              "source_build_identity": "not-independently-established; pinned release definitions and actual versioned binding recorded separately"
+            },
+            "definitions_revision": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+            "inventory_sha256": "f4f45550e6b42224794ea17d400cf651eb85056e71d23158b2441a56d2cfd48d",
+            "returncode": 0,
+            "triton_version": "3.7.1",
+            "verifier": "t2m.frontend.inspect_ttir / pinned native Triton bindings"
+          },
+          "observed_at_triton2mlir_commit": "80c213f9a2e7e7284da4dff17295903ba38b23a3",
+          "observed_refusal": "runtime scalar requires a name, supported scalar dtype and source argument position",
+          "observed_stage": "abi-construction",
+          "operation": "tt.func",
+          "selection": {
+            "address_policy": "source-words",
+            "memory_profile": "guarded-buffer"
+          },
+          "source": "module {tt.func public @half_value(%alpha:f16,%out:!tt.ptr<f16>) {\n %r=arith.addf %alpha,%alpha:f16\n tt.store %out,%r:!tt.ptr<f16>\n tt.return\n}}",
+          "source_dtype": "f16",
+          "source_sha256": "7f74a5fecf29576b1274f903f213195eaf09e89e7b3a6f73e1c7fd6062caf170"
+        }
+      ]
     }
   ],
-  "meaning": "These are verified source refusals, not supported operations or hardware exclusions. Removing an item requires an implemented route, qualified evidence and a reviewed source/profile audit.",
+  "meaning": "These are native-verified sources with demonstrated ABI, conversion or native-legalization failures, not supported operations or hardware exclusions. Removing an item requires an implemented route, qualified evidence and a reviewed source/profile audit.",
   "schema": "t2m.confirmed-generic-gaps.v1"
 }

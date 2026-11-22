@@ -20,9 +20,14 @@ generic names in Merlin-executed packages; see
 The review also closed i8/i16 RMW/CAS and 16-bit storage views, with three
 public-interface programs and 41 affected regressions. Six public scalar/tiled
 floating-exchange programs now preserve exact old/new words on f16, BF16 and
-all four FP8 formats, with typed native helper/body checks. The recorded i1/i4
-atomic sources still refuse, and other storage/view profiles await review; see
-the exact boundaries and remedies in [limitations](limitations.md).
+all four FP8 formats, with typed native helper/body checks. Boolean atomics
+additionally pass a complete public-interface program and native i4 arithmetic
+passes. The [source admission review](semantic_profiles.md) now records all
+fifty definitions, exact semantic fields and complement rules. Eight
+native-verified witnesses freeze five generic work items: public i4 storage,
+FP8 arithmetic/accumulators, FP8 atomic addition, low-precision diagnostics
+and entry value bindings. See the exact boundaries and remedies in
+[limitations](limitations.md).
 These are source-operation observations, not universal typed/composition
 coverage or a successful run of the updated 128-case candidate.
 The [two-transformer workflow](transformer_demo.md) has independent native and
