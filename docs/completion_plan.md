@@ -1,8 +1,14 @@
 # Finite closure plan: portable TTIR to the Merlin interface
 
-Updated 2026-11-21. This is the governing v1 release plan. It replaces the
-previous requirement that every valid refusal and every possible target must
-be eliminated before finishing. Historical measurements in the roadmap,
+Updated 2026-11-21. This is the governing v1 release plan. The latest scope
+requires every generic/useful TTIR computation to have an executable lowering;
+exclusions apply to assembly, hardware observations and missing external
+semantics, not to difficult generic computation. Use a broader logical
+load/store, SSA or standard control/effect expansion where a specialized pattern
+cannot be recovered. Preserve actual semantics and disclose lost structure.
+
+This plan separates generic computation closure from arbitrary device semantics
+and qualification of every possible target. Historical measurements in the roadmap,
 coverage and handoff documents retain their original scope; they are evidence,
 not an automatically expanding backlog.
 
@@ -16,8 +22,8 @@ of arbitrary physical observations or undefined source behavior.
 
 **Closure means complete accounting plus qualified support for a declared
 profile. It does not mean every kernel becomes portable MLIR.** Unsupported
-forms remain unsupported in the published numbers. The former universal goal
-is a long-term direction, not the v1 exit condition.
+forms remain unsupported in the published numbers. Generic operation gaps
+remain release work; physical/GPU-specific behavior has explicit limitations.
 
 A successful portable result contains executable standard MLIR, the actual ABI,
 source/emission provenance, numeric/effect policies and required compiler
@@ -73,8 +79,9 @@ actionable request for the named bindings; it does not count as a portable pass.
 Every op entry needs a predicate for admitted forms and an explicit complement
 rule. Supporting operations, types, semantic attributes, regions and their
 compositions need the same admission checks. Unknown names or unavailable
-attribute evidence cannot inherit a neighboring form's success. For arbitrary
-new kernels outside the frozen corpus, the default is a located refusal; finite
+attribute evidence cannot inherit a neighboring form's success. New kernels use
+the same general lowering rules; there is no kernel-name or fixture allowlist.
+A valid generic refusal is a tracked gap even outside the frozen corpus. Finite
 tests do not prove universal translation or classification correctness.
 
 ## Decide the hard boundaries now
@@ -84,15 +91,15 @@ general solver, alias engine or GPU runtime. Reuse the existing mechanisms.
 
 | Gap | First route | v1 stopping decision |
 | --- | --- | --- |
-| Irregular/loaded addresses, while-pointer state, nonlinear indexing | Existing structured analysis; otherwise explicit root/extent/stride bindings and guarded logical memory. | Retain bounds, initialization, source order and write-conflict checks. If the existing guard/effect mechanism cannot enforce the needed relationship, require a supported specialization or exclude the form. |
+| Irregular/loaded addresses, while-pointer state, nonlinear indexing | Existing structured analysis; otherwise explicit root/extent/stride bindings and guarded logical memory. | Retain bounds, initialization, source order and write-conflict checks. Broaden the logical memory/control expansion when specialized inference fails; valid generic gaps remain open. |
 | Aliases, views and mutation | Explicit storage roots, offsets, layouts, overlap and functional state/results; use existing qualified adapters. | Never assert no-alias to silence a conflict. Unrepresentable physical alias identity or unimplemented copyback is unsupported, with a functional-state adapter as remediation. |
-| Runtime shapes/scalars and value-dependent output sizes | Declared scalar/dimension bindings; reconstruct actual shape dependencies or use existing execution-owned results with finite allocation limits. | No guessed sizes or implicit specialization. Unbindable producer shapes require a supported specialization or explicit exclusion. |
-| Numeric formats, precision, reductions and RNG | Freeze the existing named, qualified profiles and their rounding/order/overflow rules. | Unknown formats/flags, undefined source enumerants and GPU-specific exact-bit claims require an implementation/profile or are excluded. No silent precision relaxation. |
+| Runtime shapes/scalars and value-dependent output sizes | Declared scalar/dimension bindings; reconstruct actual shape dependencies or use existing execution-owned results with finite allocation limits. | No guessed sizes or implicit specialization. Supply missing bindings or extend generic runtime allocation/shape transport; valid generic gaps remain open. |
+| Numeric formats, precision, reductions and RNG | Named, qualified profiles with their rounding/order/overflow rules. | Missing defined generic arithmetic needs an executable implementation. Undefined source enumerants and GPU-specific exact-bit claims need actual semantics. No silent precision relaxation. |
 | Packed maps/assembly | Existing independence/layout proofs and optional typed source provider. A generic expansion may be slower if its semantics are qualified. | General source-coupled packing, partial registers and unimplemented float/ISA forms are excluded unless a qualified standard-MLIR implementation is supplied. Preserve original pack intent and disclose sharing loss. |
 | The current packet recurrence ownership failure | Fix the generic Merlin ownership/destination proof within C1, or keep the packet route opt-in and retain the previously qualified scalar recipe as a disclosed fallback. | Do not enable the failing path by default or weaken lifetime checks. A scalar recipe does not claim packet sharing. |
 | Barriers, atomics, volatile and async | Keep qualified invocation-local phases/effects. Abstract physical scheduling only when actual dependencies and observations permit it. | External participants, general cross-program publication, race-sensitive behavior and device completion need an explicit execution contract/provider; otherwise backend-required. Serialization is not automatically equivalent. |
 | Inline assembly, extern calls and physical address observations | Known source provider or an explicit typed standard-MLIR implementation with its dependencies and trust boundary. | Unknown instructions, hardware clocks/IDs, escaping physical addresses, impure externs and descriptor bytes are backend-required/unsupported. Provenance is not their implementation. |
-| Remaining CFG/function/ABI forms | Existing official normalization and public bindings; source specialization where valid. | Unrepresented entry returns, recursion or unsupported region semantics get a stable diagnostic. No second general-purpose interpreter for v1. |
+| Remaining CFG/function/ABI forms | Existing official normalization and public bindings, or broader standard func/CF/SSA. | Valid generic entry/control forms require a working ABI/lowering; missing support remains a blocker. Preserve located diagnostics while implementing it. |
 | Target scheduling/materialization | Existing Merlin host path and bounded serial smoke cases. | Missing accelerator providers become an explicit target capability limit. Do not expand the frontend project to finish every backend. |
 
 A trusted caller declaration and an established source fact remain distinct.
@@ -166,7 +173,9 @@ implementation work, not artifacts already supplied by this planning update.
 
 A work item gets one bounded implementation attempt and one corrective attempt.
 If it exceeds its ceiling, choose a supported contract, qualified fallback or
-explicit exclusion **for a new/unclaimed profile**. A regression in previously
+explicit exclusion **for hardware-specific behavior or missing external
+semantics**. Difficult generic computation must use a broader executable
+representation or remain an open blocker. A regression in previously
 qualified baseline behavior cannot be relabeled unsupported to get a green
 report. Fix it, retain the prior qualified default, or stop with a concrete
 release blocker and ask for an explicit scope/time decision. Do not silently
@@ -206,6 +215,7 @@ inventory-only records, record those separately without claiming execution.
 | M4 | Functional buffer/user state and admitted view/alias bindings; all state observations retained. |
 | M5 | Mixed numeric/tiled model composition, including lifted constants and source precision/reuse. |
 | M6 | Mixed tensor/effect or void model: exact normal/failing outcome and all returning results. |
+| M7 | Two back-to-back full transformer blocks: ordinary PyTorch first, Triton second, actual launch discovered and integrated automatically; no hand-authored binding table or replacement with the CPU reference. |
 
 For each positive workflow, require independent whole-result/effect comparison,
 changed-input replay, source/payload accounting and actual public Merlin staging
@@ -251,9 +261,13 @@ old package observation count a closure result. The validator must check:
 
 The final report states **v1 scope closed** only if all five gates pass. It also
 lists unsupported/backend-required profiles, requested user contracts, fallback
-costs and later target work. Then stop this roadmap. No implicit requirement to
-support new source releases, arbitrary physical semantics, every composition or
-every accelerator remains attached to v1.
+costs and later target work. Each limitation explains why the source instruction
+is used, why portable lowering cannot implement it, the workloads where it
+appears and the available remediation. The two-transformer demo must pass
+complete results and changed-input replay through public Merlin compilation.
+Then stop this roadmap. No implicit requirement to
+support new source releases, arbitrary physical semantics or every accelerator
+remains attached to v1. Generic computation requirements remain mandatory.
 
 Until those gates pass, the release is open. This document changes the completion
 contract and execution order; it does not itself complete the implementation.

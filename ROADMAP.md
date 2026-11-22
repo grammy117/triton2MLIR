@@ -2,6 +2,13 @@
 
 ## Governing v1 closure plan
 
+The latest scope requires all generic/useful computation; difficult generic
+memory/control must use a broader executable representation or remain open.
+Assembly and hardware observations have explicit limitations. The required
+[mixed two-transformer demo](docs/transformer_demo.md) now has automatic launch
+integration and native/public Merlin host evidence, including ragged sequences
+and an artifact-only publication copy. This does not close the remaining ledger.
+
 Follow the [finite completion plan](docs/completion_plan.md), updated 2026-11-21.
 It defines a pinned support domain, five work packages, checked user contracts,
 qualified fallbacks, explicit exclusions and a release exit test. New accelerator

@@ -1,5 +1,13 @@
 # Package contract and explicit model2MLIR differences
 
+[Automatic model launch discovery](transformer_demo.md) adds the preprocessing
+record `t2m.discovered-launches.v1` and an `automatic_launch` provenance field.
+They describe actual fake launch graphs, file-backed JIT source identity and
+derived ports/specializations. They are not m2m receipts or source-equivalence
+proofs. Existing capture/bound-package schemas and the checked binder remain
+unchanged. Source TTIR still comes from the pinned Triton compiler; the CPU
+reference supplies only evaluator results outside compiler staging.
+
 [Checked memory continuation](checked_memory_continuation.md) records a failed
 native structured stage separately from its independently verified retained
 source and successful checked event continuation. Complete clipped-mask proofs

@@ -1,5 +1,22 @@
 # Review handoff — updated 2026-11-21
 
+New user requirements keep every generic/useful computation mandatory; hardware
+and assembly observations may be limitations. Do not use the older finite-plan
+exclusion wording to drop difficult generic memory/control. The updated plan
+also requires two full transformer blocks with automatic Triton integration.
+
+That demo is now implemented in `scripts/run_transformer_demo.py` and
+[documented here](transformer_demo.md). Torch fake launch tracing discovers the
+second block's actual JIT source/ABI/ports; ordinary m2m handles the first block.
+The existing binder lowers the real source, not the CPU reference. The initial
+16-token run passes native and three public-host invocations. Four automatic/
+ragged/negative checks pass in `.scratch/automatic-transformer-tests.log`; the
+fresh artifact-only publication selection passes separately in
+`.scratch/automatic-transformer-publication.log`. The latter runs the 13-token
+model from only declared public artifacts with both outputs on three inputs.
+[Limitations](limitations.md) explain their uses, causes and remedies. C0 policy
+and acceptance-manifest work, generic gaps and final closure audit remain open.
+
 Start with the [finite v1 closure plan](completion_plan.md). The user now permits
 checked extra information, qualified fallbacks and explicit non-support to bound
 the work. Its C0-C4 sequence replaces this file's historical instructions to

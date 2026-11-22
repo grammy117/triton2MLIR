@@ -1,10 +1,18 @@
 # triton2MLIR
 
+[Two complete transformer blocks](docs/transformer_demo.md) now run through the
+public Merlin interface: ordinary PyTorch first, a fused Triton block second.
+Actual fake launch tracing discovers the source and derives the bindings;
+there is no hand-written kernel table or replacement with the CPU reference.
+Native/public-host checks retain both outputs across changed inputs. The
+[limitations inventory](docs/limitations.md) explains hardware exclusions,
+automatic-adapter boundaries and the generic work still required for closure.
+
 The [finite v1 closure plan](docs/completion_plan.md) now governs the remaining
 work: freeze the source/support profile, qualify the public Merlin interface,
-and classify every other form as contract-dependent, a disclosed fallback or
-explicitly excluded. Five bounded work packages replace the previous universal
-coverage requirement. The measurements below describe delivered capabilities;
+and close generic forms through checked contracts or disclosed fallbacks.
+Assembly/hardware behavior has explicit exclusions. Five bounded work packages
+replace the previous universal coverage requirement. The measurements below describe delivered capabilities;
 they do not expand the v1 backlog. The release is not closed yet.
 
 [Public Merlin staging](docs/repository_layout.md) accepts standalone

@@ -1,5 +1,12 @@
 # Binding translated kernels into model2MLIR
 
+The [two-transformer demo](transformer_demo.md) adds an automatic entry path for
+static pure single-launch `triton_op` wrappers. It discovers the actual source,
+ports, grid and specialization on fake tensors, temporarily registers identities
+with m2m and derives the checked bindings described below. No user-authored
+kernel table or semantic substitution is needed for that path. More complex
+wrapper/storage forms still use explicit bindings; see [limitations](limitations.md).
+
 See the [symbolic model boundary](symbolic_models.md) for the newer importer
 that preserves dynamic public types. The execution evidence below retains its
 original static captures; symbolic binding and consumer invocation remain open.
