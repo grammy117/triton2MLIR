@@ -8,7 +8,7 @@ libraries and two complete models qualify through native/Merlin host/Spike.
 
 Status: implemented for the explicit private-invocation integer RMW/CAS profile
 and the separately selected typed profile with bitwise f32/f64 exchange and
-integer-word RMWs on f32/f64 storage (including Triton floating min/max),
+integer-word RMWs on f16/f32/f64 storage (including Triton floating min/max),
 integer-word CAS on f16/f32/f64 storage, IEEE f64 addition and explicitly
 selected IEEE/FTZ f32 addition.
 
@@ -21,6 +21,34 @@ The new ownership encoding is implemented and native-checked independently of
 admission: all 4,663 bounded access histories agree with declarative identity/
 access-category rules, including differences at bit 30 and bit 60. The eighteen
 protocol/layout tests also retain every existing ordinary-memory boundary case.
+
+## Byte-sized integer source words
+
+The integer profile admits i8/i16/i32/i64 RMW and CAS. Updates retain source
+width at every event: add wraps modulo the word width, signed and unsigned
+min/max keep their distinct interpretation, and each old result is the actual
+pre-update word. The typed profile additionally admits all nine integer RMW
+kinds through f16/f32/f64 storage and explicitly ordered 16/32/64-bit byte
+views. Subbyte integer storage is not admitted by this extension.
+
+The source review found verified i8/i16 sources rejected by width checks in
+both producers and consumer intake. This extension reuses Meta's existing
+element-typed atomic converter; its `UnstructuredAtomicRMWConverter` does not
+require 32-bit words. No ownership, source-order or old-value check is removed.
+The native i16 floating-storage helper returns integer bits through its private
+ABI and restores the original bitcast at the caller, avoiding half-by-value
+transport. Exported source remains standard tensor/memref/SCF computation.
+
+Three complete source programs in `tests/test_narrow_atomics.py` qualify raw
+i8, raw i16 and mixed f16/byte-backed i16 state through public Merlin staging
+and host execution. Each contains all nine RMW kinds and successful/failed CAS,
+returns every old array and final state, and replays changed and empty inputs
+on one unchanged library. Bounds and active alignment violations abort;
+inactive invalid addresses have no effect. Comparison is exact, including
+half-storage bits and untouched trailing bytes. Forty-one affected existing
+CAS, half-addition, byte-order and evidence-integrity checks also pass.
+These results qualify private invocation state; external publication and
+hardware-specific observations still need their own execution contract.
 
 ## Source-backed boundary
 

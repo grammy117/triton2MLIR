@@ -298,6 +298,14 @@ def kernel_representation_differences(trace, *, dynamic=False):
         differences.append("explicit private-invocation integer atomics use standard memref RMW operations and original old values; v3 thirty-bit owner fragments permit atomic collisions while rejecting ordinary races; source scope/order are retained with stronger standard acq_rel semantics; inactive undefined old values refine to zero; tensor/scalar ABI is unchanged")
     if trace.get("memory", {}).get("effect_profile") == "private-invocation-typed-atomics-v2":
         differences.append("explicit private-invocation typed atomics retain integer RMW/CAS, bitwise f32/f64 exchange and IEEE f64 round-to-nearest-even addition with subnormals preserved and unspecified arithmetic NaN payloads; v4 memory admission retains v3 thirty-bit ownership, initialization and guard costs; floating exchange preserves all old/new bits without arithmetic or rounding; source scope/order use stronger standard acq_rel semantics; inactive undefined old values refine to typed zero; tensor/scalar ABI is unchanged")
+    if any(event.get("word_bits") in (8, 16) and event.get("operation") != "fadd"
+           for event in trace.get("memory", {}).get("atomic_payload", [])):
+        differences.append(
+            "byte-sized integer atomic words retain per-update modular arithmetic, signed/unsigned comparisons "
+            "and every returned old word; i16 word views keep active alignment and explicit byte-order checks; "
+            "the private native half-storage helper transports integer bits; public ABI, receipt and admission "
+            "schemas are unchanged, but older consumers may refuse these newly qualified widths"
+        )
     numeric = {event.get("numeric_contract") for event in trace.get("memory", {}).get("atomic_payload", [])}
     if numeric & {"ieee-f16-rne-add-quiet-nans", "ieee-bf16-rne-add-quiet-nans"}:
         differences.append("IEEE f16/BF16 atomic addition retains two-byte storage, nearest-even updates, gradual underflow, explicit result NaN quieting and exact old words in standard generic atomic regions; computed NaN payload/sign is unspecified; BF16 updates extend exactly to f32, add and narrow once per event; the checked native atomic-word feature uses integer input/old-result helper transport and retains complete internal load/CAS retry bodies through ownership/lifetime checks; public tensor/scalar ABI and receipt schemas are unchanged; private invocation state supplies no external publication or accelerator equivalence")

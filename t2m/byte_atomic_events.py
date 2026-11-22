@@ -50,8 +50,7 @@ def boundary(op, source_ids, byte_order):
     if byte_order not in ("little", "big"):
         refuse("byte atomic templates require explicit little or big byte order")
     view = element(pointer.type)
-    cas = opcode(op) == "tt.atomic_cas"
-    if view not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
+    if view not in (builtin.i16, builtin.i32, builtin.i64):
         refuse("byte atomic templates require qualified integer RMW/CAS word types")
     address = cast.operands[0].owner
     if (element(cast.operands[0].type) != builtin.i8

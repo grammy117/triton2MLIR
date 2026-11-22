@@ -17,6 +17,8 @@ from .atomic_float_add import CONTRACT as F32_ADD_CONTRACT, F64_CONTRACT, HALF_C
 EFFECT_PROFILE = "private-invocation-integer-atomics-v1"
 TYPED_EFFECT_PROFILE = "private-invocation-typed-atomics-v2"
 ATOMIC_SCHEMAS = ("t2m.memory-admission.v3", "t2m.memory-admission.v4")
+INTEGER_WORDS = (builtin.i8, builtin.i16, builtin.i32, builtin.i64)
+INTEGER_WIDTHS = tuple(word.bitwidth for word in INTEGER_WORDS)
 # Source enum -> source name, standard arith::AtomicRMWKind.
 RMW = {1: ("and", 2), 2: ("or", 14), 3: ("xor", 15), 4: ("add", 1), 5: ("fadd", 0),
        6: ("max", 6), 7: ("min", 10), 8: ("umax", 7), 9: ("umin", 11), 10: ("exch", 3)}
@@ -100,7 +102,7 @@ def validate_evidence(admission, memory, records, buffers):
                 or not candidates or any(c != info and c != primitive for c in candidates)
                 or buffer.get("dtype") != dtype
                 or word and (profile != TYPED_EFFECT_PROFILE or floating
-                    or info.get("word_bits") not in ((16, 32, 64) if info.get("operation") == "cas" else (32, 64)) or info["word_view"] != expected_view)
+                    or info.get("word_bits") not in (16, 32, 64) or info["word_view"] != expected_view)
                 or floating and (profile != TYPED_EFFECT_PROFILE
                     or (info.get("operation"), dtype) not in FLOAT_CONTRACTS
                     or info.get("word_bits") != FLOAT_WIDTHS[dtype]
@@ -110,7 +112,7 @@ def validate_evidence(admission, memory, records, buffers):
                     and (admission.get("f32_atomic_add") != memory.get("f32_atomic_add")
                          or info.get("numeric_contract") != {"ieee": "ieee-f32-rne-add", "ftz": F32_ADD_CONTRACT}.get(admission.get("f32_atomic_add")))
                 or not floating and ("value_dtype" in info or "numeric_contract" in info)
-                or info.get("word_bits") not in ((16, 32, 64) if floating or info.get("operation") == "cas" else (32, 64))
+                or info.get("word_bits") not in ((16, 32, 64) if floating else INTEGER_WIDTHS)
                 or (info.get("operation"), info.get("standard_kind")) not in (*RMW.values(), ("cas", "compare-exchange"))
                 or access.get("opcode") != ("tt.atomic_cas" if info["operation"] == "cas" else "tts.unstructured_atomic_rmw")
                 or any(opcodes[s] != ("tt.atomic_cas" if info["operation"] == "cas" else "tt.atomic_rmw") for s in access["source_ids"] if s in source)
@@ -139,10 +141,10 @@ def contract(op, source_ids, *, typed=False, f32_atomic_add=None):
     element = type_.element_type if isinstance(type_, builtin.TensorType) else type_
     cas = opcode(op) in ("tt.atomic_cas", "tts.atomic_cas")
     floating = element in (builtin.f16, builtin.bf16, builtin.f32, builtin.f64)
-    if not (typed and floating and not cas) and element not in ((builtin.i16, builtin.i32, builtin.i64) if cas else (builtin.i32, builtin.i64)):
+    if not (typed and floating and not cas) and element not in INTEGER_WORDS:
         if cas:
-            refuse("atomic CAS needs a qualified integer i16/i32/i64 numeric profile")
-        refuse("atomic RMW needs a qualified integer i32/i64 numeric profile")
+            refuse("atomic CAS needs a byte-sized integer i8/i16/i32/i64 numeric profile")
+        refuse("atomic RMW needs a byte-sized integer i8/i16/i32/i64 numeric profile")
     values = [None] if cas else []
     for name, allowed in ((("atomic_rmw_op", RMW),) if not cas else ()) + (("sem", ORDERS), ("scope", SCOPES)):
         value = op.properties.get(name, op.attributes.get(name))

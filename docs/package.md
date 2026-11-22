@@ -1199,7 +1199,8 @@ source operation/order/scope. Standard RMW events retain old values inside
 exactly-once SCF regions; source-undefined inactive old values explicitly refine
 to zero. Package differences name this policy, its stronger standard ordering
 and grid-derived guard cost. See [atomic memory](atomic_memory.md).
-Integer CAS additionally supports i16/i32/i64 through a standard generic atomic
+Integer RMW and CAS support i8/i16/i32/i64 through standard atomic operations.
+CAS uses a standard generic atomic
 comparison/select region. It remains unmasked, including tail lanes unless
 source control flow suppresses them. Finite buffer selection branches inside
 parallel tensor tiles. The pinned native ownership toolchain requires Merlin's
@@ -1207,10 +1208,14 @@ checked compare/exchange legalization; this dependency and the executed prelude/
 prepared-body hashes are explicit native evidence. Exported MLIR and the public
 tensor/scalar ABI remain portable, with no opaque or LLVM helper in the package
 source. Existing RMW/v3 guard costs and initialization checks remain mandatory.
+The byte-sized width extension changes no receipt, public ABI or memory-admission
+schema. Per-event contracts already bind exact word widths and typed payloads.
+Older consumer revisions may reject newly admitted i8/i16 events; use the
+consumer revision qualified with the package, not an assumed schema-only match.
 
 `--effect-profile typed-atomics` selects the separate
 `private-invocation-typed-atomics-v2` contract with `memory-admission.v4`. It adds
-bitwise f32/f64 exchange, IEEE f64 atomic addition, integer word RMWs on equal-width f32/f64 storage and integer word CAS on f16/f32/f64 storage
+bitwise f32/f64 exchange, IEEE f64 atomic addition, integer word RMWs on equal-width f16/f32/f64 storage and integer word CAS on f16/f32/f64 storage
 to integer RMW/CAS while retaining the same public
 tensor/scalar ABI, thirty-bit ownership and guard costs. Floating events bind
 value dtype and an operation-specific numeric contract in source/access/payload declarations.
