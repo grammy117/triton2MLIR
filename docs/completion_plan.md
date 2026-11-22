@@ -65,6 +65,20 @@ Merlin results. A normalized operation appearing in a report is insufficient.
 This list is the immediate audit backlog, not a claim that unseen compositions
 are correct. A new counterexample inside an admitted profile remains a bug.
 
+### Current demonstrated generic blocker
+
+After the indexed-word fix, verified void-entry TTIR with i8/i16 logical
+`tt.atomic_rmw add` still refuses, even with existing i8/i16 buffer bindings,
+`guarded-buffer`, `source-words` and `typed-atomics` selected. Located refusals
+and exact source are retained under `.scratch/atomic-narrow-source-probe/`.
+This is a generic width-admission gap, not an unknown-source or physical-device
+exclusion. The next bounded implementation item is to extend the existing
+private-invocation atomic path while retaining per-update source-width
+arithmetic, returned old words, final state, guards and source scope/order.
+Qualify it before claiming those forms work; a wider final cast alone cannot
+replace narrow atomic semantics. Finish reviewing the other family profiles
+before the final full run.
+
 ## What we will finish
 
 Ship a versioned, usable TTIR frontend that preserves useful tensor tiles,

@@ -29,6 +29,14 @@ is `a2c0fac`; earlier failed runs remain in their original directories.
 The signaling-NaN fix has twelve scalar format/profile passes and the
 2,600-pass/two-prerequisite-skip Merlin replay. See [scalar math](scalar_math.md).
 
+The next concrete source-review finding is **i8/i16 integer atomic RMW**.
+Both native-verified, explicit-buffer, private-invocation `add` sources still
+refuse at `ttir.op.0002`, despite `typed-atomics` selection. Exact sources and
+refusals are in `.scratch/atomic-narrow-source-probe/{8,16}/`. Extend the
+existing generic atomic path with correct narrow old/final words and guards;
+do not reclassify this as GPU-specific. This is a demonstrated generic blocker,
+not a reason to restart the whole inventory or add arbitrary new variants.
+
 All twenty missing original-TTIR witnesses have now been recovered from existing
 implementations. The maintained corpus passes one aggregate check, and twelve
 targeted descriptor/cast/scaled-dot/atomic/pointer checks pass separately. The
