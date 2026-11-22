@@ -160,6 +160,27 @@ def check(run, *, audit=None, replay=None, merlin_root=None, model2mlir_root=Non
 
     gate("pinned-policy-and-fixture-custody", pinned_policy)
 
+    def confirmed_generic_gaps():
+        ledger = read(local(ROOT, policy["generic_gap_ledger"]))
+        if (ledger.get("schema") != "t2m.confirmed-generic-gaps.v1"
+                or ledger.get("definitions") != definitions["SOURCE"]
+                or not isinstance(ledger.get("gaps"), list)):
+            raise ValueError("confirmed generic gap ledger is missing its pinned source contract")
+        gaps = ledger["gaps"]
+        for gap in gaps:
+            if not gap.get("id") or not gap.get("witnesses"):
+                raise ValueError("confirmed generic gap has no source witness")
+            for witness in gap["witnesses"]:
+                if (witness.get("operation") not in definitions["OPERATIONS"]
+                        or witness["operation"] == "tt.elementwise_inline_asm"
+                        or hashlib.sha256(witness["source"].encode()).hexdigest() != witness["source_sha256"]
+                        or witness["native_verification"]["returncode"] != 0):
+                    raise ValueError("confirmed generic gap lost its original verified source")
+        if gaps:
+            raise ValueError("confirmed generic source gaps remain: " + ", ".join(gap["id"] for gap in gaps))
+
+    gate("confirmed-generic-source-gaps", confirmed_generic_gaps)
+
     def complete_execution():
         passed.update(acceptance(run, manifest))
 

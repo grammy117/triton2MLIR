@@ -25,6 +25,7 @@
   ],
   "generic_computation": "mandatory; broaden standard MLIR instead of excluding a difficult generic form",
   "generic_exclusion_allowed": false,
+  "generic_gap_ledger": "tests/data/v1_generic_gaps.json",
   "groups": {
     "assembly": {
       "audit": "pending-final-source-and-consumer-evidence",

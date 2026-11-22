@@ -1,6 +1,6 @@
 # Finite closure plan: portable TTIR to the Merlin interface
 
-Updated 2026-11-21. This is the governing v1 release plan. The requested scope
+Updated 2026-11-22. This is the governing v1 release plan. The requested scope
 requires every generic/useful TTIR computation to have an executable lowering;
 exclusions apply to assembly, hardware observations and missing external
 semantics, not to difficult generic computation. Use a broader logical
@@ -26,7 +26,7 @@ from the original full-generic-coverage requirement.
 | Public Merlin interface | Kernel and bound-model staging, preparation and whole-body host execution exist. | Qualify the final selected packages from final revisions; retain explicit model2MLIR package differences. |
 | Required two-transformer demo | Implemented: ordinary PyTorch block followed by one real Triton block, actual launch discovered automatically. Native/public host and artifact-only ragged replay have passed. | Include the existing demo in final acceptance and publish its reproduction command, source, MLIR and limitations. No new model architecture is required. |
 | Source inventory | All 50 pinned TTIR definitions have policy entries: 49 generic and optional assembly. | Finish the typed/profile review and join it to actual source-to-Merlin evidence. A policy entry is not support evidence. |
-| Frozen integration selection | All 107 preceding cases passed together with no skips/failures at `2290fb5`; retained under `out/v1-closure/acceptance-107/`. The source review then found narrow histogram/gather admission gaps. Their fix passed eighteen new public-interface checks and ten affected regressions. | The updated compiler and 125-case selection still need final whole-selection qualification after the profile audit. Retain the 107-case result as the preceding baseline, not the final candidate verdict. |
+| Frozen integration selection | All 107 preceding cases passed together with no skips/failures at `2290fb5`; retained under `out/v1-closure/acceptance-107/`. The source review then found narrow histogram/gather admission gaps. Their fix passed eighteen new public-interface checks and ten affected regressions. | The updated compiler and 128-case selection still need final whole-selection qualification after the profile audit. Retain the 107-case result as the preceding baseline, not the final candidate verdict. |
 | Known numeric regression | Signaling-NaN min/max correction passed all 12 scalar format/memory-profile checks and the Merlin replay: 2,600 passed, two pre-existing prerequisite skips. | Qualify the final public Python transport; keep separately selected stock-CLI transport outside this claim. |
 | Release checker | Implemented CLI with six reader/refusal checks. It rejects incomplete execution, absent semantic review and missing baseline custody. | Populate actual final evidence and complete the source/profile review. The checker is not itself a completed release audit. |
 
@@ -65,19 +65,29 @@ Merlin results. A normalized operation appearing in a report is insufficient.
 This list is the immediate audit backlog, not a claim that unseen compositions
 are correct. A new counterexample inside an admitted profile remains a bug.
 
-### Current demonstrated generic blocker
+### Resolved demonstrated generic blocker
 
-After the indexed-word fix, verified void-entry TTIR with i8/i16 logical
-`tt.atomic_rmw add` still refuses, even with existing i8/i16 buffer bindings,
-`guarded-buffer`, `source-words` and `typed-atomics` selected. Located refusals
-and exact source are retained under `.scratch/atomic-narrow-source-probe/`.
-This is a generic width-admission gap, not an unknown-source or physical-device
-exclusion. The next bounded implementation item is to extend the existing
-private-invocation atomic path while retaining per-update source-width
-arithmetic, returned old words, final state, guards and source scope/order.
-Qualify it before claiming those forms work; a wider final cast alone cannot
-replace narrow atomic semantics. Finish reviewing the other family profiles
-before the final full run.
+The source review found native-verified i8/i16 `tt.atomic_rmw add` rejected
+by producer and consumer width checks. The existing logical atomic path now
+retains all nine integer RMW kinds, successful/failed CAS, every old/final word,
+guards and source scope/order for byte-sized integer words. Three complete
+public-interface programs qualify raw i8/i16 and mixed f16/byte-backed i16
+views; 41 affected regressions pass. See [the exact scope](atomic_memory.md#byte-sized-integer-source-words).
+Five additional native-verified source forms still refuse: i1/i4 integer atomic
+add and f16/BF16/f8E4M3FN bitwise atomic exchange. Exact sources, verifier
+results, tool hash and located refusals are retained under
+`.scratch/atomic-profile-review/`; the [tracked gap ledger](../tests/data/v1_generic_gaps.json)
+retains the exact source, requested ABI/profile and located refusal for each.
+These reduce to two named gaps: subbyte
+atomic storage legalization and additional bitwise floating storage transport.
+They are generic gaps, not GPU exclusions. Reuse existing typed integer/byte
+atomic regions before considering another mechanism. A missing storage
+encoding may require a checked caller contract; provenance cannot implement
+an update. If they remain unresolved at the effort cap, publish their exact
+non-support and say full generic closure was not achieved.
+
+The final whole-selection run and remaining semantic/profile review are still
+open. This closes a demonstrated gap; it is not a universal atomic claim.
 
 ## What we will finish
 
@@ -253,23 +263,26 @@ in the release notes; a newly discovered problem does not reset the budget.
 The [authored policy ledger](v1_policy.json) now partitions all 50 definitions:
 49 mandatory generic operations and one optional source-assembly operation.
 Its semantic audit remains open; this is not a production allowlist.
-The [acceptance manifest](../tests/data/v1_acceptance.json) now names 125
+The [acceptance manifest](../tests/data/v1_acceptance.json) now names 128
 cases across K1-K12, M1-M7, negative boundaries and serial smoke, including
-hashes of 34 fixture source files. It retains all original 94 cases, the thirteen
-missing-family checks and eighteen checks for actual narrow-word source gaps.
+hashes of 35 fixture source files. It retains all original 94 cases, the thirteen
+missing-family checks, eighteen narrow-index checks and three complete narrow-atomic
+programs.
 The reviewed changes and qualification scope are in the manifest. The preceding
 107-case selection passed, including the transformer demo and serial smoke;
-the new candidate has not run all 125 together. Existing broader regressions
-remain required. The hard cap is 128 cases; spare capacity is not a request to
-add more variants. Finish the source/profile review before the final rerun.
+the new candidate has not run all 128 together. Existing broader regressions
+remain required. The hard cap is 128 cases; the roster is full. Do not
+add more variants without a reviewed replacement. Finish the source/profile review before the final rerun.
 
 Use `scripts/check_v1_closure.py`; do not create a second release tool.
 Generated run records belong under `out/v1-closure/<run>/`.
 Do not infer a release pass from a manifest or operation-name counts.
+The checker independently rejects any unresolved entry in the tracked generic
+gap ledger, even if all acceptance cases pass or an audit claims closure.
 
 | Checkpoint | Remaining effort | Concrete output and exit |
 | --- | --- | --- |
-| 1. Finish the inventory and freeze | Day 1 | Layout fixture correction and all twenty missing operation witnesses are done; 125 cases are frozen. Finish the 49-entry type/attribute/effect profile review, exact routes, tool/consumer pins and contract fields. End with a finite semantic gap list; no speculative new analyses. |
+| 1. Finish the inventory and freeze | Day 1 | Layout fixture correction and all twenty missing operation witnesses are done; 128 cases are frozen. Finish the 49-entry type/attribute/effect profile review, exact routes, tool/consumer pins and contract fields. End with a finite semantic gap list; no speculative new analyses. |
 | 2. Close only named gaps | Days 2-3 | Fix demonstrated failures in the frozen generic profiles using existing analysis, checked caller contracts or broader standard MLIR. Add a valid and violating case when introducing a contract. Retain immutable parameters, live state, all results and useful tiling/reuse. Finish the current checker. Resolve hardware/unknown-source cases by explicit disposition. |
 | 3. Run final qualification | Day 4 | Run every final acceptance case, the relevant baseline regression selection and the fixed serial smoke from recorded revisions. Reopen the two-transformer publication without evaluator files; compare both outputs on original, changed and zero inputs using one library. Record every failure, skip, fallback and refusal separately. |
 | 4. Correct once and deliver | Day 5 | Fix only release findings within the remaining budget. Rerun affected checks; rerun the full frozen selection if compiler/fixture changes invalidate its evidence. Publish the release check, gap/limitation inventory, packages and reproduction instructions. Deliver a closed release or an explicitly incomplete handoff, then stop expanding this roadmap. |

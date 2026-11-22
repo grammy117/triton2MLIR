@@ -9,12 +9,13 @@ Assembly and hardware observations have explicit limitations. The required
 integration and native/public Merlin host evidence, including ragged sequences
 and an artifact-only publication copy. This does not close the remaining ledger.
 
-Follow the [finite completion plan](docs/completion_plan.md), updated 2026-11-21.
+Follow the [finite completion plan](docs/completion_plan.md), updated 2026-11-22.
 It defines a pinned support domain, checked user contracts, qualified fallbacks,
 explicit exclusions and a release exit test. The remaining effort is capped at
 five focused engineering days: freeze the finite gap list; close only those
-gaps; qualify; correct once and deliver. The 125-case selection retains all
-original 94 cases, thirteen family witnesses and eighteen narrow-word checks;
+gaps; qualify; correct once and deliver. The 128-case selection retains all
+original 94 cases, thirteen family witnesses, eighteen narrow-index checks
+and three atomic programs;
 the hard cap remains 128. The preceding 107-case selection passed in full.
 All twenty missing operation witnesses have been recovered, with all 49 generic
 names in Merlin-executed packages. Semantic/profile closure remains open.

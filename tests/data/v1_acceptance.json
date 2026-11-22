@@ -1,5 +1,5 @@
 {
-  "case_count": 125,
+  "case_count": 128,
   "cases": [
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[tensor]",
     "tests/test_dynamic_shapes.py::test_one_merlin_library_handles_distinct_input_result_and_launch_shapes[buffer]",
@@ -125,7 +125,10 @@
     "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-tensor]",
     "tests/test_narrow_indexed_values.py::test_narrow_indexed_computation_reaches_public_merlin[gather-16-guarded-buffer]",
     "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[histogram]",
-    "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[gather]"
+    "tests/test_narrow_indexed_values.py::test_real_triton_narrow_inputs_reach_public_merlin[gather]",
+    "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i8]",
+    "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i16]",
+    "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[views]"
   ],
   "closure_authority": "passing this selection alone is not generic semantic/type/attribute closure; final policy/source/consumer audit is required",
   "fixture_sources": {
@@ -149,6 +152,7 @@
     "tests/test_mixed_effects.py": "c34d88c685942564449254b3eb66ba2addef5dbee61b1e5e068c1daa1b69d649",
     "tests/test_model_binding.py": "c2163be584378f1d824e2a022039312057edd69313d717daa8de643b368049ff",
     "tests/test_model_bundle.py": "c326fdb6038c2a94b37f0b475f850f4f170d75b6abd983703f7d4fb2c1cdb5ce",
+    "tests/test_narrow_atomics.py": "dfec16d7bc41a70ae27b3addd015aa7d5512a65ae3b5eddd8092c7a720798aad",
     "tests/test_narrow_indexed_values.py": "acfebffd7b92c8b6887d627e2f811316a2026411f9c5cd6cb524cb2b07ff7e06",
     "tests/test_pointer_unsplat.py": "d5b82ab76dc124680b70b53efcad81b26d8a3a19642008c4393a8828fe37390c",
     "tests/test_product_corpus.py": "31749be8239452a462b05d5e4d9dcb44ee98b87077cd37ea7dc19c8f8f980a40",
@@ -234,6 +238,16 @@
       "previous_case_count": 107,
       "qualification": "18 public-interface checks and 10 affected i32/i64 regressions passed. The preceding frozen 107-case selection passed before this compiler extension; the final 125-case selection has not run as a whole.",
       "reason": "Actual captured i8 histogram/gather kernels exposed generic width-admission gaps during the source/profile audit. Qualify legal internal i1/i4/i8/i16 forms through public Merlin, preserving masks, counter words and invalid-index aborts."
+    },
+    {
+      "added_cases": [
+        "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i8]",
+        "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i16]",
+        "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[views]"
+      ],
+      "previous_case_count": 125,
+      "qualification": "All three complete programs passed individually; 41 affected regressions passed. Final 128-case whole-selection qualification remains pending.",
+      "reason": "Native-verified generic i8/i16 atomic source gap; actual complete programs cover old/final words, all nine RMW kinds, CAS outcomes and mixed-storage guards. All prior cases retained; hard cap reached."
     }
   ],
   "schema": "t2m.release-acceptance.v1",
@@ -262,7 +276,10 @@
       "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[buffer]",
       "tests/test_mixed_effects.py::test_full_tuple_and_streams_reuse_one_library_across_runtime_shapes_and_failure[guarded-buffer]",
       "tests/test_atomic_word_cas.py::test_word_cas_preserves_success_failure_old_bits_and_storage_abi[False-32]",
-      "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]"
+      "tests/test_atomic_memory.py::test_merlin_executes_atomic_event_once_and_reuses_the_library[False-32-add]",
+      "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i8]",
+      "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[i16]",
+      "tests/test_narrow_atomics.py::test_narrow_atomics_preserve_all_old_final_words_and_guards[views]"
     ],
     "K12": [
       "tests/test_public_kernel_staging.py::test_public_compiled_library_retains_all_results_and_runtime_values[owned]",

@@ -50,12 +50,15 @@ def test_execution_reader_cannot_count_partial_skipped_failed_or_different_cases
 
 def test_even_a_complete_case_ledger_cannot_replace_semantic_audit_and_source_replay(tmp_path):
     manifest = ledger(tmp_path)
+    (tmp_path / "semantic-audit.json").write_text(json.dumps({"closure_status": "closed"}))
     result = CHECKER.check(tmp_path)
     assert result["passed_cases"] == len(manifest["cases"])
     assert result["closure_status"] == "open"
     gates = {row["gate"]: row["status"] for row in result["checks"]}
     assert gates["complete-acceptance-execution"] == "passed"
     assert gates["generic-semantic-profile-audit"] == gates["baseline-replay-source-custody"] == "open"
+    known = next(row for row in result["checks"] if row["gate"] == "confirmed-generic-source-gaps")
+    assert known["status"] == "open" and "subbyte-atomic-storage" in known["reason"]
 
 
 def test_success_label_without_replay_source_custody_does_not_pass_baseline(tmp_path):
